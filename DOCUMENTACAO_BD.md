@@ -1,5 +1,5 @@
 
-**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **42 tabelas**, **122 policies**, **96 triggers** em `05` (92 comuns e 4 `CONSTRAINT TRIGGER`), **125 funções** (87 em `05`, 36 em `03`, 1 em `08`, 1 em `01`), **52 índices** em `02`, e **117 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **43 tabelas**, **119 policies**, **100 triggers** em `05` (96 comuns e 4 `CONSTRAINT TRIGGER`), **163 funções** (124 em `05`, 37 em `03`, 1 em `08`, 1 em `01`), **64 índices** em `02`, e **128 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
 
 **Comentários dos `.sql`.** Cabeçalho curto (`Função`, `Assinatura`, `Bloco` e uma `Regra` objetiva, sem datas nem história) e, dentro de função, trigger e policy, só o comentário que explica uma regra difícil. Não há ponteiro para arquivo fora do git: o porquê longo mora aqui, na seção `[NN-Y]` correspondente, e a história (o que mudou, quando, por quê) fica no arquivo de histórico local, que não é versionado. Os comentários do `07` explicam dado de teste; o `ATUALIZAR O SUPABASE.sql` é o registro datado de cada patch e por isso mantém a narrativa.
 # 📚 Documentação Técnica do Banco de Dados - CrowdAcadêmico
@@ -208,6 +208,8 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 ---
 
 ### [01-H] CONTRIBUIÇÃO (Transações e Auditoria Financeira)
+
+> 📌 **Visão de ponta a ponta do dinheiro** (tarifa, destino no fim da campanha, repasse, devolução, validação de saque, parâmetros): `DOCUMENTACAO_FINANCEIRO.md`. Aqui ficam as regras do banco, bloco a bloco.
 
 * **`contribuicao`:** Registra os apoios financeiros.
   * Valor Mínimo: `CK_CONTRIBUICAO_VALOR_MINIMO` é só limite técnico largo (`valor > 0`) desde 30-07-2026 - o mínimo de negócio de verdade (R$ 5,00, configurável pelo Painel Admin) mora em `configuracoes.valor_minimo_contribuicao` + trigger (`05`, `[05-K-2]`), mesmo padrão do prazo/meta financeira (item 16 da Lista C). Antes disso era `CHECK (valor >= 5.00)` hardcoded - ver `PENDENCIAS e correcoes.md`, item RF-056.
@@ -527,6 +529,7 @@ O arquivo é organizado em 8 blocos conceituais que espelham literalmente os tí
   - **Caso-limite aceito:** a cascata de `suspender_pesquisador()` (03) grava por função `SECURITY DEFINER` e não passa por esta policy; a suíte de teste do banco de histórico de rejeição confere que ela continua gravando.
 * **[04-E-6] `historico_rejeicao` (ATUALIZADO 21-09-2026, ver [05-K-2-B]):** `pol_historicorej_select` passou a reconhecer o dono por `id_usuario_dono` (gravado na linha) e a policy de UPDATE foi removida, o histórico é imutável. Texto histórico abaixo: as policies de escrita foram adicionadas para permitir o registro de rejeições de campanha pelo fluxo de moderação. 🗑️➡️✅ **`pol_historicorej_select` - CORRIGIDO (27-07-2026):** só liberava quem tem `campanha_rejeitar`, diferente das duas tabelas irmãs (`solicitacao_encerramento`, `repasse`), que corretamente liberam também o dono da campanha via `EXISTS (... id_usuario = id_usuario_atual())`. Sem isso, o dono de uma campanha rejeitada não conseguia ver o motivo pela própria plataforma (RF-070 prevê editar e reenviar) - dependia só do e-mail (RF-071). Acrescentado o mesmo `OR EXISTS (...)` que as tabelas irmãs já usavam.
 * **[04-E-7] `repasse`:** as policies de escrita foram adicionadas porque esse fluxo é gerado pelo backend a partir da consolidação financeira da campanha - sem elas, a RLS bloqueia a criação e atualização do registro mesmo com o `GRANT` de tabela correto (ver nota de débito técnico acima).
+  * 🗑️➡️✅ **Escrita direta fechada (18-10-2026):** `pol_repasse_insert`, `pol_repasse_update` e o `GRANT INSERT` do `app_nestjs` saíram. O backend nunca gravou direto em `repasse`: toda escrita é das funções `SECURITY DEFINER` de `05` (`criar_repasse_campanha`, `atualizar_status_repasse`, etc.), que não dependem de policy nem de `GRANT` do `app_nestjs`.
 * 🗑️➡️✅ **[04-E-8] `campanha` / `atualizacao_campanha` (INSERT) - pesquisador suspenso passa a ser barrado - CORRIGIDO (27-07-2026):** `pol_comentario_insert` já checava `status_pesquisador = 'ativo'` antes de liberar `INSERT`, mas `pol_campanha_insert` e `pol_atualizacao_insert` não tinham essa mesma checagem - um pesquisador suspenso ainda conseguia criar campanha nova ou publicar atualização. As duas policies passaram a exigir `EXISTS (SELECT 1 FROM perfil_pesquisador WHERE id_usuario = public.id_usuario_atual() AND status_pesquisador = 'ativo')`, replicando o padrão que já existia só em `comentario`. Como o seed roda como superusuário (*bypassa* RLS) e todos os 7 pesquisadores seedados já são `'ativo'`, nada mudou na carga do `07`.
 
 #### [04-F] LINK
@@ -553,6 +556,7 @@ O arquivo é organizado em 8 blocos conceituais que espelham literalmente os tí
 
 **Detalhamento por policy:**
 * **[04-H-1] `auditoria_financeira`:** as policies de escrita foram adicionadas para permitir o registro de eventos financeiros e auditoria do fluxo de contribuição (ver nota de débito técnico acima).
+  * 🗑️➡️✅ **Escrita direta fechada (18-10-2026):** `pol_auditoria_insert` e o `GRANT INSERT` do `app_nestjs` saíram. Toda linha de auditoria é gravada pelas funções `SECURITY DEFINER` de `05`; o backend só lê.
 * 🗑️➡️✅ **[04-H-2] `aceite_termo_contribuicao` (SELECT) - CORRIGIDO (28-07-2026):** a policy de `INSERT` já aceitava `c.id_usuario IS NULL` (doador anônimo registrando o aceite dos termos), mas a de `SELECT` só liberava `c.id_usuario = id_usuario_atual()` - um doador anônimo conseguia criar o próprio registro de aceite e nunca mais conseguia relê-lo, mesmo já enxergando a própria contribuição via `pol_contribuicao_anon_select`. Corrigido replicando o mesmo ramo de `token_sessao` que essa policy irmã já usa.
 
 #### [04-I] SCORE
@@ -647,6 +651,8 @@ Cada trigger observa uma tabela que alimenta alguma dimensão do score e recalcu
 ---
 
 ### [05-K-2] Regras Transversais - Campanhas e Financeiro
+
+> 📌 **Visão de ponta a ponta do dinheiro** (tarifa, destino no fim da campanha, repasse, devolução, validação de saque, parâmetros): `DOCUMENTACAO_FINANCEIRO.md`. Aqui ficam as regras do banco, bloco a bloco.
 
 | Tabela | Função | Trigger | Regra |
 |---|---|---|---|

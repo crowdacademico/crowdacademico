@@ -4,7 +4,7 @@
 // Valores em REAIS, como `number` com 2 casas (mesma unidade de contribuicao.valor). O Kysely devolve DECIMAL como
 // string: quem lê do banco converte na fronteira (Number(...)), nunca soma string com número.
 
-export type MeioPagamentoGateway = 'pix' | 'cartao_credito';
+export type MeioPagamentoGateway = 'pix' | 'cartao_credito' | 'boleto';
 
 // 'estornada' só quando TODO o valor foi devolvido. Estorno parcial mantém 'confirmada' e preenche
 // `valorEstornado` (é o que o tudo-ou-nada faz ao devolver o valor sem a tarifa de pagamento: a cobrança original continua paga).
@@ -19,6 +19,14 @@ export interface DadosPix {
   expiraEm: Date;
 }
 
+export interface DadosBoleto {
+  // Página do provedor com o boleto para imprimir ou baixar.
+  link: string;
+  // A "linha digitável" (os números do boleto), para pagar pelo aplicativo do banco.
+  linhaDigitavel: string;
+  venceEm: Date;
+}
+
 export interface ResultadoCobranca {
   idCobranca: string;
   status: StatusCobrancaGateway;
@@ -31,6 +39,8 @@ export interface ResultadoCobranca {
   idSplit?: string;
   // Só em cobrança de cartão: a página segura do provedor onde quem apoia digita o cartão e paga.
   linkPagamento?: string;
+  // Só em cobrança por boleto.
+  boleto?: DadosBoleto;
   // O provedor já liberou o dinheiro para uso (Pix: ao pagar; cartão: cerca de 30 dias depois). Sem a informação, falso.
   dinheiroLiberado?: boolean;
 }

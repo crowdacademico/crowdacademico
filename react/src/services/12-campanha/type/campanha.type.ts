@@ -52,11 +52,12 @@ export interface HistoricoRejeicaoResponse {
   rejeitadoEm: string;
 }
 
-// Espelha nest/src/12-campanha/dto/request/campanha.request-create.ts. Datas em ISO 8601. `modelo` fica de fora:
-// o banco aplica o padrão ('all-or-nothing'), único aceito hoje.
+// Espelha nest/src/12-campanha/dto/request/campanha.request-create.ts. Datas em ISO 8601. Sem `modelo`, o banco aplica
+// o padrão ('all-or-nothing').
 export interface CampanhaRequestCreate {
   titulo: string;
   idAreaConhecimento: number;
+  modelo?: ModeloCampanha;
   metaFinanceira: number;
   descricao?: string;
   dataInicio?: string;

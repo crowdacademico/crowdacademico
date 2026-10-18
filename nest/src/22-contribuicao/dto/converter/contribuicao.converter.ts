@@ -47,6 +47,7 @@ export class ContribuicaoConverter {
       cartao: cobranca.linkPagamento
         ? { linkPagamento: cobranca.linkPagamento }
         : undefined,
+      boleto: cobranca.boleto ? { ...cobranca.boleto } : undefined,
     };
   }
 }

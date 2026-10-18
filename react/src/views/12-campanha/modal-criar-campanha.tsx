@@ -20,7 +20,9 @@ import { contarCaracteres } from '../../services/constant/util/validacao.util';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
 import { EtapaRevisaoCampanha } from './etapa-revisao-campanha';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
-import type { CampanhaRequestCreate, CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
+import type { CampanhaRequestCreate, CampanhaResponse, ModeloCampanha } from '../../services/12-campanha/type/campanha.type';
+import { ROTULO_MODELO_CAMPANHA } from '../../services/12-campanha/constants/status-campanha.constants';
+import { Tooltip } from '../../components/layout/tooltip';
 
 interface ModalCriarCampanhaProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
@@ -44,6 +46,7 @@ interface ModalCriarCampanhaProps {
 interface FormDadosCampanha {
   titulo: string;
   idAreaConhecimento: string;
+  modelo: ModeloCampanha;
   metaFinanceira: string;
   descricao: string;
   dataInicio: string;
@@ -54,12 +57,18 @@ interface FormDadosCampanha {
 const FORM_VAZIO: FormDadosCampanha = {
   titulo: '',
   idAreaConhecimento: '',
+  modelo: 'all-or-nothing',
   metaFinanceira: '',
   descricao: '',
   dataInicio: '',
   dataFim: '',
   videoApresentacaoUrl: '',
 };
+
+const EXPLICACAO_MODELO =
+  'Tudo ou nada: o pesquisador só recebe se a meta for batida até o fim do prazo; senão, todo o dinheiro volta para quem apoiou. ' +
+  'Flexível: o pesquisador recebe o que for arrecadado, mesmo sem bater a meta. Cartão de crédito só no flexível. ' +
+  'Dá para trocar até a aprovação.';
 
 type Etapa = 'dados' | 'orcamento' | 'cronograma' | 'revisao';
 
@@ -115,6 +124,7 @@ export function ModalCriarCampanha({
         const salvo: FormDadosCampanha = {
           titulo: campanha.titulo,
           idAreaConhecimento: String(campanha.idAreaConhecimento),
+          modelo: campanha.modelo,
           metaFinanceira: String(campanha.metaFinanceira),
           descricao: campanha.descricao ?? '',
           dataInicio: campanha.dataInicio ? dataLocal(campanha.dataInicio) : '',
@@ -151,6 +161,7 @@ export function ModalCriarCampanha({
   const corpo = (): CampanhaRequestCreate => ({
     titulo: form.titulo.trim(),
     idAreaConhecimento: Number(form.idAreaConhecimento),
+    modelo: form.modelo,
     metaFinanceira: Number(form.metaFinanceira),
     dataInicio: inicioDoDia(form.dataInicio),
     dataFim: fimDoDia(form.dataFim),
@@ -345,6 +356,29 @@ export function ModalCriarCampanha({
                   onChange={(evento) => setForm({ ...form, metaFinanceira: evento.target.value })}
                   className={'input-padrao' + classeErro}
                 />
+              )}
+            </Campo>
+            <Campo
+              rotulo={
+                <>
+                  Modelo de financiamento <Tooltip texto={EXPLICACAO_MODELO} />
+                </>
+              }
+              className="sm:col-span-2"
+            >
+              {({ atributos }) => (
+                <select
+                  {...atributos}
+                  value={form.modelo}
+                  onChange={(evento) => setForm({ ...form, modelo: evento.target.value as ModeloCampanha })}
+                  className="input-padrao"
+                >
+                  {(Object.keys(ROTULO_MODELO_CAMPANHA) as ModeloCampanha[]).map((modelo) => (
+                    <option key={modelo} value={modelo}>
+                      {ROTULO_MODELO_CAMPANHA[modelo]}
+                    </option>
+                  ))}
+                </select>
               )}
             </Campo>
             <Campo rotulo="Descrição (opcional)" className="sm:col-span-2" erro={erroDe('descricao')}>

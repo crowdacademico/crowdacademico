@@ -1449,8 +1449,8 @@ $$ LANGUAGE plpgsql;
 -- Função:    fn_valida_repasse_all_or_nothing()
 -- Bloco:     [05-K-2]
 -- Regra:     Impede repasse com valor em campanha all-or-nothing sem meta atingida. Roda também em UPDATE: um INSERT com
---            valor_liquido = 0 (permitido, RF-038) seguido de UPDATE para o valor cheio furaria a regra, já que
---            pol_repasse_update é USING(true) de propósito.
+--            valor_liquido = 0 (permitido, RF-038) seguido de UPDATE para o valor cheio (feito por função SECURITY DEFINER)
+--            furaria a regra.
 DROP TRIGGER IF EXISTS trg_valida_repasse ON repasse;
 CREATE TRIGGER trg_valida_repasse
 BEFORE INSERT OR UPDATE ON repasse
@@ -2268,12 +2268,30 @@ WHEN (NEW.status IS DISTINCT FROM OLD.status)
 EXECUTE FUNCTION fn_carimba_envio_aprovacao();
 
 -- ----------------------------------------------------------------------------
+-- Função:     liquido_repasse
+-- Assinatura: (p_bruto DECIMAL, p_liquido_percentual DECIMAL) -> DECIMAL
+-- Bloco:      [05-K-2]
+-- Regra:      O valor que o pesquisador recebe num repasse. A taxa da plataforma é a percentual (p_liquido_percentual já
+--             vem com ela descontada, contribuição por contribuição), mas nunca menos que taxa_minima_repasse: a tarifa
+--             que o provedor cobra para fazer a transferência Pix é paga pela plataforma, que nunca fica no prejuízo.
+--             Nunca negativo. Usada em todo lugar que calcula valor_liquido de repasse.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.liquido_repasse(p_bruto DECIMAL, p_liquido_percentual DECIMAL)
+RETURNS DECIMAL
+LANGUAGE sql
+STABLE
+SET search_path = public
+AS $$
+    SELECT GREATEST(LEAST(p_liquido_percentual, p_bruto - public.config_numero('taxa_minima_repasse', 2.00)), 0)::DECIMAL(10,2);
+$$;
+
+-- ----------------------------------------------------------------------------
 -- Função:     criar_repasse_campanha
 -- Assinatura: (p_id_campanha INT, p_meta_atingida BOOLEAN) -> INT
 -- Bloco:      [05-K-2]
 -- Regra:      Cria UM repasse com as contribuições 'confirmado' da campanha que ainda não estão em repasse nenhum
---             (valor_bruto = soma; taxa_relativa = a da campanha, ou a padrão; valor_liquido = soma dos líquidos por
---             contribuição, a mesma conta do estorno) e liga cada uma a ele (contribuicao.id_repasse). Sem contribuição
+--             (valor_bruto = soma; taxa_relativa = a da campanha, ou a padrão; valor_liquido = liquido_repasse() sobre a
+--             soma dos líquidos por contribuição) e liga cada uma a ele (contribuicao.id_repasse). Sem contribuição
 --             confirmada, não cria nada e devolve NULL. Quem transfere é o worker de repasse. Usada no fechamento pelo
 --             prazo e no encerramento antes do prazo aprovado pelo admin.
 -- ----------------------------------------------------------------------------
@@ -2303,6 +2321,7 @@ BEGIN
     IF v_bruto <= 0 THEN
         RETURN NULL;
     END IF;
+    v_liquido := public.liquido_repasse(v_bruto, v_liquido);
 
     INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, taxa_relativa, status)
     VALUES (p_id_campanha, v_bruto, v_liquido, p_meta_atingida, v_taxa, 'pendente')
@@ -3115,7 +3134,8 @@ EXECUTE FUNCTION fn_valida_contribuicao_campanha_ativa();
 -- Regra:      R$5,00 não é piso do gateway (o PIX não impõe mínimo), é política de negócio da plataforma (RF-056). O limite
 --             técnico (`valor > 0`) mora na CHECK CK_CONTRIBUICAO_VALOR_MINIMO (01); esta trigger aplica o mínimo de negócio,
 --             configurável, via configuracoes.valor_minimo_contribuicao. No cartão, também: desligado pelo admin
---             (cartao_habilitado, 91052) e faixa própria (valor_minimo/maximo_contribuicao_cartao, 90037/90038).
+--             (cartao_habilitado, 91052) e faixa própria (valor_minimo/maximo_contribuicao_cartao, 90037/90038). O boleto
+--             nasce desligado (boleto_habilitado, 91053). Cartão e boleto só em campanha flexível: validar_contribuicao_all_or_nothing.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_valida_contribuicao_valor_minimo()
 RETURNS TRIGGER AS $$
@@ -3147,6 +3167,10 @@ BEGIN
         END IF;
     END IF;
 
+    IF NEW.meio_pagamento = 'boleto' AND NOT public.config_booleano('boleto_habilitado', FALSE) THEN
+        RAISE EXCEPTION 'Pagamento com boleto está desligado no momento. Use o Pix.' USING ERRCODE = '91053';
+    END IF;
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -3175,7 +3199,7 @@ EXECUTE FUNCTION fn_valida_contribuicao_valor_minimo();
 --             100 + tarifa. Grava em taxa_pagamento a tarifa vigente no momento do apoio (configuracoes.taxa_pagamento_pix);
 --             o que vier no INSERT é ignorado. A tarifa não entra no arrecadado, no repasse nem na devolução (o tudo-ou-nada
 --             devolve só `valor`), então a plataforma nunca paga a tarifa do provedor. Cartão: estimada pelos parâmetros
---             taxa_cartao_percentual e taxa_cartao_fixa. Meio sem fluxo (boleto) fica 0.
+--             taxa_cartao_percentual e taxa_cartao_fixa. Boleto: fixa, configuracoes.taxa_pagamento_boleto. Meio sem fluxo fica 0.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_contribuicao_define_taxa_pagamento()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -3184,6 +3208,7 @@ BEGIN
     -- arredondado para cima: o líquido nunca fica abaixo do valor da contribuição.
     NEW.taxa_pagamento := CASE NEW.meio_pagamento
         WHEN 'pix' THEN public.config_numero('taxa_pagamento_pix', 1.99)
+        WHEN 'boleto' THEN public.config_numero('taxa_pagamento_boleto', 1.99)
         WHEN 'cartao_credito' THEN
             CEIL((NEW.valor + public.config_numero('taxa_cartao_fixa', 0.49))
                  / (1 - public.config_numero('taxa_cartao_percentual', 1.99) / 100) * 100) / 100 - NEW.valor
@@ -3203,8 +3228,8 @@ EXECUTE FUNCTION public.fn_contribuicao_define_taxa_pagamento();
 -- Assinatura: (p_id_contribuicao INT, p_tarifa DECIMAL) -> VOID
 -- Bloco:      [05-K-2]
 -- Regra:      O provedor informou, ao criar a cobrança, a tarifa REAL (promoção, isenção ou tarifa nova) e ela é
---             diferente da estimada: grava a real na contribuição (ainda 'pendente'). No Pix a tarifa é fixa, então ela
---             também vira o padrão (configuracoes.taxa_pagamento_pix), para as próximas já nascerem certas; a mudança do
+--             diferente da estimada: grava a real na contribuição (ainda 'pendente'). No Pix e no boleto a tarifa é fixa,
+--             então ela também vira o padrão (taxa_pagamento_pix, taxa_pagamento_boleto), para as próximas já nascerem certas; a mudança do
 --             parâmetro fica no log de auditoria. No cartão (percentual + fixa) uma cobrança só não diz as duas partes:
 --             corrige a contribuição e deixa os parâmetros do cartão com o admin. Chamada pelo Nest no POST /contribuicao,
 --             com o número que o provedor devolveu; tarifa negativa ou maior que a própria contribuição é recusada (90036).
@@ -3230,9 +3255,10 @@ BEGIN
     END IF;
 
     UPDATE contribuicao SET taxa_pagamento = p_tarifa WHERE id_contribuicao = p_id_contribuicao;
-    IF v_meio = 'pix' THEN
+    IF v_meio IN ('pix', 'boleto') THEN
         UPDATE configuracoes SET valor = to_char(p_tarifa, 'FM999999990.00')
-        WHERE chave = 'taxa_pagamento_pix' AND id_usuario IS NULL AND valor::DECIMAL IS DISTINCT FROM p_tarifa;
+        WHERE chave = CASE v_meio WHEN 'pix' THEN 'taxa_pagamento_pix' ELSE 'taxa_pagamento_boleto' END
+          AND id_usuario IS NULL AND valor::DECIMAL IS DISTINCT FROM p_tarifa;
     END IF;
 END;
 $$;
@@ -3518,8 +3544,9 @@ BEGIN
     WHERE c.id_contribuicao = v_id_contribuicao
     FOR UPDATE;
 
-    -- Estorno total de uma contribuição que o tudo-ou-nada manda devolver é a própria devolução (ver cabeçalho).
-    IF p_novo_status = 'reembolsado' AND v_status = 'a_devolver' THEN
+    -- Estorno total de uma contribuição que o sistema manda devolver é a própria devolução (ver cabeçalho), inclusive
+    -- a que foi para reembolso manual e o provedor concluiu depois (boleto: quem apoiou preencheu os dados bancários).
+    IF p_novo_status = 'reembolsado' AND v_status IN ('a_devolver', 'reembolso_manual') THEN
         p_novo_status := 'devolvido';
     END IF;
 
@@ -3554,7 +3581,7 @@ BEGIN
 
             -- Cartão com dinheiro ainda não liberado não entra em repasse agora: criar_repasses_liberados cuida dele.
             IF v_destino = 'repasse' AND (v_meio = 'pix' OR p_dinheiro_liberado) THEN
-                v_liquido := ROUND(v_valor * (1 - v_taxa / 100), 2);
+                v_liquido := public.liquido_repasse(v_valor, ROUND(v_valor * (1 - v_taxa / 100), 2));
                 INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, taxa_relativa, status)
                 VALUES (v_id_campanha, v_valor, v_liquido, (SELECT ca.valor_bruto_arrecadado >= ca.meta_financeira FROM campanha ca WHERE ca.id_campanha = v_id_campanha), v_taxa, 'pendente')
                 RETURNING repasse.id_repasse INTO v_id_repasse;
@@ -3619,6 +3646,62 @@ AS $$
     UPDATE evento_pagamento
     SET erro_processamento = LEFT(p_erro, 2000)
     WHERE id_evento_pagamento = p_id_evento AND processado_em IS NULL AND revisao_manual_em IS NULL;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     eventos_para_reprocessar
+-- Assinatura: (p_provedor VARCHAR, p_limite INT DEFAULT 50) -> TABLE (id_evento_pagamento INT, tipo_evento VARCHAR,
+--             payload JSONB, vencido BOOLEAN)
+-- Bloco:      [05-K-2]
+-- Regra:      Os avisos do provedor que ficaram para "tentar de novo" (nem processados nem em revisão manual), para a
+--             conferência periódica reprocessar sozinha. O provedor não reentrega um aviso que já recebeu resposta 200;
+--             sem isto, o aviso que chegou antes da contribuição ser gravada (ou que não é do sistema) ficaria parado
+--             para sempre. Só entra o aviso com mais de webhook_reprocessar_espera_minutos (não disputa com o webhook
+--             que acabou de chegar). vencido = passou de webhook_reprocessar_horas sem encontrar a que pertence: o
+--             chamador o manda para revisão manual (mandar_evento_para_revisao) em vez de tentar de novo.
+--             SECURITY DEFINER, SEM AUTORIZAÇÃO DE PROPÓSITO (job de fundo, mesma categoria de listar_eventos_nao_processados).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.eventos_para_reprocessar(p_provedor VARCHAR, p_limite INT DEFAULT 50)
+RETURNS TABLE (id_evento_pagamento INT, tipo_evento VARCHAR, payload JSONB, vencido BOOLEAN)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT e.id_evento_pagamento, e.tipo_evento, e.payload,
+           e.recebido_em <= NOW() - public.config_numero('webhook_reprocessar_horas', 24) * INTERVAL '1 hour'
+    FROM evento_pagamento e
+    WHERE e.provedor = p_provedor
+      AND e.processado_em IS NULL
+      AND e.revisao_manual_em IS NULL
+      AND e.recebido_em <= NOW() - public.config_numero('webhook_reprocessar_espera_minutos', 5) * INTERVAL '1 minute'
+    ORDER BY e.recebido_em, e.id_evento_pagamento
+    LIMIT p_limite;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     mandar_evento_para_revisao
+-- Assinatura: (p_id_evento INT, p_motivo TEXT) -> BOOLEAN
+-- Bloco:      [05-K-2]
+-- Regra:      Tira da fila de "tentar de novo" um aviso que, depois de webhook_reprocessar_horas, continua sem
+--             pertencer a nada do sistema, e o põe em revisão manual com o motivo (ex.: dinheiro entrou sem
+--             contribuição; transferência que o sistema não pediu). Uma pessoa resolve no painel
+--             (resolver_revisao_pagamento, com observação). Só mexe em aviso ainda não processado e fora de revisão.
+--             Devolve se mudou. SEM AUTORIZAÇÃO DE PROPÓSITO (job de fundo).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.mandar_evento_para_revisao(p_id_evento INT, p_motivo TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    WITH alterado AS (
+        UPDATE evento_pagamento
+        SET revisao_manual_em = NOW(), erro_processamento = LEFT(p_motivo, 2000)
+        WHERE id_evento_pagamento = p_id_evento AND processado_em IS NULL AND revisao_manual_em IS NULL
+        RETURNING 1
+    )
+    SELECT EXISTS (SELECT 1 FROM alterado);
 $$;
 
 -- ----------------------------------------------------------------------------
@@ -3848,6 +3931,7 @@ BEGIN
                 INTO v_bruto, v_liq
                 FROM contribuicao c
                 WHERE c.id_repasse = v.id AND c.status = 'confirmado';
+                v_liq := public.liquido_repasse(v_bruto, v_liq);
 
                 IF v_liq <= 0 THEN
                     PERFORM public.falhar_repasse(v.id, 'Nenhuma contribuição do repasse continua confirmada (estornadas?).', FALSE);
@@ -4174,11 +4258,15 @@ $$;
 
 -- ----------------------------------------------------------------------------
 -- Função:     registrar_falha_estorno
--- Assinatura: (p_id INT, p_erro TEXT, p_recuperavel BOOLEAN, p_valor_liquido DECIMAL DEFAULT NULL) -> VARCHAR
+-- Assinatura: (p_id INT, p_erro TEXT, p_recuperavel BOOLEAN, p_valor_liquido DECIMAL DEFAULT NULL,
+--              p_aguardando BOOLEAN DEFAULT FALSE) -> VARCHAR
 -- Bloco:      [05-K-2]
--- Regra:      O estorno desta contribuição não deu certo agora. Conta a tentativa, grava UMA linha em auditoria_financeira
---             (status a_devolver -> a_devolver, evento 'estorno_falhou (tentativa N): <erro>', valor = o que seria
---             devolvido) e decide:
+-- Regra:      O estorno desta contribuição não terminou agora. Conta a tentativa, grava UMA linha em auditoria_financeira
+--             (status a_devolver -> a_devolver, valor = o que seria devolvido) com o evento
+--               'estorno_falhou (tentativa N): <erro>'        o provedor recusou ou deu erro;
+--               'estorno_aguardando_provedor (tentativa N)'   p_aguardando: o provedor aceitou o pedido e ainda não
+--                                                              devolveu (nada falhou; o próximo ciclo confere de novo).
+--             A espera também conta como tentativa: uma devolução que nunca termina acaba em reembolso manual. Decide:
 --               'reagendado'       falha recuperável (rede, saldo insuficiente: o saldo pode ser reposto) e ainda há
 --                                  tentativas: marca proxima_tentativa_estorno_em com espera crescente
 --                                  (estorno_backoff_base_minutos * 2^(tentativa-1), até estorno_backoff_max_minutos).
@@ -4192,8 +4280,9 @@ $$;
 --             de espera antes de desistir, tempo de repor saldo), 90 dias de prazo.
 --             SECURITY DEFINER, sem autorização (job de fundo).
 -- ----------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.registrar_falha_estorno(INT, TEXT, BOOLEAN, DECIMAL);
 CREATE OR REPLACE FUNCTION public.registrar_falha_estorno(
-    p_id INT, p_erro TEXT, p_recuperavel BOOLEAN, p_valor_liquido DECIMAL DEFAULT NULL
+    p_id INT, p_erro TEXT, p_recuperavel BOOLEAN, p_valor_liquido DECIMAL DEFAULT NULL, p_aguardando BOOLEAN DEFAULT FALSE
 )
 RETURNS VARCHAR
 LANGUAGE plpgsql
@@ -4233,7 +4322,10 @@ BEGIN
     )
     VALUES (
         p_id, public.id_usuario_atual(), COALESCE(p_valor_liquido, v_valor), v_meio, 'a_devolver', 'a_devolver',
-        LEFT('estorno_falhou (tentativa ' || v_tentativas || '): ' || COALESCE(p_erro, '(sem detalhe)'), 200)
+        CASE WHEN p_aguardando
+             THEN 'estorno_aguardando_provedor (tentativa ' || v_tentativas || ')'
+             ELSE LEFT('estorno_falhou (tentativa ' || v_tentativas || '): ' || COALESCE(p_erro, '(sem detalhe)'), 200)
+        END
     );
 
     IF v_desistir THEN
@@ -4663,7 +4755,7 @@ BEGIN
     LEFT JOIN LATERAL (
         SELECT a.evento FROM auditoria_financeira a
         WHERE a.id_contribuicao = c.id_contribuicao
-        ORDER BY a.id_auditoria DESC
+        ORDER BY (a.evento LIKE 'estorno_%') DESC, a.id_auditoria DESC
         LIMIT 1
     ) ult ON TRUE
     WHERE c.status = 'reembolso_manual'

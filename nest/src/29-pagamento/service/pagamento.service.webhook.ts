@@ -7,8 +7,11 @@ import {
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { GatewayPagamentoErro } from '../dto/erro-gateway-pagamento';
-import { EventoPagamentoDto } from '../dto/evento-pagamento.dto';
+import { GatewayPagamentoErro } from '../ports/erro-gateway-pagamento';
+import {
+  EventoPagamentoDto,
+  type TipoEventoPagamento,
+} from '../dto/evento-pagamento.dto';
 import {
   EventoPagamentoService,
   StatusAplicavelPorEvento,
@@ -109,6 +112,21 @@ export class PagamentoServiceWebhook {
     return { recebido: true };
   }
 
+  // Nova tentativa de um aviso guardado na caixa (chamada pela conferência periódica). O provedor não reentrega um
+  // aviso que já recebeu 200, então quem tenta de novo é o próprio sistema, pelo mesmo caminho do webhook.
+  async reprocessar(idEvento: number, payload: unknown): Promise<void> {
+    await this.processar(idEvento, this.verificador.extrairEvento(payload));
+  }
+
+  // O tipo de um aviso guardado, no vocabulário do sistema; undefined se o corpo não for um aviso que o adapter entende.
+  tipoDoAviso(payload: unknown): TipoEventoPagamento | undefined {
+    try {
+      return this.verificador.extrairEvento(payload).tipoEvento;
+    } catch {
+      return undefined;
+    }
+  }
+
   private async processar(
     idEvento: number,
     evento: EventoPagamentoDto,
@@ -163,7 +181,7 @@ export class PagamentoServiceWebhook {
       );
     } else if (resultado === 'contribuicao_nao_encontrada') {
       this.logger.warn(
-        `Evento ${idEvento}: nenhuma contribuição para a cobrança ${evento.idCobranca ?? '?'}; fica na fila para reentrega.`,
+        `Evento ${idEvento}: nenhuma contribuição para a cobrança ${evento.idCobranca ?? '?'}; a conferência tenta de novo.`,
       );
     }
   }
@@ -223,7 +241,7 @@ export class PagamentoServiceWebhook {
       );
     } else if (resultado === 'repasse_nao_encontrado') {
       this.logger.warn(
-        `Evento ${idEvento}: nenhum repasse para a transferência ${evento.idTransferencia}; fica na fila para reentrega.`,
+        `Evento ${idEvento}: nenhum repasse para a transferência ${evento.idTransferencia}; a conferência tenta de novo.`,
       );
     }
   }

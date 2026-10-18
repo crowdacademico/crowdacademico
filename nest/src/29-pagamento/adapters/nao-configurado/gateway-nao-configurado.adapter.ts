@@ -1,5 +1,5 @@
 import { AutorizacaoSaqueDto } from '../../dto/autorizacao-saque.dto';
-import { GatewayPagamentoErro } from '../../dto/erro-gateway-pagamento';
+import { GatewayPagamentoErro } from '../../ports/erro-gateway-pagamento';
 import { EventoPagamentoDto } from '../../dto/evento-pagamento.dto';
 import {
   ResultadoCobranca,

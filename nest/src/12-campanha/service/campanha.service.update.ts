@@ -19,6 +19,7 @@ export class CampanhaServiceUpdate {
       ...(dto.idAreaConhecimento !== undefined
         ? { id_area_conhecimento: dto.idAreaConhecimento }
         : {}),
+      ...(dto.modelo !== undefined ? { modelo: dto.modelo } : {}),
       ...(dto.metaFinanceira !== undefined
         ? { meta_financeira: dto.metaFinanceira.toString() }
         : {}),

@@ -15,7 +15,7 @@ import { CODIGO_TERMO_PENDENTE } from '../../3-auth/guards/auth.guard.require-au
 import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
 import { PG_POOL } from '../../commons/database/database.constants';
 import { executarTransacaoCurta } from '../../commons/database/transacao-curta.util';
-import { GatewayPagamentoErro } from '../../29-pagamento/dto/erro-gateway-pagamento';
+import { GatewayPagamentoErro } from '../../29-pagamento/ports/erro-gateway-pagamento';
 import { ResultadoCobranca } from '../../29-pagamento/dto/resultado-cobranca.dto';
 import {
   COBRANCA_GATEWAY,
@@ -41,6 +41,7 @@ interface LinhaCampanha {
   data_fim: Date | null;
   // numeric volta do pg como string; ausente/ilegível cai no padrão (ver calcularExpiracaoPix).
   pix_validade_horas?: string | number | null;
+  boleto_vencimento_dias?: string | number | null;
 }
 
 // POST /contribuicao. A rota é @SemTransacaoGlobal() (ver sem-transacao-global.decorator.ts): chamar o gateway de
@@ -93,7 +94,7 @@ export class ContribuicaoServiceCreate {
       { idUsuario, tokenSessao },
       async (client) => {
         const resCampanha = await client.query<LinhaCampanha>(
-          "SELECT titulo, data_fim, public.config_numero('pix_validade_horas', 24) AS pix_validade_horas FROM campanha WHERE id_campanha = $1",
+          "SELECT titulo, data_fim, public.config_numero('pix_validade_horas', 24) AS pix_validade_horas, public.config_numero('boleto_vencimento_dias', 3) AS boleto_vencimento_dias FROM campanha WHERE id_campanha = $1",
           [dto.idCampanha],
         );
         // Campanha que a RLS esconde é indistinguível de campanha inexistente (de propósito).
@@ -133,9 +134,12 @@ export class ContribuicaoServiceCreate {
         valor: valorCobrado(contribuicao),
         tarifaEstimada: Number(contribuicao.taxa_pagamento),
         meioPagamento: dto.meioPagamento,
+        // Boleto vence em dias (boleto_vencimento_dias); Pix e cartão, em horas (pix_validade_horas). Nunca depois do fim.
         expiraEm: calcularExpiracaoPix(
           campanha.data_fim,
-          Number(campanha.pix_validade_horas),
+          dto.meioPagamento === 'boleto'
+            ? Number(campanha.boleto_vencimento_dias) * 24
+            : Number(campanha.pix_validade_horas),
         ),
         descricao: `Contribuição para: ${campanha.titulo}`.slice(0, 140),
       });

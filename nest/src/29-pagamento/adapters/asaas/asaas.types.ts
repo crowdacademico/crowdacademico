@@ -29,9 +29,23 @@ export interface AsaasPayment {
   dueDate?: string;
   // Página segura do Asaas onde quem apoia paga (cartão).
   invoiceUrl?: string | null;
+  // PDF do boleto.
+  bankSlipUrl?: string | null;
   externalReference?: string | null;
   deleted?: boolean;
   refunds?: AsaasRefund[] | null;
+}
+
+// GET /payments/{id}/identificationField (boleto).
+export interface AsaasLinhaDigitavel {
+  identificationField: string;
+  nossoNumero?: string;
+  barCode?: string;
+}
+
+// POST /payments/{id}/bankSlip/refund: o Asaas não sabe para onde devolver um boleto; quem pagou informa a conta neste link.
+export interface AsaasDevolucaoBoleto {
+  requestUrl: string;
 }
 
 export interface AsaasPixQrCode {

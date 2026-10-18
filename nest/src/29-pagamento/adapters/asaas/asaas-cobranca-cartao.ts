@@ -1,4 +1,4 @@
-import { GatewayPagamentoErro } from '../../dto/erro-gateway-pagamento';
+import { GatewayPagamentoErro } from '../../ports/erro-gateway-pagamento';
 import { type AsaasPayment } from './asaas.types';
 
 // O que é só do cartão de crédito na cobrança do Asaas. A cobrança é criada SEM dados de cartão: quem apoia paga na

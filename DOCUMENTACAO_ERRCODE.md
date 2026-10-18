@@ -60,6 +60,11 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90031 | `fn_valida_soma_pesos_score_config` | `score_config` | Dimensão ativa precisa de pelo menos um item ativo com peso maior que zero (03-10-2026) |
 | 90032 | `contestar_denuncia` | `denuncia` | Contestação sem texto (03-10-2026) |
 | 90033 | `decidir_contestacao` | `denuncia` | Decidir contestação sem justificativa (03-10-2026) |
+| 90034 | `resolver_revisao_pagamento`, `concluir_reembolso_manual` | `evento_pagamento`, `contribuicao` | Toda ação manual sobre pagamento exige uma observação escrita do que foi feito (17-10-2026) |
+| 90035 | `listar_revisoes_pagamento`, `concluir_reembolso_manual` | `evento_pagamento`, `contribuicao` | Filtro de situação inválido, ou valor devolvido à mão igual a zero ou acima do valor da contribuição (17-10-2026) |
+| 90036 | `ajustar_tarifa_pagamento` | `contribuicao` | Tarifa real informada pelo provedor fora do esperado (negativa ou absurda): o ajuste automático não é feito (17-10-2026) |
+| 90037 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | No cartão, a contribuição está abaixo do mínimo (`valor_minimo_contribuicao_cartao`) (17-10-2026) |
+| 90038 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | No cartão, a contribuição está acima do máximo (`valor_maximo_contribuicao_cartao`): para mais, o Pix (17-10-2026) |
 
 ## 91xxx - Conflito de estado/regra de negócio (409)
 
@@ -103,7 +108,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91036 | `encerrar_campanha_por_denuncia` | `denuncia` | A denúncia não é contra uma campanha (03-10-2026) |
 | 91037 | `encerrar_campanha_por_denuncia` | `campanha` | Só campanha ativa pode ser encerrada por moderação (03-10-2026) |
 | 91038 | `fn_valida_solicitacao_encerramento`, `encerrar_campanha_sem_contribuicao` | `solicitacao_encerramento` | Só campanha ativa pode ser encerrada antecipadamente (RF-064, 03-10-2026) |
-| 91040 | `encerrar_campanha_sem_contribuicao` | `campanha` | Campanha com contribuição confirmada: precisa de pedido ao administrador (RF-064, 03-10-2026) |
+| 91039 | `fn_valida_transicao_status_repasse`, `aplicar_evento_repasse` | `repasse` | Mudança de situação do repasse fora da máquina de estados (ex.: mexer num repasse já concluído) (17-10-2026) |
 | 91041 | `fn_valida_transicao_solicitacao`, `decidir_solicitacao_encerramento` | `solicitacao_encerramento` | Só um pedido pendente muda de situação (03-10-2026) |
 | 91042 | `decidir_solicitacao_encerramento` | `campanha` | A campanha já não está ativa: o pedido não pode ser aprovado (03-10-2026) |
 | 91043 | `encerrar_campanha_sem_contribuicao` | `contribuicao` | Há Pix pendente ainda válido: espere ou envie pedido ao administrador (03-10-2026) |
@@ -112,6 +117,11 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91046 | `contestar_denuncia` | `denuncia` | O pesquisador já tem uma contestação esperando análise (03-10-2026) |
 | 91047 | `decidir_contestacao` | `denuncia` | Só contestação esperando análise se decide (03-10-2026) |
 | 91048 | `fn_valida_contestacao_pendente` | `denuncia` | Com contestação esperando, a situação da denúncia só muda pela decisão dela (03-10-2026) |
+| 91049 | `resolver_revisao_pagamento`, `concluir_reembolso_manual`, `reenfileirar_repasse` | `evento_pagamento`, `contribuicao`, `repasse` | A ação manual só vale para o item na situação certa: evento em revisão manual, contribuição em reembolso manual, repasse em erro (17-10-2026) |
+| 91050 | `fn_valida_transicao_status_contribuicao` | `contribuicao` | Mudança de situação da contribuição fora da máquina de estados (ex.: sair de "devolvido") (17-10-2026) |
+| 91051 | `fn_valida_solicitacao_encerramento` | `solicitacao_encerramento` | Pedido de "Encerrar antes do prazo" de campanha tudo-ou-nada que ainda não bateu a meta: o caminho é "Cancelar o projeto", que devolve o dinheiro (17-10-2026) |
+| 91052 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | Pagamento com cartão desligado pelo administrador (`cartao_habilitado`) (17-10-2026) |
+| 91053 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | Pagamento com boleto desligado (`boleto_habilitado`, desligado por padrão) (18-10-2026) |
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
 
@@ -152,6 +162,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92034 | `contestar_denuncia` | `denuncia` | Só o pesquisador penalizado pela denúncia a contesta (03-10-2026) |
 | 92035 | `decidir_contestacao` | `denuncia` | Sem permissão (`denuncia_responder`) para decidir contestação (03-10-2026) |
 | 92036 | `decidir_contestacao` | `denuncia` | Quem julgou a denúncia não decide a contestação contra a própria decisão (10-10-2026) |
+| 92037 | `listar_revisoes_pagamento`, `resolver_revisao_pagamento`, `listar_reembolsos_manuais`, `concluir_reembolso_manual`, `listar_repasses_atencao`, `reenfileirar_repasse` | `evento_pagamento`, `contribuicao`, `repasse` | Sem permissão para ver ou resolver as pendências de pagamento (17-10-2026) |
 
 ## 93xxx - Limite de taxa (429)
 

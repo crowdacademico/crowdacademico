@@ -16,7 +16,7 @@ import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 
 type Chamar = <T>(caminho: string, opcoes?: RequestInit) => Promise<T>;
-type MeioContribuicao = 'pix' | 'cartao_credito';
+type MeioContribuicao = 'pix' | 'cartao_credito' | 'boleto';
 
 // Campanha que aceita apoio agora: publicada, já começou e o prazo não acabou.
 function aceitaApoio(campanha: CampanhaResponse): boolean {
@@ -30,9 +30,9 @@ interface ModalGerarPixProps {
   aoGerado: () => void;
 }
 
-// Contribuir como a conta logada, pela rota de verdade (POST /contribuicao), com Pix ou cartão. Mostra o que a pessoa
-// veria: o valor, a tarifa paga por cima, e o código Pix ou o link da página segura do cartão. Cartão só aparece para
-// campanha flexível (o banco recusa nas outras).
+// Contribuir como a conta logada, pela rota de verdade (POST /contribuicao), com Pix, cartão ou boleto. Mostra o que a
+// pessoa veria: o valor, a tarifa paga por cima, e o código Pix, o link da página segura do cartão ou o boleto. Cartão e
+// boleto só aparecem para campanha flexível (o banco recusa nas outras); o boleto nasce desligado (parâmetro).
 export function ModalGerarPix({ authFetch, chamar, aoFechar, aoGerado }: ModalGerarPixProps) {
   const [campanhas, setCampanhas] = useState<CampanhaResponse[] | null>(null);
   const [idCampanha, setIdCampanha] = useState('');
@@ -56,15 +56,15 @@ export function ModalGerarPix({ authFetch, chamar, aoFechar, aoGerado }: ModalGe
       aoGerado();
     });
 
-  const copiar = async (texto: string) => {
+  const copiar = async (texto: string, oQue = 'Código Pix') => {
     await navigator.clipboard.writeText(texto);
-    mostrar('Código Pix copiado.');
+    mostrar(`${oQue} copiado.`);
   };
 
   return (
     <ModalFicha
       titulo={gerada ? `Contribuição #${gerada.idContribuicao}` : 'Contribuir'}
-      ajuda="Contribui como a conta logada, pela rota de verdade. A tarifa do provedor é paga por quem apoia, por cima do valor. Cartão: só em campanha flexível, de R$ 20 a R$ 500 (parâmetros)."
+      ajuda="Contribui como a conta logada, pela rota de verdade. A tarifa do provedor é paga por quem apoia, por cima do valor. Cartão: só em campanha flexível, de R$ 20 a R$ 500 (parâmetros). Boleto: só em campanha flexível e desligado até ser ligado em Parâmetros (boleto_habilitado)."
       aoFechar={aoFechar}
       erro={erro}
       carregando={campanhas === null}
@@ -106,6 +106,35 @@ export function ModalGerarPix({ authFetch, chamar, aoFechar, aoGerado }: ModalGe
               }
             />
           )}
+          {gerada.boleto && (
+            <>
+              <CampoFicha
+                rotulo="Linha digitável"
+                largura="cheia"
+                valor={
+                  <span className="flex items-start gap-2">
+                    <code className="break-all">{gerada.boleto.linhaDigitavel}</code>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-pequeno shrink-0"
+                      onClick={() => void copiar(gerada.boleto?.linhaDigitavel ?? '', 'Linha digitável')}
+                    >
+                      <i className="fa-solid fa-copy" aria-hidden="true"></i> Copiar
+                    </button>
+                  </span>
+                }
+              />
+              <CampoFicha rotulo="Vence em" valor={new Date(gerada.boleto.venceEm).toLocaleDateString('pt-BR')} />
+              <CampoFicha
+                rotulo="Boleto"
+                valor={
+                  <a href={gerada.boleto.link} target="_blank" rel="noreferrer" className="btn btn-secondary btn-pequeno">
+                    <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Abrir o boleto
+                  </a>
+                }
+              />
+            </>
+          )}
         </SecaoFicha>
       ) : (
         <SecaoFicha titulo="Contribuição" colunas={1}>
@@ -126,6 +155,7 @@ export function ModalGerarPix({ authFetch, chamar, aoFechar, aoGerado }: ModalGe
               <select {...atributos} value={meio} onChange={(evento) => setMeio(evento.target.value as MeioContribuicao)} className={'input-padrao' + classeErro}>
                 <option value="pix">Pix</option>
                 <option value="cartao_credito">Cartão de crédito (só campanha flexível)</option>
+                <option value="boleto">Boleto (só campanha flexível)</option>
               </select>
             )}
           </Campo>

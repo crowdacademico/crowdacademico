@@ -590,6 +590,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- prazo_minimo_campanha_dias e os limites de negócio (campanhas simultâneas, endossos, denúncias/24h) são lidos
 -- pelas triggers de 05 (ver as funções correspondentes); mudar a política é um UPDATE numa linha.
 (NULL, 'taxa_plataforma_padrao',     '5.00',  'decimal',  'Taxa padrão cobrada pela plataforma (%)',              TRUE, TRUE),
+(NULL, 'taxa_minima_repasse',        '2.00',  'decimal',  'Menor taxa da plataforma num repasse, em R$: cobre a tarifa do provedor pela transferência Pix ao pesquisador', TRUE, TRUE),
 -- Lida por expirar_contribuicoes_pendentes() e encerrar_campanhas_vencidas() (05, [05-K-2]): o Pix pendente vence
 -- depois disto, e a campanha vencida espera os pendentes ainda válidos antes de sair o resultado.
 (NULL, 'pix_validade_horas',         '24',    'inteiro',  'Horas que um Pix gerado pode ser pago; depois disso a contribuição pendente vence', TRUE, TRUE),
@@ -663,6 +664,9 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'taxa_cartao_fixa',                 '0.49',  'decimal',  'Parte fixa da tarifa do provedor no cartão, em R$, paga por quem apoia (estimativa; a real vem do provedor)', TRUE, TRUE),
 (NULL, 'cartao_dias_liberacao',            '30',    'inteiro',  'Dias, contados do pagamento, até o provedor liberar o dinheiro do cartão (previsão mostrada ao pesquisador)', TRUE, FALSE),
 (NULL, 'taxa_pagamento_pix',         '1.99',  'decimal',  'Tarifa do provedor por Pix recebido, em R$, paga por quem apoia além do valor da contribuição', TRUE, TRUE),
+(NULL, 'boleto_habilitado',          'false', 'booleano', 'Aceitar contribuição com boleto (só em campanha flexível)', TRUE, TRUE),
+(NULL, 'taxa_pagamento_boleto',      '1.99',  'decimal',  'Tarifa do provedor por boleto pago, em R$, paga por quem apoia além do valor da contribuição (estimativa; a real vem do provedor)', TRUE, TRUE),
+(NULL, 'boleto_vencimento_dias',     '3',     'inteiro',  'Dias, contados da contribuição, até o vencimento do boleto', TRUE, TRUE),
 -- Workers de pagamento (29-pagamento no Nest; funções em 05, [05-K-2]): repasse ao pesquisador, devolução do
 -- tudo-ou-nada e reconciliação com o provedor.
 (NULL, 'repasse_lease_minutos',                  '10',   'inteiro', 'Minutos que um repasse fica reservado para um worker antes de outro poder tentar',          TRUE, FALSE),
@@ -676,6 +680,8 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'reconciliacao_limite_minutos',           '30',   'inteiro', 'Minutos que uma contribuição pendente espera o aviso do provedor antes de ser reconsultada', TRUE, FALSE),
 (NULL, 'reconciliacao_intervalo_minutos',        '60',   'inteiro', 'Minutos entre duas reconsultas da mesma contribuição pendente',                             TRUE, FALSE),
 (NULL, 'reconciliacao_orfa_minutos',             '60',   'inteiro', 'Minutos até uma contribuição pendente que nunca ganhou cobrança no provedor ser dada como erro', TRUE, FALSE),
+(NULL, 'webhook_reprocessar_espera_minutos',     '5',    'inteiro', 'Minutos que um aviso do provedor não aplicado espera antes de a conferência tentar de novo',   TRUE, FALSE),
+(NULL, 'webhook_reprocessar_horas',              '24',   'inteiro', 'Horas tentando de novo um aviso do provedor sem correspondência antes de mandá-lo para revisão manual', TRUE, FALSE),
 (NULL, 'cancelamento_cobranca_intervalo_minutos','15',   'inteiro', 'Minutos entre tentativas de cancelar no provedor a cobrança de uma contribuição que venceu ou deu erro', TRUE, FALSE),
 -- I
 -- score_minimo_campanha: o score NUNCA bloqueia a criação de campanha (nem Catarse nem Experiment fazem isso; o
@@ -1345,7 +1351,7 @@ INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status
 
 (2, 14,  8000.00, 'pix',            'repassado', FALSE, 'TXN-PIX-0017', '2024-03-10 10:00:00'),
 (2, 15,  7000.00, 'pix', 'repassado', FALSE, 'TXN-CC-0018',  '2024-03-15 11:00:00'), -- (*) era cartao_credito: acima do teto do cartão (R$ 500)
-(2, 17,  6000.00, 'boleto',         'repassado', FALSE, 'TXN-BOL-0019', '2024-03-20 09:00:00'),
+(2, 17,  6000.00, 'pix',            'repassado', FALSE, 'TXN-BOL-0019', '2024-03-20 09:00:00'), -- (*) era boleto: o boleto nasce desligado (boleto_habilitado)
 (2, 23,  3925.00, 'pix',            'repassado', FALSE, 'TXN-PIX-0020', '2024-03-25 10:00:00'),
 (2, 11, 2000.00, 'cartao_debito',  'repassado', FALSE, 'TXN-CD-0021',  '2024-04-01 14:00:00'),
 
@@ -1365,7 +1371,7 @@ INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status
 
 (5, 12, 8000.00, 'pix',            'repassado', FALSE, 'TXN-PIX-0029', '2024-04-15 10:00:00'),
 (5, 17, 6000.00, 'pix', 'repassado', FALSE, 'TXN-CC-0030',  '2024-04-18 11:00:00'), -- (*) era cartao_credito: acima do teto do cartão (R$ 500)
-(5, 18, 3000.00, 'boleto',         'repassado', FALSE, 'TXN-BOL-0031', '2024-04-22 09:00:00'),
+(5, 18, 3000.00, 'pix',            'repassado', FALSE, 'TXN-BOL-0031', '2024-04-22 09:00:00'), -- (*) era boleto: o boleto nasce desligado (boleto_habilitado)
 (5, 23, 2650.00, 'cartao_debito',  'repassado', FALSE, 'TXN-CD-0032',  '2024-04-25 10:00:00'),
 
 (7, 12, 15000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0033', '2024-05-15 10:00:00'),
@@ -1382,7 +1388,7 @@ INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status
 
 (9, 16, 8000.00,  'pix',            'confirmado', FALSE, 'TXN-PIX-0041', '2024-06-05 10:00:00'),
 (9, 17, 6000.00,  'pix', 'confirmado', FALSE, 'TXN-CC-0042',  '2024-06-10 11:00:00'), -- (*) era cartao_credito: acima do teto do cartão (R$ 500)
-(9, 18, 4000.00,  'boleto',         'confirmado', FALSE, 'TXN-BOL-0043', '2024-06-15 09:00:00'),
+(9, 18, 4000.00,  'pix',            'confirmado', FALSE, 'TXN-BOL-0043', '2024-06-15 09:00:00'), -- (*) era boleto: o boleto nasce desligado (boleto_habilitado)
 (9, 23, 3000.00,  'cartao_debito',  'confirmado', FALSE, 'TXN-CD-0044',  '2024-06-20 10:00:00'),
 
 -- Campanha 10 ('ativo', em andamento): 'confirmado', ainda não há repasse porque

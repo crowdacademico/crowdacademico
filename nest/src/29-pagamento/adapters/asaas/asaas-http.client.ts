@@ -1,4 +1,4 @@
-import { GatewayPagamentoErro } from '../../dto/erro-gateway-pagamento';
+import { GatewayPagamentoErro } from '../../ports/erro-gateway-pagamento';
 import { type ConfiguracaoAsaas } from './asaas.config';
 import { type AsaasErroCorpo } from './asaas.types';
 

@@ -27,11 +27,10 @@ export class CampanhaRequestCreate {
   @IsInt()
   idAreaConhecimento: number;
 
-  // Só 'all-or-nothing' por enquanto: o V7 promete o modelo flexível, mas as regras dele (repasse independente
-  // da meta, aviso ao doador, encerramento) dependem do módulo de pagamento e do checkout. Aceitar 'flexivel'
-  // hoje criaria campanha sem nenhuma dessas proteções.
+  // Tudo-ou-nada (padrão do banco) ou flexível. O destino do dinheiro de cada um no fim da campanha está em
+  // destino_dinheiro_campanha (05); o cartão de crédito só é aceito no flexível.
   @IsOptional()
-  @IsIn(['all-or-nothing'])
+  @IsIn(['all-or-nothing', 'flexivel'])
   modelo?: ModeloCampanha;
 
   @IsNumber({ maxDecimalPlaces: 2 })

@@ -11,6 +11,14 @@ export class ContribuicaoCartaoResponse {
   linkPagamento: string;
 }
 
+export class ContribuicaoBoletoResponse {
+  // Página do provedor com o boleto para imprimir ou baixar.
+  link: string;
+  // Os números do boleto, para pagar pelo aplicativo do banco.
+  linhaDigitavel: string;
+  venceEm: Date;
+}
+
 export class ContribuicaoResponseCreate {
   idContribuicao: number;
   // Quem contribuiu SEM conta acompanha a contribuição por este token (não pelo id sequencial): é o que impede
@@ -31,4 +39,6 @@ export class ContribuicaoResponseCreate {
   pix?: ContribuicaoPixResponse;
   // Só em contribuição com cartão.
   cartao?: ContribuicaoCartaoResponse;
+  // Só em contribuição com boleto.
+  boleto?: ContribuicaoBoletoResponse;
 }

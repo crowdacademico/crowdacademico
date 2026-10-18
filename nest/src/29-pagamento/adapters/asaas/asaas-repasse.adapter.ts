@@ -1,4 +1,4 @@
-import { GatewayPagamentoErro } from '../../dto/erro-gateway-pagamento';
+import { GatewayPagamentoErro } from '../../ports/erro-gateway-pagamento';
 import { type ResultadoConsultaChavePix } from '../../dto/resultado-chave-pix.dto';
 import {
   type ResultadoRepasse,

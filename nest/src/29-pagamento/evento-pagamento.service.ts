@@ -49,6 +49,13 @@ export interface EventoNaoProcessado {
   situacao: 'vale_tentar_de_novo' | 'em_revisao_manual';
 }
 
+export interface EventoParaReprocessar {
+  idEvento: number;
+  tipoEvento: string;
+  payload: unknown;
+  vencido: boolean;
+}
+
 export type ResultadoAplicacaoEvento =
   | 'aplicado'
   | 'sem_mudanca'
@@ -172,7 +179,39 @@ export class EventoPagamentoService {
     }));
   }
 
-  // Registra por que o evento não pôde ser tratado AGORA, sem marcá-lo processado (continua na fila de reentrega).
+  // Avisos para "tentar de novo" deste provedor (eventos_para_reprocessar, 05). `vencido` = já passou do prazo de
+  // tentar: vai para revisão manual.
+  async paraReprocessar(
+    provedor: string,
+    limite: number,
+  ): Promise<EventoParaReprocessar[]> {
+    const resultado = await this.pool.query<{
+      id_evento_pagamento: number;
+      tipo_evento: string;
+      payload: unknown;
+      vencido: boolean;
+    }>('SELECT * FROM public.eventos_para_reprocessar($1::varchar, $2::int)', [
+      provedor,
+      limite,
+    ]);
+    return resultado.rows.map((linha) => ({
+      idEvento: linha.id_evento_pagamento,
+      tipoEvento: linha.tipo_evento,
+      payload: linha.payload,
+      vencido: linha.vencido,
+    }));
+  }
+
+  // Põe em revisão manual, com o motivo, um aviso que nunca encontrou a que pertence (mandar_evento_para_revisao, 05).
+  async mandarParaRevisao(idEvento: number, motivo: string): Promise<boolean> {
+    const resultado = await this.pool.query<{ mudou: boolean }>(
+      'SELECT public.mandar_evento_para_revisao($1::int, $2::text) AS mudou',
+      [idEvento, motivo],
+    );
+    return resultado.rows[0]?.mudou === true;
+  }
+
+  // Registra por que o evento não pôde ser tratado AGORA, sem marcá-lo processado (a conferência tenta de novo).
   async registrarFalha(idEvento: number, motivo: string): Promise<void> {
     await this.pool.query(
       'SELECT public.registrar_falha_evento_pagamento($1::int, $2::text)',

@@ -20,9 +20,13 @@ const GRUPO_CONFIGURACAO: Record<string, string> = {
   recuperacao_senha_minutos_validade: 'Segurança',
   // Financeiro
   taxa_plataforma_padrao: 'Financeiro',
+  taxa_minima_repasse: 'Financeiro',
   meta_minima_campanha: 'Financeiro',
   valor_minimo_contribuicao: 'Financeiro',
   taxa_pagamento_pix: 'Financeiro',
+  taxa_pagamento_boleto: 'Financeiro',
+  boleto_habilitado: 'Financeiro',
+  boleto_vencimento_dias: 'Financeiro',
   cartao_habilitado: 'Financeiro',
   valor_minimo_contribuicao_cartao: 'Financeiro',
   valor_maximo_contribuicao_cartao: 'Financeiro',
@@ -43,6 +47,8 @@ const GRUPO_CONFIGURACAO: Record<string, string> = {
   reconciliacao_intervalo_minutos: 'Pagamentos',
   reconciliacao_orfa_minutos: 'Pagamentos',
   cancelamento_cobranca_intervalo_minutos: 'Pagamentos',
+  webhook_reprocessar_espera_minutos: 'Pagamentos',
+  webhook_reprocessar_horas: 'Pagamentos',
   // Campanha
   prazo_minimo_campanha_dias: 'Campanha',
   prazo_sugerido_campanha_dias: 'Campanha',

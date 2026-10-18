@@ -1,5 +1,6 @@
-import { GatewayPagamentoErro } from '../../dto/erro-gateway-pagamento';
+import { GatewayPagamentoErro } from '../../ports/erro-gateway-pagamento';
 import {
+  type MeioPagamentoGateway,
   type ResultadoCobranca,
   type ResultadoEstorno,
   type StatusCobrancaGateway,
@@ -10,6 +11,10 @@ import {
 } from '../../ports/cobranca-gateway.port';
 import { AsaasHttpClient } from './asaas-http.client';
 import { type ConfiguracaoAsaas } from './asaas.config';
+import {
+  dadosBoletoAsaas,
+  pedirDevolucaoBoletoAsaas,
+} from './asaas-cobranca-boleto';
 import { linkPagamentoCartaoAsaas } from './asaas-cobranca-cartao';
 import { dadosPixAsaas } from './asaas-cobranca-pix';
 import {
@@ -66,6 +71,16 @@ export function statusDeDominio(
 // RECEIVED = o Asaas creditou o dinheiro na conta (Pix: na hora; cartão: cerca de 30 dias depois). CONFIRMED (cartão
 // aprovado, ainda não creditado) é 'confirmada' mas NÃO liberado.
 const STATUS_DINHEIRO_LIBERADO = ['RECEIVED', 'RECEIVED_IN_CASH'];
+const TIPO_COBRANCA_ASAAS: Record<MeioPagamentoGateway, string> = {
+  pix: 'PIX',
+  cartao_credito: 'CREDIT_CARD',
+  boleto: 'BOLETO',
+};
+const MEIO_DO_TIPO_ASAAS: Record<string, MeioPagamentoGateway> = {
+  PIX: 'pix',
+  CREDIT_CARD: 'cartao_credito',
+  BOLETO: 'boleto',
+};
 // Devolução que não aconteceu nem vai acontecer: pode-se pedir outra. Qualquer outro estado (DONE, PENDING, aguardando
 // autorização...) é a MESMA devolução, ainda viva: pedir de novo devolveria duas vezes.
 const STATUS_ESTORNO_SEM_EFEITO = ['CANCELLED', 'FAILED', 'REFUSED'];
@@ -83,16 +98,16 @@ function marcador(chaveIdempotencia: string): string {
   return `ref:${chaveIdempotencia}`;
 }
 
-// Cobrança no Asaas (Pix ou cartão de crédito). O que é comum aos dois mora aqui; o que é de cada meio, em
-// asaas-cobranca-pix.ts e asaas-cobranca-cartao.ts. Fluxo de criarCobranca:
+// Cobrança no Asaas (Pix, cartão de crédito ou boleto). O que é comum mora aqui; o que é de cada meio, em
+// asaas-cobranca-pix.ts, asaas-cobranca-cartao.ts e asaas-cobranca-boleto.ts. Fluxo de criarCobranca:
 //   1. IDEMPOTÊNCIA: o Asaas NÃO tem chave de idempotência. A chave do sistema vai em `externalReference` e, antes de criar,
 //      procura-se uma cobrança com essa referência (GET /payments?externalReference=...). Existindo, reaproveita (é o que
 //      acontece num retry depois de um timeout). Sem isso, um retry criaria cobrança duplicada.
-//   2. cria a cobrança (POST /payments) para o cliente genérico ASAAS_CUSTOMER_ID, na forma pedida (PIX ou CREDIT_CARD);
+//   2. cria a cobrança (POST /payments) para o cliente genérico ASAAS_CUSTOMER_ID, na forma pedida (PIX, CREDIT_CARD ou BOLETO);
 //   3. TARIFA REAL: o Asaas já informa na criação quanto vai cair na conta (`netValue`). Se não cobrir a contribuição
 //      certinho, o valor da cobrança é corrigido ANTES de a pessoa ver o Pix ou a página do cartão: quem apoia paga a
 //      tarifa de verdade, nem a mais nem a menos (ajustarAoLiquido);
-//   4. o que é do meio: QR do Pix, ou link da página segura do cartão.
+//   4. o que é do meio: QR do Pix, link da página segura do cartão, ou o boleto com a linha digitável.
 // Se algo falhar depois de a cobrança existir, ela é CANCELADA antes de devolver o erro: sem isso ficaria aberta e pagável
 // sem nenhuma contribuição ligada a ela. `split` não é usado: se vier, recusa (nunca ignora dinheiro que seria dividido).
 export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
@@ -129,7 +144,7 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
       {
         corpo: {
           customer: this.config.customerId,
-          billingType: params.meioPagamento === 'pix' ? 'PIX' : 'CREDIT_CARD',
+          billingType: TIPO_COBRANCA_ASAAS[params.meioPagamento],
           value: valor,
           dueDate: dataBrasilia(params.expiraEm),
           description: params.descricao?.slice(0, 500),
@@ -146,15 +161,28 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
           params.expiraEm,
         );
       }
-      return params.meioPagamento === 'pix'
-        ? {
-            ...this.paraResultado(pagamento),
+      const resultado = this.paraResultado(pagamento);
+      switch (params.meioPagamento) {
+        case 'pix':
+          return {
+            ...resultado,
             pix: await dadosPixAsaas(this.http, pagamento.id, params.expiraEm),
-          }
-        : {
-            ...this.paraResultado(pagamento),
+          };
+        case 'boleto':
+          return {
+            ...resultado,
+            boleto: await dadosBoletoAsaas(
+              this.http,
+              pagamento,
+              params.expiraEm,
+            ),
+          };
+        default:
+          return {
+            ...resultado,
             linkPagamento: linkPagamentoCartaoAsaas(pagamento),
           };
+      }
     } catch (erro) {
       await this.cancelarCobranca(pagamento.id).catch(() => undefined);
       throw erro;
@@ -215,6 +243,9 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
     opcoes?: { chaveIdempotencia?: string },
   ): Promise<ResultadoEstorno> {
     const pagamento = await this.obter(idCobranca);
+    if (pagamento.billingType === 'BOLETO') {
+      return pedirDevolucaoBoletoAsaas(this.http, idCobranca);
+    }
     const jaDevolvido = totalEstornado(pagamento);
 
     const chave = opcoes?.chaveIdempotencia;
@@ -331,8 +362,7 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
         base === 'confirmada' && devolvido >= arredondar(pagamento.value)
           ? 'estornada'
           : base,
-      meioPagamento:
-        pagamento.billingType === 'CREDIT_CARD' ? 'cartao_credito' : 'pix',
+      meioPagamento: MEIO_DO_TIPO_ASAAS[pagamento.billingType ?? ''] ?? 'pix',
       valor: arredondar(pagamento.value),
       valorEstornado: devolvido,
       dinheiroLiberado: STATUS_DINHEIRO_LIBERADO.includes(pagamento.status),

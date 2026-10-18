@@ -10,7 +10,7 @@ import { PG_POOL } from '../../commons/database/database.constants';
 import { executarTransacaoCurta } from '../../commons/database/transacao-curta.util';
 import { cifrarChavePix } from '../../commons/seguranca/chave-pix-cifra.util';
 import { decifrarCpf } from '../../commons/seguranca/cpf-cifra.util';
-import { GatewayPagamentoErro } from '../../29-pagamento/dto/erro-gateway-pagamento';
+import { GatewayPagamentoErro } from '../../29-pagamento/ports/erro-gateway-pagamento';
 import { type ResultadoConsultaChavePix } from '../../29-pagamento/dto/resultado-chave-pix.dto';
 import {
   REPASSE_GATEWAY,

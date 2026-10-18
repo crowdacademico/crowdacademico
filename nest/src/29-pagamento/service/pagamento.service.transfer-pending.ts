@@ -5,7 +5,7 @@ import { Pool } from 'pg';
 import { PG_POOL } from '../../commons/database/database.constants';
 import { decifrarChavePix } from '../../commons/seguranca/chave-pix-cifra.util';
 import { NOME_PROVEDOR_NAO_CONFIGURADO } from '../adapters/nao-configurado/gateway-nao-configurado.adapter';
-import { GatewayPagamentoErro } from '../dto/erro-gateway-pagamento';
+import { GatewayPagamentoErro } from '../ports/erro-gateway-pagamento';
 import { ResultadoRepasse } from '../dto/resultado-repasse.dto';
 import {
   REPASSE_GATEWAY,

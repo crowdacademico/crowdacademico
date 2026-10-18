@@ -2,7 +2,7 @@ import { createHash, timingSafeEqual } from 'crypto';
 import { OnModuleDestroy } from '@nestjs/common';
 import { EventoPagamentoDto } from '../../dto/evento-pagamento.dto';
 import { AutorizacaoSaqueDto } from '../../dto/autorizacao-saque.dto';
-import { GatewayPagamentoErro } from '../../dto/erro-gateway-pagamento';
+import { GatewayPagamentoErro } from '../../ports/erro-gateway-pagamento';
 import {
   ResultadoCobranca,
   ResultadoEstorno,
@@ -167,8 +167,8 @@ export class FakeGatewayAdapter
     const c = this.obterCobranca(idCobranca);
     if (c.status !== 'pendente') return;
     c.status = 'confirmada';
-    // Pix: o dinheiro já está disponível. Cartão: só quando liberarCobranca() for chamado.
-    c.dinheiroLiberado = c.meioPagamento === 'pix';
+    // Pix e boleto: o dinheiro já está disponível. Cartão: só quando liberarCobranca() for chamado.
+    c.dinheiroLiberado = c.meioPagamento !== 'cartao_credito';
     this.emitir('FAKE_PAYMENT_CONFIRMED', { payment: { id: idCobranca } });
   }
 
@@ -278,6 +278,13 @@ export class FakeGatewayAdapter
     if (params.meioPagamento === 'cartao_credito') {
       cobranca.linkPagamento = `https://fake.local/pagar/${idCobranca}`;
     }
+    if (params.meioPagamento === 'boleto') {
+      cobranca.boleto = {
+        link: `https://fake.local/boleto/${idCobranca}`,
+        linhaDigitavel: `00190.00009 FAKE ${idCobranca}`,
+        venceEm: params.expiraEm,
+      };
+    }
     if (params.meioPagamento === 'pix') {
       cobranca.pix = {
         copiaECola: `00020126FAKE${idCobranca}`,
@@ -327,6 +334,17 @@ export class FakeGatewayAdapter
     const c = this.cobrancas.get(idCobranca);
     if (!c) {
       return Promise.reject(this.naoEncontrado('Cobrança', idCobranca));
+    }
+
+    // Boleto: como no Asaas, o provedor não devolve sozinho; gera um link para quem pagou informar a conta.
+    if (c.meioPagamento === 'boleto') {
+      return Promise.reject(
+        new GatewayPagamentoErro(
+          'RECUSADO',
+          `Boleto: envie a quem apoiou o link para informar a conta da devolução: https://fake.local/devolucao/${idCobranca}`,
+          false,
+        ),
+      );
     }
 
     // Retry do worker com a mesma chave: devolve o resultado anterior, sem estornar de novo.
@@ -590,6 +608,7 @@ export class FakeGatewayAdapter
     };
     if (c.pix) resultado.pix = { ...c.pix };
     if (c.linkPagamento) resultado.linkPagamento = c.linkPagamento;
+    if (c.boleto) resultado.boleto = { ...c.boleto };
     if (c.idSplit) resultado.idSplit = c.idSplit;
     return resultado;
   }

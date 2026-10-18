@@ -290,14 +290,15 @@ GRANT INSERT (
     id_usuario, id_area_conhecimento, titulo, modelo, meta_financeira,
     descricao, data_inicio, data_fim, video_apresentacao_url
 ) ON campanha TO app_nestjs;
--- UPDATE por coluna: campo calculado (valor_bruto_arrecadado, taxa_plataforma, encerrado_em, enviado_aprovacao_em) e imutável (modelo,
--- id_usuario) só mudam por função SECURITY DEFINER ou trigger. Ver DOCUMENTACAO_BD.md [05-K-2-C].
+-- UPDATE por coluna: campo calculado (valor_bruto_arrecadado, taxa_plataforma, encerrado_em, enviado_aprovacao_em) e imutável
+-- (id_usuario) só mudam por função SECURITY DEFINER ou trigger. Ver DOCUMENTACAO_BD.md [05-K-2-C]. modelo muda até a
+-- aprovação; depois o banco o barra (91005, fn_campanha_erro_congelamento em 05).
 GRANT UPDATE (
-    titulo, descricao, id_area_conhecimento, meta_financeira,
+    titulo, descricao, id_area_conhecimento, meta_financeira, modelo,
     data_inicio, data_fim, video_apresentacao_url,
     status, aprovado_em, id_admin
 ) ON campanha TO app_nestjs;
-GRANT INSERT ON repasse TO app_nestjs;
+-- repasse e auditoria_financeira: nenhum GRANT de escrita. Só as funções SECURITY DEFINER de 05 gravam nelas.
 
 -- orcamento_campanha/marco_cronograma (01, [01-E]) ganham DELETE também: o pesquisador precisa poder remover um
 -- item de orçamento/marco antes de reenviar a campanha para aprovação (as policies de DELETE em 04 existem; sem
@@ -422,9 +423,7 @@ TO app_nestjs;
 -- própria doação (ou a de qualquer um) direto por UPDATE, e a página pública passaria a exibir arrecadação sem
 -- pagamento real. status/id_transacao_api só mudam via atualizar_status_contribuicao() (05, SECURITY DEFINER,
 -- [05-K-2]); ver GRANT EXECUTE mais abaixo.
--- auditoria_financeira é append-only: só INSERT (o UPDATE de tabela inteira saiu junto com pol_auditoria_update em 04).
 GRANT INSERT ON contribuicao TO app_nestjs;
-GRANT INSERT ON auditoria_financeira TO app_nestjs;
 
 REVOKE EXECUTE ON FUNCTION public.atualizar_status_contribuicao(INT, status_contribuicao, VARCHAR, INT, DECIMAL) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.atualizar_status_contribuicao(INT, status_contribuicao, VARCHAR, INT, DECIMAL) TO app_nestjs;
@@ -438,13 +437,19 @@ REVOKE EXECUTE ON FUNCTION public.aplicar_evento_pagamento(INT, VARCHAR, VARCHAR
 GRANT EXECUTE ON FUNCTION public.aplicar_evento_pagamento(INT, VARCHAR, VARCHAR, status_contribuicao, DECIMAL, BOOLEAN) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.registrar_falha_evento_pagamento(INT, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.registrar_falha_evento_pagamento(INT, TEXT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.liquido_repasse(DECIMAL, DECIMAL) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.liquido_repasse(DECIMAL, DECIMAL) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.eventos_para_reprocessar(VARCHAR, INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.eventos_para_reprocessar(VARCHAR, INT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.mandar_evento_para_revisao(INT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.mandar_evento_para_revisao(INT, TEXT) TO app_nestjs;
 -- Worker de estorno (PR-07): job de fundo sem sessão; as três funções são SECURITY DEFINER e o app_nestjs não lê contribuicao.
 REVOKE EXECUTE ON FUNCTION public.proximo_estorno_pendente(VARCHAR) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.proximo_estorno_pendente(VARCHAR) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.concluir_estorno(INT, DECIMAL) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.concluir_estorno(INT, DECIMAL) TO app_nestjs;
-REVOKE EXECUTE ON FUNCTION public.registrar_falha_estorno(INT, TEXT, BOOLEAN, DECIMAL) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.registrar_falha_estorno(INT, TEXT, BOOLEAN, DECIMAL) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.registrar_falha_estorno(INT, TEXT, BOOLEAN, DECIMAL, BOOLEAN) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.registrar_falha_estorno(INT, TEXT, BOOLEAN, DECIMAL, BOOLEAN) TO app_nestjs;
 -- contribuicao_recompensa e aceite_termo_contribuicao sem UPDATE: são registro de auditoria/aquisição, não
 -- deveriam ser editáveis depois de criados (04 não tem policy de UPDATE para elas).
 GRANT INSERT ON contribuicao_recompensa, aceite_termo_contribuicao TO app_nestjs;

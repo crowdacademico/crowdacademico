@@ -1125,7 +1125,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 ## 13. Inventário de rotas HTTP
 
-139 handlers. `AUTH` = a rota exige login (o padrão, `AuthGuardRequireAuth` global); `pub` = a rota tem `@Publico()` (o que **não** significa "sem proteção": significa que quem protege é a RLS, e que anônimo é um caso legítimo).
+163 handlers. `AUTH` = a rota exige login (o padrão, `AuthGuardRequireAuth` global); `pub` = a rota tem `@Publico()` (o que **não** significa "sem proteção": significa que quem protege é a RLS, e que anônimo é um caso legítimo).
 
 | | Método | Rota |
 |---|---|---|
@@ -1220,6 +1220,17 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | POST | `/arquivo/upload/iniciar` · `/arquivo/upload/confirmar` |
 | pub | GET | `/arquivo/:id` · `/arquivo/avatar/:idUsuario` |
 | AUTH | DELETE | `/arquivo/:id` |
+| **Pagamento** | | |
+| pub | POST | `/contribuicao` *(contribuir não exige conta, RF-073; devolve o Pix "copia e cola" ou o link da página segura do cartão)* |
+| pub | GET | `/contribuicao/:id` *(acompanhar a contribuição: com login, pelo próprio usuário; sem conta, pelo cabeçalho `X-Token-Sessao`)* |
+| pub | POST | `/pagamento/webhook/:provedor` · `/pagamento/webhook/:provedor/autorizacao-saque` *(quem chama é o provedor; a autenticidade é o token dele, conferido antes de tocar no banco; a segunda responde se uma transferência ou devolução pode sair)* |
+| AUTH | GET · POST · DELETE | `/conta-recebimento` *(a chave Pix do próprio pesquisador, conferida no provedor)* |
+| AUTH | GET | `/conta-recebimento/repasses` · `/conta-recebimento/cartao-a-liberar` |
+| AUTH | GET | `/pagamento-admin/revisoes` · `/pagamento-admin/reembolsos-manuais` · `/pagamento-admin/repasses/atencao` |
+| AUTH | POST | `/pagamento-admin/revisoes/:id/resolver` · `/pagamento-admin/reembolsos-manuais/:id/concluir` · `/pagamento-admin/repasses/:id/reenfileirar` |
+| AUTH | GET | `/campo-testes/pagamento` *(T5, bancada de pagamento: só fora de produção, como todo o Campo de Testes)* |
+| AUTH | POST | `/campo-testes/pagamento/contribuicoes/:id/pagar` · `/campo-testes/pagamento/contribuicoes/:id/vencer` · `/campo-testes/pagamento/contribuicoes/:id/liberar` · `/campo-testes/pagamento/contribuicoes/:id/repetir-aviso` |
+| AUTH | POST | `/campo-testes/pagamento/repasses/:id/concluir` · `/campo-testes/pagamento/repasses/:id/falhar` · `/campo-testes/pagamento/tarefas/:tarefa` · `/campo-testes/pagamento/chave-pix` |
 | **Painel** | | |
 | AUTH | GET | `/log-auditoria` · `/log-auditoria/minha-atividade` |
 | AUTH | GET | `/dashboard/resumo` |
@@ -1232,15 +1243,14 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 ## 14. O que ainda não existe (pastas vazias)
 
-Conferido em 21-09-2026 (`19-denuncia` e `20-solicitacao-encerramento` saíram em 03-10-2026): as 6 pastas abaixo contêm **exatamente um arquivo `.gitkeep`** e **zero `.ts`**. (`21-historico-rejeicao` saiu da lista: ganhou código em 14-09-2026.)
+Conferido em 18-10-2026 (`19-denuncia` e `20-solicitacao-encerramento` saíram em 03-10-2026; `22-contribuicao` em 17-10-2026): as 5 pastas abaixo contêm **exatamente um arquivo `.gitkeep`** e **zero `.ts`**. (`21-historico-rejeicao` saiu da lista: ganhou código em 14-09-2026.)
 
 | Pasta | Grupo em `PROXIMOS_MODULOS.md` |
 |---|---|
 | `4-mail` | Comunicação |
 | `18-recompensa` | Engajamento |
-| `22-contribuicao` | Pagamento |
-| `23-repasse` | Pagamento |
-| `24-auditoria-financeira` | Pagamento |
+| `23-repasse` | Pagamento *(o repasse foi feito em `29-pagamento` e `30-conta-recebimento`: a pasta ficou sem uso)* |
+| `24-auditoria-financeira` | Pagamento *(a auditoria é gravada pelo banco e lida em `32-pagamento-revisao`: a pasta ficou sem uso)* |
 | `26-notificacao` | Comunicação |
 
 🗑️ **`27-resources` não está mais na lista - removido em 04-09-2026.** Era sobra do esqueleto de pastas herdado do modelo da disciplina (Programação para Web 2): lá, `resources` é um catálogo estático de metadados de rota (`GET /rest/resources`, uma lista hardcoded de endpoint/verbo por entidade, consumida pelo React pra montar URL sem hardcode) - só faz sentido porque aquele sistema segue uma convenção rígida e uniforme (toda entidade com exatamente 5 endpoints: listar/criar/buscar/alterar/excluir). O CrowdAcadêmico já resolve o mesmo problema de origem (não hardcodar URL no React) de outro jeito - um arquivo `<modulo>.api.js` por módulo, com funções nomeadas - e as rotas daqui não são uniformes o bastante pra caber no molde do `resources` (upload em 2 passos, `/dashboard/resumo` sem entidade, sub-rotas como `/usuario/:id/desbloquear`). Pasta vazia (só `.gitkeep`) desde sempre, sem nenhum código ou decisão ligando ela ao produto - removida, não é lacuna.
@@ -1251,7 +1261,7 @@ Três consequências do que falta são visíveis dentro do código já escrito, 
 
 - **`4-mail` bloqueia dois fluxos prontos no banco.** Verificação de e-mail e recuperação de senha têm tabela, índice e função - e o cadastro **já grava** a linha em `verificacao_email`. Só ninguém envia o e-mail. (`PENDENCIAS e correcoes.md`, item 6.)
 - **`26-notificacao` mantém `notificacoesPendentes: null`** no dashboard (§10).
-- **`22-contribuicao`/`23-repasse`/`24-auditoria-financeira`** são o Grupo 8, por último de propósito - a decisão de gateway de pagamento ainda não foi tomada. ⚠️ E é justamente aí que mora a pendência de segurança mais séria em aberto: **`auditoria_financeira` e `repasse` têm policies de escrita `USING (true)` - a RLS não valida quem grava.** Num sistema onde a RLS é a única camada de autorização, essas duas tabelas são o buraco no desenho. A defesa proposta (item 9 de `PENDENCIAS e correcoes.md`) é isolar a escrita num único service interno do Nest, chamado só pelo webhook do gateway, **nunca exposto como endpoint CRUD genérico** - quem construir esses módulos precisa ler aquele item antes de começar.
+- **Pagamento (feito em 17-10-2026):** contribuição (`22-contribuicao`), provedor e tarefas automáticas (`29-pagamento`), chave Pix e repasses do pesquisador (`30-conta-recebimento`) e pendências do admin (`32-pagamento-revisao`). Sobre a antiga pendência de `auditoria_financeira` e `repasse` terem policy de escrita `WITH CHECK (true)`: o Nest nunca grava nessas tabelas direto; toda escrita passa por funções `SECURITY DEFINER` do banco. ⚠️ Mas o `GRANT INSERT` do `app_nestjs` nas duas continua em `06_grants.sql` sem uso (conferido em 18-10-2026): tirá-lo fecharia de vez a porta, decisão em aberto no PENDENCIAS. O fluxo do dinheiro inteiro está em `DOCUMENTACAO_FINANCEIRO.md`.
 
 ---
 

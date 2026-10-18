@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../../commons/database/database.constants';
-import { GatewayPagamentoErro } from '../dto/erro-gateway-pagamento';
+import { GatewayPagamentoErro } from '../ports/erro-gateway-pagamento';
 import {
   COBRANCA_GATEWAY,
   type CobrancaGatewayPort,
@@ -124,9 +124,10 @@ export class PagamentoServiceRefundPending {
       }
 
       // O provedor aceitou o pedido mas ainda não devolveu (ex.: esperando a autorização): continua 'a_devolver' e o próximo
-      // ciclo confere de novo (a mesma chave acha a mesma devolução, sem pedir outra). Conta como tentativa: uma devolução
-      // que nunca conclui acaba em reembolso manual, para uma pessoa olhar.
+      // ciclo confere de novo (a mesma chave acha a mesma devolução, sem pedir outra). Fica no histórico como espera, não
+      // como falha, mas conta como tentativa: uma devolução que nunca conclui acaba em reembolso manual.
       if ('falha' in resultado || !resultado.concluido) {
+        const aguardando = !('falha' in resultado);
         const falha: Falha =
           'falha' in resultado
             ? resultado.falha
@@ -136,8 +137,14 @@ export class PagamentoServiceRefundPending {
                 recuperavel: true,
               };
         const decisao = await client.query<{ registrar_falha_estorno: string }>(
-          'SELECT public.registrar_falha_estorno($1::int, $2::text, $3::boolean, $4::numeric)',
-          [item.id_contribuicao, falha.mensagem, falha.recuperavel, liquido],
+          'SELECT public.registrar_falha_estorno($1::int, $2::text, $3::boolean, $4::numeric, $5::boolean)',
+          [
+            item.id_contribuicao,
+            falha.mensagem,
+            falha.recuperavel,
+            liquido,
+            aguardando,
+          ],
         );
         await client.query('COMMIT');
         this.logger.warn(

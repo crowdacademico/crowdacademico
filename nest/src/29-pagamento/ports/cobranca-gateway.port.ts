@@ -34,7 +34,7 @@ export interface CriarCobrancaParams {
 
 // Contrato de cobrança/estorno. Tudo que o sistema sabe de "receber dinheiro" passa por aqui; o adapter do
 // provedor (Fake hoje, Asaas no PR-10) é o único lugar que conhece o provedor. Erros sempre como
-// GatewayPagamentoErro (dto/erro-gateway-pagamento.ts).
+// GatewayPagamentoErro (erro-gateway-pagamento.ts, nesta pasta).
 export interface CobrancaGatewayPort {
   // Nome curto do provedor ('fake', 'asaas'): vai para contribuicao.provedor e evento_pagamento.provedor.
   readonly provedor: string;

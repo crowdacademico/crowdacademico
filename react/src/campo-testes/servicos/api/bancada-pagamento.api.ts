@@ -51,6 +51,7 @@ export interface ContribuicaoCriada {
   status: string;
   pix?: { copiaECola: string; qrCodeBase64?: string; expiraEm: string };
   cartao?: { linkPagamento: string };
+  boleto?: { link: string; linhaDigitavel: string; venceEm: string };
 }
 
 export interface ChavePixCadastrada {
@@ -61,7 +62,7 @@ export interface ChavePixCadastrada {
 
 export const bancadaPagamentoApi = {
   estado: (chamar: Chamar) => chamar<EstadoBancada>(BASE),
-  contribuir: (chamar: Chamar, idCampanha: number, valor: number, meioPagamento: 'pix' | 'cartao_credito') =>
+  contribuir: (chamar: Chamar, idCampanha: number, valor: number, meioPagamento: 'pix' | 'cartao_credito' | 'boleto') =>
     chamar<ContribuicaoCriada>('/contribuicao', {
       method: 'POST',
       body: JSON.stringify({ idCampanha, valor, meioPagamento }),

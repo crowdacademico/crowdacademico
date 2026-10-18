@@ -4,7 +4,9 @@ import { Cron } from '@nestjs/schedule';
 import { Pool } from 'pg';
 import { PG_POOL } from '../../commons/database/database.constants';
 import { NOME_PROVEDOR_NAO_CONFIGURADO } from '../adapters/nao-configurado/gateway-nao-configurado.adapter';
-import { GatewayPagamentoErro } from '../dto/erro-gateway-pagamento';
+import { GatewayPagamentoErro } from '../ports/erro-gateway-pagamento';
+import { PagamentoServiceWebhook } from './pagamento.service.webhook';
+import { type TipoEventoPagamento } from '../dto/evento-pagamento.dto';
 import { type StatusCobrancaGateway } from '../dto/resultado-cobranca.dto';
 import {
   EventoPagamentoService,
@@ -28,9 +30,22 @@ export interface ResumoReconciliacao {
   semMudanca: number;
   emRevisao: number;
   falhas: number;
+  avisosReprocessados: number;
+  avisosParaRevisao: number;
 }
 
 const LOTE_PADRAO = 50;
+
+// O motivo que o admin lê na revisão manual, pelo tipo do aviso (já traduzido do formato do provedor).
+function motivoAvisoSemDono(tipo: TipoEventoPagamento | undefined): string {
+  if (tipo === 'repasse_concluido' || tipo === 'repasse_falhou') {
+    return 'Aviso de uma transferência que o sistema não pediu (nenhum repasse corresponde). Confira no provedor quem a fez.';
+  }
+  if (tipo === 'cobranca_confirmada') {
+    return 'Dinheiro recebido no provedor sem contribuição correspondente no sistema. Confira no provedor de onde veio e, se for o caso, devolva.';
+  }
+  return 'Aviso do provedor sem correspondência no sistema depois do prazo de novas tentativas. Confira no provedor.';
+}
 const LIMITE_EVENTOS_LISTADOS = 200;
 
 // O que o estado REAL de uma cobrança significa para uma contribuição ainda PENDENTE (mesmo mapeamento do webhook,
@@ -56,7 +71,12 @@ function alvoDoEstadoReal(
 //      ainda deixa pagar (o Asaas só tem vencimento por data e o QR vale por meses) seria dinheiro recebido que o sistema
 //      não contabiliza. Cobrança já inexistente ou já paga (que o provedor não deixa cancelar) sai da fila do mesmo jeito:
 //      paga é assunto do webhook, que cai em revisão manual;
-//   3. loga o estado da caixa de webhooks que não terminou (D5): quantos vale tentar de novo e quantos em revisão manual.
+//   3. tenta de novo os avisos da caixa de webhooks que ficaram para "tentar de novo" (o provedor não reentrega o que
+//      já recebeu 200). O caso normal é o aviso que chegou antes de a contribuição ser gravada. Passado
+//      webhook_reprocessar_horas sem encontrar a que pertence (aviso de algo que não é do sistema: Pix recebido sem
+//      contribuição, transferência que o sistema não pediu), o aviso vai para revisão manual, com o motivo, para uma
+//      pessoa olhar no painel;
+//   4. loga o estado da caixa de webhooks que não terminou (D5): quantos vale tentar de novo e quantos em revisão manual.
 // Repasse 'processando' não precisa de passo aqui: o worker de repasse já retoma ao vencer o lease e CONSULTA o
 // provedor (pagamento.service.transfer-pending.ts). pendente -> expirado do Pix é de expirar_contribuicoes_pendentes.
 // Quais contribuições entram é decidido pelo banco (reservar_contribuicoes_para_reconciliar: limites em
@@ -73,6 +93,7 @@ export class PagamentoServiceReconcile {
     @Inject(PG_POOL) private readonly pool: Pool,
     @Inject(COBRANCA_GATEWAY) private readonly gateway: CobrancaGatewayPort,
     private readonly eventos: EventoPagamentoService,
+    private readonly webhook: PagamentoServiceWebhook,
     private readonly config: ConfigService,
   ) {}
 
@@ -83,13 +104,19 @@ export class PagamentoServiceReconcile {
     try {
       const resumo = await this.reconciliar();
       if (
-        resumo.orfas + resumo.consultadas + resumo.canceladas + resumo.falhas >
+        resumo.orfas +
+          resumo.consultadas +
+          resumo.canceladas +
+          resumo.falhas +
+          resumo.avisosReprocessados +
+          resumo.avisosParaRevisao >
           0 ||
         resumo.emRevisao > 0
       ) {
         this.logger.log(
           `Reconciliação: ${resumo.orfas} órfã(s) encerrada(s), ${resumo.canceladas} cobrança(s) cancelada(s) no provedor, ${resumo.consultadas} cobrança(s) reconsultada(s) ` +
-            `(${resumo.aplicadas} aplicada(s), ${resumo.semMudanca} sem mudança, ${resumo.emRevisao} em revisão, ${resumo.falhas} falha(s)).`,
+            `(${resumo.aplicadas} aplicada(s), ${resumo.semMudanca} sem mudança, ${resumo.emRevisao} em revisão, ${resumo.falhas} falha(s)); ` +
+            `${resumo.avisosReprocessados} aviso(s) da caixa tentado(s) de novo, ${resumo.avisosParaRevisao} mandado(s) para revisão manual.`,
         );
       }
     } catch (erro) {
@@ -110,6 +137,8 @@ export class PagamentoServiceReconcile {
       semMudanca: 0,
       emRevisao: 0,
       falhas: 0,
+      avisosReprocessados: 0,
+      avisosParaRevisao: 0,
     };
 
     resumo.orfas = await this.encerrarOrfas();
@@ -141,6 +170,7 @@ export class PagamentoServiceReconcile {
 
     if (this.gateway.provedor !== NOME_PROVEDOR_NAO_CONFIGURADO) {
       resumo.canceladas = await this.cancelarCobrancasEncerradas();
+      await this.reprocessarCaixa(resumo);
     }
 
     await this.registrarEstadoDaCaixa(resumo);
@@ -251,8 +281,43 @@ export class PagamentoServiceReconcile {
     }
   }
 
-  // D5: a caixa de webhooks que não terminou, separada em "vale tentar de novo" e "em revisão manual". Só leitura e log:
-  // o reprocessamento automático dos "vale tentar de novo" fica para depois (o gateway reentrega por 14 dias).
+  // Passo 3. Um aviso com problema não para os outros; erro transitório (banco ou provedor fora do ar) fica para o
+  // próximo ciclo.
+  private async reprocessarCaixa(resumo: ResumoReconciliacao): Promise<void> {
+    const lote = this.numero('RECONCILIACAO_LOTE', LOTE_PADRAO);
+    const avisos = await this.eventos.paraReprocessar(
+      this.gateway.provedor,
+      lote,
+    );
+    for (const aviso of avisos) {
+      try {
+        if (aviso.vencido) {
+          if (
+            await this.eventos.mandarParaRevisao(
+              aviso.idEvento,
+              motivoAvisoSemDono(this.webhook.tipoDoAviso(aviso.payload)),
+            )
+          ) {
+            resumo.avisosParaRevisao++;
+            this.logger.warn(
+              `Evento ${aviso.idEvento} (${aviso.tipoEvento}): sem correspondência no sistema depois do prazo; em revisão manual.`,
+            );
+          }
+          continue;
+        }
+        resumo.avisosReprocessados++;
+        await this.webhook.reprocessar(aviso.idEvento, aviso.payload);
+      } catch (erro) {
+        this.logger.warn(
+          `Nova tentativa do evento ${aviso.idEvento} falhou: ${
+            erro instanceof Error ? erro.message : String(erro)
+          }`,
+        );
+      }
+    }
+  }
+
+  // D5: a caixa de webhooks que não terminou, separada em "vale tentar de novo" e "em revisão manual". Só leitura e log.
   private async registrarEstadoDaCaixa(
     resumo: ResumoReconciliacao,
   ): Promise<void> {

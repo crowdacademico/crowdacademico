@@ -569,14 +569,10 @@ CREATE POLICY pol_historicorej_insert ON historico_rejeicao FOR INSERT TO app_ne
 -- senão qualquer pesquisador logado conseguiria reescrever a justificativa da própria rejeição.
 DROP POLICY IF EXISTS pol_historicorej_update ON historico_rejeicao;
 
--- [04-E-7] repasse: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)
+-- [04-E-7] repasse: sem policy de escrita (ver DOCUMENTACAO_BD.md). Quem cria e muda repasse são só as funções
+-- SECURITY DEFINER de 05; o app_nestjs não tem INSERT nem UPDATE na tabela (06).
 DROP POLICY IF EXISTS pol_repasse_insert ON repasse;
-CREATE POLICY pol_repasse_insert ON repasse FOR INSERT TO app_nestjs WITH CHECK (true);
--- Sem efeito prático para o app_nestjs: o GRANT UPDATE saiu (06, [06-E]) e status/repassado_em só mudam
--- via atualizar_status_repasse() (05, SECURITY DEFINER, [05-K-2]); mesmo raciocínio de
--- pol_contribuicao_update abaixo. Mantida por documentação.
 DROP POLICY IF EXISTS pol_repasse_update ON repasse;
-CREATE POLICY pol_repasse_update ON repasse FOR UPDATE TO app_nestjs USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS pol_repasse_select ON repasse;
 CREATE POLICY pol_repasse_select ON repasse FOR SELECT TO app_nestjs USING (
@@ -811,13 +807,11 @@ CREATE POLICY pol_auditoria_select ON auditoria_financeira FOR SELECT TO app_nes
           AND ca.id_usuario = (SELECT public.id_usuario_atual())
     )
 );
--- [04-H-1] auditoria_financeira: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)
-DROP POLICY IF EXISTS pol_auditoria_insert ON auditoria_financeira;
-CREATE POLICY pol_auditoria_insert ON auditoria_financeira FOR INSERT TO app_nestjs WITH CHECK (true);
--- Sem policy de UPDATE nem de DELETE (e sem GRANT, ver 06): auditoria financeira é APPEND-ONLY. Fecha o débito técnico
--- que existia aqui (UPDATE USING (true) + GRANT de tabela inteira); toda escrita é INSERT feito pelas funções SECURITY
--- DEFINER de 05. A FK de id_usuario_responsavel (ON DELETE SET NULL) continua funcionando: a ação referencial não depende
+-- [04-H-1] auditoria_financeira: sem policy de escrita (ver DOCUMENTACAO_BD.md). Auditoria financeira é APPEND-ONLY e
+-- quem grava são só as funções SECURITY DEFINER de 05; o app_nestjs não tem INSERT, UPDATE nem DELETE (06).
+-- A FK de id_usuario_responsavel (ON DELETE SET NULL) continua funcionando: a ação referencial não depende
 -- de GRANT do app_nestjs.
+DROP POLICY IF EXISTS pol_auditoria_insert ON auditoria_financeira;
 DROP POLICY IF EXISTS pol_auditoria_update ON auditoria_financeira;
 
 -- evento_pagamento: payload cru de webhook (dado do gateway), só lê quem tem a permissão. Sem policy de INSERT/UPDATE

@@ -106,6 +106,16 @@ Apontado pela revisão externa (resposta de 20-09) como "metade dos modelos não
 - **Gateway:** fica por último. Os testes serão em sandbox, mas sandbox não é desculpa para fazer mal feito: assinatura do webhook, idempotência, reconciliação, máquina de estados de `contribuicao`/`repasse` (`PROXIMOS_MODULOS.md`).
 - **Painel do doador** (`views/dash-doador`, pasta vazia) e **checkout** (`views/checkout`, vazia).
 
+#### 🟡 Achados da documentação do pagamento (18-10-2026), nada feito ainda
+
+- **`GRANT INSERT` sem uso em `repasse` e `auditoria_financeira`: FEITO (18-10-2026)**, Lucas aprovou. Saíram os `GRANT` e as policies de escrita (`04`, `06`); Grupo BN no ATUALIZAR (colar com o Nest parado).
+- **Pastas vazias `nest/src/23-repasse` e `nest/src/24-auditoria-financeira`: NÃO remover agora** (Lucas, 18-10-2026). Vão entrar na **reorganização de pastas, arquivos e nomes**: tudo com número, assuntos parecidos em sequência numérica, e o mesmo número no código (Nest, React) e na documentação, para ser fácil de ver e de achar. Projeto próprio, a planejar antes de mexer (escopo enxuto: propor o pequeno e seguro primeiro).
+- **Nome confuso no histórico financeiro: FEITO (18-10-2026).** A espera normal pelo provedor virou `estorno_aguardando_provedor (tentativa N)`; `estorno_falhou` ficou só para falha de verdade. Grupo BO.
+- **Caixa de webhooks crescendo: FEITO (18-10-2026).** A conferência (a cada 10 min) tenta de novo os avisos parados e, passado `webhook_reprocessar_horas` (24), manda para revisão manual o que não pertence a nada do sistema, com o motivo. Grupo BO; documentado em `DOCUMENTACAO_FINANCEIRO.md`, seção 8.
+- **Boleto: código pronto, falta testar (18-10-2026).** Só em campanha flexível, nasce desligado (`boleto_habilitado`), tarifa fixa corrigida pela real, devolução por link do provedor (vai para reembolso manual com o link). Grupo BQ. Testar no sandbox nos próximos dias: gerar, pagar (no sandbox, "Confirmar pagamento"), repasse, e a devolução por link num cancelamento. Ligar `boleto_habilitado` em Parâmetros antes.
+- **Campanha flexível liberada (18-10-2026):** campo "Modelo de financiamento" no criar campanha (troca até a aprovação). Destrava o teste do cartão e do boleto no sandbox. Grupo BP.
+- **Esta seção de Pagamento está desatualizada:** boa parte do que está acima já foi feito (máquina de estados, transação única, repasse, flexível no banco, encerramento). Mover o que foi feito para o histórico, com o texto original, quando a documentação do financeiro estiver pronta.
+
 ### Página pública da campanha (ainda não existe)
 
 - **Botões de compartilhar** (WhatsApp, Facebook, copiar link) e **prévia de link** (Open Graph, um endpoint pequeno no Nest que devolve as meta tags). Ideias do Atlas (P1 e P2 do roteiro).
@@ -146,6 +156,8 @@ O Lucas pediu detalhamento dessa ideia (citada de passagem pelo Lucas numa rodad
 - **Banco de produção:** rodar o `07_seed_dados.sql` só até o marcador `[07-DEMONSTRACAO]` e promover a primeira conta a admin uma vez (ver `.Tutorial-rodar-projeto.md`).
 - **Banco depois do deploy: mudança vira arquivo novo numerado** (começando em 09, depois 10, e assim por diante), nunca edição dos arquivos `01` a `08` nem só o `ATUALIZAR`. O executor de migrações (`npm run db:migrate`) aplica só o que é novo e avisa, sem reaplicar, quando um arquivo já aplicado muda. No primeiro deploy: `npm run db:migrate:adotar` no banco que já tem tudo, e `DATABASE_URL_MIGRATIONS` com a credencial de administrador do banco.
 - **Registro de acessos (Marco Civil da Internet, art. 15):** quem opera como empresa precisa guardar IP, data e hora de cada acesso por 6 meses. Hoje o IP fica só nos aceites e no último login. Só vale se o sistema entrar em operação; detalhe em `DOCUMENTACAO_BD.md`, "IP: base legal e anonimato do Pix".
+- **Teste de fumaça do pagamento em produção (18-10-2026):** uma contribuição de **R$ 1 de verdade**, paga com o Pix do próprio Lucas, numa campanha de teste tudo-ou-nada, e depois "Cancelar o projeto". Confere o que o sandbox não consegue simular: o dinheiro **voltando** para quem apoiou (no sandbox o pagador é sempre fictício e o banco simulado recusa devolver; ver `.Tutorial-plataforma-pagamento-sandbox.md`, Parte 12). Custo: só a tarifa (R$ 0,99). É o padrão do mercado: todo sistema de pagamento faz um teste com valor mínimo em produção antes de abrir.
+- **Apagar a conta de testes "Apoiador" do `nest/.env`** (`ASAAS_API_KEY_APOIADOR`, 18-10-2026): só serve aos testes no sandbox (segunda conta que paga e recebe devolução). Mantida até o deploy por decisão do Lucas.
 - **Docker** do Nest e do React (F2 do roteiro do Atlas, com o `docker/` deles como referência).
 - **`react/.gitignore` não cobre `.env`:** inofensivo hoje (o `.env` só tem a URL da API); só volta à tona se o conteúdo do `.env` mudar ou no deploy.
 - **CORS por lista de endereços** (ver grupo 5, segurança): se não for feito antes, entra aqui.
