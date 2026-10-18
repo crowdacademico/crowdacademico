@@ -24,7 +24,11 @@ export function CampoTestesProvider({ children }: CampoTestesProviderProps) {
     });
   }, []);
 
-  const limparRegistro = useCallback(() => setRegistroChamadas([]), []);
+  const limparRegistro = useCallback(
+    (quais?: (chamada: RegistroChamada) => boolean) =>
+      setRegistroChamadas((atual) => (quais ? atual.filter((chamada) => !quais(chamada)) : [])),
+    [],
+  );
 
   const valor = useMemo(
     () => ({

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Dica } from '../layout/tooltip';
 
 // Ícone + texto (escondido via CSS quando a coluna aperta) + dica de hover: um botão da coluna Ações. Só
 // `<button>`: a variante `<Link to=...>` (páginas de verdade, `rotaBase`) não tem consumidor desde que a
@@ -34,12 +33,11 @@ const CLASSE_VARIANTE: Record<VarianteAcaoLinha, string> = {
 const LARGURA_BOLHA_PX = 256 + 8;
 
 export function AcaoLinha({ rotulo, icone, variante = 'neutra', onClick, indisponivel, vazado, soIcone }: AcaoLinhaProps) {
-  // Motivo de indisponível: frase longa que a caixa da tabela (que rola de lado) cortava. Por isso essa bolha é
-  // desenhada fora da tabela, direto no <body>, fixa na tela, acima do botão e alinhada pela direita dele (sem
-  // passar da borda esquerda da tela). A dica curta ("Alterar") continua a de CSS puro.
+  // A dica (o nome da ação, ou o motivo de estar indisponível) é desenhada fora da tabela, direto no <body>, fixa na
+  // tela, acima do botão e alinhada pela direita dele (sem passar da borda esquerda da tela): a caixa da tabela, que
+  // rola de lado, cortava a bolha e ganhava uma barra de rolagem quando o ícone não era o último da coluna.
   const [posicao, setPosicao] = useState<{ topo: number; direita: number } | null>(null);
   const abrir = (elemento: HTMLElement) => {
-    if (!indisponivel) return;
     const caixa = elemento.getBoundingClientRect();
     setPosicao({ topo: caixa.top - 8, direita: Math.max(caixa.right, LARGURA_BOLHA_PX) });
   };
@@ -47,7 +45,6 @@ export function AcaoLinha({ rotulo, icone, variante = 'neutra', onClick, indispo
 
   const className =
     'crud-tabela__acao' +
-    (indisponivel ? '' : ' dica') +
     CLASSE_VARIANTE[variante] +
     (indisponivel ? ' crud-tabela__acao--indisponivel' : '');
 
@@ -66,16 +63,14 @@ export function AcaoLinha({ rotulo, icone, variante = 'neutra', onClick, indispo
     >
       <i className={`${vazado ? 'fa-regular' : 'fa-solid'} ${icone}`} aria-hidden="true"></i>
       {!soIcone && <span className="crud-tabela__acao-texto">{rotulo}</span>}
-      {!indisponivel && <Dica texto={rotulo} curta />}
-      {indisponivel &&
-        posicao &&
+      {posicao &&
         createPortal(
           <span
-            className="dica__bolha dica__bolha--solta"
+            className={'dica__bolha dica__bolha--solta' + (indisponivel ? '' : ' dica__bolha--curta')}
             aria-hidden="true"
             style={{ top: posicao.topo, left: posicao.direita }}
           >
-            {indisponivel}
+            {indisponivel ?? rotulo}
           </span>,
           document.body,
         )}

@@ -714,18 +714,16 @@
     top: 135%;
   }
 
-  /* Variante --direita: abre alinhada pela borda direita do gatilho, para o gatilho que fica na última coluna
-     de uma tabela (centralizada, a bolha aberta passaria da borda e criaria rolagem lateral enquanto aberta).
-     Vale sozinha para o último botão de todo grupo de ações de linha (.crud-tabela__acoes), que fica na borda
-     direita da tabela; menos na coluna de ação própria, que fica no meio e mantém a dica centralizada. */
-  .dica__bolha--direita,
-  :not(.crud-tabela__col--acao-propria) > .crud-tabela__acoes > .crud-tabela__acao:last-child .dica__bolha {
+  /* Variante --direita: abre alinhada pela borda direita do gatilho, para o gatilho que fica perto da borda direita
+     da tela (centralizada, a bolha aberta passaria da borda). As dicas dos botões de ação de tabela não usam esta
+     variante: são desenhadas fora da tabela (acao-linha.tsx, --solta). */
+  .dica__bolha--direita {
     left: auto;
     right: 0;
     transform: none;
   }
 
-  /* Variante --solta: a bolha desenhada fora da tabela, direto no <body> (motivo de ação indisponível em
+  /* Variante --solta: a bolha desenhada fora da tabela, direto no <body> (a dica dos botões de ação em
      acao-linha.tsx), fixa na tela. Assim a caixa da tabela, que rola de lado, não a corta. top/left vêm do botão:
      a bolha fica acima dele e termina na borda direita dele. */
   .dica__bolha--solta {

@@ -6,11 +6,13 @@ import { ROTULO_MEIO_PAGAMENTO } from '../../services/22-contribuicao/constants/
 import { GenericTable } from '../../components/crud/generic-table';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
-import { Tooltip } from '../../components/layout/tooltip';
+import { Dica, Tooltip } from '../../components/layout/tooltip';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { useChamadaRegistrada } from '../servicos/hook/use-chamada-registrada';
 import {
   bancadaPagamentoApi,
+  ehChamadaDeContribuicoes,
+  ehChamadaDeRepasses,
   type ContribuicaoBancada,
   type RepasseBancada,
   type TarefaBancada,
@@ -80,7 +82,7 @@ export function BancadaPagamento({ auth }: PropsPagina) {
   };
 
   return (
-    <div className="admin-content-painel">
+    <>
       {provedorDeTeste ? (
         <CaixaAviso titulo="Modo rápido: provedor de teste (Nest iniciado com npm run start:dev:teste)" tom="aviso" icone="fa-flask">
           <p>
@@ -99,116 +101,126 @@ export function BancadaPagamento({ auth }: PropsPagina) {
         </CaixaAviso>
       )}
 
-      <section className="crud-secao">
-        <h2 className="titulo-secao">
-          Tarefas automáticas <Tooltip texto={TAREFAS.map(({ rotulo, dica }) => `${rotulo}: ${dica}`).join(' ')} />
-        </h2>
-        <div className="flex flex-wrap gap-2 mt-2">
-          {TAREFAS.map(({ tarefa, rotulo, icone }) => (
-            <button
-              key={tarefa}
-              type="button"
-              className="btn btn-secondary"
-              disabled={rodando !== null}
-              onClick={() => void agir(tarefa, () => bancadaPagamentoApi.rodar(chamar, tarefa), `${rotulo}: feito.`)}
-            >
-              <i className={`fa-solid ${rodando === tarefa ? 'fa-spinner fa-spin' : icone}`} aria-hidden="true"></i> {rotulo}
+      <div className="admin-content-painel">
+        <section className="crud-secao">
+          <h2 className="titulo-secao">
+            Tarefas automáticas{' '}
+            <Tooltip texto="Fazem na hora o que o sistema faz sozinho de tempos em tempos. Passe o mouse em cada botão para ver o que ele faz." />
+          </h2>
+          <div className="flex flex-wrap gap-2 mt-2">
+            {TAREFAS.map(({ tarefa, rotulo, icone, dica }) => (
+              <button
+                key={tarefa}
+                type="button"
+                className="btn btn-secondary dica"
+                disabled={rodando !== null}
+                onClick={() => void agir(tarefa, () => bancadaPagamentoApi.rodar(chamar, tarefa), `${rotulo}: feito.`)}
+              >
+                <i className={`fa-solid ${rodando === tarefa ? 'fa-spinner fa-spin' : icone}`} aria-hidden="true"></i> {rotulo}
+                <Dica texto={dica} />
+              </button>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <div className="admin-content-painel">
+        <GenericTable<ContribuicaoBancada>
+          titulo="Contribuições"
+          ajuda="As mais recentes. Contribua com Pix, cartão ou boleto e pague como o provedor; no cartão, o dinheiro só vai para repasse depois de liberado (a previsão é o parâmetro cartao_dias_liberacao). Reiniciar o Nest apaga a memória do provedor de teste: o Pix pendente vira 'perdido' e só vence sozinho."
+          acaoTopo={
+            <button type="button" className="btn btn-primary" onClick={() => setGerandoPix(true)}>
+              <i className="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i> Contribuir
             </button>
-          ))}
-        </div>
-      </section>
-
-      <GenericTable<ContribuicaoBancada>
-        titulo="Contribuições"
-        ajuda="As mais recentes. Contribua com Pix, cartão ou boleto e pague como o provedor; no cartão, o dinheiro só vai para repasse depois de liberado (a previsão é o parâmetro cartao_dias_liberacao). Reiniciar o Nest apaga a memória do provedor de teste: o Pix pendente vira 'perdido' e só vence sozinho."
-        acaoTopo={
-          <button type="button" className="btn btn-primary" onClick={() => setGerandoPix(true)}>
-            <i className="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i> Contribuir
-          </button>
-        }
-        colunas={[
-          { chave: 'idContribuicao', rotulo: 'id', tipo: 'id' },
-          { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
-          { chave: 'valor', rotulo: 'valor', tipo: 'dinheiro' },
-          { chave: 'taxaPagamento', rotulo: 'tarifa', tipo: 'dinheiro' },
-          {
-            chave: 'meioPagamento',
-            rotulo: 'meio',
-            tipo: 'texto',
-            renderizar: (linha) =>
-              linha.meioPagamento === 'cartao_credito'
-                ? linha.dinheiroLiberado
-                  ? 'Cartão (liberado)'
-                  : 'Cartão (a liberar)'
-                : ROTULO_MEIO_PAGAMENTO[linha.meioPagamento],
-          },
-          { chave: 'status', rotulo: 'status', tipo: 'status', renderizar: (linha) => <BadgeStatusContribuicao status={linha.status} /> },
-          { chave: 'noProvedor', rotulo: 'no provedor', tipo: 'texto', renderizar: (linha) => rotuloNoProvedor(linha.noProvedor) },
-        ]}
-        chavePrimaria="idContribuicao"
-        listar={listarContribuicoes}
-        chaveRecarga={chaveRecarga}
-        acoes={{
-          pagar: (linha) => void agir('pagar', () => bancadaPagamentoApi.pagar(chamar, linha.idContribuicao), `Contribuição #${linha.idContribuicao} paga.`),
-          liberarDinheiro: (linha) =>
-            void agir('liberar', () => bancadaPagamentoApi.liberar(chamar, linha.idContribuicao), `Dinheiro do cartão da contribuição #${linha.idContribuicao} liberado.`),
-          vencer: (linha) => void agir('vencer', () => bancadaPagamentoApi.vencer(chamar, linha.idContribuicao), `Cobrança da contribuição #${linha.idContribuicao} vencida.`),
-          repetirAviso: (linha) =>
-            void agir('repetirAviso', () => bancadaPagamentoApi.repetirAviso(chamar, linha.idContribuicao), `Aviso da contribuição #${linha.idContribuicao} repetido.`),
-        }}
-        acaoIndisponivel={(linha, acao) => {
-          if (!provedorDeTeste) return 'Só com o provedor de teste.';
-          if (linha.noProvedor === 'perdida') return 'O provedor de teste não conhece mais esta cobrança.';
-          if (acao === 'repetirAviso') return linha.noProvedor === 'pendente' || linha.noProvedor === null ? 'O provedor ainda não mandou aviso desta cobrança.' : undefined;
-          if (acao === 'liberarDinheiro') {
-            if (linha.meioPagamento !== 'cartao_credito') return null;
-            return linha.noProvedor === 'confirmada' && !linha.dinheiroLiberado ? undefined : 'Só um cartão pago e ainda não liberado.';
           }
-          return linha.noProvedor === 'pendente' ? undefined : 'Só uma cobrança aguardando pagamento.';
-        }}
-        vazio={{ icone: 'fa-money-bill-wave', titulo: 'Nenhuma contribuição ainda.', texto: 'Use Contribuir para criar a primeira.' }}
-      />
+          colunas={[
+            { chave: 'idContribuicao', rotulo: 'id', tipo: 'id' },
+            { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
+            { chave: 'valor', rotulo: 'valor', tipo: 'dinheiro' },
+            { chave: 'taxaPagamento', rotulo: 'tarifa', tipo: 'dinheiro' },
+            {
+              chave: 'meioPagamento',
+              rotulo: 'meio',
+              tipo: 'texto',
+              renderizar: (linha) =>
+                linha.meioPagamento === 'cartao_credito'
+                  ? linha.dinheiroLiberado
+                    ? 'Cartão (liberado)'
+                    : 'Cartão (a liberar)'
+                  : ROTULO_MEIO_PAGAMENTO[linha.meioPagamento],
+            },
+            { chave: 'status', rotulo: 'status', tipo: 'status', renderizar: (linha) => <BadgeStatusContribuicao status={linha.status} /> },
+            { chave: 'noProvedor', rotulo: 'no provedor', tipo: 'texto', renderizar: (linha) => rotuloNoProvedor(linha.noProvedor) },
+          ]}
+          chavePrimaria="idContribuicao"
+          listar={listarContribuicoes}
+          chaveRecarga={chaveRecarga}
+          acoes={{
+            pagar: (linha) => void agir('pagar', () => bancadaPagamentoApi.pagar(chamar, linha.idContribuicao), `Contribuição #${linha.idContribuicao} paga.`),
+            liberarDinheiro: (linha) =>
+              void agir('liberar', () => bancadaPagamentoApi.liberar(chamar, linha.idContribuicao), `Dinheiro do cartão da contribuição #${linha.idContribuicao} liberado.`),
+            vencer: (linha) => void agir('vencer', () => bancadaPagamentoApi.vencer(chamar, linha.idContribuicao), `Cobrança da contribuição #${linha.idContribuicao} vencida.`),
+            repetirAviso: (linha) =>
+              void agir('repetirAviso', () => bancadaPagamentoApi.repetirAviso(chamar, linha.idContribuicao), `Aviso da contribuição #${linha.idContribuicao} repetido.`),
+          }}
+          acaoIndisponivel={(linha, acao) => {
+            if (!provedorDeTeste) return 'Só com o provedor de teste.';
+            if (linha.noProvedor === 'perdida') return 'O provedor de teste não conhece mais esta cobrança.';
+            if (acao === 'repetirAviso') return linha.noProvedor === 'pendente' || linha.noProvedor === null ? 'O provedor ainda não mandou aviso desta cobrança.' : undefined;
+            if (acao === 'liberarDinheiro') {
+              if (linha.meioPagamento !== 'cartao_credito') return null;
+              return linha.noProvedor === 'confirmada' && !linha.dinheiroLiberado ? undefined : 'Só um cartão pago e ainda não liberado.';
+            }
+            return linha.noProvedor === 'pendente' ? undefined : 'Só uma cobrança aguardando pagamento.';
+          }}
+          vazio={{ icone: 'fa-money-bill-wave', titulo: 'Nenhuma contribuição ainda.', texto: 'Use Contribuir para criar a primeira.' }}
+        />
 
-      <GenericTable<RepasseBancada>
-        titulo="Repasses"
-        ajuda="O dinheiro que vai para o pesquisador quando a campanha fecha. Sem chave Pix confirmada do dono, o repasse espera: entre como ele e use Minha chave Pix."
-        acaoTopo={
-          <button type="button" className="btn btn-secondary" onClick={() => setCadastrandoChave(true)}>
-            <i className="fa-solid fa-key" aria-hidden="true"></i> Minha chave Pix
-          </button>
-        }
-        colunas={[
-          { chave: 'idRepasse', rotulo: 'id', tipo: 'id' },
-          { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
-          { chave: 'valorLiquido', rotulo: 'líquido', tipo: 'dinheiro' },
-          {
-            chave: 'status',
-            rotulo: 'status',
-            tipo: 'status',
-            renderizar: (linha) => <BadgeStatusRepasse status={linha.status} aguardandoConta={linha.aguardandoConta} />,
-          },
-          { chave: 'noProvedor', rotulo: 'no provedor', tipo: 'texto', renderizar: (linha) => rotuloNoProvedor(linha.noProvedor) },
-        ]}
-        chavePrimaria="idRepasse"
-        listar={listarRepasses}
-        chaveRecarga={chaveRecarga}
-        acoes={{
-          concluirTransferencia: (linha) =>
-            void agir('concluir', () => bancadaPagamentoApi.concluirTransferencia(chamar, linha.idRepasse), `Transferência do repasse #${linha.idRepasse} concluída.`),
-          falharTransferencia: (linha) =>
-            void agir('falhar', () => bancadaPagamentoApi.falharTransferencia(chamar, linha.idRepasse), `Transferência do repasse #${linha.idRepasse} falhou.`),
-        }}
-        acaoIndisponivel={(linha) => {
-          if (!provedorDeTeste) return 'Só com o provedor de teste.';
-          return linha.status === 'processando' && linha.noProvedor === 'processando' ? undefined : 'Só um repasse com transferência em andamento.';
-        }}
-        vazio={{ icone: 'fa-paper-plane', titulo: 'Nenhum repasse ainda.', texto: 'Feche uma campanha com contribuição paga.' }}
-      />
+        <RegistroChamadas filtro={ehChamadaDeContribuicoes} />
+      </div>
 
-      <RegistroChamadas />
+      <div className="admin-content-painel">
+        <GenericTable<RepasseBancada>
+          titulo="Repasses"
+          ajuda="O dinheiro que vai para o pesquisador quando a campanha fecha. Sem chave Pix confirmada do dono, o repasse espera: entre como ele e use Minha chave Pix."
+          acaoTopo={
+            <button type="button" className="btn btn-secondary" onClick={() => setCadastrandoChave(true)}>
+              <i className="fa-solid fa-key" aria-hidden="true"></i> Minha chave Pix
+            </button>
+          }
+          colunas={[
+            { chave: 'idRepasse', rotulo: 'id', tipo: 'id' },
+            { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
+            { chave: 'valorLiquido', rotulo: 'líquido', tipo: 'dinheiro' },
+            {
+              chave: 'status',
+              rotulo: 'status',
+              tipo: 'status',
+              renderizar: (linha) => <BadgeStatusRepasse status={linha.status} aguardandoConta={linha.aguardandoConta} />,
+            },
+            { chave: 'noProvedor', rotulo: 'no provedor', tipo: 'texto', renderizar: (linha) => rotuloNoProvedor(linha.noProvedor) },
+          ]}
+          chavePrimaria="idRepasse"
+          listar={listarRepasses}
+          chaveRecarga={chaveRecarga}
+          acoes={{
+            concluirTransferencia: (linha) =>
+              void agir('concluir', () => bancadaPagamentoApi.concluirTransferencia(chamar, linha.idRepasse), `Transferência do repasse #${linha.idRepasse} concluída.`),
+            falharTransferencia: (linha) =>
+              void agir('falhar', () => bancadaPagamentoApi.falharTransferencia(chamar, linha.idRepasse), `Transferência do repasse #${linha.idRepasse} falhou.`),
+          }}
+          acaoIndisponivel={(linha) => {
+            if (!provedorDeTeste) return 'Só com o provedor de teste.';
+            return linha.status === 'processando' && linha.noProvedor === 'processando' ? undefined : 'Só um repasse com transferência em andamento.';
+          }}
+          vazio={{ icone: 'fa-paper-plane', titulo: 'Nenhum repasse ainda.', texto: 'Feche uma campanha com contribuição paga.' }}
+        />
+
+        <RegistroChamadas filtro={ehChamadaDeRepasses} />
+      </div>
 
       {gerandoPix && <ModalGerarPix authFetch={auth.authFetch} chamar={chamar} aoFechar={() => setGerandoPix(false)} aoGerado={recarregar} />}
       {cadastrandoChave && <ModalChavePix chamar={chamar} aoFechar={() => setCadastrandoChave(false)} aoCadastrada={recarregar} />}
-    </div>
+    </>
   );
 }

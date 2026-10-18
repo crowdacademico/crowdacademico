@@ -48,7 +48,7 @@ export interface ContribuicaoCriada {
   valor: number;
   taxaPagamento: number;
   valorCobrado: number;
-  status: string;
+  status: StatusContribuicao;
   pix?: { copiaECola: string; qrCodeBase64?: string; expiraEm: string };
   cartao?: { linkPagamento: string };
   boleto?: { link: string; linhaDigitavel: string; venceEm: string };
@@ -59,6 +59,14 @@ export interface ChavePixCadastrada {
   chaveMascarada: string;
   titularidadeVerificada: boolean;
 }
+
+// De qual card da T5 é uma chamada do Registro de Chamadas. O estado da bancada e as tarefas automáticas mexem nas duas
+// tabelas, então aparecem nos dois registros.
+const deTodos = (caminho: string) => caminho === BASE || caminho.startsWith(`${BASE}/tarefas/`);
+export const ehChamadaDeContribuicoes = ({ caminho }: { caminho: string }) =>
+  deTodos(caminho) || caminho === '/contribuicao' || caminho.startsWith(`${BASE}/contribuicoes/`);
+export const ehChamadaDeRepasses = ({ caminho }: { caminho: string }) =>
+  deTodos(caminho) || caminho === `${BASE}/chave-pix` || caminho.startsWith(`${BASE}/repasses/`);
 
 export const bancadaPagamentoApi = {
   estado: (chamar: Chamar) => chamar<EstadoBancada>(BASE),

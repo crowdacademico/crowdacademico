@@ -32,9 +32,15 @@ function montarCurl(chamada: RegistroChamada): string {
 
 // Gaveta recolhível, num cartão próprio no fim das telas T1, T2 e T4. Substituto direto do Thunder Client: toda
 // chamada feita via useChamadaRegistrada (qualquer tela) aparece aqui, mais recente primeiro. Sem coluna
-// "Ator": só existe um "ator" possível, a sessão real logada.
-export function RegistroChamadas() {
-  const { registroChamadas, limparRegistro } = useCampoTestes();
+// "Ator": só existe um "ator" possível, a sessão real logada. `filtro`: só as chamadas de uma parte da tela (cada
+// card da T5 tem o seu registro); "Limpar" apaga só essas.
+interface RegistroChamadasProps {
+  filtro?: (chamada: RegistroChamada) => boolean;
+}
+
+export function RegistroChamadas({ filtro }: RegistroChamadasProps = {}) {
+  const { registroChamadas: todas, limparRegistro } = useCampoTestes();
+  const registroChamadas = filtro ? todas.filter(filtro) : todas;
   const [aberto, setAberto] = useState(false);
   const [linhaExpandida, setLinhaExpandida] = useState<string | null>(null);
   const [pagina, setPagina] = useState(1);
@@ -65,7 +71,7 @@ export function RegistroChamadas() {
               type="button"
               className="btn btn-secondary btn-pequeno mb-2"
               onClick={() => {
-                limparRegistro();
+                limparRegistro(filtro);
                 setPagina(1);
               }}
             >

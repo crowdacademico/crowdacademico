@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { BadgeStatusContribuicao } from '../../components/crud/badge-status-contribuicao';
+import { BarraProgresso } from '../../components/crud/barra-progresso';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
@@ -39,6 +41,7 @@ export function ModalGerarPix({ authFetch, chamar, aoFechar, aoGerado }: ModalGe
   const [valor, setValor] = useState('100');
   const [meio, setMeio] = useState<MeioContribuicao>('pix');
   const [gerada, setGerada] = useState<ContribuicaoCriada | null>(null);
+  const campanhaEscolhida = campanhas?.find((campanha) => campanha.idCampanha === Number(idCampanha));
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { mostrar } = useToast();
   const { ocupado, executar } = useEnvio(reportarErro, limparErro);
@@ -77,65 +80,96 @@ export function ModalGerarPix({ authFetch, chamar, aoFechar, aoGerado }: ModalGe
       }
     >
       {gerada ? (
-        <SecaoFicha titulo="O que a pessoa paga">
-          <CampoFicha rotulo="Contribuição" valor={formatarMoeda(gerada.valor)} />
-          <CampoFicha rotulo="Tarifa do provedor" valor={formatarMoeda(gerada.taxaPagamento)} />
-          <CampoFicha rotulo="Total cobrado" valor={formatarMoeda(gerada.valorCobrado)} />
-          {gerada.pix && (
-            <CampoFicha
-              rotulo="Pix copia e cola"
-              largura="cheia"
-              valor={
-                <span className="flex items-start gap-2">
-                  <code className="break-all">{gerada.pix.copiaECola}</code>
-                  <button type="button" className="btn btn-secondary btn-pequeno shrink-0" onClick={() => void copiar(gerada.pix?.copiaECola ?? '')}>
-                    <i className="fa-solid fa-copy" aria-hidden="true"></i> Copiar
-                  </button>
-                </span>
-              }
-            />
-          )}
-          {gerada.cartao && (
-            <CampoFicha
-              rotulo="Página segura de pagamento"
-              largura="cheia"
-              valor={
-                <a href={gerada.cartao.linkPagamento} target="_blank" rel="noreferrer" className="btn btn-secondary btn-pequeno">
-                  <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Abrir e pagar com cartão
-                </a>
-              }
-            />
-          )}
-          {gerada.boleto && (
-            <>
+        <>
+          {campanhaEscolhida && (
+            <SecaoFicha titulo="Campanha">
+              <CampoFicha rotulo="Campanha" largura="cheia" valor={`#${campanhaEscolhida.idCampanha} ${campanhaEscolhida.titulo}`} />
+              <CampoFicha rotulo="Meta" valor={formatarMoeda(campanhaEscolhida.metaFinanceira)} />
               <CampoFicha
-                rotulo="Linha digitável"
+                rotulo="Arrecadado até agora"
+                valor={
+                  <span className="block space-y-1.5">
+                    <span className="block">{formatarMoeda(campanhaEscolhida.valorBrutoArrecadado)}</span>
+                    <BarraProgresso
+                      valor={campanhaEscolhida.valorBrutoArrecadado}
+                      total={campanhaEscolhida.metaFinanceira}
+                      rotulo="Arrecadado em relação à meta"
+                    />
+                  </span>
+                }
+              />
+              <CampoFicha
+                rotulo="Situação da contribuição"
+                largura="cheia"
+                valor={
+                  <span className="flex flex-wrap items-center gap-2">
+                    <BadgeStatusContribuicao status={gerada.status} />
+                    <span className="texto-fraco">Entra no arrecadado quando for paga (botão Pagar da tabela).</span>
+                  </span>
+                }
+              />
+            </SecaoFicha>
+          )}
+          <SecaoFicha titulo="O que a pessoa paga">
+            <CampoFicha rotulo="Contribuição" valor={formatarMoeda(gerada.valor)} />
+            <CampoFicha rotulo="Tarifa do provedor" valor={formatarMoeda(gerada.taxaPagamento)} />
+            <CampoFicha rotulo="Total cobrado" valor={formatarMoeda(gerada.valorCobrado)} />
+            {gerada.pix && (
+              <CampoFicha
+                rotulo="Pix copia e cola"
                 largura="cheia"
                 valor={
                   <span className="flex items-start gap-2">
-                    <code className="break-all">{gerada.boleto.linhaDigitavel}</code>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-pequeno shrink-0"
-                      onClick={() => void copiar(gerada.boleto?.linhaDigitavel ?? '', 'Linha digitável')}
-                    >
+                    <code className="break-all">{gerada.pix.copiaECola}</code>
+                    <button type="button" className="btn btn-secondary btn-pequeno shrink-0" onClick={() => void copiar(gerada.pix?.copiaECola ?? '')}>
                       <i className="fa-solid fa-copy" aria-hidden="true"></i> Copiar
                     </button>
                   </span>
                 }
               />
-              <CampoFicha rotulo="Vence em" valor={new Date(gerada.boleto.venceEm).toLocaleDateString('pt-BR')} />
+            )}
+            {gerada.cartao && (
               <CampoFicha
-                rotulo="Boleto"
+                rotulo="Página segura de pagamento"
+                largura="cheia"
                 valor={
-                  <a href={gerada.boleto.link} target="_blank" rel="noreferrer" className="btn btn-secondary btn-pequeno">
-                    <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Abrir o boleto
+                  <a href={gerada.cartao.linkPagamento} target="_blank" rel="noreferrer" className="btn btn-secondary btn-pequeno">
+                    <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Abrir e pagar com cartão
                   </a>
                 }
               />
-            </>
-          )}
-        </SecaoFicha>
+            )}
+            {gerada.boleto && (
+              <>
+                <CampoFicha
+                  rotulo="Linha digitável"
+                  largura="cheia"
+                  valor={
+                    <span className="flex items-start gap-2">
+                      <code className="break-all">{gerada.boleto.linhaDigitavel}</code>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-pequeno shrink-0"
+                        onClick={() => void copiar(gerada.boleto?.linhaDigitavel ?? '', 'Linha digitável')}
+                      >
+                        <i className="fa-solid fa-copy" aria-hidden="true"></i> Copiar
+                      </button>
+                    </span>
+                  }
+                />
+                <CampoFicha rotulo="Vence em" valor={new Date(gerada.boleto.venceEm).toLocaleDateString('pt-BR')} />
+                <CampoFicha
+                  rotulo="Boleto"
+                  valor={
+                    <a href={gerada.boleto.link} target="_blank" rel="noreferrer" className="btn btn-secondary btn-pequeno">
+                      <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Abrir o boleto
+                    </a>
+                  }
+                />
+              </>
+            )}
+          </SecaoFicha>
+        </>
       ) : (
         <SecaoFicha titulo="Contribuição" colunas={1}>
           <Campo rotulo="Campanha" dica={campanhas?.length === 0 ? 'Nenhuma campanha recebendo apoio agora.' : undefined}>

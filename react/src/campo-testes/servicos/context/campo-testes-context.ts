@@ -19,7 +19,8 @@ export interface RegistroChamada extends EntradaRegistroChamada {
 export interface CampoTestesContextValue {
   registroChamadas: RegistroChamada[];
   registrarChamada: (entrada: EntradaRegistroChamada) => void;
-  limparRegistro: () => void;
+  // Sem `quais`, limpa tudo; com `quais`, só as chamadas que ele aceita (o registro de um card da tela).
+  limparRegistro: (quais?: (chamada: RegistroChamada) => boolean) => void;
 }
 
 // Separado de campo-testes-provider.tsx e use-campo-testes.ts: o recarregamento rápido do Vite exige que um
