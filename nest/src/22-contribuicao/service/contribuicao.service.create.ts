@@ -70,6 +70,8 @@ export class ContribuicaoServiceCreate {
   async executar(
     dto: ContribuicaoRequestCreate,
     usuario: UsuarioAutenticado | undefined,
+    // IP de quem contribui: vai para o aceite do Termo (aceite_termo_contribuicao), guardado pelo prazo do Termo.
+    ip?: string,
   ): Promise<ContribuicaoResponseCreate> {
     // Rota @Publico() (contribuir não exige conta, RF-073): o guard de autenticação não roda a checagem de termo
     // pendente nela. Quem ESTÁ logado e com termo pendente recebe o mesmo 403 de qualquer outra rota.
@@ -118,6 +120,13 @@ export class ContribuicaoServiceCreate {
             tokenSessao,
             this.gateway.provedor,
           ],
+        );
+        // A versão do Termo da conta vigente agora, com o IP: prova, numa contestação de pagamento, quais regras
+        // valiam no dia (vale também para quem contribui sem conta). Sem versão ativa, não grava.
+        await client.query(
+          `INSERT INTO aceite_termo_contribuicao (id_contribuicao, id_termo, ip_aceite)
+           SELECT $1, id_termo, $2 FROM termos_de_uso WHERE tipo = 'cadastro' AND ativo LIMIT 1`,
+          [resContribuicao.rows[0].id_contribuicao, ip ?? null],
         );
         return {
           contribuicao: resContribuicao.rows[0],

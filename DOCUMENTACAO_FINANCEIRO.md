@@ -41,6 +41,35 @@ O sistema não conhece o Asaas: conhece três "tomadas" (ports, em `nest/src/29-
 | Só o cartão | Parâmetro `cartao_habilitado` = `false` no painel | Contribuição com cartão é recusada (91052); o Pix continua |
 | Só o boleto | Parâmetro `boleto_habilitado` (nasce `false`) | Contribuição com boleto é recusada (91053); o Pix continua |
 
+### 2.2 O provedor de teste e o modo rápido (`npm run start:dev:teste`)
+
+**Em palavras simples:** o provedor de teste (`nest/src/29-pagamento/adapters/fake`) é um "Asaas de mentira" que mora dentro do próprio Nest. Ele cumpre as mesmas três tomadas do Asaas (cobrar, transferir, conferir avisos), então o resto do sistema não sabe com qual dos dois está falando: o mesmo código de contribuição, webhook, repasse, devolução e conferência roda nos dois. Nenhum dinheiro existe, não precisa de internet, de conta no Asaas nem de túnel.
+
+**Como ligar:** na pasta `nest`, `npm run start:dev:teste` no lugar do `npm run start:dev` (`nest/scripts/start-dev-teste.mjs`). Ele sobe o Nest de sempre com `PAYMENT_PROVIDER=fake`, sem mexer no `nest/.env` (a variável de ambiente vale mais que o arquivo). A T5 mostra no topo "Modo rápido: provedor de teste" e todas as ações dela funcionam.
+
+**Como ele imita o Asaas, passo a passo:**
+
+| No Asaas | No provedor de teste |
+|---|---|
+| Cria a cobrança e devolve o QR do Pix, a página do cartão ou o boleto | Cria a cobrança na memória e devolve um código Pix, um link e uma linha digitável de mentira (`fake.local`) |
+| Quem apoia paga no banco dele | Ninguém paga sozinho: o botão **Pagar** da T5 faz o papel de quem apoia |
+| O Asaas manda o aviso (webhook) pelo túnel | O provedor de teste entrega o aviso direto ao mesmo serviço do webhook, dentro do Nest, com o token dele: registrar o evento, reconsultar a cobrança e aplicar seguem o caminho de um aviso real |
+| Pix não pago vence | Botão **Vencer** da T5, ou a tarefa de vencimento depois de `pix_validade_horas` |
+| Cartão: o dinheiro é liberado cerca de 30 dias depois | Botão **Liberar** da T5 |
+| Aviso repetido (o Asaas reenvia) | Botão **Repetir aviso** da T5 |
+| Diretório Pix (conferir o titular da chave do pesquisador) | "Minha chave Pix" da T5 registra a chave com o CPF do próprio perfil |
+| Transferência ao pesquisador conclui ou falha no banco | Botões **Concluir** e **Falhar** da T5 |
+| Devolução: o banco devolve (Pix e cartão) ou gera link (boleto) | Pix e cartão: devolve na hora; boleto: gera um link de mentira e a contribuição vai para reembolso manual, como no Asaas |
+
+**Cuidados:**
+- A memória do provedor de teste some quando o Nest reinicia: uma cobrança pendente criada antes vira "perdida" na T5 e só vence sozinha.
+- O banco é o mesmo do modo normal: as contribuições do modo rápido ficam com o provedor `fake` e as tarefas automáticas só tratam as do provedor ligado, então nunca se misturam com as do Asaas.
+- Em produção o provedor de teste não sobe: o Nest se recusa a iniciar com `PAYMENT_PROVIDER=fake` e `NODE_ENV=production` (`pagamento.module.ts`).
+
+- **Decisão:** um comando à parte (`start:dev:teste`), em vez de duas bancadas (uma para o provedor de teste, outra para o Asaas).
+- **Motivo:** o Nest fala com um provedor por vez; falar com dois ao mesmo tempo seria uma mudança grande no pagamento só para teste.
+- **Caso-limite:** no modo rápido, um aviso do Asaas que chegar pelo túnel é recusado (o Nest está falando com o provedor de teste) e o Asaas tenta de novo depois; por isso o tutorial manda fechar o túnel enquanto o modo rápido estiver ligado.
+
 ---
 
 ## 3. Meios de pagamento

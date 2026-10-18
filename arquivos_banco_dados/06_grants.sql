@@ -437,6 +437,8 @@ REVOKE EXECUTE ON FUNCTION public.aplicar_evento_pagamento(INT, VARCHAR, VARCHAR
 GRANT EXECUTE ON FUNCTION public.aplicar_evento_pagamento(INT, VARCHAR, VARCHAR, status_contribuicao, DECIMAL, BOOLEAN) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.registrar_falha_evento_pagamento(INT, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.registrar_falha_evento_pagamento(INT, TEXT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.resumo_contribuicoes_campanha(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.resumo_contribuicoes_campanha(INT) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.liquido_repasse(DECIMAL, DECIMAL) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.liquido_repasse(DECIMAL, DECIMAL) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.eventos_para_reprocessar(VARCHAR, INT) FROM PUBLIC;

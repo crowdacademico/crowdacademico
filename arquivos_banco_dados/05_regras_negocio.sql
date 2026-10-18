@@ -2268,6 +2268,38 @@ WHEN (NEW.status IS DISTINCT FROM OLD.status)
 EXECUTE FUNCTION fn_carimba_envio_aprovacao();
 
 -- ----------------------------------------------------------------------------
+-- Função:     resumo_contribuicoes_campanha
+-- Assinatura: (p_id_campanha INT) -> TABLE (meio_pagamento meio_pagamento, status status_contribuicao, quantidade INT,
+--             total DECIMAL)
+-- Bloco:      [05-K-2]
+-- Regra:      Quantas contribuições e quanto (o valor, sem a tarifa) a campanha tem, por meio de pagamento e situação,
+--             para o Consultar da campanha. Só números: ninguém vê quem contribuiu. Lê o dono da campanha ou quem tem
+--             contribuicao_visualizar_sensivel; outra pessoa recebe 92038.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.resumo_contribuicoes_campanha(p_id_campanha INT)
+RETURNS TABLE (meio_pagamento meio_pagamento, status status_contribuicao, quantidade INT, total DECIMAL)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NOT public.tem_permissao('contribuicao_visualizar_sensivel')
+       AND NOT EXISTS (SELECT 1 FROM campanha ca
+                       WHERE ca.id_campanha = p_id_campanha AND ca.id_usuario = public.id_usuario_atual()) THEN
+        RAISE EXCEPTION 'Sem permissão para ver as contribuições desta campanha.' USING ERRCODE = '92038';
+    END IF;
+
+    RETURN QUERY
+    SELECT c.meio_pagamento, c.status, count(*)::INT, COALESCE(SUM(c.valor), 0)::DECIMAL
+    FROM contribuicao c
+    WHERE c.id_campanha = p_id_campanha
+    GROUP BY c.meio_pagamento, c.status
+    ORDER BY c.meio_pagamento, c.status;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
 -- Função:     liquido_repasse
 -- Assinatura: (p_bruto DECIMAL, p_liquido_percentual DECIMAL) -> DECIMAL
 -- Bloco:      [05-K-2]

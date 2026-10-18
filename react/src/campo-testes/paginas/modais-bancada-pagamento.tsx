@@ -64,7 +64,7 @@ export function ModalGerarPix({ authFetch, chamar, aoFechar, aoGerado }: ModalGe
   return (
     <ModalFicha
       titulo={gerada ? `Contribuição #${gerada.idContribuicao}` : 'Contribuir'}
-      ajuda="Contribui como a conta logada, pela rota de verdade. A tarifa do provedor é paga por quem apoia, por cima do valor. Cartão: só em campanha flexível, de R$ 20 a R$ 500 (parâmetros). Boleto: só em campanha flexível e desligado até ser ligado em Parâmetros (boleto_habilitado)."
+      ajuda="Contribui como a conta logada, pela rota de verdade. A tarifa do provedor é paga por quem apoia, por cima do valor. Cartão: só em campanha flexível, na faixa de valor definida em Parâmetros. Boleto: só em campanha flexível e desligado até ser ligado em Parâmetros (boleto_habilitado)."
       aoFechar={aoFechar}
       erro={erro}
       carregando={campanhas === null}

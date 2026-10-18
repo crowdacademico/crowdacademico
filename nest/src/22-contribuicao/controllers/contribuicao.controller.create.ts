@@ -35,6 +35,10 @@ export class ContribuicaoControllerCreate {
     @Body() dto: ContribuicaoRequestCreate,
     @Req() request: Request,
   ): Promise<ContribuicaoResponseCreate> {
-    return this.service.executar(dto, request.user);
+    return this.service.executar(
+      dto,
+      request.user,
+      request.ip ?? request.socket.remoteAddress,
+    );
   }
 }

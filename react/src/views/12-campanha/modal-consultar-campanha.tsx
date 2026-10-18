@@ -20,6 +20,10 @@ import { SecaoAtualizacoesCampanha } from './secao-atualizacoes-campanha';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
+import { contribuicaoApi } from '../../services/22-contribuicao/api/contribuicao.api';
+import { ROTULO_MEIO_PAGAMENTO } from '../../services/22-contribuicao/constants/contribuicao.constants';
+import { ROTULO_STATUS_CONTRIBUICAO } from '../../services/22-contribuicao/constants/status-contribuicao.constants';
+import type { ResumoContribuicoes } from '../../services/22-contribuicao/type/contribuicao.type';
 
 interface ModalConsultarCampanhaProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
@@ -46,16 +50,18 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
   const [denuncias, setDenuncias] = useState(0);
   const [pedidos, setPedidos] = useState(0);
   const ve = (alvo: ParteConsultar) => (parte === 'geral' || parte === alvo ? '' : ' hidden');
-  // O histórico vem numa busca à parte: o modal só aparece quando ele chega, para não crescer depois de aberto.
+  // Contribuições por meio e situação. null = sem permissão para ver (só o dono e quem tem a permissão): a linha some.
+  const [resumoContribuicoes, setResumoContribuicoes] = useState<ResumoContribuicoes[] | null>(null);
+  // O histórico e o resumo vêm em buscas à parte: o modal só aparece quando os dois chegam, para não crescer depois
+  // de aberto.
   const [historicoCarregado, setHistoricoCarregado] = useState(false);
 
   useEffect(() => {
     if (campanha) {
-      campanhaApi
-        .listarHistoricoRejeicao(auth.authFetch, campanha.idCampanha)
-        .then(setHistoricoRejeicao)
-        .catch(() => {})
-        .finally(() => setHistoricoCarregado(true));
+      void Promise.allSettled([
+        campanhaApi.listarHistoricoRejeicao(auth.authFetch, campanha.idCampanha).then(setHistoricoRejeicao),
+        contribuicaoApi.resumoDaCampanha(auth.authFetch, campanha.idCampanha).then(setResumoContribuicoes),
+      ]).then(() => setHistoricoCarregado(true));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campanha]);
@@ -165,6 +171,29 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
                   </span>
                 }
               />
+              {resumoContribuicoes && (
+                <CampoFicha
+                  rotulo="Contribuições"
+                  largura="cheia"
+                  valor={
+                    resumoContribuicoes.length === 0 ? (
+                      'Nenhuma ainda.'
+                    ) : (
+                      <span className="block space-y-1">
+                        {[...new Set(resumoContribuicoes.map((linha) => linha.meioPagamento))].map((meio) => (
+                          <span key={meio} className="block">
+                            <span className="enfase">{ROTULO_MEIO_PAGAMENTO[meio]}:</span>{' '}
+                            {resumoContribuicoes
+                              .filter((linha) => linha.meioPagamento === meio)
+                              .map((linha) => `${ROTULO_STATUS_CONTRIBUICAO[linha.status]} ${linha.quantidade} (${formatarMoeda(linha.total)})`)
+                              .join(' · ')}
+                          </span>
+                        ))}
+                      </span>
+                    )
+                  }
+                />
+              )}
               <CampoFicha
                 rotulo="Taxa da plataforma"
                 valor={campanha.taxaPlataforma === null ? 'Ainda não carimbada (não aprovada)' : `${campanha.taxaPlataforma}%`}

@@ -163,6 +163,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92035 | `decidir_contestacao` | `denuncia` | Sem permissão (`denuncia_responder`) para decidir contestação (03-10-2026) |
 | 92036 | `decidir_contestacao` | `denuncia` | Quem julgou a denúncia não decide a contestação contra a própria decisão (10-10-2026) |
 | 92037 | `listar_revisoes_pagamento`, `resolver_revisao_pagamento`, `listar_reembolsos_manuais`, `concluir_reembolso_manual`, `listar_repasses_atencao`, `reenfileirar_repasse` | `evento_pagamento`, `contribuicao`, `repasse` | Sem permissão para ver ou resolver as pendências de pagamento (17-10-2026) |
+| 92038 | `resumo_contribuicoes_campanha` | `contribuicao` | Só o dono da campanha ou quem tem `contribuicao_visualizar_sensivel` vê o resumo das contribuições dela (18-10-2026) |
 
 ## 93xxx - Limite de taxa (429)
 

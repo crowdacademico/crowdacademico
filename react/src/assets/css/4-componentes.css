@@ -307,6 +307,24 @@
     background-color: var(--cor-marca);
   }
 
+  /* Barra por baixo de um texto numa célula de tabela (TextoComBarraProgresso): fora do fluxo, logo abaixo do texto e
+     da mesma largura dele, dentro do respiro da linha. O texto não sai do lugar, a coluna não alarga, a linha não cresce. */
+  .barra-progresso-sob {
+    position: relative;
+    display: inline-block;
+  }
+
+  .barra-progresso-sob__trilho {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 0.125rem);
+    height: 0.25rem;
+    border-radius: var(--radius-full);
+    background-color: var(--cor-borda);
+    overflow: hidden;
+  }
+
   .barra-progresso__trilho--completo .barra-progresso__preenchido {
     background-color: var(--cor-fundo-marca-forte);
   }

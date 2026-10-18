@@ -1125,7 +1125,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 ## 13. Inventário de rotas HTTP
 
-163 handlers. `AUTH` = a rota exige login (o padrão, `AuthGuardRequireAuth` global); `pub` = a rota tem `@Publico()` (o que **não** significa "sem proteção": significa que quem protege é a RLS, e que anônimo é um caso legítimo).
+164 handlers. `AUTH` = a rota exige login (o padrão, `AuthGuardRequireAuth` global); `pub` = a rota tem `@Publico()` (o que **não** significa "sem proteção": significa que quem protege é a RLS, e que anônimo é um caso legítimo).
 
 | | Método | Rota |
 |---|---|---|
@@ -1222,6 +1222,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | DELETE | `/arquivo/:id` |
 | **Pagamento** | | |
 | pub | POST | `/contribuicao` *(contribuir não exige conta, RF-073; devolve o Pix "copia e cola" ou o link da página segura do cartão)* |
+| AUTH | GET | `/contribuicao/campanha/:idCampanha/resumo` *(quantas e quanto por meio e situação, para o Consultar da campanha; só o dono ou quem tem `contribuicao_visualizar_sensivel`)* |
 | pub | GET | `/contribuicao/:id` *(acompanhar a contribuição: com login, pelo próprio usuário; sem conta, pelo cabeçalho `X-Token-Sessao`)* |
 | pub | POST | `/pagamento/webhook/:provedor` · `/pagamento/webhook/:provedor/autorizacao-saque` *(quem chama é o provedor; a autenticidade é o token dele, conferido antes de tocar no banco; a segunda responde se uma transferência ou devolução pode sair)* |
 | AUTH | GET · POST · DELETE | `/conta-recebimento` *(a chave Pix do próprio pesquisador, conferida no provedor)* |

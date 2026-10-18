@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { BadgeStatusContribuicao } from '../../components/crud/badge-status-contribuicao';
 import { BadgeStatusRepasse } from '../../components/crud/badge-status-repasse';
 import { CaixaAviso } from '../../components/crud/caixa-aviso';
+import { ROTULO_MEIO_PAGAMENTO } from '../../services/22-contribuicao/constants/contribuicao.constants';
 import { GenericTable } from '../../components/crud/generic-table';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -80,9 +81,21 @@ export function BancadaPagamento({ auth }: PropsPagina) {
 
   return (
     <div className="admin-content-painel">
-      {!provedorDeTeste && (
+      {provedorDeTeste ? (
+        <CaixaAviso titulo="Modo rápido: provedor de teste (Nest iniciado com npm run start:dev:teste)" tom="aviso" icone="fa-flask">
+          <p>
+            Todas as ações desta tela funcionam, sem túnel e sem abrir o Asaas: pagar, vencer, liberar, repetir aviso e concluir ou falhar a
+            transferência. Nada paga sozinho: o botão Pagar faz o papel de quem apoia. Reiniciar o Nest apaga a memória do provedor de
+            teste. Para voltar ao Asaas: Ctrl+C e npm run start:dev.
+          </p>
+        </CaixaAviso>
+      ) : (
         <CaixaAviso titulo={`Provedor de pagamento real: ${provedor}`} tom="aviso" icone="fa-triangle-exclamation">
-          <p>Só as tarefas automáticas funcionam aqui. Pagar, vencer e concluir são feitos no painel do provedor.</p>
+          <p>
+            Para usar as ações desta tela (pagar, vencer, liberar, concluir), inicie o Nest no modo rápido, no lugar do Asaas: Ctrl+C no
+            terminal do Nest e npm run start:dev:teste (na pasta nest). Com o Asaas, só as tarefas automáticas funcionam aqui; pagar e
+            vencer são feitos no painel do Asaas.
+          </p>
         </CaixaAviso>
       )}
 
@@ -107,7 +120,7 @@ export function BancadaPagamento({ auth }: PropsPagina) {
 
       <GenericTable<ContribuicaoBancada>
         titulo="Contribuições"
-        ajuda="As 30 mais recentes. Contribua com Pix ou cartão e pague como o provedor; no cartão, o dinheiro só vai para repasse depois de liberado (no Asaas, cerca de 30 dias). Reiniciar o Nest apaga a memória do provedor de teste: o Pix pendente vira 'perdido' e só vence sozinho."
+        ajuda="As mais recentes. Contribua com Pix, cartão ou boleto e pague como o provedor; no cartão, o dinheiro só vai para repasse depois de liberado (a previsão é o parâmetro cartao_dias_liberacao). Reiniciar o Nest apaga a memória do provedor de teste: o Pix pendente vira 'perdido' e só vence sozinho."
         acaoTopo={
           <button type="button" className="btn btn-primary" onClick={() => setGerandoPix(true)}>
             <i className="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i> Contribuir
@@ -123,7 +136,11 @@ export function BancadaPagamento({ auth }: PropsPagina) {
             rotulo: 'meio',
             tipo: 'texto',
             renderizar: (linha) =>
-              linha.meioPagamento === 'pix' ? 'Pix' : linha.dinheiroLiberado ? 'Cartão (liberado)' : 'Cartão (a liberar)',
+              linha.meioPagamento === 'cartao_credito'
+                ? linha.dinheiroLiberado
+                  ? 'Cartão (liberado)'
+                  : 'Cartão (a liberar)'
+                : ROTULO_MEIO_PAGAMENTO[linha.meioPagamento],
           },
           { chave: 'status', rotulo: 'status', tipo: 'status', renderizar: (linha) => <BadgeStatusContribuicao status={linha.status} /> },
           { chave: 'noProvedor', rotulo: 'no provedor', tipo: 'texto', renderizar: (linha) => rotuloNoProvedor(linha.noProvedor) },
@@ -144,7 +161,7 @@ export function BancadaPagamento({ auth }: PropsPagina) {
           if (linha.noProvedor === 'perdida') return 'O provedor de teste não conhece mais esta cobrança.';
           if (acao === 'repetirAviso') return linha.noProvedor === 'pendente' || linha.noProvedor === null ? 'O provedor ainda não mandou aviso desta cobrança.' : undefined;
           if (acao === 'liberarDinheiro') {
-            if (linha.meioPagamento === 'pix') return null;
+            if (linha.meioPagamento !== 'cartao_credito') return null;
             return linha.noProvedor === 'confirmada' && !linha.dinheiroLiberado ? undefined : 'Só um cartão pago e ainda não liberado.';
           }
           return linha.noProvedor === 'pendente' ? undefined : 'Só uma cobrança aguardando pagamento.';

@@ -10,6 +10,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
+    "start:dev:teste": "node scripts/start-dev-teste.mjs",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "tunel": "node scripts/tunel.mjs",

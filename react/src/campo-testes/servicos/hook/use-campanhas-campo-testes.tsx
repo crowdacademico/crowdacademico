@@ -1,3 +1,5 @@
+import { TextoComBarraProgresso } from '../../../components/crud/barra-progresso';
+import { formatarMoeda } from '../../../services/constant/util/formatacao.util';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { BadgeStatusCampanha } from '../../../components/crud/badge-status-campanha';
@@ -108,7 +110,19 @@ export function useCampanhasCampoTestes(auth: UseAuthReturn, aoMudarSeguidas?: (
       { chave: 'idCampanha', rotulo: 'id', tipo: 'id' },
       { chave: 'titulo', rotulo: 'título', tipo: 'nome', umaLinha: true },
       { chave: 'status', rotulo: 'status', tipo: 'status', renderizar: (campanha) => <BadgeStatusCampanha campanha={campanha} /> },
-      { chave: 'dono', rotulo: 'dono', tipo: 'texto' },
+      {
+        chave: 'valorBrutoArrecadado',
+        rotulo: 'arrecadado',
+        tipo: 'dinheiro',
+        renderizar: (campanha) => (
+          <TextoComBarraProgresso
+            texto={formatarMoeda(campanha.valorBrutoArrecadado)}
+            valor={campanha.valorBrutoArrecadado}
+            total={campanha.metaFinanceira}
+            rotulo="Arrecadado em relação à meta"
+          />
+        ),
+      },
       { chave: 'metaFinanceira', rotulo: 'meta', tipo: 'dinheiro' },
     ],
     chavePrimaria: 'idCampanha',

@@ -66,7 +66,7 @@ Falta, e depende do `4-mail`:
 
 **Levar para a revisão externa quando o `4-mail` estiver pronto (pesquisa de mercado de 12-10-2026):** lembretes para quem segue a campanha ("faltam 48 h" e "faltam 8 h" para o fim, como faz o Kickstarter) e o endosso de colegas antes de enviar a campanha para aprovação (como faz o Experiment.com; este só com requisito novo).
 
-### Pagamento: `22-contribuicao`, `23-repasse`, `24-auditoria-financeira`, gateway e checkout (por último, de propósito)
+### Pagamento (feito em 17 e 18-10-2026; visão completa em `DOCUMENTACAO_FINANCEIRO.md`)
 
 #### 🔴 Pendência aberta (17-10-2026): o túnel (`cloudflared`) nos computadores da escola
 
@@ -76,45 +76,21 @@ Falta, e depende do `4-mail`:
 - **Opção 2:** o `cloudflared.exe` portátil (um arquivo só, roda sem instalar), baixado uma vez e guardado no Drive ou pendrive, copiado para o computador a cada dia.
 - **Atenuante:** para o teste do dia a dia, o túnel não é obrigatório. A "conferência com o provedor" (Parte 2 do tutorial) confirma o Pix sem aviso nenhum. O túnel só é obrigatório para testar o webhook de verdade e a validação de saque.
 - **Atualização (18-10-2026): túnel trocado pelo ngrok, com endereço fixo.** `npm run tunel` (em `nest/`) abre o túnel; o ngrok vem pelo `npm install` (pacote `@ngrok/ngrok`), sem instalar nada no Windows, e as URLs no Asaas foram cadastradas uma vez só (tutorial, Parte 6B). **Falta só confirmar na escola** que a rede deixa o ngrok funcionar; se não deixar, o Cloudflare (Parte 6) é o plano B.
-- **Ideia aprovada, para depois (18-10-2026): `npm run start:dev:teste`.** Liga o Nest no modo rápido (provedor de teste, `PAYMENT_PROVIDER=fake`) sem mexer no `.env`: testa o pagamento inteiro pela T5 sem túnel e sem abrir o Asaas. O `npm run start:dev` de sempre continua usando o `.env`. Junto: mostrar no topo da T5 em qual modo ela está e explicar no começo do tutorial. Uma T5 e uma T6 separadas foram descartadas: o Nest teria de falar com dois provedores ao mesmo tempo, mudança grande no pagamento só para teste.
-- **Como fechar:** o Lucas testa na escola (semana de 19-10-2026) se o `winget` e o download do pacote npm funcionam lá, e decide entre as opções. Nada foi feito ainda.
+- **Como fechar:** o Lucas roda `npm install` e `npm run tunel` (em `nest/`) num computador da escola (semana de 19-10-2026). Funcionando, a pendência fecha; senão, plano B (Cloudflare, opções 1 e 2 acima).
 
-#### 🔴 O que o banco do dinheiro ainda deixa passar (sondagem de 03-10-2026)
+#### 🟡 Testes no sandbox que faltam (próximos dias, com o Lucas)
 
-Provado no PGlite (`informacoes/testes-banco/_aud-contribuicao-sondagem.mjs`); detalhe e comparação com o Catarse no relatório `informacoes/todas as auditorias/SUPER_AUDITORIA_PREPARACAO_03-10-2026.md`, seção 7. Fazer no começo do módulo, antes do gateway:
-- **Ordem de status da contribuição:** hoje o status pode voltar para trás (devolvido para confirmado, pendente para repassado). Inclui recusar a confirmação que chega depois de a campanha ser encerrada.
-- **Transação do gateway única:** `id_transacao_api` sem `UNIQUE`; o gateway reenvia o mesmo aviso. E o webhook precisa achar a contribuição pela transação, não pelo nosso id.
-- **Repasse:** um por campanha, líquido menor ou igual ao bruto, e só de campanha encerrada.
-- **Auditoria financeira imutável e automática:** DECIDIDO (03-10-2026), ver `DOCUMENTACAO_BD.md`, [05-K-2-F].
-- **Escrita de `repasse` e `auditoria_financeira` sem regra no banco** (regra de acesso `USING (true)`): a escrita fica num serviço único do Nest, chamado só pelo webhook do gateway (com a assinatura conferida), nunca numa rota comum. Por isso só fecha junto do gateway.
-- **Gravar o IP no aceite de cada contribuição:** o Termo v5, o prazo de 5 anos (parâmetro) e a limpeza diária já estão feitos (03-10-2026, `DOCUMENTACAO_BD.md`, retenção do log). Falta, no módulo: o Nest pegar o IP da requisição de quem contribui (inclusive anônimo) e gravar em `aceite_termo_contribuicao.ip_aceite`. No deploy, atrás de um proxy, o Nest precisa confiar no proxy para ler o IP real (`trust proxy`).
-- **Contribuições no Consultar da campanha:** a consulta da gestão (Campanhas) passa a mostrar as contribuições (quantas, quanto, por meio de pagamento) quando o módulo existir.
+- **Cartão** numa campanha flexível (cartão de teste 4444 4444 4444 4444 aprova; 5184019740373151 recusa), até o repasse da parte liberada.
+- **Boleto:** ligar `boleto_habilitado` em Parâmetros; gerar, pagar ("Confirmar pagamento" no sandbox), repasse, e a devolução por link num cancelamento (vai para reembolso manual com o link).
+- **Tela "Concluir reembolso"** com as contribuições 56, 59, 60, 61 e 63 do Supabase, que chegam ao reembolso manual sozinhas depois das 8 tentativas (o banco simulado recusa devolver Pix de pagador fictício).
+- **Revisão manual da caixa de avisos:** os avisos parados de 17 e 18-10-2026 devem aparecer na tela de revisões do pagamento 24 horas depois de chegar, com o motivo.
+- **`npm run start:dev:teste`: FEITO (18-10-2026).** Modo rápido (provedor de teste) sem mexer no `.env`; a T5 mostra em qual modo está e todos os botões funcionam nele; tutorial, seção "Modo rápido" no topo. Provado de ponta a ponta no banco local (20 de 20 checagens).
 
-#### 🟡 Pendência aberta (24-09-2026): modelo de campanha `flexivel` existe no banco, no seed e no V7, mas o sistema não o exercita de ponta a ponta
+#### 🟡 Ainda aberto no pagamento
 
-Apontado pela revisão externa (resposta de 20-09) como "metade dos modelos não existe". Conferido: o **REQUISITOS_V7 promete os dois modelos**, então a pergunta "manter ou tirar o valor do enum" não se aplica; o enum fica. O que falta é implementar o lado flexível:
-
-- **Criação:** o wizard (`corpoDadosCampanha()`) não envia `modelo`, então toda campanha nasce `all-or-nothing`. O DTO de `PATCH` também não aceita `modelo`, de propósito (mudar o modelo depois de criada é decisão de produto em aberto, comentário em `campanha.request-update.ts`).
-- **Regras do banco:** existem `fn_valida_repasse_all_or_nothing` e `validar_contribuicao_all_or_nothing`, mas nenhuma regra correspondente para o flexível (repasse independente de atingir a meta, com a taxa descontada).
-- **Encerramento antecipado aprovado (03-10-2026):** a campanha já é encerrada; falta devolver tudo no Tudo ou Nada e registrar o repasse no Flexível (RF-066), igual ao encerramento por moderação.
-- **Encerramento:** o requisito de encerramento do flexível (repasse registrado com valor bruto, taxa, líquido e indicação de meta atingida ou não) não tem implementação.
-- **Aviso ao doador:** o aviso destacado e a confirmação de ciência antes da contribuição dependem da tela de checkout, que não existe.
-- **Só existe em dado:** `07_seed_dados.sql` tem uma campanha flexível (a do repasse `parcial_processando`), e o tipo aparece em `db.types.ts` e `campanha.type.ts`.
-
-**Depende de:** módulo de contribuição/pagamento (Grupo 8) e checkout. Não iniciar antes. Decidido no V8: o modelo pode mudar enquanto a campanha não foi aprovada e congela na aprovação (o banco já congela). O IP do contribuinte anônimo foi decidido nos requisitos em 04-10-2026 (RF-082): guardado no aceite, inclusive no anônimo, pelo prazo configurável.
-
-- **Gateway:** fica por último. Os testes serão em sandbox, mas sandbox não é desculpa para fazer mal feito: assinatura do webhook, idempotência, reconciliação, máquina de estados de `contribuicao`/`repasse` (`PROXIMOS_MODULOS.md`).
-- **Painel do doador** (`views/dash-doador`, pasta vazia) e **checkout** (`views/checkout`, vazia).
-
-#### 🟡 Achados da documentação do pagamento (18-10-2026), nada feito ainda
-
-- **`GRANT INSERT` sem uso em `repasse` e `auditoria_financeira`: FEITO (18-10-2026)**, Lucas aprovou. Saíram os `GRANT` e as policies de escrita (`04`, `06`); Grupo BN no ATUALIZAR (colar com o Nest parado).
-- **Pastas vazias `nest/src/23-repasse` e `nest/src/24-auditoria-financeira`: NÃO remover agora** (Lucas, 18-10-2026). Vão entrar na **reorganização de pastas, arquivos e nomes**: tudo com número, assuntos parecidos em sequência numérica, e o mesmo número no código (Nest, React) e na documentação, para ser fácil de ver e de achar. Projeto próprio, a planejar antes de mexer (escopo enxuto: propor o pequeno e seguro primeiro).
-- **Nome confuso no histórico financeiro: FEITO (18-10-2026).** A espera normal pelo provedor virou `estorno_aguardando_provedor (tentativa N)`; `estorno_falhou` ficou só para falha de verdade. Grupo BO.
-- **Caixa de webhooks crescendo: FEITO (18-10-2026).** A conferência (a cada 10 min) tenta de novo os avisos parados e, passado `webhook_reprocessar_horas` (24), manda para revisão manual o que não pertence a nada do sistema, com o motivo. Grupo BO; documentado em `DOCUMENTACAO_FINANCEIRO.md`, seção 8.
-- **Boleto: código pronto, falta testar (18-10-2026).** Só em campanha flexível, nasce desligado (`boleto_habilitado`), tarifa fixa corrigida pela real, devolução por link do provedor (vai para reembolso manual com o link). Grupo BQ. Testar no sandbox nos próximos dias: gerar, pagar (no sandbox, "Confirmar pagamento"), repasse, e a devolução por link num cancelamento. Ligar `boleto_habilitado` em Parâmetros antes.
-- **Campanha flexível liberada (18-10-2026):** campo "Modelo de financiamento" no criar campanha (troca até a aprovação). Destrava o teste do cartão e do boleto no sandbox. Grupo BP.
-- **Esta seção de Pagamento está desatualizada:** boa parte do que está acima já foi feito (máquina de estados, transação única, repasse, flexível no banco, encerramento). Mover o que foi feito para o histórico, com o texto original, quando a documentação do financeiro estiver pronta.
+- **Checkout e painel de quem apoia** (`views/checkout` e `views/dash-doador`, pastas vazias): a tela pública de apoiar. Hoje uma contribuição nasce pela T5 ou pela API. Junto vem o **aviso ao apoiador** sobre o modelo da campanha (tudo-ou-nada devolve, flexível não) com confirmação de ciência.
+- **Pastas vazias `nest/src/23-repasse` e `nest/src/24-auditoria-financeira`: NÃO remover agora** (Lucas, 18-10-2026). Entram na **reorganização de pastas, arquivos e nomes**: tudo com número, assuntos parecidos em sequência numérica, e o mesmo número no código (Nest, React) e na documentação. Projeto próprio, a planejar antes de mexer (escopo enxuto: propor o pequeno e seguro primeiro).
+- **Policy sem efeito em `contribuicao`** (`pol_contribuicao_update`, `USING (true)`, 04): o `app_nestjs` não tem `GRANT UPDATE` na tabela, então ela não faz nada e está "mantida só por documentação". Mesma situação das policies de escrita de `repasse` e `auditoria_financeira`, que saíram em 18-10-2026 (Grupo BN). Tirar também? Decisão do Lucas.
 
 ### Página pública da campanha (ainda não existe)
 
@@ -158,6 +134,7 @@ O Lucas pediu detalhamento dessa ideia (citada de passagem pelo Lucas numa rodad
 - **Registro de acessos (Marco Civil da Internet, art. 15):** quem opera como empresa precisa guardar IP, data e hora de cada acesso por 6 meses. Hoje o IP fica só nos aceites e no último login. Só vale se o sistema entrar em operação; detalhe em `DOCUMENTACAO_BD.md`, "IP: base legal e anonimato do Pix".
 - **Teste de fumaça do pagamento em produção (18-10-2026):** uma contribuição de **R$ 1 de verdade**, paga com o Pix do próprio Lucas, numa campanha de teste tudo-ou-nada, e depois "Cancelar o projeto". Confere o que o sandbox não consegue simular: o dinheiro **voltando** para quem apoiou (no sandbox o pagador é sempre fictício e o banco simulado recusa devolver; ver `.Tutorial-plataforma-pagamento-sandbox.md`, Parte 12). Custo: só a tarifa (R$ 0,99). É o padrão do mercado: todo sistema de pagamento faz um teste com valor mínimo em produção antes de abrir.
 - **Apagar a conta de testes "Apoiador" do `nest/.env`** (`ASAAS_API_KEY_APOIADOR`, 18-10-2026): só serve aos testes no sandbox (segunda conta que paga e recebe devolução). Mantida até o deploy por decisão do Lucas.
+- **`trust proxy` no Nest:** atrás de um proxy (servidor de hospedagem), o Nest precisa confiar nele para ler o IP real de quem contribui (gravado no aceite do Termo, `aceite_termo_contribuicao.ip_aceite`) e de quem faz login. Sem isso, todo IP gravado seria o do proxy.
 - **Docker** do Nest e do React (F2 do roteiro do Atlas, com o `docker/` deles como referência).
 - **`react/.gitignore` não cobre `.env`:** inofensivo hoje (o `.env` só tem a URL da API); só volta à tona se o conteúdo do `.env` mudar ou no deploy.
 - **CORS por lista de endereços** (ver grupo 5, segurança): se não for feito antes, entra aqui.
