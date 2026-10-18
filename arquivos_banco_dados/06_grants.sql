@@ -316,6 +316,8 @@ GRANT EXECUTE ON FUNCTION public.reservar_cobrancas_para_cancelar(VARCHAR, INT) 
 REVOKE EXECUTE ON FUNCTION public.marcar_cobranca_cancelada(INT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.marcar_cobranca_cancelada(INT) TO app_nestjs;
 -- Autorização de saque por webhook (PR-10): chamada pelo endpoint que o provedor consulta antes de executar uma transferência.
+REVOKE EXECUTE ON FUNCTION public.dados_autorizacao_estorno(VARCHAR, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.dados_autorizacao_estorno(VARCHAR, TEXT) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.dados_autorizacao_repasse(VARCHAR, TEXT, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.dados_autorizacao_repasse(VARCHAR, TEXT, TEXT) TO app_nestjs;
 -- Painel de revisão manual de pagamentos: chamadas por uma pessoa logada; a permissão é conferida DENTRO de cada função.
@@ -352,9 +354,14 @@ REVOKE EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() TO app_nestjs;
 -- Destino do dinheiro de campanha encerrada (05): só as funções de encerramento e o webhook chamam, por dentro. Nenhuma
 -- rota chama direto, então ninguém recebe EXECUTE.
--- ajustar_tarifa_pix: o POST /contribuicao grava a tarifa real que o provedor informou ao criar a cobrança.
-REVOKE EXECUTE ON FUNCTION public.ajustar_tarifa_pix(INT, DECIMAL) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.ajustar_tarifa_pix(INT, DECIMAL) TO app_nestjs;
+-- ajustar_tarifa_pagamento: o POST /contribuicao grava a tarifa real que o provedor informou ao criar a cobrança.
+REVOKE EXECUTE ON FUNCTION public.ajustar_tarifa_pagamento(INT, DECIMAL) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.ajustar_tarifa_pagamento(INT, DECIMAL) TO app_nestjs;
+-- Cartão: o worker de repasse cria o repasse da parte liberada; o pesquisador vê o que ainda falta liberar.
+REVOKE EXECUTE ON FUNCTION public.criar_repasses_liberados() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.criar_repasses_liberados() TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.cartao_a_liberar() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.cartao_a_liberar() TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.criar_repasse_campanha(INT, BOOLEAN) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.devolver_contribuicoes_campanha(INT) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.destino_dinheiro_campanha(INT) FROM PUBLIC;
@@ -427,8 +434,8 @@ REVOKE EXECUTE ON FUNCTION public.registrar_evento_pagamento(VARCHAR, VARCHAR, V
 GRANT EXECUTE ON FUNCTION public.registrar_evento_pagamento(VARCHAR, VARCHAR, VARCHAR, JSONB) TO app_nestjs;
 -- Processamento do webhook (PR-05): o webhook não tem usuário, então estas funções SECURITY DEFINER são o único caminho
 -- de escrita em evento_pagamento e de leitura de contribuicao a partir dele.
-REVOKE EXECUTE ON FUNCTION public.aplicar_evento_pagamento(INT, VARCHAR, VARCHAR, status_contribuicao, DECIMAL) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.aplicar_evento_pagamento(INT, VARCHAR, VARCHAR, status_contribuicao, DECIMAL) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.aplicar_evento_pagamento(INT, VARCHAR, VARCHAR, status_contribuicao, DECIMAL, BOOLEAN) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.aplicar_evento_pagamento(INT, VARCHAR, VARCHAR, status_contribuicao, DECIMAL, BOOLEAN) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.registrar_falha_evento_pagamento(INT, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.registrar_falha_evento_pagamento(INT, TEXT) TO app_nestjs;
 -- Worker de estorno (PR-07): job de fundo sem sessão; as três funções são SECURITY DEFINER e o app_nestjs não lê contribuicao.

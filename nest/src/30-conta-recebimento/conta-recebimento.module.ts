@@ -6,6 +6,7 @@ import { ContaRecebimentoControllerFindOne } from './controllers/conta-recebimen
 import { ContaRecebimentoControllerRemove } from './controllers/conta-recebimento.controller.remove';
 import { ContaRecebimentoServiceCreate } from './service/conta-recebimento.service.create';
 import { ContaRecebimentoServiceFindAll } from './service/conta-recebimento.service.findall';
+import { ContaRecebimentoServiceFindAllPendingCard } from './service/conta-recebimento.service.findall-pending-card';
 import { ContaRecebimentoServiceFindOne } from './service/conta-recebimento.service.findone';
 import { ContaRecebimentoServiceRemove } from './service/conta-recebimento.service.remove';
 
@@ -20,6 +21,7 @@ import { ContaRecebimentoServiceRemove } from './service/conta-recebimento.servi
   providers: [
     ContaRecebimentoServiceCreate,
     ContaRecebimentoServiceFindAll,
+    ContaRecebimentoServiceFindAllPendingCard,
     ContaRecebimentoServiceFindOne,
     ContaRecebimentoServiceRemove,
   ],

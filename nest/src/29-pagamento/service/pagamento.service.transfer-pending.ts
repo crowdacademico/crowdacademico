@@ -71,6 +71,15 @@ export class PagamentoServiceTransferPending {
     if (this.emExecucao) return;
     this.emExecucao = true;
     try {
+      // Antes da fila: o dinheiro de cartão que o provedor liberou desde o último ciclo vira um repasse adicional.
+      const liberados = await this.pool.query<{ criados: number }>(
+        'SELECT public.criar_repasses_liberados() AS criados',
+      );
+      if ((liberados.rows[0]?.criados ?? 0) > 0) {
+        this.logger.log(
+          `${liberados.rows[0].criados} repasse(s) criado(s) com dinheiro de cartão liberado.`,
+        );
+      }
       const limite = this.numero('REPASSE_LOTE_MAXIMO', LOTE_MAXIMO_PADRAO);
       let tratados = 0;
       while (tratados < limite && (await this.processarProximo())) {

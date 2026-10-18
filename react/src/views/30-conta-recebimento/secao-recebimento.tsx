@@ -12,7 +12,8 @@ import { contaRecebimentoApi } from '../../services/30-conta-recebimento/api/con
 import { ORDEM_TIPO_CHAVE_PIX, ROTULO_TIPO_CHAVE_PIX } from '../../services/30-conta-recebimento/constants/conta-recebimento.constants';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
-import type { ContaRecebimentoResponse, RepasseResponse } from '../../services/30-conta-recebimento/type/conta-recebimento.type';
+import type { CartaoALiberarResponse, ContaRecebimentoResponse, RepasseResponse } from '../../services/30-conta-recebimento/type/conta-recebimento.type';
+import { formatarData, formatarMoeda } from '../../services/constant/util/formatacao.util';
 import type { TipoChavePix } from '../../services/constant/type/enums-do-banco.gerado';
 
 // Recebimento do pesquisador, em Minha Conta > Acadêmico: a chave Pix para onde vai o repasse das campanhas dele e a
@@ -26,12 +27,14 @@ export function SecaoRecebimento({ authFetch }: { authFetch: AuthFetch }) {
   const [chave, setChave] = useState('');
   const [removendo, setRemovendo] = useState(false);
   const [chaveRecarga, setChaveRecarga] = useState(0);
+  const [cartaoALiberar, setCartaoALiberar] = useState<CartaoALiberarResponse[]>([]);
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { mostrar } = useToast();
   const { ocupado, executar } = useEnvio(reportarErro, limparErro);
 
   useEffect(() => {
     contaRecebimentoApi.buscar(authFetch).then(setConta).catch(reportarErro);
+    contaRecebimentoApi.listarCartaoALiberar(authFetch).then(setCartaoALiberar).catch(reportarErro);
   }, [authFetch, reportarErro, chaveRecarga]);
 
   const listarRepasses = useCallback((): Promise<RepasseResponse[]> => contaRecebimentoApi.listarRepasses(authFetch), [authFetch]);
@@ -133,6 +136,18 @@ export function SecaoRecebimento({ authFetch }: { authFetch: AuthFetch }) {
         )}
         <Tooltip texto="O dinheiro das suas campanhas, menos a taxa da plataforma, vai para esta chave quando a campanha fecha. Ela precisa estar no seu CPF: o sistema confere no diretório Pix." />
       </div>
+
+      {cartaoALiberar.length > 0 && (
+        <SecaoFicha titulo="Cartão a liberar" nivel={2}>
+          {cartaoALiberar.map((item) => (
+            <CampoFicha
+              key={item.idCampanha}
+              rotulo={item.tituloCampanha}
+              valor={`${formatarMoeda(item.valor)}, liberado em ${formatarData(item.previstoPara)} (previsão)`}
+            />
+          ))}
+        </SecaoFicha>
+      )}
 
       <GenericTable<RepasseResponse>
         titulo="Meus repasses"

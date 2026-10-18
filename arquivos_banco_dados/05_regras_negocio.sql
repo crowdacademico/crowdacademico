@@ -869,7 +869,8 @@ DECLARE
         ['arquivo_tamanho_minimo_bytes',  'arquivo_tamanho_maximo_documento_bytes'],
         ['espera_atencao_dias',           'espera_critica_dias'],
         ['repasse_backoff_base_minutos',  'repasse_backoff_max_minutos'],
-        ['estorno_backoff_base_minutos',  'estorno_backoff_max_minutos']
+        ['estorno_backoff_base_minutos',  'estorno_backoff_max_minutos'],
+        ['valor_minimo_contribuicao_cartao', 'valor_maximo_contribuicao_cartao']
     ];
     v_chave  TEXT;
     v_par    TEXT[];
@@ -2296,7 +2297,8 @@ BEGIN
     SELECT COALESCE(SUM(valor), 0), COALESCE(SUM(ROUND(valor * (1 - v_taxa / 100), 2)), 0)
     INTO v_bruto, v_liquido
     FROM contribuicao
-    WHERE id_campanha = p_id_campanha AND status = 'confirmado' AND id_repasse IS NULL;
+    WHERE id_campanha = p_id_campanha AND status = 'confirmado' AND id_repasse IS NULL
+      AND (meio_pagamento = 'pix' OR dinheiro_liberado_em IS NOT NULL);
 
     IF v_bruto <= 0 THEN
         RETURN NULL;
@@ -2307,9 +2309,85 @@ BEGIN
     RETURNING repasse.id_repasse INTO v_id_repasse;
 
     UPDATE contribuicao SET id_repasse = v_id_repasse
-    WHERE id_campanha = p_id_campanha AND status = 'confirmado' AND id_repasse IS NULL;
+    WHERE id_campanha = p_id_campanha AND status = 'confirmado' AND id_repasse IS NULL
+      AND (meio_pagamento = 'pix' OR dinheiro_liberado_em IS NOT NULL);
     RETURN v_id_repasse;
 END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     criar_repasses_liberados
+-- Assinatura: () -> INT
+-- Bloco:      [05-K-2]
+-- Regra:      Repasse da parte do cartão: o dinheiro do cartão só é liberado pelo provedor cerca de 30 dias depois do
+--             pagamento, então no fechamento ele fica fora do repasse. Quando é liberado (dinheiro_liberado_em), esta
+--             função cria um repasse adicional com ele, para toda campanha cujo destino do dinheiro é 'repasse'. Chamada
+--             pelo worker de repasse antes de cada ciclo. Devolve quantos repasses criou. SECURITY DEFINER, sem
+--             autorização (job de fundo).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.criar_repasses_liberados()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_id     INT;
+    v_criados INT := 0;
+BEGIN
+    FOR v_id IN
+        SELECT DISTINCT c.id_campanha
+        FROM contribuicao c
+        WHERE c.status = 'confirmado' AND c.id_repasse IS NULL
+          AND c.meio_pagamento <> 'pix' AND c.dinheiro_liberado_em IS NOT NULL
+        ORDER BY c.id_campanha
+    LOOP
+        BEGIN
+            PERFORM 1 FROM campanha WHERE id_campanha = v_id FOR UPDATE;
+            IF public.destino_dinheiro_campanha(v_id) = 'repasse'
+               AND public.criar_repasse_campanha(
+                       v_id, (SELECT valor_bruto_arrecadado >= meta_financeira FROM campanha WHERE id_campanha = v_id)
+                   ) IS NOT NULL THEN
+                v_criados := v_criados + 1;
+            END IF;
+        EXCEPTION WHEN OTHERS THEN
+            RAISE WARNING 'criar_repasses_liberados: campanha % ignorada neste ciclo (% / %)', v_id, SQLSTATE, SQLERRM;
+        END;
+    END LOOP;
+    RETURN v_criados;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     cartao_a_liberar
+-- Assinatura: () -> TABLE (id_campanha INT, titulo_campanha VARCHAR, valor DECIMAL, previsto_para TIMESTAMPTZ)
+-- Bloco:      [05-K-2]
+-- Regra:      Para o pesquisador logado: o dinheiro de cartão já pago nas campanhas dele que o provedor ainda não liberou
+--             (fora de repasse até lá), por campanha, com a data prevista (a confirmação mais recente + o prazo do
+--             parâmetro cartao_dias_liberacao). SECURITY DEFINER: o pesquisador não lê as contribuições de outras pessoas
+--             (pol_contribuicao_select); aqui sai só a soma das campanhas dele.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.cartao_a_liberar()
+RETURNS TABLE (id_campanha INT, titulo_campanha VARCHAR, valor DECIMAL, previsto_para TIMESTAMPTZ)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT ca.id_campanha, ca.titulo, SUM(c.valor),
+           MAX(COALESCE(conf.confirmado_em, c.criado_em))
+               + (public.config_numero('cartao_dias_liberacao', 30) * INTERVAL '1 day')
+    FROM contribuicao c
+    JOIN campanha ca ON ca.id_campanha = c.id_campanha
+    LEFT JOIN LATERAL (
+        SELECT MIN(a.timestamp) AS confirmado_em FROM auditoria_financeira a
+        WHERE a.id_contribuicao = c.id_contribuicao AND a.status_novo = 'confirmado'
+    ) conf ON TRUE
+    WHERE ca.id_usuario = public.id_usuario_atual()
+      AND c.status = 'confirmado' AND c.meio_pagamento <> 'pix'
+      AND c.dinheiro_liberado_em IS NULL AND c.id_repasse IS NULL
+    GROUP BY ca.id_campanha, ca.titulo
+    ORDER BY ca.id_campanha;
 $$;
 
 -- ----------------------------------------------------------------------------
@@ -3036,7 +3114,8 @@ EXECUTE FUNCTION fn_valida_contribuicao_campanha_ativa();
 -- Bloco:      [05-K-2]
 -- Regra:      R$5,00 não é piso do gateway (o PIX não impõe mínimo), é política de negócio da plataforma (RF-056). O limite
 --             técnico (`valor > 0`) mora na CHECK CK_CONTRIBUICAO_VALOR_MINIMO (01); esta trigger aplica o mínimo de negócio,
---             configurável, via configuracoes.valor_minimo_contribuicao.
+--             configurável, via configuracoes.valor_minimo_contribuicao. No cartão, também: desligado pelo admin
+--             (cartao_habilitado, 91052) e faixa própria (valor_minimo/maximo_contribuicao_cartao, 90037/90038).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_valida_contribuicao_valor_minimo()
 RETURNS TRIGGER AS $$
@@ -3048,6 +3127,24 @@ BEGIN
     IF NEW.valor < v_valor_minimo THEN
         RAISE EXCEPTION 'O valor da contribuição precisa ser de pelo menos %.', 'R$ ' || replace(to_char(v_valor_minimo, 'FM999999990.00'), '.', ',')
             USING ERRCODE = '90014';
+    END IF;
+
+    -- Cartão: pode ser desligado pelo admin; e tem faixa própria (a parte fixa da tarifa pesa num apoio pequeno, e o
+    -- teto limita o prejuízo de uma contestação de compra).
+    IF NEW.meio_pagamento = 'cartao_credito' THEN
+        IF NOT public.config_booleano('cartao_habilitado', TRUE) THEN
+            RAISE EXCEPTION 'Pagamento com cartão está desligado no momento. Use o Pix.' USING ERRCODE = '91052';
+        END IF;
+        IF NEW.valor < public.config_numero('valor_minimo_contribuicao_cartao', 20.00) THEN
+            RAISE EXCEPTION 'No cartão, a contribuição precisa ser de pelo menos %.',
+                'R$ ' || replace(to_char(public.config_numero('valor_minimo_contribuicao_cartao', 20.00), 'FM999999990.00'), '.', ',')
+                USING ERRCODE = '90037';
+        END IF;
+        IF NEW.valor > public.config_numero('valor_maximo_contribuicao_cartao', 500.00) THEN
+            RAISE EXCEPTION 'No cartão, a contribuição pode ser de no máximo %. Para um valor maior, use o Pix.',
+                'R$ ' || replace(to_char(public.config_numero('valor_maximo_contribuicao_cartao', 500.00), 'FM999999990.00'), '.', ',')
+                USING ERRCODE = '90038';
+        END IF;
     END IF;
 
     RETURN NEW;
@@ -3077,14 +3174,20 @@ EXECUTE FUNCTION fn_valida_contribuicao_valor_minimo();
 -- Regra:      A tarifa do provedor de pagamento é paga por quem apoia, POR CIMA do valor: contribui 100, a cobrança é de
 --             100 + tarifa. Grava em taxa_pagamento a tarifa vigente no momento do apoio (configuracoes.taxa_pagamento_pix);
 --             o que vier no INSERT é ignorado. A tarifa não entra no arrecadado, no repasse nem na devolução (o tudo-ou-nada
---             devolve só `valor`), então a plataforma nunca paga a tarifa do provedor. Meio sem fluxo ainda (cartão) fica 0.
+--             devolve só `valor`), então a plataforma nunca paga a tarifa do provedor. Cartão: estimada pelos parâmetros
+--             taxa_cartao_percentual e taxa_cartao_fixa. Meio sem fluxo (boleto) fica 0.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_contribuicao_define_taxa_pagamento()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
-    NEW.taxa_pagamento := CASE WHEN NEW.meio_pagamento = 'pix'
-                               THEN public.config_numero('taxa_pagamento_pix', 1.99)
-                               ELSE 0 END;
+    -- Cartão: a tarifa é percentual + fixa sobre o valor COBRADO, então o cobrado sai de (valor + fixa) / (1 - %),
+    -- arredondado para cima: o líquido nunca fica abaixo do valor da contribuição.
+    NEW.taxa_pagamento := CASE NEW.meio_pagamento
+        WHEN 'pix' THEN public.config_numero('taxa_pagamento_pix', 1.99)
+        WHEN 'cartao_credito' THEN
+            CEIL((NEW.valor + public.config_numero('taxa_cartao_fixa', 0.49))
+                 / (1 - public.config_numero('taxa_cartao_percentual', 1.99) / 100) * 100) / 100 - NEW.valor
+        ELSE 0 END;
     RETURN NEW;
 END;
 $$;
@@ -3096,16 +3199,18 @@ FOR EACH ROW
 EXECUTE FUNCTION public.fn_contribuicao_define_taxa_pagamento();
 
 -- ----------------------------------------------------------------------------
--- Função:     ajustar_tarifa_pix
+-- Função:     ajustar_tarifa_pagamento
 -- Assinatura: (p_id_contribuicao INT, p_tarifa DECIMAL) -> VOID
 -- Bloco:      [05-K-2]
--- Regra:      O provedor informou, ao criar a cobrança, a tarifa REAL do Pix (promoção, isenção ou tarifa nova) e ela é
---             diferente da estimada: grava a real na contribuição (ainda 'pendente', Pix) e passa a usá-la como padrão
---             (configuracoes.taxa_pagamento_pix), para as próximas já nascerem certas. A mudança do parâmetro fica no log
---             de auditoria, como qualquer outra. Chamada pelo Nest no POST /contribuicao, com o número que o provedor
---             devolveu; tarifa negativa ou maior que a própria contribuição é recusada (90036).
+-- Regra:      O provedor informou, ao criar a cobrança, a tarifa REAL (promoção, isenção ou tarifa nova) e ela é
+--             diferente da estimada: grava a real na contribuição (ainda 'pendente'). No Pix a tarifa é fixa, então ela
+--             também vira o padrão (configuracoes.taxa_pagamento_pix), para as próximas já nascerem certas; a mudança do
+--             parâmetro fica no log de auditoria. No cartão (percentual + fixa) uma cobrança só não diz as duas partes:
+--             corrige a contribuição e deixa os parâmetros do cartão com o admin. Chamada pelo Nest no POST /contribuicao,
+--             com o número que o provedor devolveu; tarifa negativa ou maior que a própria contribuição é recusada (90036).
 -- ----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.ajustar_tarifa_pix(p_id_contribuicao INT, p_tarifa DECIMAL)
+DROP FUNCTION IF EXISTS public.ajustar_tarifa_pix(INT, DECIMAL);
+CREATE OR REPLACE FUNCTION public.ajustar_tarifa_pagamento(p_id_contribuicao INT, p_tarifa DECIMAL)
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -3113,9 +3218,10 @@ SET search_path = public
 AS $$
 DECLARE
     v_valor DECIMAL(10,2);
+    v_meio  meio_pagamento;
 BEGIN
-    SELECT valor INTO v_valor FROM contribuicao
-    WHERE id_contribuicao = p_id_contribuicao AND status = 'pendente' AND meio_pagamento = 'pix';
+    SELECT valor, meio_pagamento INTO v_valor, v_meio FROM contribuicao
+    WHERE id_contribuicao = p_id_contribuicao AND status = 'pendente';
     IF NOT FOUND THEN
         RETURN;
     END IF;
@@ -3124,8 +3230,10 @@ BEGIN
     END IF;
 
     UPDATE contribuicao SET taxa_pagamento = p_tarifa WHERE id_contribuicao = p_id_contribuicao;
-    UPDATE configuracoes SET valor = to_char(p_tarifa, 'FM999999990.00')
-    WHERE chave = 'taxa_pagamento_pix' AND id_usuario IS NULL AND valor::DECIMAL IS DISTINCT FROM p_tarifa;
+    IF v_meio = 'pix' THEN
+        UPDATE configuracoes SET valor = to_char(p_tarifa, 'FM999999990.00')
+        WHERE chave = 'taxa_pagamento_pix' AND id_usuario IS NULL AND valor::DECIMAL IS DISTINCT FROM p_tarifa;
+    END IF;
 END;
 $$;
 
@@ -3338,9 +3446,11 @@ $$;
 --             SEM AUTORIZAÇÃO DE PROPÓSITO (mesma categoria de registrar_evento_pagamento): a barreira é a verificação
 --             de autenticidade do webhook, feita pelo Nest ANTES de qualquer chamada.
 -- ----------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.aplicar_evento_pagamento(INT, VARCHAR, VARCHAR, status_contribuicao, DECIMAL);
 CREATE OR REPLACE FUNCTION public.aplicar_evento_pagamento(
     p_id_evento INT, p_provedor VARCHAR, p_id_cobranca VARCHAR,
-    p_novo_status status_contribuicao, p_valor_evento DECIMAL DEFAULT NULL
+    p_novo_status status_contribuicao, p_valor_evento DECIMAL DEFAULT NULL,
+    p_dinheiro_liberado BOOLEAN DEFAULT FALSE
 )
 RETURNS VARCHAR
 LANGUAGE plpgsql
@@ -3415,6 +3525,10 @@ BEGIN
 
     -- Mesmo status que o pedido, ou eco do estorno total que o próprio worker fez (devolvido -> 'reembolsado').
     IF v_status = p_novo_status OR (p_novo_status = 'reembolsado' AND v_status = 'devolvido') THEN
+        IF p_dinheiro_liberado AND v_status = 'confirmado' THEN
+            UPDATE contribuicao SET dinheiro_liberado_em = COALESCE(dinheiro_liberado_em, NOW())
+            WHERE id_contribuicao = v_id_contribuicao AND meio_pagamento <> 'pix';
+        END IF;
         UPDATE evento_pagamento SET processado_em = NOW(), erro_processamento = NULL
         WHERE id_evento_pagamento = p_id_evento;
         RETURN 'sem_mudanca';
@@ -3433,7 +3547,13 @@ BEGIN
         BEGIN
             PERFORM public.atualizar_status_contribuicao(v_id_contribuicao, p_novo_status, NULL, p_id_evento, p_valor_evento);
 
-            IF v_destino = 'repasse' THEN
+            IF p_dinheiro_liberado AND p_novo_status = 'confirmado' THEN
+                UPDATE contribuicao SET dinheiro_liberado_em = COALESCE(dinheiro_liberado_em, NOW())
+                WHERE id_contribuicao = v_id_contribuicao AND meio_pagamento <> 'pix';
+            END IF;
+
+            -- Cartão com dinheiro ainda não liberado não entra em repasse agora: criar_repasses_liberados cuida dele.
+            IF v_destino = 'repasse' AND (v_meio = 'pix' OR p_dinheiro_liberado) THEN
                 v_liquido := ROUND(v_valor * (1 - v_taxa / 100), 2);
                 INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, taxa_relativa, status)
                 VALUES (v_id_campanha, v_valor, v_liquido, (SELECT ca.valor_bruto_arrecadado >= ca.meta_financeira FROM campanha ca WHERE ca.id_campanha = v_id_campanha), v_taxa, 'pendente')
@@ -4162,7 +4282,8 @@ BEGIN
     WITH alvo AS (
         SELECT c.id_contribuicao
         FROM contribuicao c
-        WHERE c.status = 'pendente'
+        WHERE (c.status = 'pendente'
+               OR (c.status = 'confirmado' AND c.meio_pagamento <> 'pix' AND c.dinheiro_liberado_em IS NULL))
           AND c.provedor = p_provedor
           AND c.id_transacao_api IS NOT NULL
           AND c.criado_em <= NOW() - (public.config_numero('reconciliacao_limite_minutos', 30) * INTERVAL '1 minute')
@@ -4348,6 +4469,29 @@ AS $$
       AND ((p_id_transferencia IS NOT NULL AND r.id_transferencia_api = p_id_transferencia)
            OR (r.id_transferencia_api IS NULL AND p_referencia_externa IS NOT NULL
                AND r.chave_idempotencia::TEXT = p_referencia_externa))
+    LIMIT 1;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     dados_autorizacao_estorno
+-- Assinatura: (p_provedor VARCHAR, p_id_cobranca TEXT) -> TABLE (id_contribuicao INT, valor DECIMAL)
+-- Bloco:      [05-K-2]
+-- Regra:      Base da AUTORIZAÇÃO de uma devolução de Pix que o provedor pede por webhook antes de executá-la: devolve a
+--             contribuição 'a_devolver' daquela cobrança e o valor que o sistema mandou devolver (o valor inteiro, sem a
+--             tarifa), ou nenhuma linha. O Nest só aprova se o valor pedido for esse. Devolução de cobrança que o sistema
+--             não mandou devolver (por exemplo, pedida com uma chave de API vazada) não casa e é recusada.
+--             SECURITY DEFINER, SEM AUTORIZAÇÃO DE PROPÓSITO: a barreira é o token do webhook.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.dados_autorizacao_estorno(p_provedor VARCHAR, p_id_cobranca TEXT)
+RETURNS TABLE (id_contribuicao INT, valor DECIMAL)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT c.id_contribuicao, c.valor
+    FROM contribuicao c
+    WHERE c.provedor = p_provedor AND c.id_transacao_api = p_id_cobranca AND c.status = 'a_devolver'
     LIMIT 1;
 $$;
 

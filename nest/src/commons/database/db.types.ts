@@ -507,6 +507,8 @@ export interface ContribuicaoTable {
   cobranca_cancelada_em: Date | null;
   // trg_contribuicao_define_taxa_pagamento (05) grava a estimada; ajustar_tarifa_pix (05) corrige para a real.
   taxa_pagamento: Generated<string>;
+  // Quando o provedor liberou o dinheiro (só cartão; Pix fica NULL). Escrito só por aplicar_evento_pagamento (05).
+  dinheiro_liberado_em: Date | null;
   id_repasse: number | null;
 }
 

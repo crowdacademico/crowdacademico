@@ -1,4 +1,4 @@
-import type { StatusContribuicao, StatusRepasse, TipoChavePix } from '../../../services/constant/type/enums-do-banco.gerado';
+import type { MeioPagamento, StatusContribuicao, StatusRepasse, TipoChavePix } from '../../../services/constant/type/enums-do-banco.gerado';
 
 // Espelha nest/src/campo-testes (rotas /campo-testes/pagamento). Recebe a função de chamada da tela (a que grava no
 // Registro de Chamadas), não o authFetch cru.
@@ -15,6 +15,9 @@ export interface ContribuicaoBancada {
   tituloCampanha: string;
   valor: number;
   taxaPagamento: number;
+  meioPagamento: MeioPagamento;
+  // Pix: disponível ao pagar. Cartão: só quando o provedor libera (~30 dias).
+  dinheiroLiberado: boolean;
   status: StatusContribuicao;
   idRepasse: number | null;
   criadoEm: string;
@@ -47,6 +50,7 @@ export interface ContribuicaoCriada {
   valorCobrado: number;
   status: string;
   pix?: { copiaECola: string; qrCodeBase64?: string; expiraEm: string };
+  cartao?: { linkPagamento: string };
 }
 
 export interface ChavePixCadastrada {
@@ -57,11 +61,12 @@ export interface ChavePixCadastrada {
 
 export const bancadaPagamentoApi = {
   estado: (chamar: Chamar) => chamar<EstadoBancada>(BASE),
-  contribuir: (chamar: Chamar, idCampanha: number, valor: number) =>
+  contribuir: (chamar: Chamar, idCampanha: number, valor: number, meioPagamento: 'pix' | 'cartao_credito') =>
     chamar<ContribuicaoCriada>('/contribuicao', {
       method: 'POST',
-      body: JSON.stringify({ idCampanha, valor, meioPagamento: 'pix' }),
+      body: JSON.stringify({ idCampanha, valor, meioPagamento }),
     }),
+  liberar: (chamar: Chamar, idContribuicao: number) => chamar<void>(`${BASE}/contribuicoes/${idContribuicao}/liberar`, POST),
   pagar: (chamar: Chamar, idContribuicao: number) => chamar<void>(`${BASE}/contribuicoes/${idContribuicao}/pagar`, POST),
   vencer: (chamar: Chamar, idContribuicao: number) => chamar<void>(`${BASE}/contribuicoes/${idContribuicao}/vencer`, POST),
   repetirAviso: (chamar: Chamar, idContribuicao: number) =>

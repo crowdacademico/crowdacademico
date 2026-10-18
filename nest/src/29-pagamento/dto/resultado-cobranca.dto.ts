@@ -29,8 +29,10 @@ export interface ResultadoCobranca {
   pix?: DadosPix;
   // Só quando a cobrança foi criada com split.
   idSplit?: string;
-  // Tarifa real que o provedor vai descontar desta cobrança (valor - líquido), quando ele informa. Só na criação.
-  tarifaProvedor?: number;
+  // Só em cobrança de cartão: a página segura do provedor onde quem apoia digita o cartão e paga.
+  linkPagamento?: string;
+  // O provedor já liberou o dinheiro para uso (Pix: ao pagar; cartão: cerca de 30 dias depois). Sem a informação, falso.
+  dinheiroLiberado?: boolean;
 }
 
 export interface ResultadoEstorno {
@@ -40,4 +42,7 @@ export interface ResultadoEstorno {
   // Acumulado de todos os estornos da cobrança.
   valorTotalEstornado: number;
   status: StatusCobrancaGateway;
+  // O dinheiro já voltou para quem pagou. Falso = o provedor aceitou o pedido mas ainda não concluiu (por exemplo,
+  // esperando a autorização da devolução): a contribuição continua 'a_devolver' até concluir.
+  concluido: boolean;
 }

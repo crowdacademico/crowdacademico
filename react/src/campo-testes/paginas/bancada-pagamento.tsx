@@ -107,10 +107,10 @@ export function BancadaPagamento({ auth }: PropsPagina) {
 
       <GenericTable<ContribuicaoBancada>
         titulo="Contribuições"
-        ajuda="As 30 mais recentes. Gere um Pix e pague como o provedor. Reiniciar o Nest apaga a memória do provedor de teste: o Pix pendente vira 'perdido' e só vence sozinho."
+        ajuda="As 30 mais recentes. Contribua com Pix ou cartão e pague como o provedor; no cartão, o dinheiro só vai para repasse depois de liberado (no Asaas, cerca de 30 dias). Reiniciar o Nest apaga a memória do provedor de teste: o Pix pendente vira 'perdido' e só vence sozinho."
         acaoTopo={
           <button type="button" className="btn btn-primary" onClick={() => setGerandoPix(true)}>
-            <i className="fa-solid fa-qrcode" aria-hidden="true"></i> Gerar Pix
+            <i className="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i> Contribuir
           </button>
         }
         colunas={[
@@ -118,6 +118,13 @@ export function BancadaPagamento({ auth }: PropsPagina) {
           { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
           { chave: 'valor', rotulo: 'valor', tipo: 'dinheiro' },
           { chave: 'taxaPagamento', rotulo: 'tarifa', tipo: 'dinheiro' },
+          {
+            chave: 'meioPagamento',
+            rotulo: 'meio',
+            tipo: 'texto',
+            renderizar: (linha) =>
+              linha.meioPagamento === 'pix' ? 'Pix' : linha.dinheiroLiberado ? 'Cartão (liberado)' : 'Cartão (a liberar)',
+          },
           { chave: 'status', rotulo: 'status', tipo: 'status', renderizar: (linha) => <BadgeStatusContribuicao status={linha.status} /> },
           { chave: 'noProvedor', rotulo: 'no provedor', tipo: 'texto', renderizar: (linha) => rotuloNoProvedor(linha.noProvedor) },
         ]}
@@ -125,8 +132,10 @@ export function BancadaPagamento({ auth }: PropsPagina) {
         listar={listarContribuicoes}
         chaveRecarga={chaveRecarga}
         acoes={{
-          pagar: (linha) => void agir('pagar', () => bancadaPagamentoApi.pagar(chamar, linha.idContribuicao), `Pix da contribuição #${linha.idContribuicao} pago.`),
-          vencer: (linha) => void agir('vencer', () => bancadaPagamentoApi.vencer(chamar, linha.idContribuicao), `Pix da contribuição #${linha.idContribuicao} vencido.`),
+          pagar: (linha) => void agir('pagar', () => bancadaPagamentoApi.pagar(chamar, linha.idContribuicao), `Contribuição #${linha.idContribuicao} paga.`),
+          liberarDinheiro: (linha) =>
+            void agir('liberar', () => bancadaPagamentoApi.liberar(chamar, linha.idContribuicao), `Dinheiro do cartão da contribuição #${linha.idContribuicao} liberado.`),
+          vencer: (linha) => void agir('vencer', () => bancadaPagamentoApi.vencer(chamar, linha.idContribuicao), `Cobrança da contribuição #${linha.idContribuicao} vencida.`),
           repetirAviso: (linha) =>
             void agir('repetirAviso', () => bancadaPagamentoApi.repetirAviso(chamar, linha.idContribuicao), `Aviso da contribuição #${linha.idContribuicao} repetido.`),
         }}
@@ -134,9 +143,13 @@ export function BancadaPagamento({ auth }: PropsPagina) {
           if (!provedorDeTeste) return 'Só com o provedor de teste.';
           if (linha.noProvedor === 'perdida') return 'O provedor de teste não conhece mais esta cobrança.';
           if (acao === 'repetirAviso') return linha.noProvedor === 'pendente' || linha.noProvedor === null ? 'O provedor ainda não mandou aviso desta cobrança.' : undefined;
-          return linha.noProvedor === 'pendente' ? undefined : 'Só um Pix aguardando pagamento.';
+          if (acao === 'liberarDinheiro') {
+            if (linha.meioPagamento === 'pix') return null;
+            return linha.noProvedor === 'confirmada' && !linha.dinheiroLiberado ? undefined : 'Só um cartão pago e ainda não liberado.';
+          }
+          return linha.noProvedor === 'pendente' ? undefined : 'Só uma cobrança aguardando pagamento.';
         }}
-        vazio={{ icone: 'fa-money-bill-wave', titulo: 'Nenhuma contribuição ainda.', texto: 'Use Gerar Pix para criar a primeira.' }}
+        vazio={{ icone: 'fa-money-bill-wave', titulo: 'Nenhuma contribuição ainda.', texto: 'Use Contribuir para criar a primeira.' }}
       />
 
       <GenericTable<RepasseBancada>

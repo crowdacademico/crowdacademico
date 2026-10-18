@@ -179,6 +179,7 @@ export interface Contribuicao {
   anonima: Generated<boolean>;
   cobranca_cancelada_em: Timestamp | null;
   criado_em: Generated<Timestamp>;
+  dinheiro_liberado_em: Timestamp | null;
   id_campanha: number;
   id_contribuicao: Generated<number>;
   id_repasse: number | null;

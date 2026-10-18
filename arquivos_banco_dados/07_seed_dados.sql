@@ -653,6 +653,15 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- Tarifa do provedor de pagamento: quem apoia paga POR CIMA do valor (contribui 100, paga 100 + tarifa). Gravada na
 -- contribuição no momento do apoio (fn_contribuicao_define_taxa_pagamento, 05); não entra no arrecadado, no repasse
 -- nem na devolução, então a plataforma nunca paga a tarifa do provedor. 0 = sem tarifa.
+-- Cartão de crédito: só em campanha flexível (trg_contribuicao_all_or_nothing_pix), à vista, pela página segura do
+-- provedor. Pode ser desligado; faixa própria; tarifa percentual + fixa (estimativa: a real é lida do provedor em cada
+-- cobrança); e o prazo médio em que o provedor libera o dinheiro (só para mostrar a previsão ao pesquisador).
+(NULL, 'cartao_habilitado',                'true',  'booleano', 'Aceitar contribuição com cartão de crédito (só em campanha flexível)', TRUE, TRUE),
+(NULL, 'valor_minimo_contribuicao_cartao', '20.00', 'decimal',  'Valor mínimo de uma contribuição com cartão, em R$', TRUE, TRUE),
+(NULL, 'valor_maximo_contribuicao_cartao', '500.00','decimal',  'Valor máximo de uma contribuição com cartão, em R$ (limita o prejuízo de uma contestação de compra)', TRUE, TRUE),
+(NULL, 'taxa_cartao_percentual',           '1.99',  'decimal',  'Parte percentual da tarifa do provedor no cartão, paga por quem apoia (estimativa; a real vem do provedor)', TRUE, TRUE),
+(NULL, 'taxa_cartao_fixa',                 '0.49',  'decimal',  'Parte fixa da tarifa do provedor no cartão, em R$, paga por quem apoia (estimativa; a real vem do provedor)', TRUE, TRUE),
+(NULL, 'cartao_dias_liberacao',            '30',    'inteiro',  'Dias, contados do pagamento, até o provedor liberar o dinheiro do cartão (previsão mostrada ao pesquisador)', TRUE, FALSE),
 (NULL, 'taxa_pagamento_pix',         '1.99',  'decimal',  'Tarifa do provedor por Pix recebido, em R$, paga por quem apoia além do valor da contribuição', TRUE, TRUE),
 -- Workers de pagamento (29-pagamento no Nest; funções em 05, [05-K-2]): repasse ao pesquisador, devolução do
 -- tudo-ou-nada e reconciliação com o provedor.
@@ -1335,7 +1344,7 @@ INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status
 (1, 9,  2700.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0016', '2024-03-05 10:00:00'),
 
 (2, 14,  8000.00, 'pix',            'repassado', FALSE, 'TXN-PIX-0017', '2024-03-10 10:00:00'),
-(2, 15,  7000.00, 'cartao_credito', 'repassado', FALSE, 'TXN-CC-0018',  '2024-03-15 11:00:00'),
+(2, 15,  7000.00, 'pix', 'repassado', FALSE, 'TXN-CC-0018',  '2024-03-15 11:00:00'), -- (*) era cartao_credito: acima do teto do cartão (R$ 500)
 (2, 17,  6000.00, 'boleto',         'repassado', FALSE, 'TXN-BOL-0019', '2024-03-20 09:00:00'),
 (2, 23,  3925.00, 'pix',            'repassado', FALSE, 'TXN-PIX-0020', '2024-03-25 10:00:00'),
 (2, 11, 2000.00, 'cartao_debito',  'repassado', FALSE, 'TXN-CD-0021',  '2024-04-01 14:00:00'),
@@ -1355,7 +1364,7 @@ INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status
 (4, 14, 2500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0028', '2024-03-16 09:00:00'),
 
 (5, 12, 8000.00, 'pix',            'repassado', FALSE, 'TXN-PIX-0029', '2024-04-15 10:00:00'),
-(5, 17, 6000.00, 'cartao_credito', 'repassado', FALSE, 'TXN-CC-0030',  '2024-04-18 11:00:00'),
+(5, 17, 6000.00, 'pix', 'repassado', FALSE, 'TXN-CC-0030',  '2024-04-18 11:00:00'), -- (*) era cartao_credito: acima do teto do cartão (R$ 500)
 (5, 18, 3000.00, 'boleto',         'repassado', FALSE, 'TXN-BOL-0031', '2024-04-22 09:00:00'),
 (5, 23, 2650.00, 'cartao_debito',  'repassado', FALSE, 'TXN-CD-0032',  '2024-04-25 10:00:00'),
 
@@ -1372,7 +1381,7 @@ INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status
 (8, 15,   4000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0040', '2024-06-15 10:00:00'),
 
 (9, 16, 8000.00,  'pix',            'confirmado', FALSE, 'TXN-PIX-0041', '2024-06-05 10:00:00'),
-(9, 17, 6000.00,  'cartao_credito', 'confirmado', FALSE, 'TXN-CC-0042',  '2024-06-10 11:00:00'),
+(9, 17, 6000.00,  'pix', 'confirmado', FALSE, 'TXN-CC-0042',  '2024-06-10 11:00:00'), -- (*) era cartao_credito: acima do teto do cartão (R$ 500)
 (9, 18, 4000.00,  'boleto',         'confirmado', FALSE, 'TXN-BOL-0043', '2024-06-15 09:00:00'),
 (9, 23, 3000.00,  'cartao_debito',  'confirmado', FALSE, 'TXN-CD-0044',  '2024-06-20 10:00:00'),
 

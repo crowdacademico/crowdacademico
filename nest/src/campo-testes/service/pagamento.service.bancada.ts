@@ -55,6 +55,8 @@ interface LinhaContribuicao {
   titulo: string;
   valor: string;
   taxa_pagamento: string;
+  meio_pagamento: string;
+  dinheiro_liberado_em: Date | null;
   status: string;
   id_transacao_api: string | null;
   id_repasse: number | null;
@@ -114,7 +116,8 @@ export class PagamentoServiceBancada implements OnModuleInit {
   async estado(): Promise<PagamentoBancadaEstado> {
     const db = this.database.getDb();
     const contribuicoes = await sql<LinhaContribuicao>`
-      SELECT c.id_contribuicao, c.id_campanha, ca.titulo, c.valor, c.taxa_pagamento, c.status::text AS status,
+      SELECT c.id_contribuicao, c.id_campanha, ca.titulo, c.valor, c.taxa_pagamento, c.meio_pagamento::text AS meio_pagamento,
+             c.dinheiro_liberado_em, c.status::text AS status,
              c.id_transacao_api, c.id_repasse, c.criado_em
       FROM contribuicao c JOIN campanha ca ON ca.id_campanha = c.id_campanha
       ORDER BY c.id_contribuicao DESC
@@ -151,6 +154,14 @@ export class PagamentoServiceBancada implements OnModuleInit {
     const fake = this.fake();
     const idCobranca = await this.idCobranca(idContribuicao);
     this.semPerderCobranca(() => fake.expirarCobranca(idCobranca));
+    await this.esperarAvisos();
+  }
+
+  // Cartão: o provedor libera o dinheiro (no Asaas, cerca de 30 dias depois do pagamento).
+  async liberar(idContribuicao: number): Promise<void> {
+    const fake = this.fake();
+    const idCobranca = await this.idCobranca(idContribuicao);
+    this.semPerderCobranca(() => fake.liberarCobranca(idCobranca));
     await this.esperarAvisos();
   }
 
@@ -285,6 +296,10 @@ export class PagamentoServiceBancada implements OnModuleInit {
       tituloCampanha: linha.titulo,
       valor: Number(linha.valor),
       taxaPagamento: Number(linha.taxa_pagamento),
+      meioPagamento: linha.meio_pagamento,
+      // Pix: disponível ao pagar. Cartão: só quando o provedor libera.
+      dinheiroLiberado:
+        linha.meio_pagamento === 'pix' || linha.dinheiro_liberado_em !== null,
       status: linha.status,
       idRepasse: linha.id_repasse,
       criadoEm: linha.criado_em,

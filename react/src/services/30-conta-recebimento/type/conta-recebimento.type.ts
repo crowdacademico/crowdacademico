@@ -9,6 +9,14 @@ export interface ContaRecebimentoResponse {
   titularidadeVerificadaEm: string | null;
 }
 
+// Espelha nest/src/30-conta-recebimento/dto/response/cartao-a-liberar.response.ts.
+export interface CartaoALiberarResponse {
+  idCampanha: number;
+  tituloCampanha: string;
+  valor: number;
+  previstoPara: string;
+}
+
 // Espelha nest/src/30-conta-recebimento/dto/response/repasse.response.ts.
 export interface RepasseResponse {
   idRepasse: number;

@@ -23,6 +23,12 @@ const GRUPO_CONFIGURACAO: Record<string, string> = {
   meta_minima_campanha: 'Financeiro',
   valor_minimo_contribuicao: 'Financeiro',
   taxa_pagamento_pix: 'Financeiro',
+  cartao_habilitado: 'Financeiro',
+  valor_minimo_contribuicao_cartao: 'Financeiro',
+  valor_maximo_contribuicao_cartao: 'Financeiro',
+  taxa_cartao_percentual: 'Financeiro',
+  taxa_cartao_fixa: 'Financeiro',
+  cartao_dias_liberacao: 'Financeiro',
   pix_validade_horas: 'Financeiro',
   // Pagamentos: ritmo dos processos automáticos de repasse, devolução e conferência com o provedor.
   repasse_lease_minutos: 'Pagamentos',

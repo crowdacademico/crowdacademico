@@ -33,6 +33,7 @@ export type AcaoCampoTestes =
   | 'deixarDeSeguir'
   | 'denunciar'
   | 'pagar'
+  | 'liberarDinheiro'
   | 'vencer'
   | 'repetirAviso'
   | 'concluirTransferencia'
@@ -45,8 +46,9 @@ const ACOES_CAMPO_TESTES: DefinicaoAcao<AcaoCampoTestes>[] = [
   { acao: 'deixarDeSeguir', rotulo: 'Deixar de seguir', icone: 'fa-heart', variante: 'erro' },
   { acao: 'denunciar', rotulo: 'Denunciar', icone: 'fa-flag', variante: 'erro' },
   // Bancada de pagamento (T05): o papel do provedor de pagamento.
-  { acao: 'pagar', rotulo: 'Pagar o Pix', icone: 'fa-money-bill-wave', variante: 'alterar' },
-  { acao: 'vencer', rotulo: 'Fazer o Pix vencer', icone: 'fa-hourglass-end', variante: 'aviso' },
+  { acao: 'pagar', rotulo: 'Pagar', icone: 'fa-money-bill-wave', variante: 'alterar' },
+  { acao: 'liberarDinheiro', rotulo: 'Liberar o dinheiro do cartão', icone: 'fa-unlock', variante: 'alterar' },
+  { acao: 'vencer', rotulo: 'Fazer a cobrança vencer', icone: 'fa-hourglass-end', variante: 'aviso' },
   { acao: 'repetirAviso', rotulo: 'Repetir o último aviso do provedor', icone: 'fa-rotate-right' },
   { acao: 'concluirTransferencia', rotulo: 'Concluir a transferência', icone: 'fa-check', variante: 'alterar' },
   { acao: 'falharTransferencia', rotulo: 'Falhar a transferência', icone: 'fa-xmark', variante: 'erro' },

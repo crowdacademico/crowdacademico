@@ -876,6 +876,10 @@ CREATE TABLE contribuicao (
     -- trg_contribuicao_define_taxa_pagamento (05) grava a estimada e ajustar_tarifa_pix (05) a corrige para a real que o
     -- provedor informou. Fica fora do arrecadado, do repasse e da devolução.
     taxa_pagamento   DECIMAL(10,2)       NOT NULL DEFAULT 0,
+    -- Quando o provedor liberou o dinheiro desta contribuição para uso (transferir). Pix: disponível na confirmação, fica
+    -- NULL. Cartão: o provedor libera cerca de 30 dias depois do pagamento; até lá a contribuição não entra em repasse
+    -- (criar_repasse_campanha e criar_repasses_liberados, 05).
+    dinheiro_liberado_em TIMESTAMPTZ,
     -- Repasse em que esta contribuição entrou (só 'confirmado' de campanha encerrada; ver encerrar_campanhas_vencidas em 05).
     id_repasse       INT,
     -- Controle do worker de estorno (só contribuição 'a_devolver'; ver proximo_estorno_pendente/registrar_falha_estorno em 05).

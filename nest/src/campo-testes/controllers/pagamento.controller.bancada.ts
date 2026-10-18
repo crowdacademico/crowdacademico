@@ -54,6 +54,13 @@ export class PagamentoControllerBancada {
     await this.service.vencer(id);
   }
 
+  @Post('contribuicoes/:id/liberar')
+  @HttpCode(204)
+  async liberar(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    await this.exigirPermissao();
+    await this.service.liberar(id);
+  }
+
   @Post('contribuicoes/:id/repetir-aviso')
   @HttpCode(204)
   async repetirAviso(@Param('id', ParseIntPipe) id: number): Promise<void> {

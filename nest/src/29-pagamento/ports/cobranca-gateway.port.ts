@@ -21,8 +21,9 @@ export interface CriarCobrancaParams {
   chaveIdempotencia: string;
   // Total cobrado de quem apoia: a contribuição + a tarifa estimada.
   valor: number;
-  // Parte de `valor` que é a tarifa do provedor (configuracoes.taxa_pagamento_pix). O adapter que souber a tarifa real
-  // na criação corrige o valor da cobrança para contribuição + tarifa real e devolve a real em `tarifaProvedor`.
+  // Parte de `valor` que é a tarifa estimada do provedor (taxa_pagamento da contribuição). O adapter que souber a tarifa
+  // real na criação corrige o valor da cobrança para que o líquido cubra a contribuição; `ResultadoCobranca.valor` traz o
+  // valor final cobrado.
   tarifaEstimada?: number;
   meioPagamento: MeioPagamentoGateway;
   // Alinhado a campanha.data_fim: nunca sobra PIX pendente depois do prazo.

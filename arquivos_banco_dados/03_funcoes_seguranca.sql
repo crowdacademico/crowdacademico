@@ -45,6 +45,26 @@ AS $$
     );
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Função:     config_booleano
+-- Assinatura: (p_chave TEXT, p_padrao BOOLEAN) -> BOOLEAN
+-- Bloco:      [03-C]
+-- Regra:      Mesmo contrato de config_numero, para parâmetro sim/não (tipo 'booleano', valor 'true'/'false'): nunca
+--             retorna NULL nem erro, cai no padrão se a chave não existir.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.config_booleano(p_chave TEXT, p_padrao BOOLEAN)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT COALESCE(
+        (SELECT valor = 'true' FROM configuracoes WHERE chave = p_chave AND ativo = TRUE AND id_usuario IS NULL LIMIT 1),
+        p_padrao
+    );
+$$;
+
 -- ============================================================
 -- Função:     id_usuario_atual
 -- Assinatura: () -> INT

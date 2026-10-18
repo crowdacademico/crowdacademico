@@ -1,7 +1,7 @@
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { TipoChavePix } from '../../constant/type/enums-do-banco.gerado';
-import type { ContaRecebimentoResponse, RepasseResponse } from '../type/conta-recebimento.type';
+import type { CartaoALiberarResponse, ContaRecebimentoResponse, RepasseResponse } from '../type/conta-recebimento.type';
 
 // Espelha nest/src/30-conta-recebimento: a chave Pix onde o próprio pesquisador recebe o repasse, e os repasses das
 // campanhas dele. Sempre a conta logada (o backend pega o id do token).
@@ -14,4 +14,7 @@ export const contaRecebimentoApi = {
     authFetch(BASE, { method: 'POST', body: JSON.stringify({ tipoChave, chave }) }).then(tratarResposta<ContaRecebimentoResponse | null>),
   remover: (authFetch: AuthFetch): Promise<void> => authFetch(BASE, { method: 'DELETE' }).then(tratarResposta<void>),
   listarRepasses: (authFetch: AuthFetch): Promise<RepasseResponse[]> => authFetch(`${BASE}/repasses`).then(tratarResposta<RepasseResponse[]>),
+  // Dinheiro de cartão ainda não liberado pelo provedor, por campanha (fica fora do repasse até lá).
+  listarCartaoALiberar: (authFetch: AuthFetch): Promise<CartaoALiberarResponse[]> =>
+    authFetch(`${BASE}/cartao-a-liberar`).then(tratarResposta<CartaoALiberarResponse[]>),
 };

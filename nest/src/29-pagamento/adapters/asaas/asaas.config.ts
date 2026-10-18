@@ -36,8 +36,8 @@ import { ConfigService } from '@nestjs/config';
 //     sistema, antes de executar CADA transferência, se ela é legítima, e o sistema só aprova a que corresponde a um repasse
 //     dele (mesmo valor e mesma chave Pix). Isso impede que uma chave de API vazada tire dinheiro da conta. RECOMENDADO LIGAR.
 //     URL a cadastrar: https://SEU-DOMINIO/pagamento/webhook/asaas/autorizacao-saque
-//     NÃO marque a opção "Ativar autorização de saque para estornos Pix": o estorno de contribuição (devolução do
-//     tudo-ou-nada) não passa por essa validação no sistema e seria recusado.
+//     MARQUE também "Ativar autorização de saque para estornos Pix": sem ela, cada devolução de contribuição fica parada
+//     esperando autorização manual. O sistema aprova só a devolução de uma contribuição 'a devolver', no valor certo.
 //
 //   ASAAS_CUSTOMER_ID=cus_000000000000
 //     O Asaas exige um "cliente" em toda cobrança. As contribuições aqui podem ser anônimas, então TODAS usam UM cliente

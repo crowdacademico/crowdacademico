@@ -79,6 +79,8 @@ const arredondar2 = (n: number): number => Math.round(n * 100) / 100;
 
 const TIPOS_EVENTO: Record<string, EventoPagamentoDto['tipoEvento']> = {
   FAKE_PAYMENT_CONFIRMED: 'cobranca_confirmada',
+  // Cartão: o dinheiro foi liberado (no Asaas, PAYMENT_RECEIVED cerca de 30 dias depois da confirmação).
+  FAKE_PAYMENT_RECEIVED: 'cobranca_confirmada',
   FAKE_PAYMENT_EXPIRED: 'cobranca_expirada',
   FAKE_PAYMENT_REFUNDED: 'cobranca_estornada',
   FAKE_TRANSFER_DONE: 'repasse_concluido',
@@ -165,7 +167,17 @@ export class FakeGatewayAdapter
     const c = this.obterCobranca(idCobranca);
     if (c.status !== 'pendente') return;
     c.status = 'confirmada';
+    // Pix: o dinheiro já está disponível. Cartão: só quando liberarCobranca() for chamado.
+    c.dinheiroLiberado = c.meioPagamento === 'pix';
     this.emitir('FAKE_PAYMENT_CONFIRMED', { payment: { id: idCobranca } });
+  }
+
+  // Cartão: o provedor libera o dinheiro (no Asaas, cerca de 30 dias depois do pagamento). Idempotente.
+  liberarCobranca(idCobranca: string): void {
+    const c = this.obterCobranca(idCobranca);
+    if (c.status !== 'confirmada' || c.dinheiroLiberado) return;
+    c.dinheiroLiberado = true;
+    this.emitir('FAKE_PAYMENT_RECEIVED', { payment: { id: idCobranca } });
   }
 
   // Cancela uma cobrança aberta (a mesma coisa de expirar, sem emitir evento: quem cancela é o próprio sistema).
@@ -263,6 +275,9 @@ export class FakeGatewayAdapter
       chaveIdempotencia: params.chaveIdempotencia,
       estornosPorChave: new Map(),
     };
+    if (params.meioPagamento === 'cartao_credito') {
+      cobranca.linkPagamento = `https://fake.local/pagar/${idCobranca}`;
+    }
     if (params.meioPagamento === 'pix') {
       cobranca.pix = {
         copiaECola: `00020126FAKE${idCobranca}`,
@@ -352,6 +367,7 @@ export class FakeGatewayAdapter
       valorEstornado: aEstornar,
       valorTotalEstornado: c.valorEstornado,
       status: c.status,
+      concluido: true,
     };
     if (chave) c.estornosPorChave.set(chave, resultado);
     this.emitir('FAKE_PAYMENT_REFUNDED', { payment: { id: idCobranca } });
@@ -570,8 +586,10 @@ export class FakeGatewayAdapter
       meioPagamento: c.meioPagamento,
       valor: c.valor,
       valorEstornado: c.valorEstornado,
+      dinheiroLiberado: c.dinheiroLiberado === true,
     };
     if (c.pix) resultado.pix = { ...c.pix };
+    if (c.linkPagamento) resultado.linkPagamento = c.linkPagamento;
     if (c.idSplit) resultado.idSplit = c.idSplit;
     return resultado;
   }

@@ -10,11 +10,9 @@ import {
 } from '../../ports/cobranca-gateway.port';
 import { AsaasHttpClient } from './asaas-http.client';
 import { type ConfiguracaoAsaas } from './asaas.config';
-import {
-  type AsaasLista,
-  type AsaasPayment,
-  type AsaasPixQrCode,
-} from './asaas.types';
+import { linkPagamentoCartaoAsaas } from './asaas-cobranca-cartao';
+import { dadosPixAsaas } from './asaas-cobranca-pix';
+import { type AsaasLista, type AsaasPayment } from './asaas.types';
 
 export const NOME_PROVEDOR = 'asaas';
 
@@ -29,6 +27,10 @@ export function dataBrasilia(quando: Date): string {
 }
 
 const arredondar = (valor: number): number => Math.round(valor * 100) / 100;
+// Arredonda para cima no centavo, sem o erro de ponto flutuante (100.00 * 100 = 10000.000000001 viraria 100.01).
+const centavosParaCima = (valor: number): number =>
+  Math.ceil(Number((valor * 100).toFixed(6))) / 100;
+const MAXIMO_RODADAS_AJUSTE = 3;
 
 // Estado do Asaas => estado de domínio.
 //   PENDING / AWAITING_RISK_ANALYSIS / desconhecido => pendente
@@ -57,6 +59,13 @@ export function statusDeDominio(
   }
 }
 
+// RECEIVED = o Asaas creditou o dinheiro na conta (Pix: na hora; cartão: cerca de 30 dias depois). CONFIRMED (cartão
+// aprovado, ainda não creditado) é 'confirmada' mas NÃO liberado.
+const STATUS_DINHEIRO_LIBERADO = ['RECEIVED', 'RECEIVED_IN_CASH'];
+// Devolução que não aconteceu nem vai acontecer: pode-se pedir outra. Qualquer outro estado (DONE, PENDING, aguardando
+// autorização...) é a MESMA devolução, ainda viva: pedir de novo devolveria duas vezes.
+const STATUS_ESTORNO_SEM_EFEITO = ['CANCELLED', 'FAILED', 'REFUSED'];
+
 // Soma só os estornos CONCLUÍDOS (status DONE): a existência do array `refunds` não significa que o dinheiro voltou.
 export function totalEstornado(pagamento: AsaasPayment): number {
   return arredondar(
@@ -70,18 +79,18 @@ function marcador(chaveIdempotencia: string): string {
   return `ref:${chaveIdempotencia}`;
 }
 
-// Cobrança Pix no Asaas. Fluxo de criarCobranca:
+// Cobrança no Asaas (Pix ou cartão de crédito). O que é comum aos dois mora aqui; o que é de cada meio, em
+// asaas-cobranca-pix.ts e asaas-cobranca-cartao.ts. Fluxo de criarCobranca:
 //   1. IDEMPOTÊNCIA: o Asaas NÃO tem chave de idempotência. A chave do sistema vai em `externalReference` e, antes de criar,
 //      procura-se uma cobrança com essa referência (GET /payments?externalReference=...). Existindo, reaproveita (é o que
 //      acontece num retry depois de um timeout). Sem isso, um retry criaria cobrança duplicada.
-//   2. cria a cobrança (POST /payments) para o cliente genérico ASAAS_CUSTOMER_ID, forma PIX;
-//   3. busca o QR code (GET /payments/{id}/pixQrCode).
-// Limites que o desenho respeita:
-//   - O vencimento do Asaas é uma DATA, não um instante, e o QR continua pagável por meses depois dele. Por isso o sistema
-//     CANCELA a cobrança quando a contribuição expira (cancelarCobranca, chamado pelo job de reconciliação), em vez de
-//     confiar no vencimento. `pix.expiraEm` devolvido é a expiração DO SISTEMA (params.expiraEm), não a do QR do Asaas.
-//   - Cartão de crédito NÃO é suportado ainda (exige tokenização/fatura hospedada): recusa com mensagem clara.
-//   - `split` não é usado: se vier, recusa (nunca ignora em silêncio dinheiro que deveria ser dividido).
+//   2. cria a cobrança (POST /payments) para o cliente genérico ASAAS_CUSTOMER_ID, na forma pedida (PIX ou CREDIT_CARD);
+//   3. TARIFA REAL: o Asaas já informa na criação quanto vai cair na conta (`netValue`). Se não cobrir a contribuição
+//      certinho, o valor da cobrança é corrigido ANTES de a pessoa ver o Pix ou a página do cartão: quem apoia paga a
+//      tarifa de verdade, nem a mais nem a menos (ajustarAoLiquido);
+//   4. o que é do meio: QR do Pix, ou link da página segura do cartão.
+// Se algo falhar depois de a cobrança existir, ela é CANCELADA antes de devolver o erro: sem isso ficaria aberta e pagável
+// sem nenhuma contribuição ligada a ela. `split` não é usado: se vier, recusa (nunca ignora dinheiro que seria dividido).
 export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
   readonly provedor = NOME_PROVEDOR;
 
@@ -91,14 +100,6 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
   ) {}
 
   async criarCobranca(params: CriarCobrancaParams): Promise<ResultadoCobranca> {
-    if (params.meioPagamento !== 'pix') {
-      throw new GatewayPagamentoErro(
-        'RECUSADO',
-        'Pagamento com cartão ainda não está disponível neste provedor.',
-        false,
-        400,
-      );
-    }
     if (params.split) {
       throw new GatewayPagamentoErro(
         'RECUSADO',
@@ -124,7 +125,7 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
       {
         corpo: {
           customer: this.config.customerId,
-          billingType: 'PIX',
+          billingType: params.meioPagamento === 'pix' ? 'PIX' : 'CREDIT_CARD',
           value: valor,
           dueDate: dataBrasilia(params.expiraEm),
           description: params.descricao?.slice(0, 500),
@@ -133,52 +134,63 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
       },
     );
 
-    // A cobrança já existe no Asaas: se o ajuste da tarifa ou o QR falharem, cancela antes de devolver o erro. Sem isso
-    // ela ficaria aberta e pagável sem nenhuma contribuição ligada a ela (ninguém recebe o código, mas o Asaas aceitaria).
-    let qr: AsaasPixQrCode;
-    let tarifaProvedor: number | undefined;
     try {
-      // Tarifa real = valor - líquido, que o Asaas informa já na criação (promoção, isenção ou tarifa nova). Se for
-      // outra que a estimada, a cobrança passa a ser contribuição + tarifa real, ANTES do QR: quem apoia paga a tarifa
-      // de verdade, nem a mais nem a menos.
-      if (pagamento.netValue !== undefined) {
-        tarifaProvedor = arredondar(pagamento.value - pagamento.netValue);
-        if (
-          params.tarifaEstimada !== undefined &&
-          tarifaProvedor !== arredondar(params.tarifaEstimada)
-        ) {
-          pagamento = await this.http.requisitar<AsaasPayment>(
-            'PUT',
-            `/payments/${encodeURIComponent(pagamento.id)}`,
-            {
-              corpo: {
-                value: arredondar(
-                  valor - params.tarifaEstimada + tarifaProvedor,
-                ),
-                dueDate: dataBrasilia(params.expiraEm),
-              },
-            },
-          );
-        }
+      if (params.tarifaEstimada !== undefined) {
+        pagamento = await this.ajustarAoLiquido(
+          pagamento,
+          arredondar(valor - params.tarifaEstimada),
+          params.expiraEm,
+        );
       }
-      qr = await this.http.requisitar<AsaasPixQrCode>(
-        'GET',
-        `/payments/${encodeURIComponent(pagamento.id)}/pixQrCode`,
-      );
+      return params.meioPagamento === 'pix'
+        ? {
+            ...this.paraResultado(pagamento),
+            pix: await dadosPixAsaas(this.http, pagamento.id, params.expiraEm),
+          }
+        : {
+            ...this.paraResultado(pagamento),
+            linkPagamento: linkPagamentoCartaoAsaas(pagamento),
+          };
     } catch (erro) {
       await this.cancelarCobranca(pagamento.id).catch(() => undefined);
       throw erro;
     }
+  }
 
-    return {
-      ...this.paraResultado(pagamento),
-      tarifaProvedor,
-      pix: {
-        copiaECola: qr.payload,
-        qrCodeBase64: qr.encodedImage,
-        expiraEm: params.expiraEm,
-      },
-    };
+  // Corrige o valor da cobrança até o líquido (`netValue`) cobrir a contribuição, sobrando no máximo 1 centavo. No Pix
+  // a tarifa é fixa e basta uma correção; no cartão ela é percentual, e a correção de um valor também paga tarifa: duas
+  // ou três rodadas chegam. Se mesmo assim o líquido não cobrir, recusa (a plataforma nunca paga a tarifa).
+  private async ajustarAoLiquido(
+    pagamento: AsaasPayment,
+    liquidoDesejado: number,
+    expiraEm: Date,
+  ): Promise<AsaasPayment> {
+    let atual = pagamento;
+    for (let rodada = 0; rodada <= MAXIMO_RODADAS_AJUSTE; rodada++) {
+      if (atual.netValue === undefined) return atual;
+      const falta = arredondar(liquidoDesejado - atual.netValue);
+      if (falta <= 0 && falta > -0.02) return atual;
+      if (rodada === MAXIMO_RODADAS_AJUSTE) break;
+      atual = await this.http.requisitar<AsaasPayment>(
+        'PUT',
+        `/payments/${encodeURIComponent(atual.id)}`,
+        {
+          corpo: {
+            value: centavosParaCima(atual.value + falta),
+            dueDate: dataBrasilia(expiraEm),
+          },
+        },
+      );
+    }
+    if (atual.netValue !== undefined && atual.netValue < liquidoDesejado) {
+      throw new GatewayPagamentoErro(
+        'RECUSADO',
+        'Não foi possível ajustar a cobrança à tarifa do provedor.',
+        false,
+        400,
+      );
+    }
+    return atual;
   }
 
   async consultarCobranca(idCobranca: string): Promise<ResultadoCobranca> {
@@ -206,7 +218,7 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
       const existente = (pagamento.refunds ?? []).find(
         (r) =>
           (r.description ?? '').includes(marcador(chave)) &&
-          (r.status === 'DONE' || r.status === 'PENDING'),
+          !STATUS_ESTORNO_SEM_EFEITO.includes(r.status ?? ''),
       );
       if (existente) {
         return {
@@ -214,6 +226,7 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
           valorEstornado: arredondar(existente.value ?? 0),
           valorTotalEstornado: jaDevolvido,
           status: this.statusAposEstorno(pagamento, jaDevolvido),
+          concluido: existente.status === 'DONE',
         };
       }
     }
@@ -229,7 +242,7 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
       );
     }
 
-    await this.http.requisitar<AsaasPayment>(
+    const depois = await this.http.requisitar<AsaasPayment>(
       'POST',
       `/payments/${encodeURIComponent(idCobranca)}/refund`,
       {
@@ -243,11 +256,18 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
     );
 
     const total = arredondar(jaDevolvido + pedido);
+    const criado = chave
+      ? (depois.refunds ?? []).find((r) =>
+          (r.description ?? '').includes(marcador(chave)),
+        )
+      : undefined;
     return {
       idCobranca,
       valorEstornado: pedido,
       valorTotalEstornado: total,
       status: this.statusAposEstorno(pagamento, total),
+      // Sem como identificar a devolução recém-criada, não se presume concluída: o próximo ciclo confere.
+      concluido: criado?.status === 'DONE',
     };
   }
 
@@ -302,6 +322,7 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
         pagamento.billingType === 'CREDIT_CARD' ? 'cartao_credito' : 'pix',
       valor: arredondar(pagamento.value),
       valorEstornado: devolvido,
+      dinheiroLiberado: STATUS_DINHEIRO_LIBERADO.includes(pagamento.status),
     };
   }
 }

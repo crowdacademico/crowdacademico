@@ -107,12 +107,21 @@ export class EventoPagamentoService {
     idCobranca: string | null,
     novoStatus: StatusAplicavelPorEvento | null,
     valorEvento?: number,
+    // O provedor já liberou o dinheiro (cartão: cerca de 30 dias depois do pagamento). Ver dinheiro_liberado_em (01).
+    dinheiroLiberado = false,
   ): Promise<ResultadoAplicacaoEvento> {
     const resultado = await this.pool.query<{
       resultado: ResultadoAplicacaoEvento;
     }>(
-      `SELECT public.aplicar_evento_pagamento($1::int, $2::varchar, $3::varchar, $4::status_contribuicao, $5::numeric) AS resultado`,
-      [idEvento, provedor, idCobranca, novoStatus, valorEvento ?? null],
+      `SELECT public.aplicar_evento_pagamento($1::int, $2::varchar, $3::varchar, $4::status_contribuicao, $5::numeric, $6::boolean) AS resultado`,
+      [
+        idEvento,
+        provedor,
+        idCobranca,
+        novoStatus,
+        valorEvento ?? null,
+        dinheiroLiberado,
+      ],
     );
     return resultado.rows[0].resultado;
   }

@@ -213,10 +213,13 @@ export class PagamentoServiceReconcile {
     resumo.consultadas++;
     const alvo = alvoDoEstadoReal(real.status);
     if (!alvo) return;
+    // Cartão já confirmado cujo dinheiro o provedor liberou (o aviso pode ter se perdido): id próprio, senão o evento da
+    // confirmação, já processado, faria pular a liberação.
+    const liberado = alvo === 'confirmado' && real.dinheiroLiberado === true;
 
     const registro = await this.eventos.registrar({
       provedor: this.gateway.provedor,
-      idEventoExterno: `reconciliacao:${item.id_cobranca}:${alvo}`,
+      idEventoExterno: `reconciliacao:${item.id_cobranca}:${alvo}${liberado ? ':liberado' : ''}`,
       tipoEvento:
         alvo === 'confirmado' ? 'cobranca_confirmada' : 'cobranca_expirada',
       tipoEventoOriginal: 'RECONCILIACAO',
@@ -233,6 +236,8 @@ export class PagamentoServiceReconcile {
       this.gateway.provedor,
       item.id_cobranca,
       alvo,
+      undefined,
+      liberado,
     );
     if (resultado === 'revisao_manual') {
       resumo.emRevisao++;

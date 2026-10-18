@@ -34,7 +34,13 @@ export interface RespostaWebhook {
 // O que fazer com o evento depois de conferir o estado REAL no gateway.
 type Alvo =
   // Aplicar este status. `valor` só no estorno (o que o gateway diz ter devolvido).
-  | { acao: 'aplicar'; status: StatusAplicavelPorEvento; valor?: number }
+  | {
+      acao: 'aplicar';
+      status: StatusAplicavelPorEvento;
+      valor?: number;
+      // Só na confirmação: o provedor já liberou o dinheiro (cartão liberado ~30 dias depois; Pix na hora).
+      liberado?: boolean;
+    }
   // Evento que não pede ação (repasse, desconhecido, estorno parcial): só marcar como processado.
   | { acao: 'sem_acao' }
   // O estado real não bate com o evento (ex.: "confirmada" mas o gateway ainda diz "pendente"): não aplica, deixa
@@ -145,6 +151,7 @@ export class PagamentoServiceWebhook {
       evento.idCobranca ?? null,
       alvo.acao === 'aplicar' ? alvo.status : null,
       alvo.acao === 'aplicar' ? alvo.valor : undefined,
+      alvo.acao === 'aplicar' && alvo.liberado === true,
     );
 
     if (resultado === 'revisao_manual') {
@@ -245,7 +252,11 @@ export class PagamentoServiceWebhook {
       case 'cobranca_confirmada':
         // 'estornada' conta: pagou e já foi estornada; o evento de estorno aplica o resto depois.
         return real.status === 'confirmada' || real.status === 'estornada'
-          ? { acao: 'aplicar', status: 'confirmado' }
+          ? {
+              acao: 'aplicar',
+              status: 'confirmado',
+              liberado: real.dinheiroLiberado === true,
+            }
           : this.divergente(evento, real.status);
       case 'cobranca_expirada':
         return real.status === 'expirada'

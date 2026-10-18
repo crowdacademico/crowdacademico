@@ -123,19 +123,25 @@ export class PagamentoServiceRefundPending {
         return false;
       }
 
-      if ('falha' in resultado) {
+      // O provedor aceitou o pedido mas ainda não devolveu (ex.: esperando a autorização): continua 'a_devolver' e o próximo
+      // ciclo confere de novo (a mesma chave acha a mesma devolução, sem pedir outra). Conta como tentativa: uma devolução
+      // que nunca conclui acaba em reembolso manual, para uma pessoa olhar.
+      if ('falha' in resultado || !resultado.concluido) {
+        const falha: Falha =
+          'falha' in resultado
+            ? resultado.falha
+            : {
+                mensagem:
+                  'Devolução pedida ao provedor; aguardando ele concluir.',
+                recuperavel: true,
+              };
         const decisao = await client.query<{ registrar_falha_estorno: string }>(
           'SELECT public.registrar_falha_estorno($1::int, $2::text, $3::boolean, $4::numeric)',
-          [
-            item.id_contribuicao,
-            resultado.falha.mensagem,
-            resultado.falha.recuperavel,
-            liquido,
-          ],
+          [item.id_contribuicao, falha.mensagem, falha.recuperavel, liquido],
         );
         await client.query('COMMIT');
         this.logger.warn(
-          `Estorno da contribuição ${item.id_contribuicao}: falhou (${resultado.falha.mensagem}); ${decisao.rows[0]?.registrar_falha_estorno ?? '?'}.`,
+          `Estorno da contribuição ${item.id_contribuicao}: ${falha.mensagem} (${decisao.rows[0]?.registrar_falha_estorno ?? '?'}).`,
         );
         return true;
       }
@@ -162,7 +168,9 @@ export class PagamentoServiceRefundPending {
     item: LinhaEstorno,
     liquido: number,
   ): Promise<
-    { valorEstornado: number } | { falha: Falha } | 'nao_configurado'
+    | { valorEstornado: number; concluido: boolean }
+    | { falha: Falha }
+    | 'nao_configurado'
   > {
     if (item.prazo_vencido) {
       return {
@@ -195,7 +203,10 @@ export class PagamentoServiceRefundPending {
           chaveIdempotencia: `estorno-${item.id_contribuicao}`,
         }),
       );
-      return { valorEstornado: estorno.valorEstornado };
+      return {
+        valorEstornado: estorno.valorEstornado,
+        concluido: estorno.concluido,
+      };
     } catch (erro) {
       if (erro instanceof GatewayPagamentoErro) {
         if (erro.codigo === 'NAO_CONFIGURADO') {

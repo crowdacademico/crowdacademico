@@ -145,17 +145,16 @@ export class ContribuicaoServiceCreate {
     }
 
     // Passo 3: vincula a cobrança do gateway à contribuição (o webhook acha a contribuição por este id). Se o provedor
-    // informou uma tarifa real diferente da estimada (ele já corrigiu o valor da cobrança), grava a real na contribuição
-    // e no parâmetro (ajustar_tarifa_pix, 05): a resposta e as próximas contribuições usam a tarifa de verdade.
-    const tarifaReal = cobranca.tarifaProvedor;
-    const ajustarTarifa =
-      tarifaReal !== undefined &&
-      tarifaReal !== Number(contribuicao.taxa_pagamento);
+    // cobrou outra tarifa que a estimada (ele já corrigiu o valor da cobrança), grava a real na contribuição, e no Pix
+    // também no parâmetro (ajustar_tarifa_pagamento, 05): a resposta e as próximas contribuições usam a tarifa de verdade.
+    const tarifaReal =
+      Math.round((cobranca.valor - Number(contribuicao.valor)) * 100) / 100;
+    const ajustarTarifa = tarifaReal !== Number(contribuicao.taxa_pagamento);
     try {
       await executarTransacaoCurta(this.pool, { idUsuario }, async (client) => {
         if (ajustarTarifa) {
           await client.query(
-            'SELECT public.ajustar_tarifa_pix($1::int, $2::numeric)',
+            'SELECT public.ajustar_tarifa_pagamento($1::int, $2::numeric)',
             [contribuicao.id_contribuicao, tarifaReal],
           );
         }

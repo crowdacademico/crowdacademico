@@ -1,6 +1,7 @@
-// Meios aceitos por POST /contribuicao hoje: só PIX. O enum do banco tem mais (cartão, boleto), mas cartão ainda não
-// tem fluxo; pedido com outro meio é recusado na validação (400), antes de gravar a contribuição.
-export const MEIOS_PAGAMENTO_ACEITOS = ['pix'] as const;
+// Meios aceitos por POST /contribuicao: Pix e cartão de crédito (o enum do banco tem mais; boleto não tem fluxo e é
+// recusado na validação, 400). O cartão ainda passa pelas regras do banco: só campanha flexível (90007), faixa de valor
+// (90037/90038) e pode estar desligado pelo admin (91052).
+export const MEIOS_PAGAMENTO_ACEITOS = ['pix', 'cartao_credito'] as const;
 export type MeioPagamentoAceito = (typeof MEIOS_PAGAMENTO_ACEITOS)[number];
 
 // Maior valor que cabe em contribuicao.valor (DECIMAL(10,2)).

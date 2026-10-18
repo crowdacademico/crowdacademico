@@ -6,6 +6,8 @@ export class PagamentoBancadaContribuicao {
   tituloCampanha: string;
   valor: number;
   taxaPagamento: number;
+  meioPagamento: string;
+  dinheiroLiberado: boolean;
   status: string;
   idRepasse: number | null;
   criadoEm: Date;

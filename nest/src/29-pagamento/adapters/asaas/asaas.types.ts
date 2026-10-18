@@ -27,6 +27,8 @@ export interface AsaasPayment {
   netValue?: number;
   billingType?: string;
   dueDate?: string;
+  // Página segura do Asaas onde quem apoia paga (cartão).
+  invoiceUrl?: string | null;
   externalReference?: string | null;
   deleted?: boolean;
   refunds?: AsaasRefund[] | null;
@@ -68,6 +70,12 @@ export interface AsaasWebhookCorpo {
   type?: string;
   payment?: Partial<AsaasPayment>;
   transfer?: Partial<AsaasTransfer>;
+  // Pedido de autorização de devolução de Pix (type PIX_REFUND). `payment` é a cobrança devolvida.
+  pixRefund?: {
+    id?: string;
+    value?: number;
+    payment?: string | { id?: string };
+  };
 }
 
 export const TIPO_CHAVE_PIX_ASAAS = {

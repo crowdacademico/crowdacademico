@@ -44,6 +44,9 @@ export class ContribuicaoConverter {
             expiraEm: cobranca.pix.expiraEm,
           }
         : undefined,
+      cartao: cobranca.linkPagamento
+        ? { linkPagamento: cobranca.linkPagamento }
+        : undefined,
     };
   }
 }

@@ -93,6 +93,9 @@ export class PagamentoServiceAuthorizeWithdrawal {
 
   // null = aprovado; texto = motivo da recusa.
   private async avaliar(pedido: AutorizacaoSaqueDto): Promise<string | null> {
+    if (pedido.tipo === 'estorno') {
+      return this.avaliarEstorno(pedido);
+    }
     if (pedido.tipo !== 'transferencia') {
       return 'Tipo de saque não reconhecido por esta aplicação.';
     }
@@ -138,6 +141,36 @@ export class PagamentoServiceAuthorizeWithdrawal {
       )
     ) {
       return 'A chave Pix de destino difere da conta de recebimento do repasse.';
+    }
+    return null;
+  }
+
+  // Devolução de Pix: só aprova a que o próprio sistema mandou fazer (contribuição 'a_devolver' daquela cobrança, no
+  // valor inteiro da contribuição). Qualquer outra devolução é recusada, como a transferência que não casa com repasse.
+  private async avaliarEstorno(
+    pedido: AutorizacaoSaqueDto,
+  ): Promise<string | null> {
+    if (!pedido.idCobranca || pedido.valor === undefined) {
+      return 'Pedido de devolução sem os dados necessários para conferência.';
+    }
+    let dados: { id_contribuicao: number; valor: string } | undefined;
+    try {
+      const resultado = await this.pool.query<{
+        id_contribuicao: number;
+        valor: string;
+      }>(
+        'SELECT * FROM public.dados_autorizacao_estorno($1::varchar, $2::text)',
+        [this.verificador.provedor, pedido.idCobranca],
+      );
+      dados = resultado.rows.at(0);
+    } catch {
+      throw new ServiceUnavailableException();
+    }
+    if (!dados) {
+      return 'A devolução não corresponde a nenhuma contribuição a devolver.';
+    }
+    if (Math.abs(Number(dados.valor) - pedido.valor) > 0.005) {
+      return 'O valor da devolução difere do valor da contribuição.';
     }
     return null;
   }

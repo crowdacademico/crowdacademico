@@ -105,6 +105,16 @@ export class AsaasWebhookAdapter implements WebhookVerifierPort {
     const pedido = (
       corpo && typeof corpo === 'object' ? corpo : {}
     ) as AsaasWebhookCorpo;
+    if (pedido.type === 'PIX_REFUND') {
+      const r = pedido.pixRefund ?? {};
+      const cobranca =
+        typeof r.payment === 'string' ? r.payment : r.payment?.id;
+      return {
+        tipo: 'estorno',
+        idCobranca: typeof cobranca === 'string' ? cobranca : undefined,
+        valor: typeof r.value === 'number' ? r.value : undefined,
+      };
+    }
     if (pedido.type !== 'TRANSFER') return { tipo: 'outro' };
     const t = pedido.transfer ?? {};
     return {

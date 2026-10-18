@@ -6,6 +6,11 @@ export class ContribuicaoPixResponse {
   expiraEm: Date;
 }
 
+export class ContribuicaoCartaoResponse {
+  // Página segura do provedor onde quem apoia digita o cartão e paga (o cartão nunca passa pelo sistema).
+  linkPagamento: string;
+}
+
 export class ContribuicaoResponseCreate {
   idContribuicao: number;
   // Quem contribuiu SEM conta acompanha a contribuição por este token (não pelo id sequencial): é o que impede
@@ -24,4 +29,6 @@ export class ContribuicaoResponseCreate {
   criadoEm: Date;
   // Só em contribuição PIX.
   pix?: ContribuicaoPixResponse;
+  // Só em contribuição com cartão.
+  cartao?: ContribuicaoCartaoResponse;
 }
