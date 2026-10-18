@@ -12,7 +12,11 @@ import { AsaasHttpClient } from './asaas-http.client';
 import { type ConfiguracaoAsaas } from './asaas.config';
 import { linkPagamentoCartaoAsaas } from './asaas-cobranca-cartao';
 import { dadosPixAsaas } from './asaas-cobranca-pix';
-import { type AsaasLista, type AsaasPayment } from './asaas.types';
+import {
+  type AsaasLista,
+  type AsaasPayment,
+  type AsaasRefund,
+} from './asaas.types';
 
 export const NOME_PROVEDOR = 'asaas';
 
@@ -279,11 +283,20 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
     );
   }
 
+  // A cobrança COM as devoluções dela. O GET /payments/{id} devolve `refunds` vazio (conferido no sandbox): as devoluções
+  // só vêm em GET /payments/{id}/refunds. Sem elas, o total devolvido e a busca da devolução já pedida (que impede devolver
+  // duas vezes) estariam errados.
   private async obter(idCobranca: string): Promise<AsaasPayment> {
-    return this.http.requisitar<AsaasPayment>(
+    const id = encodeURIComponent(idCobranca);
+    const pagamento = await this.http.requisitar<AsaasPayment>(
       'GET',
-      `/payments/${encodeURIComponent(idCobranca)}`,
+      `/payments/${id}`,
     );
+    const devolucoes = await this.http.requisitar<AsaasLista<AsaasRefund>>(
+      'GET',
+      `/payments/${id}/refunds`,
+    );
+    return { ...pagamento, refunds: devolucoes.data };
   }
 
   private async buscarPorReferencia(

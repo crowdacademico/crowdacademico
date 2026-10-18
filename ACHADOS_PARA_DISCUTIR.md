@@ -2,6 +2,24 @@
 
 Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de contra-prompt de 24-09 dentro de `informacoes/`), conferida item por item contra o código. Os achados antigos (itens 1 a 20, quase todos resolvidos) estão em `informacoes/HISTORICO/HISTORICO_ACHADOS_PARA_DISCUTIR.md`; qualquer citação "`ACHADOS_PARA_DISCUTIR.md`, item N" em documento ou comentário antigo aponta para lá.
 
+## 📌 Túnel do sandbox de pagamento: endereço que muda toda vez (18-10-2026)
+
+> Em andamento: o Lucas escolheu a opção B (ngrok) e está criando a conta. Fica aqui para a Alexia ler.
+
+**Em palavras simples:** enquanto o Nest roda no computador, o Asaas precisa de um endereço público para mandar os avisos (webhook) e perguntar se pode transferir ou devolver dinheiro (validação de saque). Quem cria esse endereço é o túnel (`.Tutorial-plataforma-pagamento-sandbox.md`, Parte 2). O túnel usado até agora é o "rápido" do Cloudflare: grátis e sem conta, mas gera um endereço **novo a cada vez que abre**, e as duas URLs no Asaas têm de ser trocadas à mão toda vez.
+
+| Opção | Como funciona | A favor | Contra |
+|---|---|---|---|
+| A. Comando que atualiza sozinho | `npm run tunel` abre o túnel, lê o endereço novo e troca as URLs no Asaas pela API | Sem conta nova, sem custo | Remendo: o endereço continua mudando. A URL do webhook dá para trocar pela API; a da validação de saque ainda não foi conferida |
+| **B. Endereço fixo grátis (ngrok)** | Conta gratuita no ngrok dá um endereço que não muda | Configura no Asaas **uma vez só**; tem pacote npm, então vem com o `npm install` (serve também para os computadores da escola) | Uma conta a mais; o código de acesso do ngrok vai no `.env` (segredo, nunca no Git) |
+| C. Endereço fixo pelo Cloudflare | Túnel "com nome" do Cloudflare | Endereço fixo | Exige domínio próprio (cerca de R$ 40 por ano): exagero só para teste |
+
+- **Decisão:** opção B (ngrok).
+- **Motivo:** resolve a causa (o endereço mudar), não o sintoma; sem custo; e também atende a pendência do túnel na escola.
+- **Caso-limite:** se a rede da escola bloquear o ngrok, o túnel rápido do Cloudflare continua funcionando como antes (troca manual das URLs). Depois do deploy nenhum túnel é necessário: o sistema terá endereço próprio.
+
+**Ideia relacionada, para depois (no PENDENCIAS):** `npm run start:dev:teste`, que liga o Nest no modo rápido (provedor de teste) para testar o pagamento pela T5 sem túnel e sem abrir o Asaas.
+
 ## 📌 Contestação do score (RF-033): DECIDIDO E FEITO (03-10-2026)
 
 > ✅ O Lucas escolheu a B2 (a contestação na própria denúncia). Feito e documentado em `DOCUMENTACAO_BD.md`, [05-K-2-J]. O risco (c) foi aceito e documentado; o pedido de revisão ficou na Minha Conta, aba Acadêmico. Fica aqui para a Alexia ler.
