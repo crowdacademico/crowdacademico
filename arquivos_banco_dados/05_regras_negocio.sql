@@ -3741,6 +3741,71 @@ AS $$
 $$;
 
 -- ----------------------------------------------------------------------------
+-- Função:     registrar_contestacao_pagamento
+-- Assinatura: (p_id_evento INT, p_provedor VARCHAR, p_id_cobranca VARCHAR, p_motivo TEXT) -> VARCHAR (o resultado)
+-- Bloco:      [05-K-2]
+-- Regra:      Aviso de contestação de cartão (chargeback: quem pagou contestou a compra no banco, e o provedor tira ou
+--             segura o dinheiro na conta da plataforma). Nunca muda a contribuição sozinho: acha a contribuição da cobrança,
+--             põe o aviso em revisão manual com o motivo e grava UMA linha em auditoria_financeira (status anterior = novo =
+--             o atual, evento 'chargeback_em_revisao_manual: <aviso do provedor>', valor da contribuição), para a tela
+--             Eventos de Pagamento mostrar a contribuição e o valor. Uma pessoa decide o que fazer (ex.: cobrar o pesquisador,
+--             se o dinheiro já foi repassado). Resultados: 'revisao_manual'; 'contribuicao_nao_encontrada' (o aviso fica para
+--             tentar de novo, com o motivo); 'ja_processado'; 'ja_em_revisao'; 'evento_inexistente'.
+--             SEM AUTORIZAÇÃO DE PROPÓSITO (mesma categoria de aplicar_evento_pagamento): a barreira é a verificação do
+--             webhook, feita pelo Nest antes.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.registrar_contestacao_pagamento(
+    p_id_evento INT, p_provedor VARCHAR, p_id_cobranca VARCHAR, p_motivo TEXT
+)
+RETURNS VARCHAR
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_processado_em TIMESTAMPTZ;
+    v_revisao_em    TIMESTAMPTZ;
+    v_tipo          VARCHAR;
+    v_contribuicao  RECORD;
+BEGIN
+    SELECT e.processado_em, e.revisao_manual_em, e.tipo_evento INTO v_processado_em, v_revisao_em, v_tipo
+    FROM evento_pagamento e
+    WHERE e.id_evento_pagamento = p_id_evento
+    FOR UPDATE;
+
+    IF NOT FOUND THEN RETURN 'evento_inexistente'; END IF;
+    IF v_processado_em IS NOT NULL THEN RETURN 'ja_processado'; END IF;
+    IF v_revisao_em IS NOT NULL THEN RETURN 'ja_em_revisao'; END IF;
+
+    SELECT c.id_contribuicao, c.status, c.valor, c.meio_pagamento INTO v_contribuicao
+    FROM contribuicao c
+    WHERE c.provedor = p_provedor AND c.id_transacao_api = p_id_cobranca;
+
+    IF NOT FOUND THEN
+        UPDATE evento_pagamento
+        SET erro_processamento = 'Contribuição não encontrada para a cobrança ' || COALESCE(p_id_cobranca, '(sem id)') || '.'
+        WHERE id_evento_pagamento = p_id_evento;
+        RETURN 'contribuicao_nao_encontrada';
+    END IF;
+
+    UPDATE evento_pagamento
+    SET revisao_manual_em = NOW(), erro_processamento = LEFT(p_motivo, 2000)
+    WHERE id_evento_pagamento = p_id_evento;
+
+    INSERT INTO auditoria_financeira (
+        id_contribuicao, id_evento_pagamento, id_usuario_responsavel, valor, meio_pagamento,
+        status_novo, status_anterior, evento
+    )
+    VALUES (
+        v_contribuicao.id_contribuicao, p_id_evento, public.id_usuario_atual(), v_contribuicao.valor,
+        v_contribuicao.meio_pagamento, v_contribuicao.status::text, v_contribuicao.status::text,
+        LEFT('chargeback_em_revisao_manual: ' || v_tipo, 200)
+    );
+    RETURN 'revisao_manual';
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
 -- Função:     atualizar_status_contribuicao
 -- Assinatura: (p_id INT, p_status status_contribuicao, p_id_transacao VARCHAR DEFAULT NULL,
 --              p_id_evento_pagamento INT DEFAULT NULL, p_valor_evento DECIMAL DEFAULT NULL) -> VOID
@@ -3926,6 +3991,10 @@ $$;
 --             Só entram repasses cujo dono da campanha tem chave Pix com titularidade VERIFICADA
 --             (perfil_pesquisador.chave_pix_verificada_em); sem ela o repasse espera na fila, sem gastar tentativa. Só o provedor informado
 --             (ou repasse ainda sem provedor).
+--             Carência: um repasse 'pendente' só sai depois de configuracoes.repasse_carencia_dias (padrão 15) contados de
+--             repasse.criado_em. É a janela em que o dinheiro ainda pode voltar (estorno, contestação de cartão, MED do Pix):
+--             se voltar antes do repasse, sai do valor dele (as contribuições são reconferidas aqui); depois, quem ressarce
+--             é o pesquisador. Mesmo princípio do prazo de 15 dias do Catarse (Termos de Uso, item 7.4).
 --             SECURITY DEFINER, SEM AUTORIZAÇÃO DE PROPÓSITO (job de fundo).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.reservar_proximo_repasse(p_provedor VARCHAR)
@@ -3950,7 +4019,8 @@ BEGIN
         FROM repasse r
         JOIN campanha ca ON ca.id_campanha = r.id_campanha
         JOIN perfil_pesquisador pp ON pp.id_usuario = ca.id_usuario AND pp.chave_pix_verificada_em IS NOT NULL
-        WHERE ((r.status = 'pendente'    AND (r.proxima_tentativa_em IS NULL OR r.proxima_tentativa_em <= NOW()))
+        WHERE ((r.status = 'pendente'    AND (r.proxima_tentativa_em IS NULL OR r.proxima_tentativa_em <= NOW())
+                AND r.criado_em <= NOW() - public.config_numero('repasse_carencia_dias', 15) * INTERVAL '1 day')
             OR (r.status = 'processando' AND r.proxima_tentativa_em <= NOW()))
           AND (r.provedor IS NULL OR r.provedor = p_provedor)
         ORDER BY r.proxima_tentativa_em NULLS FIRST, r.id_repasse
@@ -4697,7 +4767,9 @@ BEGIN
                         OR (alvo.id_contribuicao IS NOT NULL AND alvo.status_anterior = 'pendente' AND alvo.status_novo = 'confirmado')
                        THEN 'entrada'
                    WHEN alvo.evento IN ('evento_em_revisao_manual: reembolsado', 'evento_em_revisao_manual: devolvido',
-                                        'repasse_evento_em_revisao_manual: concluido')
+                                        'repasse_evento_em_revisao_manual: concluido',
+                                        -- Contestação aberta: o provedor tira o dinheiro da conta da plataforma.
+                                        'chargeback_em_revisao_manual: PAYMENT_CHARGEBACK_REQUESTED')
                         OR (alvo.id_contribuicao IS NOT NULL AND alvo.status_anterior <> alvo.status_novo
                             AND alvo.status_novo IN ('reembolsado', 'devolvido'))
                         OR (alvo.id_repasse IS NOT NULL AND alvo.status_anterior <> alvo.status_novo AND alvo.status_novo = 'concluido')

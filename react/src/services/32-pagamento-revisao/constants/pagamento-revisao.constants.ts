@@ -45,6 +45,9 @@ const ROTULO_TIPO_EVENTO: Partial<Record<string, string>> = {
   TRANSFER_DONE: 'Repasse concluído',
   TRANSFER_FAILED: 'Repasse falhou',
   TRANSFER_CANCELLED: 'Repasse cancelado',
+  PAYMENT_CHARGEBACK_REQUESTED: 'Contestação de cartão aberta',
+  PAYMENT_CHARGEBACK_DISPUTE: 'Contestação de cartão em disputa',
+  PAYMENT_AWAITING_CHARGEBACK_REVERSAL: 'Contestação de cartão ganha',
 };
 
 export function rotuloTipoEvento(tipoEvento: string): string {

@@ -155,9 +155,14 @@ Decidido por `destino_dinheiro_campanha()` (05), no mesmo instante em que a camp
 
 1. O pesquisador cadastra a chave Pix em **Minha Conta > Acadêmico**. O sistema consulta o diretório Pix pelo provedor e só aceita a chave cujo titular tem o **mesmo CPF** do pesquisador. A chave fica guardada cifrada.
 2. Quando o destino é repasse, o banco cria **um repasse por campanha** com o valor bruto (soma das contribuições disponíveis), a taxa da plataforma (`taxa_plataforma` da campanha ou `taxa_plataforma_padrao`) e o valor líquido. A taxa nunca é menor que `taxa_minima_repasse` (função `liquido_repasse`, 05).
-3. A tarefa de repasse (a cada 5 minutos, `pagamento.service.transfer-pending.ts`) pede a transferência ao provedor. Antes de executar, o provedor pergunta ao sistema (validação de saque, seção 8), e o sistema só aprova se o valor e a chave de destino forem os do repasse.
+3. A tarefa de repasse (a cada 5 minutos, `pagamento.service.transfer-pending.ts`) pede a transferência ao provedor, mas só depois da **carência** (`repasse_carencia_dias`, contada de quando o repasse foi criado). Antes de executar, o provedor pergunta ao sistema (validação de saque, seção 8), e o sistema só aprova se o valor e a chave de destino forem os do repasse.
 4. O aviso de transferência concluída marca o repasse como `concluido` e as contribuições como `repassado`.
 5. Falha (banco recusou, sem saldo, rede): nova tentativa com espera que dobra a cada vez (`repasse_backoff_base_minutos` até `repasse_backoff_max_minutos`), até `repasse_max_tentativas`. Depois disso o repasse fica em `erro` e o admin o reenfileira no painel.
+
+- **Em palavras simples:** o dinheiro de uma campanha espera alguns dias na conta da plataforma antes de ir para o pesquisador, porque ainda pode voltar.
+- **Decisão (19-10-2026):** carência de `repasse_carencia_dias` (padrão 15) antes de cada repasse sair, contada de `repasse.criado_em` (o fechamento da campanha, ou a liberação do cartão). Para testar na hora, o parâmetro pode ficar em 0.
+- **Motivo:** o dinheiro ainda pode voltar depois de pago: estorno, contestação de cartão e a devolução por fraude do Pix (MED, que a vítima pode pedir em até 80 dias). Se voltar antes do repasse, sai do valor dele (as contribuições são reconferidas na hora de transferir); depois, a plataforma pagaria a conta. É o mesmo princípio do Catarse, que repassa 15 dias depois do fim da campanha (Termos de Uso, item 7.4).
+- **Caso-limite:** a carência cobre só o começo da janela do MED (80 dias) e da contestação de cartão; o que voltar depois do repasse cai em revisão manual, e o ressarcimento pelo pesquisador ainda não está no Termo do Pesquisador (ver PENDENCIAS).
 
 - **Decisão:** a tarifa que o provedor cobra pela transferência Pix ao pesquisador (R$ 2,00 no Asaas, com 30 grátis por mês, lida em 18-10-2026 pela API de tarifas da conta) é paga pela plataforma, e a taxa da plataforma num repasse é **a maior** entre a percentual (5%) e `taxa_minima_repasse` (R$ 2,00).
 - **Motivo:** quem faz o Pix paga a tarifa dele, como quem apoia paga a de receber; e a plataforma nunca fica no prejuízo: 5% de um repasse pequeno (por exemplo, R$ 10 dão R$ 0,50) não pagaria a transferência.
@@ -203,6 +208,12 @@ Decidido por `destino_dinheiro_campanha()` (05), no mesmo instante em que a camp
 - **Motivo:** o caso comum é o aviso de "pago" chegar uma fração de segundo antes de a contribuição terminar de ser gravada; na segunda tentativa ela já existe. O que sobra depois de 24 horas não é do sistema, e as duas situações merecem um olhar: dinheiro sem dono na conta, ou uma saída que ninguém pediu (sinal de segurança).
 - **Caso-limite:** aviso de uma devolução ou transferência feita por fora e recusada pela validação de saque também cai aqui depois de 24 horas, junto com o registro da recusa no log. Antes desta regra (até 18-10-2026), esses avisos ficavam parados para sempre.
 
+**Contestação de cartão (chargeback).**
+- **Em palavras simples:** quando alguém contesta a compra do cartão no banco, o provedor tira o dinheiro da conta da plataforma; o sistema agora põe isso na frente de uma pessoa.
+- **Decisão (19-10-2026):** os avisos `PAYMENT_CHARGEBACK_REQUESTED`, `PAYMENT_CHARGEBACK_DISPUTE` e `PAYMENT_AWAITING_CHARGEBACK_REVERSAL` viram `cobranca_contestada` e vão **sempre** para revisão manual (`registrar_contestacao_pagamento`, 05), ligados à contribuição e com o valor, sem mudar o status dela. A contestação aberta aparece como saída em Eventos de Pagamento.
+- **Motivo:** antes, esses avisos eram gravados e ignorados, e a conferência periódica lia a contestação como pagamento confirmado: o dinheiro saía da conta e o sistema continuava achando que a contribuição estava paga ou repassada.
+- **Caso-limite:** o sistema não decide sozinho o que fazer com a contestação (devolver, disputar, cobrar o pesquisador); quem decide é a pessoa na revisão manual.
+
 **Aviso que se perdeu.** A tarefa de conferência (a cada 10 minutos, `pagamento.service.reconcile.ts`) pergunta ao provedor a situação de cada contribuição pendente há mais de `reconciliacao_limite_minutos`. Um Pix pago cujo aviso nunca chegou é confirmado mesmo assim.
 
 **Validação de saque (a proteção do dinheiro que sai).** O provedor, antes de executar qualquer transferência ou devolução pedida pela API, chama `POST /pagamento/webhook/:provedor/autorizacao-saque` com um token próprio. O sistema aprova só:
@@ -231,6 +242,7 @@ Todo o resto é recusado, com o motivo no log. Se o banco estiver fora do ar, a 
 | `valor_minimo_contribuicao_cartao` / `valor_maximo_contribuicao_cartao` | R$ 20 / R$ 500 | Faixa do cartão (o máximo limita o prejuízo de uma contestação de compra) |
 | `taxa_cartao_percentual` / `taxa_cartao_fixa` | 1,99 % / R$ 0,49 | Tarifa estimada do cartão |
 | `cartao_dias_liberacao` | 30 | Previsão de liberação do cartão mostrada ao pesquisador |
+| `repasse_carencia_dias` | 15 | Dias que o repasse espera antes de sair (0 para testar na hora) |
 | `repasse_max_tentativas`, `repasse_backoff_base_minutos`, `repasse_backoff_max_minutos`, `repasse_lease_minutos` | 8, 15, 1440, 10 | Tentativas e esperas do repasse |
 | `estorno_max_tentativas`, `estorno_backoff_base_minutos`, `estorno_backoff_max_minutos`, `estorno_prazo_pix_dias` | 8, 15, 1440, 90 | Tentativas, esperas e prazo da devolução |
 | `reconciliacao_limite_minutos`, `reconciliacao_intervalo_minutos`, `reconciliacao_orfa_minutos` | 30, 60, 60 | Quando conferir com o provedor uma contribuição pendente |

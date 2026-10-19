@@ -627,6 +627,9 @@ CREATE TABLE repasse (
     valor_bruto   DECIMAL(10,2) NOT NULL,
     valor_liquido DECIMAL(10,2) NOT NULL,
     meta_atingida BOOLEAN       NOT NULL DEFAULT FALSE,
+    -- Quando o repasse nasceu (o fechamento da campanha, ou a liberação do cartão): a carência
+    -- (configuracoes.repasse_carencia_dias) conta daqui.
+    criado_em     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     repassado_em  TIMESTAMPTZ,
     taxa_relativa DECIMAL(5,2),
     -- pendente (na fila) -> processando (o worker pegou; transferência pedida) -> concluido | erro. Máquina de estados em

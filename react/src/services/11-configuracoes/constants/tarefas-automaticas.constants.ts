@@ -23,7 +23,7 @@ export const TAREFAS_AUTOMATICAS: TarefaAutomatica[] = [
     tarefa: 'repasse',
     rotulo: 'Rodar o repasse',
     icone: 'fa-paper-plane',
-    dica: 'Pede ao provedor a transferência dos repasses na fila.',
+    dica: 'Pede ao provedor a transferência dos repasses na fila que já passaram da carência (repasse_carencia_dias; 0 para testar na hora).',
   },
   {
     chave: 'tarefa_devolucao_ligada',

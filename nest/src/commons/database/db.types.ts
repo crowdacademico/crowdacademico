@@ -522,6 +522,7 @@ export interface RepasseTable {
   valor_bruto: string;
   valor_liquido: string;
   meta_atingida: Generated<boolean>;
+  criado_em: Generated<Date>;
   repassado_em: Date | null;
   taxa_relativa: string | null;
   status: Generated<StatusRepasse>;

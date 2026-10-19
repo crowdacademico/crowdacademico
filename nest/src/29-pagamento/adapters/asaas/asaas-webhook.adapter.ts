@@ -19,6 +19,7 @@ import { type AsaasWebhookCorpo } from './asaas.types';
 //                                                                        parcial pelo estado real, e o parcial não faz nada)
 //   TRANSFER_DONE                                                     => repasse_concluido
 //   TRANSFER_FAILED / TRANSFER_CANCELLED                              => repasse_falhou
+//   PAYMENT_CHARGEBACK_REQUESTED / _DISPUTE / AWAITING_CHARGEBACK_REVERSAL => cobranca_contestada (revisão manual)
 //   qualquer outro (PAYMENT_CREATED, TRANSFER_PENDING, ...)           => desconhecido: gravado na caixa e ignorado
 const EVENTOS: Record<string, TipoEventoPagamento> = {
   PAYMENT_CONFIRMED: 'cobranca_confirmada',
@@ -30,6 +31,9 @@ const EVENTOS: Record<string, TipoEventoPagamento> = {
   TRANSFER_DONE: 'repasse_concluido',
   TRANSFER_FAILED: 'repasse_falhou',
   TRANSFER_CANCELLED: 'repasse_falhou',
+  PAYMENT_CHARGEBACK_REQUESTED: 'cobranca_contestada',
+  PAYMENT_CHARGEBACK_DISPUTE: 'cobranca_contestada',
+  PAYMENT_AWAITING_CHARGEBACK_REVERSAL: 'cobranca_contestada',
 };
 
 // Comparação em tempo constante (não vaza, pelo tempo de resposta, quantos caracteres do token estavam certos). O hash

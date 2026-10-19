@@ -41,6 +41,7 @@ const GRUPO_CONFIGURACAO: Record<string, string> = {
   cartao_dias_liberacao: 'Financeiro',
   pix_validade_horas: 'Financeiro',
   // Pagamentos: ritmo dos processos automáticos de repasse, devolução e conferência com o provedor.
+  repasse_carencia_dias: 'Pagamentos',
   repasse_lease_minutos: 'Pagamentos',
   repasse_max_tentativas: 'Pagamentos',
   repasse_backoff_base_minutos: 'Pagamentos',

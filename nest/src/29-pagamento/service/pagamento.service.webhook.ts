@@ -34,6 +34,16 @@ export interface RespostaWebhook {
   recebido: true;
 }
 
+// O que cada aviso de contestação de cartão (chargeback) quer dizer, para quem for decidir na revisão manual.
+const MOTIVO_CONTESTACAO: Partial<Record<string, string>> = {
+  PAYMENT_CHARGEBACK_REQUESTED:
+    'Contestação de cartão aberta: quem pagou contestou a compra no banco e o provedor tirou o valor da conta da plataforma. Confira no provedor; se o dinheiro já foi repassado, quem ressarce é o pesquisador.',
+  PAYMENT_CHARGEBACK_DISPUTE:
+    'Contestação de cartão em disputa: os documentos foram enviados ao banco do cartão. Acompanhe o resultado no provedor.',
+  PAYMENT_AWAITING_CHARGEBACK_REVERSAL:
+    'Contestação de cartão ganha: o provedor vai devolver o valor à conta da plataforma. Acompanhe no provedor.',
+};
+
 // O que fazer com o evento depois de conferir o estado REAL no gateway.
 type Alvo =
   // Aplicar este status. `valor` só no estorno (o que o gateway diz ter devolvido).
@@ -138,6 +148,10 @@ export class PagamentoServiceWebhook {
       await this.processarRepasse(idEvento, evento);
       return;
     }
+    if (evento.tipoEvento === 'cobranca_contestada') {
+      await this.processarContestacao(idEvento, evento);
+      return;
+    }
 
     let alvo: Alvo;
     try {
@@ -182,6 +196,37 @@ export class PagamentoServiceWebhook {
     } else if (resultado === 'contribuicao_nao_encontrada') {
       this.logger.warn(
         `Evento ${idEvento}: nenhuma contribuição para a cobrança ${evento.idCobranca ?? '?'}; a conferência tenta de novo.`,
+      );
+    }
+  }
+
+  // Contestação de cartão: vai SEMPRE para revisão manual, sem reconsultar o provedor (não muda nenhum status, só pede
+  // que uma pessoa olhe). Contribuição ainda não encontrada: fica para tentar de novo, como o aviso de cobrança.
+  private async processarContestacao(
+    idEvento: number,
+    evento: EventoPagamentoDto,
+  ): Promise<void> {
+    if (!evento.idCobranca) {
+      await this.eventos.registrarFalha(
+        idEvento,
+        'Aviso de contestação sem id da cobrança.',
+      );
+      return;
+    }
+    const resultado = await this.eventos.registrarContestacao(
+      idEvento,
+      evento.provedor,
+      evento.idCobranca,
+      MOTIVO_CONTESTACAO[evento.tipoEventoOriginal] ??
+        `Aviso de contestação de cartão (${evento.tipoEventoOriginal}). Confira no provedor.`,
+    );
+    if (resultado === 'revisao_manual') {
+      this.logger.error(
+        `Evento ${idEvento} (cobrança ${evento.idCobranca}): contestação de cartão, em revisão manual.`,
+      );
+    } else if (resultado === 'contribuicao_nao_encontrada') {
+      this.logger.warn(
+        `Evento ${idEvento}: contestação sem contribuição para a cobrança ${evento.idCobranca}; a conferência tenta de novo.`,
       );
     }
   }

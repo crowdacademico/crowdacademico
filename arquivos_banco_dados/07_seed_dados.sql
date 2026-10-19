@@ -669,6 +669,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'boleto_vencimento_dias',     '3',     'inteiro',  'Dias, contados da contribuição, até o vencimento do boleto', TRUE, TRUE),
 -- Workers de pagamento (29-pagamento no Nest; funções em 05, [05-K-2]): repasse ao pesquisador, devolução do
 -- tudo-ou-nada e reconciliação com o provedor.
+(NULL, 'repasse_carencia_dias',                  '15',   'inteiro', 'Dias, contados de quando o repasse é criado (o fim da campanha), antes de o dinheiro ir para o pesquisador: janela para estorno, contestação de cartão e devolução por fraude do Pix (MED)', TRUE, FALSE),
 (NULL, 'repasse_lease_minutos',                  '10',   'inteiro', 'Minutos que um repasse fica reservado para um worker antes de outro poder tentar',          TRUE, FALSE),
 (NULL, 'repasse_max_tentativas',                 '8',    'inteiro', 'Tentativas de transferência de um repasse antes de ele parar em erro (o admin reenfileira)', TRUE, FALSE),
 (NULL, 'repasse_backoff_base_minutos',           '15',   'inteiro', 'Espera, em minutos, antes da 2ª tentativa de repasse (dobra a cada falha)',                 TRUE, FALSE),
@@ -1415,6 +1416,7 @@ BEGIN
     UPDATE evento_pagamento SET processado_em = p_quando WHERE processado_em >= v_inicio;
     UPDATE evento_pagamento SET revisao_manual_em = p_quando WHERE revisao_manual_em >= v_inicio;
     UPDATE repasse SET repassado_em = p_quando WHERE repassado_em >= v_inicio;
+    UPDATE repasse SET criado_em = p_quando WHERE criado_em >= v_inicio;
     UPDATE contribuicao SET dinheiro_liberado_em = p_quando WHERE dinheiro_liberado_em >= v_inicio;
     UPDATE contribuicao SET cobranca_cancelada_em = p_quando WHERE cobranca_cancelada_em >= v_inicio;
     UPDATE campanha SET encerrado_em = p_quando WHERE encerrado_em >= v_inicio;
@@ -1626,11 +1628,19 @@ BEGIN
     FROM contribuicao c JOIN campanha ca ON ca.id_campanha = c.id_campanha
     WHERE a.id_contribuicao = c.id_contribuicao AND a.timestamp >= (SELECT inicio FROM seed_relogio);
     UPDATE campanha SET encerrado_em = data_fim + INTERVAL '1 hour' WHERE encerrado_em >= (SELECT inicio FROM seed_relogio);
+    UPDATE repasse r SET criado_em = ca.data_fim + INTERVAL '1 hour'
+    FROM campanha ca
+    WHERE ca.id_campanha = r.id_campanha AND r.criado_em >= (SELECT inicio FROM seed_relogio);
 END;
 $$;
 
 SELECT pg_temp.liberar(14, pg_temp.dia(-72));
-SELECT public.criar_repasses_liberados();
+DO $$
+BEGIN
+    PERFORM public.criar_repasses_liberados();
+    PERFORM pg_temp.datar(pg_temp.dia(-72));
+END;
+$$;
 
 -- Repasse de demonstração só com o provedor do seed: nenhum worker de verdade o pega.
 UPDATE repasse SET provedor = 'seed' WHERE provedor IS NULL;
@@ -1778,7 +1788,8 @@ BEGIN
     IF EXISTS (SELECT 1 FROM auditoria_financeira WHERE timestamp >= (SELECT inicio FROM seed_relogio))
        OR EXISTS (SELECT 1 FROM evento_pagamento WHERE recebido_em >= (SELECT inicio FROM seed_relogio)
                      OR processado_em >= (SELECT inicio FROM seed_relogio))
-       OR EXISTS (SELECT 1 FROM campanha WHERE encerrado_em >= (SELECT inicio FROM seed_relogio)) THEN
+       OR EXISTS (SELECT 1 FROM campanha WHERE encerrado_em >= (SELECT inicio FROM seed_relogio))
+       OR EXISTS (SELECT 1 FROM repasse WHERE criado_em >= (SELECT inicio FROM seed_relogio)) THEN
         RAISE EXCEPTION 'seed: sobrou registro sem data em [07-H-5]';
     END IF;
 END;

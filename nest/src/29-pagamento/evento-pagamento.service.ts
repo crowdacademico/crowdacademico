@@ -202,6 +202,23 @@ export class EventoPagamentoService {
     }));
   }
 
+  // Contestação de cartão: põe o aviso em revisão manual, ligado à contribuição da cobrança, sem mudar o status dela
+  // (registrar_contestacao_pagamento, 05).
+  async registrarContestacao(
+    idEvento: number,
+    provedor: string,
+    idCobranca: string,
+    motivo: string,
+  ): Promise<ResultadoAplicacaoEvento> {
+    const resultado = await this.pool.query<{
+      resultado: ResultadoAplicacaoEvento;
+    }>(
+      'SELECT public.registrar_contestacao_pagamento($1::int, $2::varchar, $3::varchar, $4::text) AS resultado',
+      [idEvento, provedor, idCobranca, motivo],
+    );
+    return resultado.rows[0].resultado;
+  }
+
   // Põe em revisão manual, com o motivo, um aviso que nunca encontrou a que pertence (mandar_evento_para_revisao, 05).
   async mandarParaRevisao(idEvento: number, motivo: string): Promise<boolean> {
     const resultado = await this.pool.query<{ mudou: boolean }>(

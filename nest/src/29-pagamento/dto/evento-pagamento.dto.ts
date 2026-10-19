@@ -6,6 +6,8 @@ export type TipoEventoPagamento =
   | 'cobranca_estornada'
   | 'repasse_concluido'
   | 'repasse_falhou'
+  // Contestação de cartão (chargeback): sempre para revisão manual, nunca muda a contribuição sozinha.
+  | 'cobranca_contestada'
   // Qualquer evento que o sistema ainda não trata: é gravado (a caixa guarda tudo) e ignorado no processamento.
   | 'desconhecido';
 

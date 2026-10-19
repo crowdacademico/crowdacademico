@@ -380,6 +380,7 @@ export interface RecuperacaoSenha {
 
 export interface Repasse {
   chave_idempotencia: Generated<string>;
+  criado_em: Generated<Timestamp>;
   id_campanha: number;
   id_repasse: Generated<number>;
   id_transferencia_api: string | null;

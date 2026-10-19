@@ -445,6 +445,8 @@ REVOKE EXECUTE ON FUNCTION public.eventos_para_reprocessar(VARCHAR, INT) FROM PU
 GRANT EXECUTE ON FUNCTION public.eventos_para_reprocessar(VARCHAR, INT) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.mandar_evento_para_revisao(INT, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.mandar_evento_para_revisao(INT, TEXT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.registrar_contestacao_pagamento(INT, VARCHAR, VARCHAR, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.registrar_contestacao_pagamento(INT, VARCHAR, VARCHAR, TEXT) TO app_nestjs;
 -- Worker de estorno (PR-07): job de fundo sem sessão; as três funções são SECURITY DEFINER e o app_nestjs não lê contribuicao.
 REVOKE EXECUTE ON FUNCTION public.proximo_estorno_pendente(VARCHAR) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.proximo_estorno_pendente(VARCHAR) TO app_nestjs;
