@@ -81,7 +81,10 @@ O sistema não conhece o Asaas: conhece três "tomadas" (ports, em `nest/src/23-
 | Devolução: o banco devolve (Pix e cartão) ou gera link (boleto) | Pix e cartão: devolve na hora; boleto: gera um link de mentira e a contribuição vai para reembolso manual, como no Asaas |
 
 **Cuidados:**
-- A memória do provedor de teste some quando o Nest reinicia: uma cobrança pendente criada antes vira "perdida" na T5 e só vence sozinha.
+- A memória do provedor de teste fica no arquivo `nest/.fake-gateway.json` (fora do git, `fake-gateway.persistencia.ts`): reiniciar o Nest não perde as cobranças. O arquivo leva um carimbo do banco; com o banco recriado, o carimbo não bate e o provedor começa vazio (as cobranças antigas aparecem como "Perdida" na T5 e só vencem sozinhas).
+  - **Decisão:** gravar a memória do provedor de teste num arquivo local a cada mudança e ler de volta quando o Nest sobe.
+  - **Motivo:** o Nest reinicia a cada arquivo salvo (`--watch`) e a cada Ctrl+C; sem isso, toda cobrança pendente da T5 virava "perdida" e o teste tinha de recomeçar.
+  - **Caso-limite:** banco recriado ou arquivo apagado: o provedor começa vazio e cada memória nova leva uma marca própria nos ids (`fake_pay_<marca>_000001`), então nunca repete um id que o banco já guarda. Arquivo estragado só gera um aviso no log; o Nest sobe do mesmo jeito.
 - O banco é o mesmo do modo normal: as contribuições do modo rápido ficam com o provedor `fake` e as tarefas automáticas só tratam as do provedor ligado, então nunca se misturam com as do Asaas.
 - Em produção o provedor de teste não sobe: o Nest se recusa a iniciar com `PAYMENT_PROVIDER=fake` e `NODE_ENV=production` (`pagamento.module.ts`).
 

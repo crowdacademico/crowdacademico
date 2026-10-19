@@ -1,5 +1,5 @@
 // Respostas da bancada de pagamento (T05). `noProvedor`: o que o provedor de teste diz da cobrança/transferência
-// ('perdida' quando o Nest reiniciou e a memória dele foi apagada); null com provedor real ou sem cobrança.
+// ('perdida' quando a cobrança é de antes de o banco ser recriado); null com provedor real ou sem cobrança.
 export class PagamentoBancadaContribuicao {
   idContribuicao: number;
   idCampanha: number;

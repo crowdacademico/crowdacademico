@@ -8,8 +8,7 @@ import { excecaoDeValidacao } from './commons/validacao/erro-de-validacao';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  // Necessário pro front (Vite, outra origem) conseguir chamar a API -
-  // .Tutorial-rodar-projeto.md já avisava disso desde o "hello world".
+  // Necessário pro front (Vite, outra origem) conseguir chamar a API.
   app.enableCors();
   // Sem isto, em produção (atrás de QUALQUER proxy reverso: Render, Railway, Fly, Cloudflare) o Express enxerga
   // o IP do PROXY em toda requisição, não o do usuário de verdade. Dois efeitos ruins, silenciosos em localhost

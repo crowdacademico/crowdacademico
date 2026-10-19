@@ -62,7 +62,7 @@ export class DatabaseModule implements OnModuleInit {
 
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
-  // .Tutorial-rodar-projeto.md, item 2: conectar como qualquer outro usuário
+  // Conectar como qualquer outro usuário
   // que não seja app_nestjs (ex.: postgres, por engano no .env) faz a RLS
   // deixar de valer SILENCIOSAMENTE - nada quebra na hora, só some a proteção.
   // Falha rápido e alto na subida em vez de deixar isso passar despercebido.

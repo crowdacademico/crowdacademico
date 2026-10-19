@@ -9,11 +9,7 @@ import {
   tarefaLigada,
 } from '../../commons/agendamento/tarefa-automatica';
 import { PG_POOL } from '../../commons/database/database.constants';
-import { decifrarSegredoEmail } from '../../commons/seguranca/segredo-email-cifra.util';
-import { CHAVE_SEGREDO_NOTIFICACAO } from '../../27-notificacao/constants/notificacao.constants';
-import { URL_PAINEL_PADRAO } from '../email.config';
-import { montarHtml, montarTexto } from '../modelos/layout-email';
-import { montarConteudo } from '../modelos/modelos-email';
+import { montarMensagem } from '../modelos/montar-mensagem';
 import {
   ENVIO_EMAIL,
   ErroEnvioEmail,
@@ -34,7 +30,7 @@ const LOTE_MAXIMO = 20;
 // meio, a reserva vence (email_lease_minutos) e outro ciclo retoma. Mesmo desenho do worker de repasse (23-pagamento).
 //
 // `PG_POOL` direto, nunca DatabaseService.getDb(): job agendado roda fora do pipeline HTTP. O link com token só é
-// decifrado na hora de montar o e-mail e nunca vai para log.
+// decifrado na hora de montar o e-mail (montarMensagem) e nunca vai para log.
 @Injectable()
 export class EmailServiceSendPending {
   private readonly logger = new Logger(EmailServiceSendPending.name);
@@ -57,12 +53,17 @@ export class EmailServiceSendPending {
     }
   }
 
-  async executar(): Promise<number> {
+  // ignorarEspera: só o "Rodar agora" do Campo de Testes (T6) passa true, para mandar também o que espera uma nova
+  // tentativa depois de um erro; a execução agendada respeita a espera.
+  async executar(opcoes: { ignorarEspera?: boolean } = {}): Promise<number> {
     if (this.emExecucao || !this.envio.configurado) return 0;
     this.emExecucao = true;
     let tratados = 0;
     try {
-      while (tratados < LOTE_MAXIMO && (await this.enviarProximo())) {
+      while (
+        tratados < LOTE_MAXIMO &&
+        (await this.enviarProximo(opcoes.ignorarEspera ?? false))
+      ) {
         tratados++;
       }
       if (tratados > 0) {
@@ -79,21 +80,20 @@ export class EmailServiceSendPending {
   }
 
   // false = fila vazia; true = tratou um (enviado, ou falha registrada).
-  private async enviarProximo(): Promise<boolean> {
+  private async enviarProximo(ignorarEspera: boolean): Promise<boolean> {
     const fila = await this.pool.query<LinhaNotificacao>(
-      'SELECT * FROM public.reservar_proxima_notificacao()',
+      'SELECT * FROM public.reservar_proxima_notificacao($1::boolean)',
+      [ignorarEspera],
     );
     const item = fila.rows[0] as LinhaNotificacao | undefined;
     if (!item) return false;
 
-    const conteudo = montarConteudo(item.tipo_evento, {
-      dados: item.dados,
-      urlPainel: (
-        this.config.get<string>('PAINEL_URL') ?? URL_PAINEL_PADRAO
-      ).replace(/\/+$/, ''),
-      segredo: this.decifrar(item.dados[CHAVE_SEGREDO_NOTIFICACAO]),
-    });
-    if (!conteudo) {
+    const mensagem = montarMensagem(
+      item.tipo_evento,
+      item.dados,
+      this.config.get<string>('PAINEL_URL'),
+    );
+    if (!mensagem) {
       await this.falhar(
         item,
         null,
@@ -110,15 +110,13 @@ export class EmailServiceSendPending {
         para: item.email_destinatario,
         nomePara:
           typeof item.dados.nome === 'string' ? item.dados.nome : undefined,
-        assunto: conteudo.assunto,
-        texto: montarTexto(conteudo),
-        html: montarHtml(conteudo),
+        ...mensagem,
       });
       await this.pool.query(
         'SELECT public.concluir_notificacao($1::int, $2::varchar, $3::varchar, $4::varchar)',
         [
           item.id_notificacao,
-          conteudo.assunto,
+          mensagem.assunto,
           this.envio.provedor,
           resultado.idMensagem,
         ],
@@ -126,7 +124,7 @@ export class EmailServiceSendPending {
     } catch (erro) {
       await this.falhar(
         item,
-        conteudo.assunto,
+        mensagem.assunto,
         erro instanceof ErroEnvioEmail
           ? erro
           : new ErroEnvioEmail(
@@ -156,14 +154,5 @@ export class EmailServiceSendPending {
     this.logger.warn(
       `E-mail ${item.id_notificacao} (${item.tipo_evento}) não saiu: ${erro.message}; ficou ${decisao.rows[0]?.r ?? '?'}.`,
     );
-  }
-
-  private decifrar(valor: unknown): string | null {
-    if (typeof valor !== 'string' || valor === '') return null;
-    try {
-      return decifrarSegredoEmail(valor);
-    } catch {
-      return null;
-    }
   }
 }

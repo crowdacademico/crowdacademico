@@ -13,6 +13,8 @@ const GRUPO_CONFIGURACAO: Record<string, string> = {
   tarefa_conferencia_ligada: 'Tarefas automáticas',
   tarefa_envio_email_ligada: 'Tarefas automáticas',
   teste_pagamento_automatico_ligado: 'Tarefas automáticas',
+  // Campo de Testes: até onde a Caixa de E-mails (T6) foi limpa (o Limpar a caixa grava).
+  teste_caixa_email_limpa_ate_id: 'Campo de Testes',
   // Moderação: cor do tempo de espera nas filas (coluna "esperando").
   espera_atencao_dias: 'Moderação',
   espera_critica_dias: 'Moderação',
@@ -99,7 +101,7 @@ const GRUPO_CONFIGURACAO: Record<string, string> = {
   notificar_novas_campanhas: 'Geral',
 };
 
-const ORDEM_GRUPOS = ['Segurança', 'Financeiro', 'Pagamentos', 'E-mail', 'Tarefas automáticas', 'Campanha', 'Moderação', 'Score / Reputação', 'Arquivo', 'Geral', 'Outras'];
+const ORDEM_GRUPOS = ['Segurança', 'Financeiro', 'Pagamentos', 'E-mail', 'Tarefas automáticas', 'Campanha', 'Moderação', 'Score / Reputação', 'Arquivo', 'Geral', 'Campo de Testes', 'Outras'];
 
 export function grupoConfiguracao(chave: string): string {
   return GRUPO_CONFIGURACAO[chave] ?? 'Outras';

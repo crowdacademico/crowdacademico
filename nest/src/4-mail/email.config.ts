@@ -8,8 +8,6 @@ import type { Remetente } from './adapters/remetente';
 import { SmtpEmailAdapter } from './adapters/smtp/smtp-email.adapter';
 import type { EnvioEmailPort } from './ports/envio-email.port';
 
-export const URL_PAINEL_PADRAO = 'http://localhost:5173';
-
 // Escolhe o provedor pela variável EMAIL_PROVIDER ('fake' | 'brevo' | 'smtp'). Mesmas regras de PAYMENT_PROVIDER:
 //  - ausente em desenvolvimento => 'fake' (subir o projeto sem configurar nada continua funcionando);
 //  - ausente em PRODUÇÃO => o sistema sobe, com erro no log, e os e-mails esperam na fila;

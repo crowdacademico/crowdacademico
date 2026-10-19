@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AsaasGatewayAdapter } from './adapters/asaas/asaas-gateway.adapter';
 import { lerConfiguracaoAsaas } from './adapters/asaas/asaas.config';
 import { FakeGatewayAdapter } from './adapters/fake/fake-gateway.adapter';
+import { FakeGatewayPersistencia } from './adapters/fake/fake-gateway.persistencia';
 import { GatewayNaoConfiguradoAdapter } from './adapters/nao-configurado/gateway-nao-configurado.adapter';
 import { PagamentoControllerWebhook } from './controllers/pagamento.controller.webhook';
 import { EventoPagamentoService } from './evento-pagamento.service';
@@ -91,6 +92,8 @@ export function criarAdapter(
     { provide: COBRANCA_GATEWAY, useExisting: ADAPTER_PAGAMENTO },
     { provide: REPASSE_GATEWAY, useExisting: ADAPTER_PAGAMENTO },
     { provide: WEBHOOK_VERIFIER, useExisting: ADAPTER_PAGAMENTO },
+    // Só age com o provedor de teste: guarda a memória dele num arquivo local, para um reinício não perder cobranças.
+    FakeGatewayPersistencia,
     EventoPagamentoService,
     PagamentoServiceWebhook,
     PagamentoServiceAuthorizeWithdrawal,

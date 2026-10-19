@@ -1028,7 +1028,7 @@ Regras verificadas no PGlite com o banco montado inteiro, usando o papel real `a
 | `enfileirar_notificacao(id_usuario, tipo, dados)` | gatilhos e o Nest (verificação de conta, nova senha) | Copia o e-mail e o nome da conta; conta excluída ou inexistente: `NULL`, nada gravado |
 | `enfileirar_notificacao_doadores(id_campanha, tipo, dados)` | só gatilhos (sem EXECUTE para o `app_nestjs`) | Um e-mail por pessoa com conta que pagou alguma contribuição da campanha |
 | `enfileirar_notificacao_seguidores(id_campanha, tipo, dados)` | só gatilhos | Quem segue a campanha OU o pesquisador dono, uma vez por pessoa, nunca o dono |
-| `reservar_proxima_notificacao()` | worker (sem sessão) | Pega a próxima `pendente` vencida, conta a tentativa e empurra `proxima_tentativa_em` (`email_lease_minutos`); `FOR UPDATE SKIP LOCKED` |
+| `reservar_proxima_notificacao(p_ignorar_espera)` | worker (sem sessão) | Pega a próxima `pendente` vencida (com `TRUE`, só no Rodar agora da T6, também a que espera nova tentativa), conta a tentativa e empurra `proxima_tentativa_em` (`email_lease_minutos`); `FOR UPDATE SKIP LOCKED` |
 | `concluir_notificacao(...)` | worker | `enviado`, com assunto, provedor e id da mensagem; apaga `dados.segredo` |
 | `falhar_notificacao(...)` | worker | Recuperável e com tentativas: volta com espera `email_backoff_base_minutos * 2^(n-1)` até `email_backoff_max_minutos`; senão `falhou` |
 | `reenviar_notificacao(id)` / `cancelar_notificacao(id)` | aba Notificações | Exigem `notificacao_processar` (92039); só `falhou` reenvia, só `pendente`/`falhou` cancela (91054); inexistente: 90039 |

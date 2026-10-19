@@ -21,7 +21,7 @@ export interface ContribuicaoBancada {
   status: StatusContribuicao;
   idRepasse: number | null;
   criadoEm: string;
-  // O que o provedor de teste diz da cobrança ('perdida' = o Nest reiniciou); null com provedor real.
+  // O que o provedor de teste diz da cobrança ('perdida' = de antes de o banco ser recriado); null com provedor real.
   noProvedor: string | null;
 }
 

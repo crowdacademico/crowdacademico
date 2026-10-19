@@ -11,7 +11,7 @@ export const ROTULO_STATUS_NOTIFICACAO: Record<StatusNotificacao, string> = {
   cancelado: 'Cancelado',
 };
 
-// Falhou pede uma pessoa (reenviar ou cancelar); na fila é o caminho normal até o próximo minuto; enviado é sucesso.
+// Falhou pede uma pessoa (reenviar ou cancelar); na fila é o caminho normal até o envio rodar; enviado é sucesso.
 export const CLASSE_BADGE_STATUS_NOTIFICACAO: Record<StatusNotificacao, string> = {
   falhou: 'badge-aviso',
   pendente: 'badge-neutro',

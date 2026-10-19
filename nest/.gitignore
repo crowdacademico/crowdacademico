@@ -54,3 +54,7 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Memória do provedor de pagamento de teste (PAYMENT_PROVIDER=fake), recriada pelo Nest em desenvolvimento.
+.fake-gateway.json
+.fake-gateway.json.tmp

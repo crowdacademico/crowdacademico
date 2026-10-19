@@ -57,7 +57,7 @@ export function ListarNotificacoes({ authFetch }: { authFetch: AuthFetch }) {
       const { acao, linha } = pedido;
       if (acao === 'reenviar') {
         await notificacaoApi.reenviar(authFetch, linha.idNotificacao);
-        mostrar('E-mail de volta na fila.', `O e-mail #${linha.idNotificacao} sai no próximo minuto.`);
+        mostrar('E-mail de volta na fila.', `O e-mail #${linha.idNotificacao} sai na próxima vez que o envio rodar.`);
       } else {
         await notificacaoApi.cancelar(authFetch, linha.idNotificacao);
         mostrar('Envio cancelado.', `O e-mail #${linha.idNotificacao} não vai mais sair.`);
@@ -72,7 +72,7 @@ export function ListarNotificacoes({ authFetch }: { authFetch: AuthFetch }) {
       <GenericTable
         titulo="Notificações"
         nivelTitulo={2}
-        ajuda="Todos os e-mails do sistema. Os que esperam (na fila ou que falharam) vêm primeiro, o mais antigo no topo; depois os outros, do mais novo para o mais antigo. Na fila: sai no próximo minuto, ou espera uma nova tentativa depois de um erro passageiro. Falhou: as tentativas acabaram ou o endereço foi recusado; reenvie depois de corrigir a causa, ou cancele. Os textos de cada tipo de e-mail ficam no código (nest/src/4-mail/modelos)."
+        ajuda="Todos os e-mails do sistema. Os que esperam (na fila ou que falharam) vêm primeiro, o mais antigo no topo; depois os outros, do mais novo para o mais antigo. Na fila: espera o envio (sozinho a cada minuto com a tarefa Enviar os e-mails ligada; desligada, só pelo Rodar agora da T6), ou uma nova tentativa depois de um erro passageiro. Falhou: as tentativas acabaram ou o endereço foi recusado; reenvie depois de corrigir a causa, ou cancele. Os textos de cada tipo de e-mail ficam no código (nest/src/4-mail/modelos)."
         colunas={[
           { chave: 'idNotificacao', rotulo: 'id', tipo: 'id' },
           { chave: 'tipo', rotulo: 'tipo', tipo: 'nome', umaLinha: true },
@@ -126,8 +126,7 @@ export function ListarNotificacoes({ authFetch }: { authFetch: AuthFetch }) {
         >
           {pedido.acao === 'reenviar' ? (
             <p>
-              O e-mail para {pedido.linha.emailDestinatario} volta para a fila, com as tentativas zeradas, e sai no próximo minuto.
-              Corrija antes a causa do erro, ou ele falha de novo.
+              O e-mail para {pedido.linha.emailDestinatario} volta para a fila, com as tentativas zeradas, e sai na próxima vez que o envio rodar (sozinho a cada minuto com a tarefa Enviar os e-mails ligada; desligada, pelo Rodar agora da T6). Corrija antes a causa do erro, ou ele falha de novo.
             </p>
           ) : (
             <p>O e-mail para {pedido.linha.emailDestinatario} não vai mais sair. Se ele tinha um link (confirmar a conta, nova senha), o link é apagado.</p>

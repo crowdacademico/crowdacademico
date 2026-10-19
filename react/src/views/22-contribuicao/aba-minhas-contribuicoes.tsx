@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ModalConsultarContribuicao } from './modal-consultar-contribuicao';
 import { BadgeStatusContribuicao } from '../../components/crud/badge-status-contribuicao';
 import { EstadoVazio } from '../../components/crud/estado-vazio';
 import { GenericTable } from '../../components/crud/generic-table';
@@ -24,6 +25,7 @@ interface ContribuicaoLinha extends MinhaContribuicao {
 // na página pública da campanha, que ainda não existe; hoje uma contribuição nasce pela T5 do Campo de Testes.
 export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
   const [recompensas, setRecompensas] = useState<RecompensaGanha[] | null>(null);
+  const [consultando, setConsultando] = useState<ContribuicaoLinha | null>(null);
 
   useEffect(() => {
     recompensaApi
@@ -48,11 +50,12 @@ export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'au
       <GenericTable<ContribuicaoLinha>
         titulo="Minhas contribuições"
         nivelTitulo={2}
-        ajuda="Todas as contribuições feitas com esta conta, da mais nova para a mais antiga, com a situação de cada uma (paga, devolvida, vencida...)."
+        ajuda="Todas as contribuições feitas com esta conta, da mais nova para a mais antiga, com a situação de cada uma (paga, devolvida, vencida...). A tarifa é a do meio de pagamento, paga por cima do valor; Consultar mostra o total cobrado."
         colunas={[
           { chave: 'idContribuicao', rotulo: 'id', tipo: 'id' },
           { chave: 'campanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
           { chave: 'valor', rotulo: 'valor', tipo: 'dinheiro' },
+          { chave: 'taxaPagamento', rotulo: 'tarifa', tipo: 'dinheiro' },
           { chave: 'meio', rotulo: 'meio', tipo: 'texto' },
           { chave: 'recompensa', rotulo: 'recompensa', tipo: 'texto' },
           { chave: 'criadoEm', rotulo: 'data', tipo: 'dataHora' },
@@ -66,9 +69,20 @@ export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'au
         ]}
         chavePrimaria="idContribuicao"
         listar={listar}
+        acoes={{ consultar: (linha) => setConsultando(linha) }}
         vazio={{ icone: 'fa-hand-holding-heart', titulo: 'Você ainda não apoiou nenhuma campanha.' }}
         filtrosFacetados={[{ chave: 'situacao', rotulo: 'Situação' }]}
       />
+
+      {consultando && (
+        <ModalConsultarContribuicao
+          authFetch={auth.authFetch}
+          contribuicao={consultando}
+          rotuloMeio={consultando.meio}
+          dicaPendente="Entra no arrecadado quando o pagamento for confirmado."
+          aoFechar={() => setConsultando(null)}
+        />
+      )}
 
       <section className="space-y-3">
         <h2 className="titulo-secao">Recompensas ganhas</h2>

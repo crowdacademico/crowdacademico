@@ -6481,16 +6481,18 @@ $$;
 
 -- ----------------------------------------------------------------------------
 -- Função:     reservar_proxima_notificacao
--- Assinatura: () -> TABLE (id_notificacao INT, id_usuario INT, email_destinatario VARCHAR, tipo_evento VARCHAR,
---             dados JSONB, tentativas INT)
+-- Assinatura: (p_ignorar_espera BOOLEAN DEFAULT FALSE) -> TABLE (id_notificacao INT, id_usuario INT,
+--             email_destinatario VARCHAR, tipo_evento VARCHAR, dados JSONB, tentativas INT)
 -- Bloco:      [05-Q]
 -- Regra:      Fila do worker de e-mail. Pega o próximo 'pendente' cuja vez chegou (proxima_tentativa_em <= agora), conta
 --             a tentativa e o RESERVA empurrando proxima_tentativa_em para daqui a email_lease_minutos (padrão 5):
 --             enquanto não vence, ninguém mais pega o mesmo e-mail; se o processo morrer no meio, ele volta sozinho
 --             para a fila quando o prazo vence. FOR UPDATE SKIP LOCKED: duas instâncias nunca reservam o mesmo.
+--             p_ignorar_espera: pega também o que espera uma nova tentativa (só o "Rodar agora" do Campo de Testes,
+--             para testar sem esperar; a tarefa agendada nunca passa TRUE).
 --             SECURITY DEFINER, SEM AUTORIZAÇÃO DE PROPÓSITO (job de fundo, sem usuário na sessão).
 -- ----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.reservar_proxima_notificacao()
+CREATE OR REPLACE FUNCTION public.reservar_proxima_notificacao(p_ignorar_espera BOOLEAN DEFAULT FALSE)
 RETURNS TABLE (
     id_notificacao INT, id_usuario INT, email_destinatario VARCHAR, tipo_evento VARCHAR, dados JSONB, tentativas INT
 )
@@ -6503,7 +6505,7 @@ DECLARE
 BEGIN
     SELECT n.id_notificacao INTO v_id
     FROM notificacao n
-    WHERE n.status = 'pendente' AND n.proxima_tentativa_em <= NOW()
+    WHERE n.status = 'pendente' AND (p_ignorar_espera OR n.proxima_tentativa_em <= NOW())
     ORDER BY n.proxima_tentativa_em, n.id_notificacao
     LIMIT 1
     FOR UPDATE SKIP LOCKED;

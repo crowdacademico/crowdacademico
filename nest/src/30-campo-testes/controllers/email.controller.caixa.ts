@@ -1,58 +1,38 @@
 import {
-  ConflictException,
   Controller,
   Delete,
   Get,
   HttpCode,
-  Inject,
+  Param,
+  ParseIntPipe,
 } from '@nestjs/common';
-import { AutorizacaoService } from '../../commons/seguranca/autorizacao.service';
 import {
-  FakeEmailAdapter,
-  type EmailCapturado,
-} from '../../4-mail/adapters/fake/fake-email.adapter';
-import {
-  ENVIO_EMAIL,
-  type EnvioEmailPort,
-} from '../../4-mail/ports/envio-email.port';
+  EmailServiceCaixa,
+  type EmailDaCaixa,
+  type PreviaDoEmail,
+} from '../service/email.service.caixa';
 
-const MENSAGEM_SEM_PERMISSAO =
-  'Só quem cuida dos e-mails do sistema vê a caixa de teste.';
-const MENSAGEM_SO_FAKE =
-  'A caixa de entrada só existe com o provedor de teste (EMAIL_PROVIDER=fake ou vazio).';
-
-// Caixa de entrada do provedor de e-mail de teste: o que o sistema "enviou" sem mandar nada para fora. Exige
-// notificacao_processar, como a aba Notificações. Some ao reiniciar o Nest (a caixa mora na memória).
+// Caixa de E-mails do Campo de Testes (T6). Exige notificacao_processar, como a aba Notificações.
 @Controller('campo-testes/email')
 export class EmailControllerCaixa {
-  constructor(
-    @Inject(ENVIO_EMAIL) private readonly envio: EnvioEmailPort,
-    private readonly autorizacao: AutorizacaoService,
-  ) {}
+  constructor(private readonly service: EmailServiceCaixa) {}
 
   @Get()
-  async listar(): Promise<EmailCapturado[]> {
-    await this.autorizacao.exigirPermissao(
-      'notificacao_processar',
-      MENSAGEM_SEM_PERMISSAO,
-    );
-    return this.fake().listar();
+  listar(): Promise<EmailDaCaixa[]> {
+    return this.service.listar();
   }
 
+  @Get(':idNotificacao')
+  previa(
+    @Param('idNotificacao', ParseIntPipe) idNotificacao: number,
+  ): Promise<PreviaDoEmail> {
+    return this.service.previa(idNotificacao);
+  }
+
+  // O único jeito de um e-mail sair da T6.
   @Delete()
   @HttpCode(204)
   async limpar(): Promise<void> {
-    await this.autorizacao.exigirPermissao(
-      'notificacao_processar',
-      MENSAGEM_SEM_PERMISSAO,
-    );
-    this.fake().limpar();
-  }
-
-  private fake(): FakeEmailAdapter {
-    if (!(this.envio instanceof FakeEmailAdapter)) {
-      throw new ConflictException(MENSAGEM_SO_FAKE);
-    }
-    return this.envio;
+    await this.service.limpar();
   }
 }

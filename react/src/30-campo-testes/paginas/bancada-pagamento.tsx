@@ -20,7 +20,9 @@ import {
   type ContribuicaoBancada,
   type RepasseBancada,
 } from '../servicos/api/bancada-pagamento.api';
-import { ModalChavePix, ModalConsultarContribuicao, ModalGerarPix } from './modais-bancada-pagamento';
+import { ModalChavePix, ModalGerarPix } from './modais-bancada-pagamento';
+import { DICA_PENDENTE_T5 } from '../servicos/constants/campo-testes.constants';
+import { ModalConsultarContribuicao } from '../../views/22-contribuicao/modal-consultar-contribuicao';
 import { RegistroChamadas } from './registro-chamadas';
 import { CardsTarefasAutomaticas } from './cards-tarefas-automaticas';
 import { PAGAMENTO_AUTOMATICO, TAREFAS_AUTOMATICAS } from '../../services/11-configuracoes/constants/tarefas-automaticas.constants';
@@ -36,7 +38,7 @@ const ROTULO_NO_PROVEDOR: Record<string, string> = {
   processando: 'Em andamento',
   concluido: 'Concluída',
   erro: 'Falhou',
-  perdida: 'Perdida (o Nest reiniciou)',
+  perdida: 'Perdida',
 };
 
 const rotuloNoProvedor = (status: string | null) => (status === null ? '-' : (ROTULO_NO_PROVEDOR[status] ?? status));
@@ -136,8 +138,8 @@ export function BancadaPagamento({ auth }: PropsPagina) {
         <CaixaAviso titulo="Modo rápido ligado: provedor de teste (npm run start:dev:teste)" tom="info" icone="fa-flask">
           <p>
             Todas as ações desta tela funcionam, sem túnel e sem abrir o Asaas: pagar, vencer, liberar, repetir aviso e concluir ou falhar a
-            transferência. Nada paga sozinho: o botão Pagar faz o papel de quem apoia. Reiniciar o Nest apaga a memória do provedor de
-            teste. Para voltar ao Asaas: Ctrl+C e npm run start:dev.
+            transferência. Nada paga sozinho: o botão Pagar faz o papel de quem apoia. Reiniciar o Nest não perde nada (o provedor de
+            teste guarda tudo em nest/.fake-gateway.json). Para voltar ao Asaas: Ctrl+C e npm run start:dev.
           </p>
         </CaixaAviso>
       ) : (
@@ -167,7 +169,7 @@ export function BancadaPagamento({ auth }: PropsPagina) {
       <div className="admin-content-painel">
         <GenericTable<ContribuicaoBancada>
           titulo="Contribuições"
-          ajuda={"As mais recentes. Use Contribuir e pague como o provedor faria.\nReiniciar o Nest apaga a memória do provedor de teste: o Pix pendente vira 'perdido' e só vence sozinho."}
+          ajuda={"As mais recentes. Use Contribuir e pague como o provedor faria.\nPerdida: cobrança de antes de o banco ser recriado, que o provedor de teste não conhece; só vence sozinha."}
           aoLadoDaAjuda={<DicasMeiosPagamento parametro={(chave) => parametros[chave]} />}
           acaoTopo={
             <button type="button" className="btn btn-primary" onClick={() => setGerandoPix(true)}>
@@ -217,7 +219,7 @@ export function BancadaPagamento({ auth }: PropsPagina) {
             // Consultar só lê: vale em qualquer modo e em qualquer situação.
             if (acao === 'consultar') return undefined;
             if (!provedorDeTeste) return 'Só com o provedor de teste.';
-            if (linha.noProvedor === 'perdida') return 'O provedor de teste não conhece mais esta cobrança.';
+            if (linha.noProvedor === 'perdida') return 'O provedor de teste não conhece esta cobrança (ela é de antes de o banco ser recriado).';
             if (acao === 'repetirAviso') return linha.noProvedor === 'pendente' || linha.noProvedor === null ? 'O provedor ainda não mandou aviso desta cobrança.' : undefined;
             if (acao === 'liberarDinheiro') {
               if (linha.meioPagamento !== 'cartao_credito') return null;
@@ -279,7 +281,13 @@ export function BancadaPagamento({ auth }: PropsPagina) {
       </div>
 
       {consultando && (
-        <ModalConsultarContribuicao authFetch={auth.authFetch} contribuicao={consultando} rotuloMeio={rotuloMeio(consultando)} aoFechar={() => setConsultando(null)} />
+        <ModalConsultarContribuicao
+          authFetch={auth.authFetch}
+          contribuicao={consultando}
+          rotuloMeio={rotuloMeio(consultando)}
+          dicaPendente={DICA_PENDENTE_T5}
+          aoFechar={() => setConsultando(null)}
+        />
       )}
       {gerandoPix && <ModalGerarPix authFetch={auth.authFetch} chamar={chamar} aoFechar={() => setGerandoPix(false)} aoGerado={recarregar} />}
       {cadastrandoChave && <ModalChavePix chamar={chamar} aoFechar={() => setCadastrandoChave(false)} aoCadastrada={recarregar} />}

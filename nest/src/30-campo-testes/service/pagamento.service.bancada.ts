@@ -60,7 +60,7 @@ const INTERVALO_PAGAMENTO_AUTOMATICO_MINUTOS = 1;
 const MENSAGEM_SO_FAKE =
   'Esta ação só funciona com o provedor de teste (PAYMENT_PROVIDER=fake).';
 const MENSAGEM_COBRANCA_PERDIDA =
-  'O provedor de teste não conhece esta cobrança: o Nest reiniciou e a memória dele foi apagada.';
+  'O provedor de teste não conhece esta cobrança: ela é de antes de o banco ser recriado (ou o arquivo .fake-gateway.json foi apagado).';
 
 interface LinhaContribuicao {
   id_contribuicao: number;
@@ -74,6 +74,7 @@ interface LinhaContribuicao {
   id_transacao_api: string | null;
   id_repasse: number | null;
   criado_em: Date;
+  provedor: string | null;
 }
 
 interface LinhaRepasse {
@@ -84,6 +85,7 @@ interface LinhaRepasse {
   valor_liquido: string;
   id_transferencia_api: string | null;
   aguardando_conta: boolean;
+  provedor: string | null;
 }
 
 // Bancada de pagamento (T05): faz o papel de quem paga e do provedor, para testar o fluxo do dinheiro pela tela.
@@ -132,13 +134,13 @@ export class PagamentoServiceBancada implements OnModuleInit {
     const contribuicoes = await sql<LinhaContribuicao>`
       SELECT c.id_contribuicao, c.id_campanha, ca.titulo, c.valor, c.taxa_pagamento, c.meio_pagamento::text AS meio_pagamento,
              c.dinheiro_liberado_em, c.status::text AS status,
-             c.id_transacao_api, c.id_repasse, c.criado_em
+             c.id_transacao_api, c.id_repasse, c.criado_em, c.provedor
       FROM contribuicao c JOIN campanha ca ON ca.id_campanha = c.id_campanha
       ORDER BY c.id_contribuicao DESC
       LIMIT ${LIMITE_LINHAS}`.execute(db);
     const repasses = await sql<LinhaRepasse>`
       SELECT r.id_repasse, r.id_campanha, ca.titulo, r.status::text AS status, r.valor_liquido,
-             r.id_transferencia_api,
+             r.id_transferencia_api, r.provedor,
              NOT EXISTS (SELECT 1 FROM perfil_pesquisador pp
                          WHERE pp.id_usuario = ca.id_usuario AND pp.chave_pix_verificada_em IS NOT NULL) AS aguardando_conta
       FROM repasse r JOIN campanha ca ON ca.id_campanha = r.id_campanha
@@ -280,7 +282,7 @@ export class PagamentoServiceBancada implements OnModuleInit {
         await this.pagarPendentes();
         break;
       case 'email':
-        await this.email.executar();
+        await this.email.executar({ ignorarEspera: true });
         break;
       default:
         await this.conferencia.executar();
@@ -369,8 +371,10 @@ export class PagamentoServiceBancada implements OnModuleInit {
       status: linha.status,
       idRepasse: linha.id_repasse,
       criadoEm: linha.criado_em,
-      noProvedor: await this.statusNoProvedor(linha.id_transacao_api, (id) =>
-        this.adapter.consultarCobranca(id),
+      noProvedor: await this.statusNoProvedor(
+        linha.id_transacao_api,
+        linha.provedor,
+        (id) => this.adapter.consultarCobranca(id),
       ),
     };
   }
@@ -387,18 +391,27 @@ export class PagamentoServiceBancada implements OnModuleInit {
       aguardandoConta: linha.aguardando_conta,
       noProvedor: await this.statusNoProvedor(
         linha.id_transferencia_api,
+        linha.provedor,
         (id) => this.adapter.consultarTransferencia(id),
       ),
     };
   }
 
   // O que o provedor diz desta cobrança/transferência. Só pergunta ao Fake (é memória, sem rede): com um provedor
-  // real a lista não faria uma chamada externa por linha.
+  // real a lista não faria uma chamada externa por linha. E só pelo que nasceu nele: as linhas do seed (provedor
+  // 'seed') e as do Asaas nunca foram do Fake, então não são "perdidas".
   private async statusNoProvedor(
     id: string | null,
+    provedor: string | null,
     consultar: (id: string) => Promise<{ status: string }>,
   ): Promise<string | null> {
-    if (!id || !(this.adapter instanceof FakeGatewayAdapter)) return null;
+    if (
+      !id ||
+      !(this.adapter instanceof FakeGatewayAdapter) ||
+      provedor !== this.adapter.provedor
+    ) {
+      return null;
+    }
     try {
       return (await consultar(id)).status;
     } catch {

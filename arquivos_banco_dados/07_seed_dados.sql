@@ -961,8 +961,10 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 
 -- Campo de Testes (só desenvolvimento): pagamento automático do provedor de teste, desligado por padrão. Ligado, a
 -- cada minuto o provedor de teste paga as cobranças pendentes (nest/src/30-campo-testes, CHAVE_PAGAMENTO_AUTOMATICO).
+-- E até onde a Caixa de E-mails (T6) foi limpa: ela lista os e-mails do banco, e só o "Limpar a caixa" tira alguém dela.
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
-(NULL, 'teste_pagamento_automatico_ligado', 'false', 'booleano', 'Campo de Testes: o provedor de teste paga sozinho, a cada minuto, as contribuições pendentes (só no modo rápido)', TRUE, FALSE);
+(NULL, 'teste_pagamento_automatico_ligado', 'false', 'booleano', 'Campo de Testes: o provedor de teste paga sozinho, a cada minuto, as contribuições pendentes (só no modo rápido)', TRUE, FALSE),
+(NULL, 'teste_caixa_email_limpa_ate_id', '0', 'inteiro', 'Campo de Testes: a Caixa de E-mails (T6) mostra só os e-mails com número acima deste; o Limpar a caixa grava o maior número de agora', TRUE, FALSE);
 
 -- [07-D-3] perfil_pesquisador
 -- score_atual e score_atualizado_em não estão no INSERT de propósito: a tabela tem trg_perfil_recalcula_score

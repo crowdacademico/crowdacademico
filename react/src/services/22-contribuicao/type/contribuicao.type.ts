@@ -14,6 +14,9 @@ export interface MinhaContribuicao {
   idCampanha: number;
   tituloCampanha: string | null;
   valor: number;
+  // A tarifa do meio de pagamento, paga por cima do valor.
+  taxaPagamento: number;
+  idRepasse: number | null;
   meioPagamento: MeioPagamento;
   status: StatusContribuicao;
   anonima: boolean;

@@ -13,6 +13,7 @@ import { PerfilPesquisadorControllerCreateForOther } from './controllers/perfil-
 import { CampanhaServiceCreateForOther } from './service/campanha.service.create-for-other';
 import { CampanhaServiceForceRemove } from './service/campanha.service.force-remove';
 import { PagamentoServiceBancada } from './service/pagamento.service.bancada';
+import { EmailServiceCaixa } from './service/email.service.caixa';
 import { PerfilPesquisadorServiceCreateForOther } from './service/perfil-pesquisador.service.create-for-other';
 
 // Rotas que só o Campo de Testes do painel usa (criar campanha e perfil de pesquisador em nome de outra conta,
@@ -39,6 +40,7 @@ import { PerfilPesquisadorServiceCreateForOther } from './service/perfil-pesquis
     CampanhaServiceForceRemove,
     PerfilPesquisadorServiceCreateForOther,
     PagamentoServiceBancada,
+    EmailServiceCaixa,
     CampanhaServiceFindOne,
     PerfilPesquisadorServiceFindOne,
   ],

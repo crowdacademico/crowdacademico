@@ -29,7 +29,9 @@ import {
 //  - reproduzir à vontade o que um gateway real faz de ruim: confirmar tarde, repetir webhook, mandar evento fora
 //    de ordem, cair a rede, recusar estorno por saldo.
 //
-// Estado só vive no processo: reiniciar apaga tudo. NUNCA usar em produção (PagamentoModule recusa subir assim).
+// O estado vive no processo; em desenvolvimento, FakeGatewayPersistencia (ao lado) grava cada mudança num arquivo local e
+// lê de volta quando o Nest sobe, para um reinício não deixar as cobranças "perdidas". NUNCA usar em produção
+// (PagamentoModule recusa subir assim).
 
 export const NOME_PROVEDOR_FAKE = 'fake';
 export const CABECALHO_TOKEN_FAKE = 'x-fake-token';
@@ -75,6 +77,20 @@ interface RepasseFake extends ResultadoRepasse {
 
 type OuvinteWebhook = (payload: PayloadWebhookFake) => void;
 
+// O que o Fake sabe, em formato que vira JSON (Map vira lista de pares; datas viram texto e voltam a ser Date).
+export interface EstadoFake {
+  marca: string;
+  contadores: { cobranca: number; repasse: number; evento: number };
+  cobrancas: (Omit<CobrancaFake, 'estornosPorChave'> & {
+    estornosPorChave: [string, ResultadoEstorno][];
+  })[];
+  cobrancaPorChave: [string, string][];
+  repasses: RepasseFake[];
+  repassePorChave: [string, string][];
+  chavesPix: [string, { documento?: string; nome?: string }][];
+  eventos: PayloadWebhookFake[];
+}
+
 const arredondar2 = (n: number): number => Math.round(n * 100) / 100;
 
 const TIPOS_EVENTO: Record<string, EventoPagamentoDto['tipoEvento']> = {
@@ -105,6 +121,7 @@ export class FakeGatewayAdapter
     { documento?: string; nome?: string }
   >();
   private readonly ouvintes: OuvinteWebhook[] = [];
+  private readonly ouvintesMudanca: (() => void)[] = [];
   private readonly eventos: PayloadWebhookFake[] = [];
   private readonly idsReservados: string[] = [];
   private readonly timers = new Set<NodeJS.Timeout>();
@@ -113,6 +130,9 @@ export class FakeGatewayAdapter
     falhaRedeEmTransferir: false,
     saldoInsuficienteNoEstorno: false,
   };
+  // Marca de cada memória nova, no meio dos ids (fake_pay_<marca>_000001): uma memória que recomeça do zero num banco
+  // já usado nunca repete um id que ele guarda. Volta junto com o estado salvo, então reiniciar não troca a marca.
+  private marca = Date.now().toString(36);
   private contadorCobranca = 0;
   private contadorRepasse = 0;
   private contadorEvento = 0;
@@ -135,6 +155,70 @@ export class FakeGatewayAdapter
   // Quem quiser "receber" os webhooks do Fake (os testes de PR-05 plugam o handler aqui).
   aoEmitirEvento(ouvinte: OuvinteWebhook): void {
     this.ouvintes.push(ouvinte);
+  }
+
+  // Chamado depois de toda mudança de estado (a persistência em arquivo se pluga aqui).
+  aoMudar(ouvinte: () => void): void {
+    this.ouvintesMudanca.push(ouvinte);
+  }
+
+  exportarEstado(): EstadoFake {
+    return {
+      marca: this.marca,
+      contadores: {
+        cobranca: this.contadorCobranca,
+        repasse: this.contadorRepasse,
+        evento: this.contadorEvento,
+      },
+      cobrancas: [...this.cobrancas.values()].map((c) => ({
+        ...c,
+        estornosPorChave: [...c.estornosPorChave.entries()],
+      })),
+      cobrancaPorChave: [...this.cobrancaPorChave.entries()],
+      repasses: [...this.repasses.values()],
+      repassePorChave: [...this.repassePorChave.entries()],
+      chavesPix: [...this.chavesPix.entries()],
+      eventos: [...this.eventos],
+    };
+  }
+
+  // Troca todo o estado pelo salvo (só ao subir, antes de qualquer cobrança nova).
+  importarEstado(estado: EstadoFake): void {
+    this.marca = estado.marca;
+    this.contadorCobranca = estado.contadores.cobranca;
+    this.contadorRepasse = estado.contadores.repasse;
+    this.contadorEvento = estado.contadores.evento;
+    this.cobrancas.clear();
+    for (const c of estado.cobrancas) {
+      const cobranca: CobrancaFake = {
+        ...c,
+        estornosPorChave: new Map(c.estornosPorChave),
+      };
+      if (cobranca.pix) {
+        cobranca.pix = {
+          ...cobranca.pix,
+          expiraEm: new Date(cobranca.pix.expiraEm),
+        };
+      }
+      if (cobranca.boleto) {
+        cobranca.boleto = {
+          ...cobranca.boleto,
+          venceEm: new Date(cobranca.boleto.venceEm),
+        };
+      }
+      this.cobrancas.set(c.idCobranca, cobranca);
+    }
+    this.repasses.clear();
+    for (const r of estado.repasses) this.repasses.set(r.idTransferencia, r);
+    this.trocarMapa(this.cobrancaPorChave, estado.cobrancaPorChave);
+    this.trocarMapa(this.repassePorChave, estado.repassePorChave);
+    this.trocarMapa(this.chavesPix, estado.chavesPix);
+    this.eventos.length = 0;
+    this.eventos.push(...estado.eventos);
+  }
+
+  get quantidadeCobrancas(): number {
+    return this.cobrancas.size;
   }
 
   get eventosEmitidos(): readonly PayloadWebhookFake[] {
@@ -202,6 +286,7 @@ export class FakeGatewayAdapter
     }
     if (c.status === 'pendente') {
       c.status = 'expirada';
+      this.mudou();
       return Promise.resolve();
     }
     if (c.status === 'expirada') return Promise.resolve();
@@ -305,6 +390,7 @@ export class FakeGatewayAdapter
 
     this.cobrancas.set(idCobranca, cobranca);
     this.cobrancaPorChave.set(params.chaveIdempotencia, idCobranca);
+    this.mudou();
 
     if (cobranca.status === 'pendente') {
       this.agendar(this.opcoes.atrasoConfirmacaoMs, () =>
@@ -431,7 +517,7 @@ export class FakeGatewayAdapter
     }
 
     this.contadorRepasse += 1;
-    const idTransferencia = `fake_trf_${String(this.contadorRepasse).padStart(6, '0')}`;
+    const idTransferencia = `fake_trf_${this.marca}_${String(this.contadorRepasse).padStart(6, '0')}`;
     this.repasses.set(idTransferencia, {
       idTransferencia,
       status: 'processando',
@@ -439,6 +525,7 @@ export class FakeGatewayAdapter
       chaveIdempotencia: params.chaveIdempotencia,
     });
     this.repassePorChave.set(params.chaveIdempotencia, idTransferencia);
+    this.mudou();
     this.agendar(this.opcoes.atrasoConclusaoRepasseMs, () =>
       this.concluirTransferencia(idTransferencia),
     );
@@ -448,6 +535,7 @@ export class FakeGatewayAdapter
   // Ajuda de teste/dev: define quem é o titular de uma chave Pix no "diretório" do Fake.
   registrarChavePix(chave: string, documento?: string, nome?: string): void {
     this.chavesPix.set(chave, { documento, nome });
+    this.mudou();
   }
 
   // DICT de mentira. Chave registrada: devolve o titular registrado. Não registrada: uma chave CPF pertence ao próprio
@@ -557,7 +645,7 @@ export class FakeGatewayAdapter
 
   private proximoIdCobranca(): string {
     this.contadorCobranca += 1;
-    return `fake_pay_${String(this.contadorCobranca).padStart(6, '0')}`;
+    return `fake_pay_${this.marca}_${String(this.contadorCobranca).padStart(6, '0')}`;
   }
 
   private emitir(
@@ -566,12 +654,23 @@ export class FakeGatewayAdapter
   ): void {
     this.contadorEvento += 1;
     const payload: PayloadWebhookFake = {
-      id: `fake_evt_${String(this.contadorEvento).padStart(6, '0')}`,
+      id: `fake_evt_${this.marca}_${String(this.contadorEvento).padStart(6, '0')}`,
       event,
       ...corpo,
     };
     this.eventos.push(payload);
+    // O estado já mudou antes de todo emitir() (confirmar, liberar, expirar, estornar, concluir): salva antes de avisar.
+    this.mudou();
     this.notificar(payload);
+  }
+
+  private mudou(): void {
+    for (const ouvinte of this.ouvintesMudanca) ouvinte();
+  }
+
+  private trocarMapa<V>(mapa: Map<string, V>, pares: [string, V][]): void {
+    mapa.clear();
+    for (const [chave, valor] of pares) mapa.set(chave, valor);
   }
 
   private notificar(payload: PayloadWebhookFake): void {

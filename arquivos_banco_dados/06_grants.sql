@@ -529,8 +529,8 @@ REVOKE EXECUTE ON FUNCTION public.enfileirar_notificacao(INT, VARCHAR, JSONB) FR
 GRANT EXECUTE ON FUNCTION public.enfileirar_notificacao(INT, VARCHAR, JSONB) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.enfileirar_notificacao_doadores(INT, VARCHAR, JSONB) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.enfileirar_notificacao_seguidores(INT, VARCHAR, JSONB) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.reservar_proxima_notificacao() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.reservar_proxima_notificacao() TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.reservar_proxima_notificacao(BOOLEAN) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.reservar_proxima_notificacao(BOOLEAN) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.concluir_notificacao(INT, VARCHAR, VARCHAR, VARCHAR) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.concluir_notificacao(INT, VARCHAR, VARCHAR, VARCHAR) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.falhar_notificacao(INT, VARCHAR, TEXT, BOOLEAN, VARCHAR) FROM PUBLIC;

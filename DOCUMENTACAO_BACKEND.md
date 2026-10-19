@@ -1246,7 +1246,8 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | GET | `/dashboard/resumo` |
 | AUTH | GET | `/notificacao` · `/notificacao/resumo` *(e-mails do sistema; exige `notificacao_processar`)* |
 | AUTH | POST | `/notificacao/:id/reenviar` · `/notificacao/:id/cancelar` *(RF-121; permissão e situação conferidas no banco)* |
-| AUTH | GET · DELETE | `/campo-testes/email` *(T6, caixa do provedor de e-mail de teste: só fora de produção)* |
+| AUTH | GET · DELETE | `/campo-testes/email` *(T6: todos os e-mails do banco desde a última limpeza; o DELETE é o "Limpar a caixa". Só fora de produção)* |
+| AUTH | GET | `/campo-testes/email/:idNotificacao` *(T6: o e-mail como a pessoa vê, o recebido pelo provedor de teste ou montado agora)* |
 
 📌 **Rotas administrativas exigem login (não são `@Publico()`).** `GET /usuario`, `GET /usuario/:id`, `GET /usuario-papel`, `GET /usuario-papel/:idUsuario` e `GET /dashboard/resumo` exigem login. Não vale o argumento "só o admin chega na tela": a API não sabe de tela nenhuma, qualquer requisição direta (um `curl`) chega na rota sem passar pelo `/admin`, e o `AuthGuardJwt` global deixa passar como anônima a requisição sem cabeçalho `Authorization` (comportamento documentado nele). Sobra a RLS, e a RLS de `usuario` é permissiva de propósito (o login precisa achar o usuário pelo e-mail antes de existir alguém autenticado); sem o guard, um visitante anônimo obteria os e-mails de todos os usuários, quem é administrador e as métricas internas.
 
@@ -1620,7 +1621,7 @@ Testado com o backend rodando de verdade contra o Postgres real (não só compil
 | Fila | `notificacao` + funções de `[05-Q]` | `reservar_proxima_notificacao`, `concluir_notificacao`, `falhar_notificacao` (espera crescente) |
 | Enfileirar pelo Nest | `27-notificacao/service/notificacao.service.enqueue.ts` | Só verificação de conta e recuperação de senha (o token só o Nest conhece) |
 | Painel | `27-notificacao` | `GET /notificacao`, `/notificacao/resumo`, `POST /notificacao/:id/reenviar`, `/cancelar` |
-| Campo de Testes | `30-campo-testes/controllers/email.controller.caixa.ts` | `GET`/`DELETE /campo-testes/email`; o "Rodar agora" do card da T6 chama a tarefa `email` (`POST /campo-testes/pagamento/tarefas/:tarefa`, com `email`) |
+| Campo de Testes | `30-campo-testes/service/email.service.caixa.ts` | A T6 lê `notificacao` (todos os e-mails desde `teste_caixa_email_limpa_ate_id`; só o "Limpar a caixa" avança esse número), e o Consultar monta o e-mail com `4-mail/modelos/montar-mensagem.ts`, o mesmo do envio; o "Rodar agora" do card da T6 chama a tarefa `email` (`POST /campo-testes/pagamento/tarefas/:tarefa`, com `email`), que manda também o que espera uma nova tentativa (`reservar_proxima_notificacao(TRUE)`) |
 
 - **Decisão:** os e-mails nascem nos gatilhos do banco (`[05-Q]`), não espalhados pelos services do Nest; o Nest só enfileira o que só ele sabe (o token do link).
 - **Motivo:** qualquer caminho que aprove, rejeite, encerre, suspenda ou devolva (tela, tarefa agendada, função de moderação, webhook) gera o aviso, na mesma transação. É o padrão "caixa de saída" (outbox), o mesmo do repasse.
