@@ -5,7 +5,7 @@ import type { MeioPagamento, StatusRepasse } from '../../constant/type/enums-do-
 // destrava o que está parado e deixa o rastro (quem fez, o quê) na auditoria financeira.
 
 // Espelha SITUACOES_REVISAO (dto/request/pagamento-revisao.request-list.ts).
-export type SituacaoRevisao = 'em_revisao_manual' | 'vale_tentar_de_novo';
+export type SituacaoRevisao = 'processado' | 'vale_tentar_de_novo' | 'em_revisao_manual' | 'revisao_resolvida';
 
 export interface RevisaoPagamentoResponse {
   idEvento: number;
@@ -16,7 +16,7 @@ export interface RevisaoPagamentoResponse {
   situacao: SituacaoRevisao;
   motivo: string | null;
   revisaoManualEm: string | null;
-  // De onde veio o dinheiro/efeito (só nas revisões que deixaram auditoria).
+  // De onde veio o dinheiro/efeito (quando o aviso deixou auditoria).
   idContribuicao: number | null;
   idRepasse: number | null;
   // Valor do evento (da auditoria) e para onde o dinheiro andou segundo o provedor: 'entrada' (pagamento recebido),

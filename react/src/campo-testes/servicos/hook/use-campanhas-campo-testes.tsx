@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router';
 import { BadgeStatusCampanha } from '../../../components/crud/badge-status-campanha';
 import type { AcaoPadrao, AcoesLinha } from '../../../components/crud/colunas/5-coluna-acoes';
 import type { GenericTableProps } from '../../../components/crud/generic-table';
@@ -19,17 +18,16 @@ import { renderizarArrecadado } from '../../../views/12-campanha/colunas-campanh
 import { ModalConsultarCampanha } from '../../../views/12-campanha/modal-consultar-campanha';
 import { ModalDenunciar } from '../../../views/19-denuncia/modal-denunciar';
 import { ModalComentar } from '../../paginas/modal-comentar';
-import { ORIGEM_TESTE, origemCampanha } from '../util/registros-demonstracao.util';
 import { useAuthFetchRegistrado } from './use-chamada-registrada';
 import type { CampanhaResponse } from '../../../services/12-campanha/type/campanha.type';
 import type { UsuarioResponse } from '../../../services/1-usuario/type/usuario.type';
 import type { UseAuthReturn } from '../../../services/3-auth/hook/use-auth';
 
-// Linha da tabela: a campanha com o nome do dono já resolvido (coluna, busca e modais) e a origem (faceta).
-export type CampanhaLinha = CampanhaResponse & { dono: string; origem: string };
+// Linha da tabela: a campanha com o nome do dono já resolvido (coluna, busca e modais).
+export type CampanhaLinha = CampanhaResponse & { dono: string };
 
 // Peças comuns às telas de campanha do Campo de Testes (T2, T4 e as próximas): colunas, as ações de quem visita
-// a campanha (consultar, comentar, seguir, denunciar), os modais delas e a lista com dono e origem. Cada tela
+// a campanha (consultar, comentar, seguir, denunciar), os modais delas e a lista com o dono. Cada tela
 // junta o que é só dela (ex.: o T2 cria, altera e exclui). Toda chamada aparece no Registro de Chamadas.
 // `aoMudarSeguidas`: para a tela que depende de quem a conta segue (T4) recarregar a lista.
 export function useCampanhasCampoTestes(auth: UseAuthReturn, aoMudarSeguidas?: () => void) {
@@ -55,13 +53,6 @@ export function useCampanhasCampoTestes(auth: UseAuthReturn, aoMudarSeguidas?: (
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.carregando]);
 
-  // Faceta Origem pré-marcada em "teste": esconde as campanhas da demonstração ao abrir.
-  const [parametros, setParametros] = useSearchParams();
-  useEffect(() => {
-    if (!parametros.has('origem')) setParametros({ origem: ORIGEM_TESTE }, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Os usuários vêm junto: dão o nome do dono (coluna, busca e modais).
   const buscarLinhas = async (): Promise<CampanhaLinha[]> => {
     if (auth.carregando) {
@@ -72,7 +63,6 @@ export function useCampanhasCampoTestes(auth: UseAuthReturn, aoMudarSeguidas?: (
     return campanhas.map((campanha) => ({
       ...campanha,
       dono: todos.find((u) => u.idUsuario === campanha.idUsuario)?.nome ?? `#${campanha.idUsuario}`,
-      origem: origemCampanha(campanha.idCampanha),
     }));
   };
 
@@ -133,7 +123,6 @@ export function useCampanhasCampoTestes(auth: UseAuthReturn, aoMudarSeguidas?: (
     acaoIndisponivel,
     filtrosFacetados: [
       { chave: 'status', rotulo: 'Status', rotulos: ROTULO_STATUS_CAMPANHA },
-      { chave: 'origem', rotulo: 'Origem' },
     ],
   };
 

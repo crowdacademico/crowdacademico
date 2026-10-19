@@ -13,7 +13,8 @@ interface AcaoLinhaProps {
   icone: string;
   variante?: VarianteAcaoLinha;
   onClick?: () => void;
-  // Motivo de a ação não se aplicar a esta linha: o botão fica apagado, não reage ao clique e a dica mostra o motivo.
+  // Motivo de a ação não se aplicar a esta linha: o botão fica apagado, não reage ao clique e a dica mostra o nome da
+  // ação e, embaixo, o motivo.
   indisponivel?: string;
   // Ícone vazado (fa-regular), ex.: coração de Seguir; e só o ícone, sem o texto (coluna própria, ColunaAcao).
   vazado?: boolean;
@@ -33,7 +34,7 @@ const CLASSE_VARIANTE: Record<VarianteAcaoLinha, string> = {
 const LARGURA_BOLHA_PX = 256 + 8;
 
 export function AcaoLinha({ rotulo, icone, variante = 'neutra', onClick, indisponivel, vazado, soIcone }: AcaoLinhaProps) {
-  // A dica (o nome da ação, ou o motivo de estar indisponível) é desenhada fora da tabela, direto no <body>, fixa na
+  // A dica (o nome da ação, e o motivo quando ela está indisponível) é desenhada fora da tabela, direto no <body>, fixa na
   // tela, acima do botão e alinhada pela direita dele (sem passar da borda esquerda da tela): a caixa da tabela, que
   // rola de lado, cortava a bolha e ganhava uma barra de rolagem quando o ícone não era o último da coluna.
   const [posicao, setPosicao] = useState<{ topo: number; direita: number } | null>(null);
@@ -70,7 +71,9 @@ export function AcaoLinha({ rotulo, icone, variante = 'neutra', onClick, indispo
             aria-hidden="true"
             style={{ top: posicao.topo, left: posicao.direita }}
           >
-            {indisponivel ?? rotulo}
+            {indisponivel ? `${rotulo}
+
+${indisponivel}` : rotulo}
           </span>,
           document.body,
         )}

@@ -124,8 +124,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
 
   // forcar_exclusao_campanha(): o Admin precisa poder excluir forçadamente uma campanha, senão o Campo de
   // Testes fica muito sujo. Ignora status de propósito (POST /campanha/:id/forcar-exclusao, endpoint separado
-  // do DELETE normal, que só libera 'rascunho'). Só oferecida quando a campanha NÃO é uma das 10 de
-  // demonstração: essas continuam protegidas de qualquer exclusão, forçada ou não.
+  // do DELETE normal, que só libera 'rascunho'). As campanhas da demonstração não têm trava própria: o banco é
+  // recriado do zero antes de uma apresentação.
   const forcarExclusaoCampanha = async () => {
     if (!campanhaExcluindo) return;
     await executarExcluindoForcado(async () => {

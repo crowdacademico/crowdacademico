@@ -1,7 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { BadgeStatusContribuicao } from '../../components/crud/badge-status-contribuicao';
 import { BadgeStatusRepasse } from '../../components/crud/badge-status-repasse';
 import { CaixaAviso } from '../../components/crud/caixa-aviso';
+import { Tooltip } from '../../components/layout/tooltip';
+import { configuracoesApi } from '../../services/11-configuracoes/api/configuracoes.api';
+import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { ROTULO_MEIO_PAGAMENTO } from '../../services/22-contribuicao/constants/contribuicao.constants';
 import { ROTULO_STATUS_CONTRIBUICAO } from '../../services/22-contribuicao/constants/status-contribuicao.constants';
 import { rotuloSituacaoRepasse } from '../../services/23-repasse/constants/status-repasse.constants';
@@ -44,6 +47,38 @@ const rotuloMeio = (linha: ContribuicaoBancada) =>
       : 'Cartão (a liberar)'
     : ROTULO_MEIO_PAGAMENTO[linha.meioPagamento];
 
+// Um ícone por meio de pagamento ao lado do título "Contribuições", cada um com a sua dica: as regras e a tarifa vêm
+// dos parâmetros (Parâmetros do Sistema, grupo Pagamentos), então a dica muda junto quando o admin muda um deles.
+function DicasMeiosPagamento({ parametro }: { parametro: (chave: string) => string | undefined }) {
+  const reais = (chave: string) => formatarMoeda(parametro(chave) ?? null);
+  const numero = (chave: string) => Number(parametro(chave) ?? 0).toLocaleString('pt-BR');
+  const desligado = (chave: string) => (parametro(chave) === 'false' ? ' (desligado nos Parâmetros)' : '');
+  const dicas = [
+    {
+      icone: 'fa-brands fa-pix',
+      texto:
+        `Pix\nTarifa de ${reais('taxa_pagamento_pix')}, paga por quem apoia, por cima do valor.\n` +
+        `Vence em ${numero('pix_validade_horas')} horas sem pagamento.\n` +
+        'O dinheiro fica liberado na hora.\nÚnico meio aceito em campanha tudo-ou-nada.',
+    },
+    {
+      icone: 'fa-solid fa-credit-card',
+      texto:
+        `Cartão de crédito${desligado('cartao_habilitado')}\n` +
+        `De ${reais('valor_minimo_contribuicao_cartao')} a ${reais('valor_maximo_contribuicao_cartao')}, só em campanha flexível.\n` +
+        `Tarifa de ${numero('taxa_cartao_percentual')}% + ${reais('taxa_cartao_fixa')} sobre o valor cobrado.\n` +
+        `O dinheiro só vai para repasse depois de liberado, cerca de ${numero('cartao_dias_liberacao')} dias depois do pagamento.`,
+    },
+    {
+      icone: 'fa-solid fa-barcode',
+      texto:
+        `Boleto${desligado('boleto_habilitado')}\nSó em campanha flexível.\n` +
+        `Tarifa de ${reais('taxa_pagamento_boleto')}.\nO dinheiro fica liberado quando o boleto é compensado.`,
+    },
+  ];
+  return dicas.map((dica) => <Tooltip key={dica.icone} texto={dica.texto} icone={dica.icone} baixo />);
+}
+
 // T05, Bancada de Pagamento. Faz o papel de quem paga (Gerar Pix) e do provedor de teste (pagar, vencer, repetir o
 // aviso, concluir ou falhar a transferência), e roda na hora as tarefas que o sistema faz sozinho de tempos em
 // tempos. Tudo passa pelo caminho de verdade: rota de contribuição, webhook, funções do banco e workers.
@@ -59,6 +94,15 @@ export function BancadaPagamento({ auth }: PropsPagina) {
   const [rodando, setRodando] = useState<string | null>(null);
   const { reportarErro } = useErroToast({ mostraTexto: true });
   const { mostrar } = useToast();
+
+  // Parâmetros globais, para as dicas dos meios de pagamento (alguns não são públicos, por isso a lista do painel).
+  const [parametros, setParametros] = useState<Record<string, string>>({});
+  useEffect(() => {
+    configuracoesApi
+      .listar(auth.authFetch)
+      .then((lista) => setParametros(Object.fromEntries(lista.filter((p) => p.idUsuario === null).map((p) => [p.chave, p.valor ?? '']))))
+      .catch(() => {});
+  }, [auth.authFetch]);
 
   const buscarEstado = useCallback(async () => {
     const estado = await bancadaPagamentoApi.estado(chamar);
@@ -88,7 +132,7 @@ export function BancadaPagamento({ auth }: PropsPagina) {
   return (
     <>
       {provedorDeTeste ? (
-        <CaixaAviso titulo="Modo rápido: provedor de teste (Nest iniciado com npm run start:dev:teste)" tom="aviso" icone="fa-flask">
+        <CaixaAviso titulo="Modo rápido ligado: provedor de teste (npm run start:dev:teste)" tom="info" icone="fa-flask">
           <p>
             Todas as ações desta tela funcionam, sem túnel e sem abrir o Asaas: pagar, vencer, liberar, repetir aviso e concluir ou falhar a
             transferência. Nada paga sozinho: o botão Pagar faz o papel de quem apoia. Reiniciar o Nest apaga a memória do provedor de
@@ -96,11 +140,13 @@ export function BancadaPagamento({ auth }: PropsPagina) {
           </p>
         </CaixaAviso>
       ) : (
-        <CaixaAviso titulo={`Provedor de pagamento real: ${provedor}`} tom="aviso" icone="fa-triangle-exclamation">
+        <CaixaAviso titulo="Atenção: troque para npm run start:dev:teste" tom="aviso" icone="fa-triangle-exclamation" tituloEmDestaque espacado>
           <p>
-            Para usar as ações desta tela (pagar, vencer, liberar, concluir), inicie o Nest no modo rápido, no lugar do Asaas: Ctrl+C no
-            terminal do Nest e npm run start:dev:teste (na pasta nest). Com o Asaas, só as tarefas automáticas funcionam aqui; pagar e
-            vencer são feitos no painel do Asaas.
+            O Nest está rodando com o provedor de pagamento real (<strong>{provedor}</strong>), iniciado com npm run start:dev. Assim, as
+            ações desta tela (pagar, vencer, liberar, concluir) não funcionam: só as tarefas automáticas.
+          </p>
+          <p>
+            Para testar aqui: Ctrl+C no terminal do Nest e <strong>npm run start:dev:teste</strong> (na pasta nest).
           </p>
         </CaixaAviso>
       )}
@@ -119,7 +165,8 @@ export function BancadaPagamento({ auth }: PropsPagina) {
       <div className="admin-content-painel">
         <GenericTable<ContribuicaoBancada>
           titulo="Contribuições"
-          ajuda="As mais recentes. Contribua com Pix, cartão ou boleto e pague como o provedor; no cartão, o dinheiro só vai para repasse depois de liberado (a previsão é o parâmetro cartao_dias_liberacao). Reiniciar o Nest apaga a memória do provedor de teste: o Pix pendente vira 'perdido' e só vence sozinho."
+          ajuda={"As mais recentes. Use Contribuir e pague como o provedor faria.\nReiniciar o Nest apaga a memória do provedor de teste: o Pix pendente vira 'perdido' e só vence sozinho."}
+          aoLadoDaAjuda={<DicasMeiosPagamento parametro={(chave) => parametros[chave]} />}
           acaoTopo={
             <button type="button" className="btn btn-primary" onClick={() => setGerandoPix(true)}>
               <i className="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i> Contribuir

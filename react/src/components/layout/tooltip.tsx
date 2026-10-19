@@ -46,13 +46,16 @@ export function Dica({ texto, baixo, curta, direita, alerta }: DicaProps) {
 // continua mostrando só `texto` (ex.: "Saiba mais", curto de propósito), e o clique dispara `aoClicar`,
 // normalmente para abrir um `ModalDetalhe` com a explicação de verdade (explicação grande demais para caber num
 // tooltip), organizada em parágrafos/seções.
+// `icone`: as classes do ícone no lugar do "ⓘ" (ex.: 'fa-brands fa-pix'), quando a dica fala de uma coisa que tem
+// ícone próprio. O texto pode ter quebra de linha ("\n"), que a bolha respeita.
 interface TooltipProps {
   texto: string;
   baixo?: boolean;
   aoClicar?: () => void;
+  icone?: string;
 }
 
-export function Tooltip({ texto, baixo = false, aoClicar }: TooltipProps) {
+export function Tooltip({ texto, baixo = false, aoClicar, icone = 'fa-solid fa-circle-info' }: TooltipProps) {
   const classe = 'dica dica--info' + (aoClicar ? ' dica--clicavel' : '');
   const Elemento = aoClicar ? 'button' : 'span';
 
@@ -65,7 +68,7 @@ export function Tooltip({ texto, baixo = false, aoClicar }: TooltipProps) {
       onClick={aoClicar}
       aria-label={texto}
     >
-      <i className="fa-solid fa-circle-info" aria-hidden="true"></i>
+      <i className={icone} aria-hidden="true"></i>
       <Dica texto={texto} baixo={baixo} />
     </Elemento>
   );

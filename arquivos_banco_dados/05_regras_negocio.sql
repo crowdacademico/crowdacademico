@@ -2269,15 +2269,18 @@ EXECUTE FUNCTION fn_carimba_envio_aprovacao();
 
 -- ----------------------------------------------------------------------------
 -- Função:     resumo_contribuicoes_campanha
--- Assinatura: (p_id_campanha INT) -> TABLE (meio_pagamento meio_pagamento, status status_contribuicao, quantidade INT,
---             total DECIMAL)
+-- Assinatura: (p_id_campanha INT) -> TABLE (pagas INT, total INT)
 -- Bloco:      [05-K-2]
--- Regra:      Quantas contribuições e quanto (o valor, sem a tarifa) a campanha tem, por meio de pagamento e situação,
---             para o Consultar da campanha. Só números: ninguém vê quem contribuiu. Lê o dono da campanha ou quem tem
---             contribuicao_visualizar_sensivel; outra pessoa recebe 92038.
+-- Regra:      Quantas contribuições a campanha tem, para o Consultar da campanha: `pagas` são as que entram no
+--             arrecadado (confirmado e repassado, a mesma regra de fn_sincroniza_arrecadado_campanha) e `total` conta
+--             todas, inclusive as que nunca viraram dinheiro (vencidas, com erro, devolvidas). Só números: ninguém vê
+--             quem contribuiu. Lê o dono da campanha ou quem tem contribuicao_visualizar_sensivel; outra pessoa recebe
+--             92038.
 -- ----------------------------------------------------------------------------
+-- DROP necessário: CREATE OR REPLACE não pode mudar as colunas de retorno (RETURNS TABLE) de uma função existente.
+DROP FUNCTION IF EXISTS public.resumo_contribuicoes_campanha(INT);
 CREATE OR REPLACE FUNCTION public.resumo_contribuicoes_campanha(p_id_campanha INT)
-RETURNS TABLE (meio_pagamento meio_pagamento, status status_contribuicao, quantidade INT, total DECIMAL)
+RETURNS TABLE (pagas INT, total INT)
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
@@ -2291,11 +2294,9 @@ BEGIN
     END IF;
 
     RETURN QUERY
-    SELECT c.meio_pagamento, c.status, count(*)::INT, COALESCE(SUM(c.valor), 0)::DECIMAL
+    SELECT (count(*) FILTER (WHERE c.status IN ('confirmado', 'repassado')))::INT, count(*)::INT
     FROM contribuicao c
-    WHERE c.id_campanha = p_id_campanha
-    GROUP BY c.meio_pagamento, c.status
-    ORDER BY c.meio_pagamento, c.status;
+    WHERE c.id_campanha = p_id_campanha;
 END;
 $$;
 
@@ -2395,11 +2396,14 @@ BEGIN
     LOOP
         BEGIN
             PERFORM 1 FROM campanha WHERE id_campanha = v_id FOR UPDATE;
-            IF public.destino_dinheiro_campanha(v_id) = 'repasse'
-               AND public.criar_repasse_campanha(
+            -- Dois IFs, nunca "destino = 'repasse' AND criar_repasse_campanha(...)": campanha ainda ativa tem destino
+            -- NULL, e NULL AND x obriga o Postgres a avaliar x, o que criaria o repasse antes do fim da campanha.
+            IF public.destino_dinheiro_campanha(v_id) = 'repasse' THEN
+                IF public.criar_repasse_campanha(
                        v_id, (SELECT valor_bruto_arrecadado >= meta_financeira FROM campanha WHERE id_campanha = v_id)
                    ) IS NOT NULL THEN
-                v_criados := v_criados + 1;
+                    v_criados := v_criados + 1;
+                END IF;
             END IF;
         EXCEPTION WHEN OTHERS THEN
             RAISE WARNING 'criar_repasses_liberados: campanha % ignorada neste ciclo (% / %)', v_id, SQLSTATE, SQLERRM;
@@ -4624,6 +4628,7 @@ $$;
 -- ----------------------------------------------------------------------------
 -- Tudo que o sistema deliberadamente NÃO resolve sozinho cai numa destas filas, e cada fila tem uma listagem e uma ação:
 --   evento de webhook em revisão manual   -> listar_revisoes_pagamento  / resolver_revisao_pagamento
+--                                            (a listagem traz todos os eventos; a fila é a situação em revisão manual)
 --   contribuição em 'reembolso_manual'    -> listar_reembolsos_manuais  / concluir_reembolso_manual
 --   repasse em 'erro' (ou sem conta)      -> listar_repasses_atencao    / reenfileirar_repasse
 -- DIFERENTE das funções dos jobs (que são "sem autorização de propósito" porque rodam sem sessão), estas SÃO chamadas por
@@ -4636,21 +4641,25 @@ $$;
 
 -- ----------------------------------------------------------------------------
 -- Função:     listar_revisoes_pagamento
--- Assinatura: (p_situacao TEXT DEFAULT NULL, p_limite INT DEFAULT 100) -> TABLE (id_evento_pagamento INT,
+-- Assinatura: (p_situacao TEXT DEFAULT NULL, p_limite INT DEFAULT 500) -> TABLE (id_evento_pagamento INT,
 --             provedor VARCHAR, tipo_evento VARCHAR, recebido_em TIMESTAMPTZ, situacao TEXT, motivo TEXT,
 --             revisao_manual_em TIMESTAMPTZ, id_contribuicao INT, id_repasse INT, valor DECIMAL, sentido TEXT,
 --             arrecadado DECIMAL)
 -- Bloco:      [05-K-2]
--- Regra:      Webhooks que não terminaram com sucesso, para uma pessoa olhar. p_situacao: 'em_revisao_manual' (o sistema não
---             aplicou de propósito, alguém precisa decidir), 'vale_tentar_de_novo' (falhou por motivo transitório) ou NULL
---             (as duas). `id_contribuicao`/`id_repasse` vêm da linha de auditoria que a revisão gravou (NULL num evento que
---             só falhou). `valor` é o da mesma linha de auditoria; `sentido` diz para onde o dinheiro andou segundo o
---             provedor: 'entrada' (pagamento recebido), 'saida' (estorno, devolução ou transferência concluída) ou NULL
---             (nada se moveu, ex.: vencimento, falha). `arrecadado` é o valor ATUAL da campanha da contribuição ou do
---             repasse. Sem o payload. Exige 'evento_pagamento_visualizar' (92037).
+-- Regra:      Todos os avisos do provedor (a caixa de entrada inteira), do mais novo para o mais antigo, para a tela Eventos
+--             de Pagamento. `situacao`:
+--               'processado'           o sistema aplicou o aviso (processado_em, sem revisão);
+--               'vale_tentar_de_novo'  falhou por motivo transitório ou ainda não foi tentado (nem processado nem em revisão);
+--               'em_revisao_manual'    o sistema não aplicou de propósito e alguém precisa decidir;
+--               'revisao_resolvida'    passou por revisão manual e uma pessoa já deu baixa (resolver_revisao_pagamento).
+--             p_situacao filtra uma delas; NULL traz todas. `id_contribuicao`/`id_repasse` e `valor` vêm da primeira linha
+--             de auditoria que o aviso gravou (NULL num aviso que não mexeu em nada). `sentido` diz para onde o dinheiro
+--             andou segundo o provedor: 'entrada' (pagamento recebido), 'saida' (estorno, devolução ou transferência
+--             concluída) ou NULL (nada se moveu: vencimento, falha, aviso ignorado). `arrecadado` é o valor ATUAL da
+--             campanha da contribuição ou do repasse. Sem o payload. Exige 'evento_pagamento_visualizar' (92037).
 -- ----------------------------------------------------------------------------
 DROP FUNCTION IF EXISTS public.listar_revisoes_pagamento(TEXT, INT);
-CREATE OR REPLACE FUNCTION public.listar_revisoes_pagamento(p_situacao TEXT DEFAULT NULL, p_limite INT DEFAULT 100)
+CREATE OR REPLACE FUNCTION public.listar_revisoes_pagamento(p_situacao TEXT DEFAULT NULL, p_limite INT DEFAULT 500)
 RETURNS TABLE (
     id_evento_pagamento INT, provedor VARCHAR, tipo_evento VARCHAR, recebido_em TIMESTAMPTZ, situacao TEXT,
     motivo TEXT, revisao_manual_em TIMESTAMPTZ, id_contribuicao INT, id_repasse INT, valor DECIMAL, sentido TEXT,
@@ -4664,36 +4673,52 @@ BEGIN
     IF NOT public.tem_permissao('evento_pagamento_visualizar') THEN
         RAISE EXCEPTION 'Sem permissão para ver os eventos de pagamento.' USING ERRCODE = '92037';
     END IF;
-    IF p_situacao IS NOT NULL AND p_situacao NOT IN ('em_revisao_manual', 'vale_tentar_de_novo') THEN
-        RAISE EXCEPTION 'Situação inválida: use em_revisao_manual ou vale_tentar_de_novo.' USING ERRCODE = '90035';
+    IF p_situacao IS NOT NULL AND p_situacao NOT IN ('processado', 'vale_tentar_de_novo', 'em_revisao_manual', 'revisao_resolvida') THEN
+        RAISE EXCEPTION 'Situação inválida: use processado, vale_tentar_de_novo, em_revisao_manual ou revisao_resolvida.'
+            USING ERRCODE = '90035';
     END IF;
 
     RETURN QUERY
-    SELECT e.id_evento_pagamento, e.provedor, e.tipo_evento, e.recebido_em,
-           CASE WHEN e.revisao_manual_em IS NOT NULL THEN 'em_revisao_manual' ELSE 'vale_tentar_de_novo' END,
-           e.erro_processamento, e.revisao_manual_em, alvo.id_contribuicao, alvo.id_repasse, alvo.valor,
-           CASE
-               WHEN alvo.evento = 'pagamento_recebido_em_revisao_manual' THEN 'entrada'
-               WHEN alvo.evento IN ('evento_em_revisao_manual: reembolsado', 'evento_em_revisao_manual: devolvido',
-                                    'repasse_evento_em_revisao_manual: concluido') THEN 'saida'
-           END,
-           ca.valor_bruto_arrecadado
-    FROM evento_pagamento e
-    LEFT JOIN LATERAL (
-        SELECT a.id_contribuicao, a.id_repasse, a.valor, a.evento
-        FROM auditoria_financeira a
-        WHERE a.id_evento_pagamento = e.id_evento_pagamento
-        ORDER BY a.id_auditoria
-        LIMIT 1
-    ) alvo ON TRUE
-    LEFT JOIN contribuicao c ON c.id_contribuicao = alvo.id_contribuicao
-    LEFT JOIN repasse r ON r.id_repasse = alvo.id_repasse
-    LEFT JOIN campanha ca ON ca.id_campanha = COALESCE(c.id_campanha, r.id_campanha)
-    WHERE e.processado_em IS NULL
-      AND (p_situacao IS NULL
-           OR (p_situacao = 'em_revisao_manual' AND e.revisao_manual_em IS NOT NULL)
-           OR (p_situacao = 'vale_tentar_de_novo' AND e.revisao_manual_em IS NULL))
-    ORDER BY e.recebido_em, e.id_evento_pagamento
+    SELECT v.id_evento_pagamento, v.provedor, v.tipo_evento, v.recebido_em, v.situacao, v.erro_processamento,
+           v.revisao_manual_em, v.id_contribuicao, v.id_repasse, v.valor, v.sentido, v.arrecadado
+    FROM (
+        SELECT e.id_evento_pagamento, e.provedor, e.tipo_evento, e.recebido_em, e.erro_processamento, e.revisao_manual_em,
+               CASE
+                   WHEN e.processado_em IS NOT NULL AND e.revisao_manual_em IS NOT NULL THEN 'revisao_resolvida'
+                   WHEN e.processado_em IS NOT NULL THEN 'processado'
+                   WHEN e.revisao_manual_em IS NOT NULL THEN 'em_revisao_manual'
+                   ELSE 'vale_tentar_de_novo'
+               END AS situacao,
+               alvo.id_contribuicao, alvo.id_repasse, alvo.valor,
+               -- A primeira linha de auditoria do aviso diz o que ele fez: a transição que aplicou, ou a revisão que
+               -- registrou sem aplicar (status anterior = novo, com o evento nomeando o que o provedor informou).
+               CASE
+                   WHEN alvo.evento = 'pagamento_recebido_em_revisao_manual'
+                        OR (alvo.id_contribuicao IS NOT NULL AND alvo.status_anterior = 'pendente' AND alvo.status_novo = 'confirmado')
+                       THEN 'entrada'
+                   WHEN alvo.evento IN ('evento_em_revisao_manual: reembolsado', 'evento_em_revisao_manual: devolvido',
+                                        'repasse_evento_em_revisao_manual: concluido')
+                        OR (alvo.id_contribuicao IS NOT NULL AND alvo.status_anterior <> alvo.status_novo
+                            AND alvo.status_novo IN ('reembolsado', 'devolvido'))
+                        OR (alvo.id_repasse IS NOT NULL AND alvo.status_anterior <> alvo.status_novo AND alvo.status_novo = 'concluido')
+                       THEN 'saida'
+               END AS sentido,
+               ca.valor_bruto_arrecadado AS arrecadado
+        FROM evento_pagamento e
+        LEFT JOIN LATERAL (
+            SELECT a.id_contribuicao, a.id_repasse, a.valor, a.evento, a.status_anterior, a.status_novo
+            FROM auditoria_financeira a
+            WHERE a.id_evento_pagamento = e.id_evento_pagamento
+            ORDER BY a.id_auditoria
+            LIMIT 1
+        ) alvo ON TRUE
+        LEFT JOIN contribuicao c ON c.id_contribuicao = alvo.id_contribuicao
+        LEFT JOIN repasse r ON r.id_repasse = alvo.id_repasse
+        LEFT JOIN campanha ca ON ca.id_campanha = COALESCE(c.id_campanha, r.id_campanha)
+    ) v
+    WHERE p_situacao IS NULL OR v.situacao = p_situacao
+    -- Do mais novo para o mais antigo: com o limite, o que fica de fora é o histórico mais velho, nunca o aviso de agora.
+    ORDER BY v.recebido_em DESC, v.id_evento_pagamento DESC
     LIMIT p_limite;
 END;
 $$;

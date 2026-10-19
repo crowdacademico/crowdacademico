@@ -8,6 +8,7 @@ import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 import { arquivoApi } from '../../services/25-arquivo/api/arquivo.api';
 import { reduzirImagemNoNavegador, TIPOS_REDUZIVEIS } from '../../services/25-arquivo/util/reduzir-imagem.util';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
+import { formatarTamanhoArquivo } from '../../services/constant/util/formatacao.util';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 
 // Espelha a lista aceita no backend (nest/src/25-arquivo/constants/arquivo.constants.ts TIPOS_MIME_PERMITIDOS) MENOS
@@ -99,8 +100,7 @@ export function SeletorFotoPerfil({
         // Mensagem calcula o MB a partir da config (não hardcoded) - se o
         // Admin mudar `arquivo_tamanho_maximo_imagem_bytes`, o texto some
         // sozinho.
-        const megabytes = Math.round(tamanhoMaximoAvatarBytes / (1024 * 1024));
-        setErroLocal(`Imagem muito grande - o tamanho máximo é ${megabytes} MB.`);
+        setErroLocal(`Imagem muito grande - o tamanho máximo é ${formatarTamanhoArquivo(tamanhoMaximoAvatarBytes)}.`);
         return;
       }
 

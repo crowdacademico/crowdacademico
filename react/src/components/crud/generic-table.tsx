@@ -60,6 +60,8 @@ export interface GenericTableProps<T extends Linha> {
   // Explicação da tela num "ⓘ" ao lado do título (aparece ao passar o mouse). Não é um subtítulo de propósito:
   // um parágrafo a mais deixava o cabeçalho mais alto que o das outras listas e a tela "dançava" ao trocar.
   ajuda?: string;
+  // Ao lado da dica do título (ex.: um ícone por meio de pagamento, cada um com a própria dica).
+  aoLadoDaAjuda?: ReactNode;
   acaoTopo?: ReactNode;
   colunas: Coluna<T>[];
   chavePrimaria: keyof T & string;
@@ -133,6 +135,7 @@ export function GenericTable<T extends Linha>({
   titulo,
   nivelTitulo = 1,
   ajuda,
+  aoLadoDaAjuda,
   acaoTopo,
   colunas,
   chavePrimaria,
@@ -567,6 +570,7 @@ export function GenericTable<T extends Linha>({
               <h2 className="titulo-secao">{titulo}</h2>
             )}
             {ajuda && <Tooltip texto={ajuda} baixo />}
+            {aoLadoDaAjuda}
           </div>
         </div>
         {acaoTopo && <div className="crud-secao__acao-topo">{acaoTopo}</div>}

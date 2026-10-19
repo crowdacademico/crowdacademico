@@ -19,7 +19,7 @@ interface LinhaRevisao {
   arrecadado: string | null;
 }
 
-// Webhooks que não terminaram com sucesso. A permissão é conferida DENTRO das funções do banco (listar exige
+// Todos os avisos do provedor, do mais novo para o mais antigo (a tela Eventos de Pagamento). A permissão é conferida DENTRO das funções do banco (listar exige
 // evento_pagamento_visualizar; resolver exige pagamento_revisao_resolver; sem ela, 92037 => 403), com a sessão do usuário
 // que o interceptor global já montou (SET LOCAL app.id_usuario_atual): este service não decide quem pode.
 @Injectable()
@@ -28,7 +28,7 @@ export class PagamentoRevisaoServiceEventos {
 
   async listar(
     situacao: SituacaoRevisao | undefined,
-    limite = 100,
+    limite = 500,
   ): Promise<RevisaoPagamentoResponse[]> {
     const resultado = await sql<LinhaRevisao>`
       SELECT * FROM public.listar_revisoes_pagamento(${situacao ?? null}::text, ${limite}::int)

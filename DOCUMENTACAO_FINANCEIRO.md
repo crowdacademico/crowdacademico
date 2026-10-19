@@ -165,6 +165,11 @@ Decidido por `destino_dinheiro_campanha()` (05), no mesmo instante em que a camp
 
 **Cartão:** a parte paga com cartão só entra no repasse quando o provedor libera o dinheiro (cerca de 30 dias). A mesma tarefa cria um repasse novo, só dessa parte, quando ela fica disponível (`criar_repasses_liberados`). O pesquisador vê o que falta liberar em **Minha Conta**.
 
+- **Em palavras simples:** o cartão (ou o boleto) liberado numa campanha que ainda está no ar espera o fim dela; só depois vira repasse.
+- **Decisão (18-10-2026):** `criar_repasses_liberados` olha primeiro para onde vai o dinheiro da campanha e só então cria o repasse, em dois passos separados. Antes, as duas coisas eram uma conta só ("destino é repasse **e** criar o repasse"); com a campanha ainda ativa o destino é vazio, e o banco precisava calcular a segunda parte para saber o resultado, o que criava o repasse.
+- **Motivo:** achado ao montar a demonstração nova: o boleto já pago de uma campanha flexível no ar ganhou um repasse antes do fim. No uso real, um cartão liberado 30 dias depois do pagamento, numa campanha de até 60 dias, sairia para o pesquisador antes do fechamento; se depois a moderação encerrasse a campanha, o dinheiro que devia voltar para quem apoiou já teria saído.
+- **Caso-limite:** campanha encerrada antes da correção com um repasse indevido criado não é corrigida sozinha (o banco é recriado do zero). Provado no PGlite (suíte 47, "cartão liberado em campanha ainda no ar não gera repasse").
+
 ---
 
 ## 7. Devolução a quem apoiou

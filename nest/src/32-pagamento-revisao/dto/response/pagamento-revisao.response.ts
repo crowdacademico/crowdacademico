@@ -1,12 +1,14 @@
+import { type SituacaoRevisao } from '../request/pagamento-revisao.request-list';
+
 export class RevisaoPagamentoResponse {
   idEvento: number;
   provedor: string;
   tipoEvento: string;
   recebidoEm: Date;
-  situacao: 'em_revisao_manual' | 'vale_tentar_de_novo';
+  situacao: SituacaoRevisao;
   motivo: string | null;
   revisaoManualEm: Date | null;
-  // De onde veio o dinheiro/efeito (preenchido nas revisões que deixaram auditoria).
+  // De onde veio o dinheiro/efeito (preenchido quando o aviso deixou auditoria).
   idContribuicao: number | null;
   idRepasse: number | null;
   // Valor do evento (da auditoria) e para onde o dinheiro andou segundo o provedor: 'entrada' (pagamento recebido),

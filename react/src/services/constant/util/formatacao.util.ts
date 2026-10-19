@@ -128,3 +128,17 @@ export function textoSeguro(valor: unknown): string {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   return JSON.stringify(valor) ?? '(valor não representável)';
 }
+
+// Tamanho de arquivo guardado em bytes nos parâmetros (arquivo_*_bytes) para exibir: "8 MB", e abaixo de 1 MB, "100
+// bytes" ou "512 KB". Arredonda: é texto de explicação, não conferência de limite.
+export function formatarTamanhoArquivo(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${Math.round(bytes / (1024 * 1024)).toLocaleString('pt-BR')} MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024).toLocaleString('pt-BR')} KB`;
+  return `${bytes.toLocaleString('pt-BR')} bytes`;
+}
+
+// Duração guardada em minutos nos parâmetros: "24h" quando dá hora cheia, senão "90 minutos".
+export function formatarDuracaoMinutos(minutos: number): string {
+  if (minutos >= 60 && minutos % 60 === 0) return `${minutos / 60}h`;
+  return minutos === 1 ? '1 minuto' : `${minutos} minutos`;
+}

@@ -10,7 +10,7 @@ export class ContribuicaoControllerSummary {
   @Get('campanha/:idCampanha/resumo')
   resumir(
     @Param('idCampanha', ParseIntPipe) idCampanha: number,
-  ): Promise<ContribuicaoResponseSummary[]> {
+  ): Promise<ContribuicaoResponseSummary> {
     return this.service.executar(idCampanha);
   }
 }

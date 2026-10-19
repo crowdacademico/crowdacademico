@@ -11,7 +11,7 @@ import {
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { gerarCpfValido } from '../servicos/util/gerar-cpf-valido.util';
-import { ORIGEM_TESTE, origemUsuario } from '../servicos/util/registros-demonstracao.util';
+import { ORIGEM_NORMAL, origemUsuario } from '../servicos/util/registros-demonstracao.util';
 import { useAuthFetchRegistrado } from '../servicos/hook/use-chamada-registrada';
 import { ModaisUsuario } from '../../views/1-usuario/modais-usuario';
 import { ModalUpgradePesquisador } from '../../views/6-perfil-pesquisador/modal-upgrade-pesquisador';
@@ -47,10 +47,10 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   const [upgrade, setUpgrade] = useState<PesquisadorLinha | null>(null);
   const [denunciando, setDenunciando] = useState<PesquisadorLinha | null>(null);
 
-  // Facetas pré-marcadas: Papel com usuário/pesquisador (adianta os testes) e Origem com "teste" (esconde a demo).
+  // Faceta Origem pré-marcada em "normal": esconde as 7 contas "Sistema".
   const [parametros, setParametros] = useSearchParams();
   useEffect(() => {
-    if (!parametros.has('papel')) setParametros({ papel: `${PAPEL_SEM_EXTRA},pesquisador`, origem: ORIGEM_TESTE }, { replace: true });
+    if (!parametros.has('origem')) setParametros({ origem: ORIGEM_NORMAL }, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

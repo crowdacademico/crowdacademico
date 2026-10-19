@@ -6,7 +6,7 @@ import type { ResumoContribuicoes } from '../type/contribuicao.type';
 const BASE = '/contribuicao';
 
 export const contribuicaoApi = {
-  // Quantas e quanto por meio de pagamento e situação. Só o dono da campanha ou quem tem a permissão (senão, 403).
-  resumoDaCampanha: (authFetch: AuthFetch, idCampanha: number): Promise<ResumoContribuicoes[]> =>
-    authFetch(`${BASE}/campanha/${idCampanha}/resumo`).then(tratarResposta<ResumoContribuicoes[]>),
+  // Quantas contribuições estão pagas e quantas existem. Só o dono da campanha ou quem tem a permissão (senão, 403).
+  resumoDaCampanha: (authFetch: AuthFetch, idCampanha: number): Promise<ResumoContribuicoes> =>
+    authFetch(`${BASE}/campanha/${idCampanha}/resumo`).then(tratarResposta<ResumoContribuicoes>),
 };

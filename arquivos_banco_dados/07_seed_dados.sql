@@ -791,58 +791,51 @@ ON CONFLICT DO NOTHING;
 -- TODOS, só para dev/seed, nunca em produção:
 --   senha de todo mundo no seed = DevTcc123!
 -- Gerado com `bcrypt.hash('DevTcc123!', 10)` e conferido com `bcrypt.compare()`. Serve para logar como qualquer
--- papel (admin, moderador, pesquisador, usuario comum etc.) só trocando o e-mail (ver a lista de e-mail/papel
--- logo abaixo, em usuario_papel).
+-- papel só trocando o e-mail (ver a lista de e-mail/papel logo abaixo, em usuario_papel).
 --
--- Ordem por poder (admin -> moderador -> revisor -> suporte -> curador -> pesquisador -> usuario), igual à de
--- `papel`; os IDs numéricos de usuario_papel/perfil_pesquisador/campanha etc. (mais abaixo) assumem esta ordem.
---
--- "Admin Sistema 2": segundo admin de teste (sempre um admin de reserva, já que só outro admin desfaz a
--- besteira de um admin) e 5 contas "Sistema" (uma por papel, além de admin) para testes rápidos e intuitivos,
--- sem nome de gente, somando ao "Entrar como" de desenvolvimento (dev-login-rapido).
+-- Quem é quem (os IDs numéricos dos blocos abaixo assumem esta ordem de inserção):
+--   1 a 7    contas "Sistema", uma por papel (Admin Sistema 2 é o admin de reserva: só outro admin desfaz a
+--            besteira de um admin), para os testes rápidos e o "Entrar como" de desenvolvimento (dev-login-rapido).
+--   8 a 17   pesquisadores da demonstração, cada um com uma história (ver o resumo no fim deste arquivo):
+--            8 Ana (Referência), 9 Bruno, 10 Carlos, 11 Renata, 12 Eduardo, 13 Beatriz, 14 Juliana, 15 Patrícia,
+--            16 Vinícius e 17 Gabriel (os dois na faixa Atenção).
+--   18 a 20  quem apoia as campanhas (Fernanda, Tiago, Helena).
+--   21 a 23  contas comuns zeradas, sem nenhuma dependência e com o e-mail ainda não verificado: sobram sempre duas
+--            para testar "2ª conta tentando o mesmo CPF" (22 e 23); a 21 (Marina) também fica com o aceite do termo
+--            da conta pendente, para demonstrar a tela de aceite.
+-- Ninguém nasce suspenso: suspender é uma ação do painel, demonstrada ao vivo.
 INSERT INTO usuario (nome, email, senha_hash, id_imagem_perfil, criado_em) VALUES
-('Admin Sistema',          'admin@crowdacademico.com.br',            '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:00'),
-('Admin Sistema 2',        'admin2@crowdacademico.com.br',           '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:01'),
-('Moderador Sistema',      'moderador@crowdacademico.com.br',        '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:02'),
-('Revisor Sistema',        'revisor@crowdacademico.com.br',          '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:03'),
-('Suporte Sistema',        'suporte.sistema@crowdacademico.com.br',  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:04'),
-('Curador Sistema',        'curador@crowdacademico.com.br',          '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:05'),
-('Pesquisador Sistema',    'pesquisador@crowdacademico.com.br',      '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:06'),
+('Admin Sistema',            'admin@crowdacademico.com.br',           '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:00'),
+('Admin Sistema 2',          'admin2@crowdacademico.com.br',          '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:01'),
+('Moderador Sistema',        'moderador@crowdacademico.com.br',       '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:02'),
+('Revisor Sistema',          'revisor@crowdacademico.com.br',         '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:03'),
+('Suporte Sistema',          'suporte.sistema@crowdacademico.com.br', '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:04'),
+('Curador Sistema',          'curador@crowdacademico.com.br',         '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:05'),
+('Pesquisador Sistema',      'pesquisador@crowdacademico.com.br',     '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:06'),
 
-('Diego Martins Alves',   'diego.martins@crowdacademico.com.br', '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-05 09:00:00'), -- moderador
-('Camila Nunes Barros',   'camila.nunes@crowdacademico.com.br',  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-05 09:00:00'), -- revisor
-('Thiago Almeida Rocha',  'thiago.almeida@crowdacademico.com.br','$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-05 09:00:00'), -- curador
-('Larissa Pinto Gomes',   'larissa.pinto@crowdacademico.com.br', '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-05 09:00:00'), -- suporte
+('Ana Beatriz Santos',       'ana.santos@usp.br',                     '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-01-10 09:00:00'),
+('Bruno Tavares Costa',      'bruno.tavares@ufrgs.br',                '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-01-20 09:00:00'),
+('Carlos Eduardo Melo',      'carlos.melo@unicamp.br',                '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-02-03 10:30:00'),
+('Renata Vasconcelos Dias',  'renata.vasconcelos@ufpr.br',            '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-02-14 09:00:00'),
+('Eduardo Barbosa Nogueira', 'eduardo.barbosa@ufba.br',               '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-02-25 09:00:00'),
+('Beatriz Lima Alves',       'beatriz.lima@ufmg.br',                  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-03-05 08:45:00'),
+('Juliana Ferreira Paz',     'juliana.ferreira@ufsc.br',              '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-03-18 11:20:00'),
+('Patrícia Rocha Silva',     'patricia.rocha@unifesp.br',             '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-04-02 09:30:00'),
+('Vinícius Almeida Ferraz',  'vinicius.ferraz@gmail.com',             '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-04-20 09:00:00'),
+('Gabriel Souza Martins',    'gabriel.martins@gmail.com',             '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-05-08 10:00:00'),
 
-('Ana Beatriz Santos',    'ana.santos@usp.br',          '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    NULL, '2024-01-10 09:00:00'),
-('Carlos Eduardo Melo',   'carlos.melo@unicamp.br',     '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-15 10:30:00'),
-('Beatriz Lima Alves',    'beatriz.lima@ufmg.br',       '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    NULL, '2024-02-01 08:45:00'),
-('Rafael Costa Nunes',    'rafael.costa@ufrj.br',       '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    NULL, '2024-02-10 14:00:00'),
-('Juliana Ferreira Paz',  'juliana.ferreira@ufsc.br',   '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    NULL, '2024-02-15 11:20:00'),
-('Marcos Oliveira Ramos', 'marcos.oliveira@unesp.br',   '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    NULL, '2024-03-01 16:00:00'),
-('Patrícia Rocha Silva',  'patricia.rocha@unifesp.br',  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    NULL, '2024-02-17 09:30:00'),
--- Continuam pesquisadores: já têm um "laboratório de teste" inteiro montado (perfil, campanha, denúncias,
--- links) desenhado para cobrir as 4 faixas de score_rotulo; virar "usuario comum" apagaria tudo isso. Só a
--- posição/ID mudou, para ficarem agrupados com o resto dos pesquisadores.
-('Bruno Tavares Costa',    'bruno.tavares@ufrgs.br',    '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-05-20 09:00:00'),
-('Renata Vasconcelos Dias','renata.vasconcelos@ufpr.br','$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-05-22 09:00:00'),
-('Eduardo Barbosa Nogueira','eduardo.barbosa@ufba.br',  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-05-25 09:00:00'),
-('Vinícius Almeida Ferraz','vinicius.ferraz@ufc.br',    '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-05-28 09:00:00'),
+('Fernanda Souza Lima',      'fernanda.souza@gmail.com',              '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-01-15 10:00:00'),
+('Tiago Ramos Pereira',      'tiago.ramos@gmail.com',                 '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-02-01 14:00:00'),
+('Helena Duarte Campos',     'helena.campos@outlook.com',             '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-02-20 19:30:00'),
 
-('Fernanda Souza Lima',   'fernanda.souza@gmail.com',            '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-02-24 10:00:00'), -- usuario comum (apoiador, nunca virou pesquisador)
--- 2 contas "usuario comum" zeradas, sem NENHUMA dependência (sem campanha, sem link, sem denúncia), para sempre
--- sobrar gente para testar o fluxo de "2ª conta tentando o mesmo CPF" sem mexer nos 12-21 (donos de campanha
--- no seed; 19-22 foram desenhados a dedo para as 4 faixas de score_rotulo, ver comentário perto do bloco de
--- campanha). Fernanda (23) sozinha não bastava para testar duplicidade de CPF entre DUAS contas.
-('Marina Alves Torres',   'marina.torres@gmail.com',             '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-04-10 10:00:01'), -- usuario comum, zerada
-('Gabriel Souza Martins', 'gabriel.martins@gmail.com',           '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-04-10 10:00:02'), -- usuario comum, zerada
-('Camila Rocha Pereira',  'camila.rocha@gmail.com',              '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-04-10 10:00:03'), -- usuario comum, zerada
-('Rafael Costa Andrade',  'rafael.costa.andrade@gmail.com',      '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-04-10 10:00:04'), -- usuario comum, zerado
-('Larissa Mendes Cunha',  'larissa.mendes@gmail.com',            '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-04-10 10:00:05'); -- usuario comum, zerada
+('Marina Alves Torres',      'marina.torres@gmail.com',               '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-06-10 10:00:00'),
+('Rafael Costa Andrade',     'rafael.costa.andrade@gmail.com',        '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-06-10 10:00:01'),
+('Larissa Mendes Cunha',     'larissa.mendes@gmail.com',              '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-06-10 10:00:02');
 
 -- [07-D-2] usuario_papel
 -- id_usuario é fixo (a tabela usuario está vazia antes deste seed, então os IDs abaixo batem com a ordem de
--- inserção acima, ver [07-D-1]). id_papel é resolvido por nome, pelo mesmo motivo do bloco [07-B-3].
+-- inserção acima, ver [07-D-1]). id_papel é resolvido por nome, pelo mesmo motivo do bloco [07-B-3]. O papel
+-- 'pesquisador' de 8 a 17 vem do próprio perfil (trg_perfil_atribui_papel_pesquisador, 05), como no upgrade real.
 INSERT INTO usuario_papel (id_usuario, id_papel)
 SELECT v.id_usuario, p.id_papel
 FROM (VALUES
@@ -852,28 +845,7 @@ FROM (VALUES
     (4, 'revisor'),      -- Revisor Sistema
     (5, 'suporte'),      -- Suporte Sistema
     (6, 'curador'),      -- Curador Sistema
-    (7, 'pesquisador'),  -- Pesquisador Sistema
-    (8, 'moderador'),    -- Diego
-    (9, 'revisor'),      -- Camila
-    (10, 'curador'),     -- Thiago
-    (11, 'suporte'),     -- Larissa
-    (12, 'pesquisador'), -- Ana
-    (13, 'pesquisador'), -- Carlos
-    (14, 'pesquisador'), -- Beatriz
-    (15, 'pesquisador'), -- Rafael
-    (16, 'pesquisador'), -- Juliana
-    (17, 'pesquisador'), -- Marcos
-    (18, 'pesquisador'), -- Patrícia
-    (19, 'pesquisador'), -- Bruno
-    (20, 'pesquisador'), -- Renata
-    (21, 'pesquisador'), -- Eduardo
-    (22, 'pesquisador'), -- Vinícius
-    (23, 'usuario'),     -- Fernanda (apoiador comum)
-    (24, 'usuario'),     -- Marina (apoiador comum, zerada)
-    (25, 'usuario'),     -- Gabriel (apoiador comum, zerado)
-    (26, 'usuario'),     -- Camila (apoiador comum, zerada)
-    (27, 'usuario'),     -- Rafael (apoiador comum, zerado)
-    (28, 'usuario')      -- Larissa (apoiador comum, zerada)
+    (7, 'pesquisador')   -- Pesquisador Sistema
 ) AS v(id_usuario, papel_nome)
 JOIN papel p ON p.nome = v.papel_nome
 ON CONFLICT DO NOTHING;
@@ -963,12 +935,12 @@ SELECT u.id_usuario,
 FROM usuario u;
 
 -- RF-015: quando a versão vigente entrou, cada conta aceitou de novo no acesso seguinte (um dia depois), menos a
--- conta 24 (Marina Torres), que fica com o aceite PENDENTE de propósito para demonstrar a tela de aceite.
+-- conta 21 (Marina Torres), que fica com o aceite PENDENTE de propósito para demonstrar a tela de aceite.
 INSERT INTO usuario_termo (id_usuario, id_termo, aceito_em, ip_aceite)
 SELECT u.id_usuario, t.id_termo, LEAST(t.criado_em + INTERVAL '1 day', NOW()), '187.10.20.30'
 FROM usuario u
 JOIN termos_de_uso t ON t.tipo = 'cadastro' AND t.ativo
-WHERE u.id_usuario <> 24
+WHERE u.id_usuario <> 21
 ON CONFLICT (id_usuario, id_termo) DO NOTHING;
 
 -- Parâmetro de uma conta específica (o admin da demonstração): só existe porque a conta existe.
@@ -982,41 +954,28 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 
 -- [07-D-3] perfil_pesquisador
 -- score_atual e score_atualizado_em não estão no INSERT de propósito: a tabela tem trg_perfil_recalcula_score
--- (AFTER INSERT), que dispara recalcular_score_pesquisador() assim que a linha é criada, e qualquer valor
--- digitado aqui seria sobrescrito no mesmo instante. O score de cada um é 100% produto dos dados reais dos
--- blocos abaixo (link_academico, campanha, atualizacao_campanha, denuncia).
--- cpf_criptografado: os 12 valores abaixo são CPFs FALSOS de verdade (dígito verificador válido, nenhum de
--- dígito repetido), cifrados com commons/seguranca/cpf-cifra.util.ts (AES-256-GCM, formato
--- "v1:iv:tag:ciphertext") usando as chaves CPF_ENCRYPTION_KEY/CPF_INDEX_KEY do .env de desenvolvimento (ver
--- DOCUMENTACAO_BD.md); cpf_hash é o índice cego correspondente (HMAC-SHA256). Gerados por script descartável,
--- nunca CPF de pessoa real. Se CPF_ENCRYPTION_KEY/CPF_INDEX_KEY forem trocadas, estas 12 linhas passam a ser
--- indecifráveis (como qualquer dado cifrado com chave antiga): para um banco de dev/seed, basta rodar o seed de
--- novo com uma chave nova.
-INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, cpf_hash, vinculo_institucional, titulo_academico, status_pesquisador, ativado_em) VALUES
-(7,  'v1:uUtOS/UIKkMBczzR:wKf1XU/T4DU7wxlBRIN9XA==:EdujkWtk43mcH08=', 'e44f434dd801bdcb2846daafc2646d428b8b8fe6ef64b37513c8c25ec219b639', 'CrowdAcadêmico (conta de teste)',                   'doutor',     'ativo', '2024-01-01 00:10:00'), -- Pesquisador Sistema, sem campanha
-(12, 'v1:mWTFzqRm8FMW14/u:iMiDqsRSTJ4KUyzcmKP18w==:bR7wgOpNkI+vSJ4=', '1610ee8b3555955f9e79eba6efa88324a4c30ced46b4bee5e6f2b6b3ed605797', 'Universidade de São Paulo (USP)',                   'doutor',     'ativo', '2024-01-10 09:05:00'),
-(13, 'v1:biXIzmT/+Z0OVzgl:y8lT16d44wlXzCKzGAsK9A==:HxBEvdcXcZk8bHY=', 'b3b4544a4ec41edae5514228ab14306250a0fce3bc3f149f8a0ed92be2536dd8', 'Universidade Estadual de Campinas (UNICAMP)',       'mestre',      'ativo', '2024-01-15 10:35:00'),
-(14, 'v1:/qWUrRI/9fzjm9Kh:uU6qNuQlvvFjghnTLVr8Og==:N5DdmozsScRBV8A=', '93d76c0ae76d371c84ead92cdc597742cd149067fe7f234552e10abe75ee5e7f', 'Universidade Federal de Minas Gerais (UFMG)',       'doutor',      'ativo', '2024-02-01 08:50:00'),
-(15, 'v1:P3LMaMpY05s3WLyr:7eDEN698asnW0mHcOs18Hw==:a51Rr8evV8QG/zw=', 'a6b7b8e7c9b4114a993ffdd74c58a4f09b2ea02a107faca711642e5f6cb4538b', 'Universidade Federal do Rio de Janeiro (UFRJ)',     'especialista','ativo', '2024-02-10 14:10:00'),
-(16, 'v1:gRfGHqP2CaS1KfN8:/Ndt5pdWu6A/ZxDBptQipQ==:XXTsLYETudrxeik=', '74fc41e2f0ea9e284b8c1d2379fcc4388988d1b4a18f53c88a626d91b5d4cbc6', 'Universidade Federal de Santa Catarina (UFSC)',     'mestre',      'ativo', '2024-03-05 11:25:00'),
-(17, 'v1:7abSMfGxUwGXdwcb:by/laHiieT6GUyoRZK5eEQ==:rlvzzxsYevmjKR4=', '3f165d5243e5fbddf4290416d712da7ba1a1129f442c866bc855fac2c19f3458', 'Universidade Estadual Paulista (UNESP)',            'graduado',    'ativo', '2024-03-12 16:05:00'),
-(18, 'v1:gH+4XLY9grNC1AAN:f0QkyT8OuWRTKwwbyHhtKQ==:/dE9nq3r7rYxs3k=', '3f022d05c183ecfb64cbb6ac2500e66ad731e684f1c9afd5e2cb801d5576d376', 'Universidade Federal de São Paulo (UNIFESP)',       'doutor',      'ativo', '2024-04-01 09:35:00'),
--- 4 pesquisadores desenhados de propósito para cobrir as 4 faixas de score_rotulo (Atenção/Em
--- Construção/Confiável/Referência) de forma DETERMINÍSTICA: o resultado depende só da fórmula real em
--- 05_regras_negocio.sql, não de sorte. Ver o comentário completo depois do bloco de denuncia sobre como cada um
--- chega na faixa esperada.
-(19, 'v1:LEFw0QnUeHqL2X91:6kAh7osqA4mnvClzmJIEpA==:YdQlSK3Dr/mdlFw=', 'a36805b35ddfe2257718bedd4035fd49afa11d5e3602285131419df0827d49f1', 'Universidade Federal do Rio Grande do Sul (UFRGS)', 'doutor',   'ativo', '2024-05-20 09:00:00'), -- Bruno:    alvo = Referência
-(20, 'v1:N0tFgAz4WUtH/Zmi:9c3av62cgJj7CVWQsTTN/Q==:1jWfrfd+IZW7NZI=', '0d491a6df2cd5e6e9fe25c47630ff59d88a6e0a6a3d85f61badb2723a22ff19c', 'Universidade Federal do Paraná (UFPR)',             'mestre',   'ativo', '2024-05-22 09:00:00'), -- Renata:   alvo = Confiável
-(21, 'v1:Irign/aW5mMCv4Ug:EQxzkR0lXxnJhmu8xAEhcw==:2lmUgJVYjExvdAM=', 'b5944441f2b1f45294195783812f36bc72c9bf38d2ef3d8a231c1a8d8f538ec5', 'Universidade Federal da Bahia (UFBA)',              'mestre',   'ativo', '2024-05-25 09:00:00'), -- Eduardo:  alvo = Em Construção
-(22, 'v1:m7z9uq+435l0syBo:wVQB6djPxdi38eWcfpnUAQ==:45Hee0oUAA3IDek=', '469f49af437e577be058f668669a27ec903aa9ddc42895750ef3e1d45f05c380', 'Universidade Federal do Ceará (UFC)',               'graduado', 'ativo', '2024-05-28 09:00:00'); -- Vinícius: alvo = Atenção
-
--- Gabriel (25) e Camila (26): contas comuns que viraram pesquisadoras há pouco, com perfil mínimo (só o título,
--- independentes) e denúncias procedentes contra o perfil ([07-E-8]). As duas caem na faixa "Atenção" (abaixo de
--- score_minimo_campanha) e têm uma campanha na fila de aprovação ([07-E-1]): é o que faz a coluna "atenção" de
--- Aprovar Campanhas mostrar "Score baixo". CPFs falsos (dígito verificador válido), cifrados como os de cima.
-INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, cpf_hash, tipo_vinculo, vinculo_institucional, titulo_academico, status_pesquisador, ativado_em) VALUES
-(25, 'v1:C1Zn4ew8FWLXPe4S:wcLOpqSIBgvH2Genmxlgsw==:RGXCLYPxkIwNTWM=', 'b9569cd5536268347eacea693dc45a92962d3084beca606e73fead8c3723d8fa', 'independente', NULL, 'graduado', 'ativo', NOW() - INTERVAL '40 days'),
-(26, 'v1:BC+nl3fgfyFT1nXE:eOtlTwYqKt0+IxzqJKRf6w==:rpq51QWtvLgRa3A=', 'dc87038643614e096ecfeb3826ffa018aa7d4f8a657bec4a3bf3e593bb506e92', 'independente', NULL, 'mestre', 'ativo', NOW() - INTERVAL '60 days');
+-- (AFTER INSERT), e o score de cada um é 100% produto dos dados reais dos blocos abaixo (link_academico, campanha,
+-- atualizacao_campanha, denuncia).
+-- cpf_criptografado: CPFs FALSOS de verdade (dígito verificador válido, nenhum de dígito repetido), cifrados com
+-- commons/seguranca/cpf-cifra.util.ts (AES-256-GCM, formato "v1:iv:tag:ciphertext") usando as chaves
+-- CPF_ENCRYPTION_KEY/CPF_INDEX_KEY do .env de desenvolvimento (ver DOCUMENTACAO_BD.md); cpf_hash é o índice cego
+-- correspondente (HMAC-SHA256). A chave Pix (chave_pix_criptografada) é cifrada do mesmo jeito
+-- (chave-pix-cifra.util.ts) e também é fictícia. Se CPF_ENCRYPTION_KEY/CPF_INDEX_KEY forem trocadas, estas linhas
+-- passam a ser indecifráveis: para um banco de dev/seed, basta rodar o seed de novo com uma chave nova.
+-- chave_pix_verificada_em: a titularidade foi confirmada logo depois do cadastro da chave. A Renata (11) e o
+-- Gabriel (17) não cadastraram chave: o repasse da Renata espera na fila ("aguardando conta").
+INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, cpf_hash, tipo_vinculo, vinculo_institucional, titulo_academico, status_pesquisador, ativado_em, tipo_chave_pix, chave_pix_criptografada, chave_pix_verificada_em) VALUES
+(7,  'v1:uUtOS/UIKkMBczzR:wKf1XU/T4DU7wxlBRIN9XA==:EdujkWtk43mcH08=', 'e44f434dd801bdcb2846daafc2646d428b8b8fe6ef64b37513c8c25ec219b639', 'institucional', 'CrowdAcadêmico (conta de teste)',                   'doutor',   'ativo', '2024-01-01 00:10:00', NULL, NULL, NULL),
+(8,  'v1:mWTFzqRm8FMW14/u:iMiDqsRSTJ4KUyzcmKP18w==:bR7wgOpNkI+vSJ4=', '1610ee8b3555955f9e79eba6efa88324a4c30ced46b4bee5e6f2b6b3ed605797', 'institucional', 'Universidade de São Paulo (USP)',                   'doutor',   'ativo', '2025-01-10 09:05:00', 'email',     'v1:DIg7v8LA7dyr+Hqc:/t3SmH58SpMInR0yfJkHNw==:pHcryKbuuai0kI/pNqU1pOw=', '2025-01-12 10:00:00'),
+(9,  'v1:LEFw0QnUeHqL2X91:6kAh7osqA4mnvClzmJIEpA==:YdQlSK3Dr/mdlFw=', 'a36805b35ddfe2257718bedd4035fd49afa11d5e3602285131419df0827d49f1', 'institucional', 'Universidade Federal do Rio Grande do Sul (UFRGS)', 'doutor',   'ativo', '2025-01-20 09:10:00', 'aleatoria', 'v1:EfKf5Hclz5tm/h+T:KJmGoeQeWZSNRaipD4HNUA==:KVxgWW8ltrfAJpbXZALbopeudEZSFV2yqIM0w9LTrmCP9PwI', '2025-01-22 10:00:00'),
+(10, 'v1:biXIzmT/+Z0OVzgl:y8lT16d44wlXzCKzGAsK9A==:HxBEvdcXcZk8bHY=', 'b3b4544a4ec41edae5514228ab14306250a0fce3bc3f149f8a0ed92be2536dd8', 'institucional', 'Universidade Estadual de Campinas (UNICAMP)',       'mestre',   'ativo', '2025-02-03 10:40:00', 'telefone',  'v1:I+ZcnKpeMi97idPx:NfCZ9KymQMW8UvQMGQu2mA==:8XC0qKatn99KCCOfdXo=', '2025-02-05 10:00:00'),
+(11, 'v1:N0tFgAz4WUtH/Zmi:9c3av62cgJj7CVWQsTTN/Q==:1jWfrfd+IZW7NZI=', '0d491a6df2cd5e6e9fe25c47630ff59d88a6e0a6a3d85f61badb2723a22ff19c', 'institucional', 'Universidade Federal do Paraná (UFPR)',             'mestre',   'ativo', '2025-02-14 09:10:00', NULL, NULL, NULL),
+(12, 'v1:Irign/aW5mMCv4Ug:EQxzkR0lXxnJhmu8xAEhcw==:2lmUgJVYjExvdAM=', 'b5944441f2b1f45294195783812f36bc72c9bf38d2ef3d8a231c1a8d8f538ec5', 'institucional', 'Universidade Federal da Bahia (UFBA)',              'mestre',   'ativo', '2025-02-25 09:10:00', 'email',     'v1:KqxuwtOm724qtOI7:LxuKQ2zTrdCHnZIRCVTZSA==:KVYEoHKuZvIt/Y3uC+Fx7b6M9Q1khBQ=', '2025-03-01 10:00:00'),
+(13, 'v1:/qWUrRI/9fzjm9Kh:uU6qNuQlvvFjghnTLVr8Og==:N5DdmozsScRBV8A=', '93d76c0ae76d371c84ead92cdc597742cd149067fe7f234552e10abe75ee5e7f', 'institucional', 'Universidade Federal de Minas Gerais (UFMG)',       'doutor',   'ativo', '2025-03-05 09:00:00', 'aleatoria', 'v1:TdqU/vNUZWF3B/+j:13UEjgEEINz8P7Q8u+d+YA==:/gDJVLCsBlqUtMvDYXOlfrf1f0ADW7RUBKKQvmCayaTlrLiR', '2025-03-08 10:00:00'),
+(14, 'v1:gRfGHqP2CaS1KfN8:/Ndt5pdWu6A/ZxDBptQipQ==:XXTsLYETudrxeik=', '74fc41e2f0ea9e284b8c1d2379fcc4388988d1b4a18f53c88a626d91b5d4cbc6', 'institucional', 'Universidade Federal de Santa Catarina (UFSC)',     'mestre',   'ativo', '2025-03-18 11:30:00', 'email',     'v1:BktVyX2lb13+pXgw:HAs2NfQY/xfhwkfL0/ew3g==:KkqcgrQXrBTRVaZBeeJCH7C8m17wRUqS', '2025-03-20 10:00:00'),
+(15, 'v1:gH+4XLY9grNC1AAN:f0QkyT8OuWRTKwwbyHhtKQ==:/dE9nq3r7rYxs3k=', '3f022d05c183ecfb64cbb6ac2500e66ad731e684f1c9afd5e2cb801d5576d376', 'institucional', 'Universidade Federal de São Paulo (UNIFESP)',       'doutor',   'ativo', '2025-04-02 09:40:00', 'email',     'v1:UD+7wVPGzE/66K9j:i0IbQ4LVWvBT6wjsi1KUOw==:bIv+5CJ+YHLcwyezRmobW+Y1dadW8TCQ6Q==', '2025-04-05 10:00:00'),
+(16, 'v1:m7z9uq+435l0syBo:wVQB6djPxdi38eWcfpnUAQ==:45Hee0oUAA3IDek=', '469f49af437e577be058f668669a27ec903aa9ddc42895750ef3e1d45f05c380', 'independente',  NULL,                                                'graduado', 'ativo', '2025-04-20 09:10:00', 'aleatoria', 'v1:osAv1z/OK2WZ8RU3:vJDeX+k0L2kD5Q+T4CijEA==:dAVI1j17QB+ioBwcDzGp53tIsEZ6cX8H8FdqhOfJ+69WbX3s', '2025-04-22 10:00:00'),
+(17, 'v1:C1Zn4ew8FWLXPe4S:wcLOpqSIBgvH2Genmxlgsw==:RGXCLYPxkIwNTWM=', 'b9569cd5536268347eacea693dc45a92962d3084beca606e73fead8c3723d8fa', 'independente',  NULL,                                                'graduado', 'ativo', NOW() - INTERVAL '40 days', NULL, NULL, NULL);
 
 -- Estes pesquisadores já nascem com perfil pronto acima, então aceitaram o Termo de Upgrade de Pesquisador na
 -- data em que o próprio perfil foi ativado (ativado_em), na versão vigente naquela data.
@@ -1031,17 +990,17 @@ SELECT
 FROM perfil_pesquisador pp;
 
 -- RF-015 vale também para o termo de pesquisador: quando a versão vigente entrou, cada pesquisador aceitou de novo
--- no acesso seguinte, menos o Vinícius (22), que fica com o aceite PENDENTE de propósito para demonstrar a tela.
+-- no acesso seguinte, menos o Vinícius (16), que fica com o aceite PENDENTE de propósito para demonstrar a tela.
 INSERT INTO usuario_termo (id_usuario, id_termo, aceito_em, ip_aceite)
 SELECT pp.id_usuario, t.id_termo, LEAST(t.criado_em + INTERVAL '1 day', NOW()), '187.10.20.30'
 FROM perfil_pesquisador pp
 JOIN termos_de_uso t ON t.tipo = 'upgrade_pesquisador' AND t.ativo
-WHERE pp.id_usuario <> 22
+WHERE pp.id_usuario <> 16
 ON CONFLICT (id_usuario, id_termo) DO NOTHING;
 
 -- [07-D-8] verificacao_email: toda conta confirmou o e-mail logo depois do cadastro, pelo mesmo caminho do
 -- sistema (um token em verificacao_email, depois email_verificado = TRUE). Exceção de propósito: as 3 contas
--- comuns zeradas (24, 27 e 28) seguem com o e-mail não verificado, para testar esse estado. O token é só um hash
+-- comuns zeradas (21, 22 e 23) seguem com o e-mail não verificado, para testar esse estado. O token é só um hash
 -- de preenchimento: já nasce confirmado, nunca é usado. A validade vem de verificacao_email_horas_validade.
 INSERT INTO verificacao_email (id_usuario, token_hash, criado_em, expira_em, confirmado_em)
 SELECT u.id_usuario,
@@ -1051,383 +1010,384 @@ SELECT u.id_usuario,
          + (SELECT valor::INT FROM configuracoes WHERE chave = 'verificacao_email_horas_validade' AND id_usuario IS NULL) * INTERVAL '1 hour',
        u.criado_em + INTERVAL '10 minutes'
 FROM usuario u
-WHERE u.id_usuario NOT IN (24, 27, 28);
+WHERE u.id_usuario NOT IN (21, 22, 23);
 
 UPDATE usuario u SET email_verificado = TRUE
 WHERE EXISTS (SELECT 1 FROM verificacao_email v WHERE v.id_usuario = u.id_usuario AND v.confirmado_em IS NOT NULL);
 
 -- [07-F-1] link_academico
--- Bruno (19) recebe os 3 links que a fórmula de score realmente soma (calcular_score_perfil_academico, 05):
--- Lattes, ORCID e um "outro link" (qualquer tipo_link que não seja Lattes/ORCID). É o único dos 4 novos
--- pesquisadores com link_academico de propósito, para ser o único a fechar os 30/30 pontos possíveis nessa
--- dimensão. id_tipolink é resolvido por subquery em tipo_link.codigo (chave natural), não pelo id posicional
--- (mesmo princípio do bug de denuncia, ver [07-E-8]).
+-- A Ana (8) tem os 3 tipos de link que a fórmula do score soma (calcular_score_perfil_academico, 05): Lattes, ORCID
+-- e um "outro link" (qualquer tipo_link que não seja Lattes/ORCID). Os outros têm um ou dois, ou nenhum. id_tipolink
+-- é resolvido por tipo_link.codigo (chave natural), não pelo id posicional.
 INSERT INTO link_academico (id_usuario, id_tipolink, ordem, url)
 SELECT v.id_usuario, tl.id_tipolink, v.ordem, v.url
 FROM (VALUES
-    (12, 'LATTES',      1, 'http://lattes.cnpq.br/1234567890123456'),
-    (12, 'ORCID',       2, 'https://orcid.org/0000-0001-2345-6789'),
-    (13, 'LATTES',      1, 'http://lattes.cnpq.br/9876543210987654'),
-    (14, 'LATTES',      1, 'http://lattes.cnpq.br/1111222233334444'),
-    (16, 'RESEARCHGATE', 1, 'https://www.researchgate.net/profile/Juliana-Ferreira-Paz'),
-    (18, 'ORCID',       1, 'https://orcid.org/0000-0002-9876-5432'),
-    (19, 'LATTES',      1, 'http://lattes.cnpq.br/1122334455667788'),
-    (19, 'ORCID',       2, 'https://orcid.org/0000-0003-1234-5678'),
-    (19, 'LINKEDIN',    3, 'https://www.linkedin.com/in/bruno-tavares-costa')
+    (8,  'LATTES',       1, 'http://lattes.cnpq.br/1234567890123456'),
+    (8,  'ORCID',        2, 'https://orcid.org/0000-0001-2345-6789'),
+    (8,  'RESEARCHGATE', 3, 'https://www.researchgate.net/profile/Ana-Beatriz-Santos'),
+    (9,  'LATTES',       1, 'http://lattes.cnpq.br/1122334455667788'),
+    (10, 'RESEARCHGATE', 1, 'https://www.researchgate.net/profile/Carlos-Eduardo-Melo'),
+    (13, 'LATTES',       1, 'http://lattes.cnpq.br/1111222233334444'),
+    (13, 'ORCID',        2, 'https://orcid.org/0000-0002-9876-5432'),
+    (14, 'RESEARCHGATE', 1, 'https://www.researchgate.net/profile/Juliana-Ferreira-Paz')
 ) AS v(id_usuario, tipolink_codigo, ordem, url)
 JOIN tipo_link tl ON tl.codigo = v.tipolink_codigo;
 
 -- [07-E-1] campanha
--- valor_bruto_arrecadado não está no INSERT (a coluna tem DEFAULT 0): o valor final é 100% produto das
--- contribuições reais inseridas logo abaixo, somadas por trg_sincroniza_arrecadado_campanha (que fica LIGADA
--- durante o INSERT de contribuicao, ver [07-H-1]), e não de um número digitado à mão (que divergia da soma
--- real). Mesmo princípio de perfil_pesquisador.score_atual (bloco [07-D-3]).
--- trg_campanha_valida_prazo_negocio fica desligada só durante esta carga: várias campanhas são dado histórico
--- anterior à regra de prazo atual (algumas com mais de 60 dias de duração, ex.: a campanha 3 tem 90). Mesmo
--- raciocínio das triggers de contribuicao em [07-H-1]: dado histórico não deve ser barrado por uma regra que só
--- passou a valer depois dele existir.
-ALTER TABLE campanha DISABLE TRIGGER trg_campanha_valida_prazo_negocio;
+-- Uma campanha para cada situação do sistema, com datas relativas ao dia em que o banco é montado (a demonstração
+-- nunca envelhece). As que já terminaram nascem 'ativo' com o prazo no passado e são fechadas mais abaixo pelas
+-- próprias rotinas do sistema ([07-H-5]): é o fechamento de verdade que cria o repasse ou manda devolver.
+--    1 Ana       tudo-ou-nada  sucesso, repasse concluído
+--    2 Ana       flexível      sucesso com cartão; um cartão pago no fim gera um repasse adicional
+--    3 Ana       flexível      ativa: Pix, cartão a liberar, boleto, Pix aguardando pagamento, vencido, órfão, estornado
+--    4 Bruno     tudo-ou-nada  sucesso, rejeitada uma vez antes de ser aprovada
+--    5 Bruno     tudo-ou-nada  não atingida: cada devolução numa situação
+--    6 Carlos    flexível      não atingida, fica com o que arrecadou; a transferência falhou (repasse em erro)
+--    7 Carlos    tudo-ou-nada  ativa, já bateu a meta e pediu para encerrar antes do prazo (há 1 dia)
+--    8 Renata    tudo-ou-nada  sucesso; o repasse espera ela cadastrar a chave Pix
+--    9 Eduardo   flexível      encerrada antes do prazo com o pedido aprovado; transferência em andamento
+--   10 Beatriz   flexível      ativa, pedido de encerramento esperando há 40 dias, denúncia pendente
+--   11 Beatriz   flexível      ativa, um pedido rejeitado e outro esperando há 15 dias
+--   12 Juliana   tudo-ou-nada  "Em breve" (RF-059): aprovada, começa daqui a 7 dias
+--   13 Juliana   tudo-ou-nada  rascunho
+--   14 Patrícia  tudo-ou-nada  rejeitada há 5 dias, com reenvio disponível
+--   15 Patrícia  tudo-ou-nada  projeto cancelado pela pesquisadora: todo o dinheiro voltou
+--   16 Vinícius  flexível      encerrada por moderação depois de denúncias procedentes
+--   17 Gabriel   tudo-ou-nada  na fila há 15 dias; dono na faixa Atenção ("Score baixo")
+--   18 Renata    tudo-ou-nada  na fila, reenviada depois de uma rejeição (há 2 dias)
+--   19 Vinícius  tudo-ou-nada  na fila há 40 dias; dono na faixa Atenção
+--   20 Bruno     tudo-ou-nada  na fila há 3 dias, com 2 marcos: o checklist "Pronta para aprovar?" mostra o que falta
+--                              (no uso real o envio barra isso; só aconteceria se os parâmetros mudassem depois)
+--   21 Pesquisador Sistema     ativa e sem comentário, para testar comentário e endosso pelo login rápido (não é da
+--                              demonstração: a faceta Origem do Campo de Testes a mostra como "teste")
+-- A fila de aprovação mostra as três cores da espera (até 7 dias, até 30, acima: espera_atencao_dias e
+-- espera_critica_dias), e Pedidos de Encerramento também (1, 15 e 40 dias). Quem aprova e rejeita é o Curador
+-- Sistema (6). A duração de toda campanha fica entre prazo_minimo_campanha_dias e prazo_maximo_campanha_dias.
+-- seed_campanha é uma tabela temporária (some no fim da sessão) que também gera o orçamento e o cronograma abaixo.
+CREATE TEMP TABLE seed_campanha (
+    n INT PRIMARY KEY, dono INT, aprovador INT, area TEXT, titulo TEXT, modelo modelo_campanha, meta DECIMAL(10,2),
+    descricao TEXT, inicio INT, fim INT, status status_campanha, aprovada INT, criada INT, enviada INT
+);
+INSERT INTO seed_campanha VALUES
+    -- n, dono, aprovador, área CNPq, título, modelo, meta, descrição, início, fim, status, aprovada, criada, enviada (dias a partir de hoje)
+    (1,  8,  6,    '1.03.00.00', 'Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA', 'all-or-nothing', 12000.00, 'Pesquisa aplicada em inteligência artificial para detecção precoce da doença de Alzheimer usando redes neurais convolucionais.', -230, -185, 'ativo', -232, -240, -236),
+    (2,  8,  6,    '1.03.00.00', 'Assistente de Leitura para Pessoas com Dislexia Baseado em IA', 'flexivel', 8000.00, 'Ferramenta de apoio à leitura que adapta fonte, espaçamento e ritmo do texto conforme o perfil de leitura de pessoas com dislexia.', -140, -100, 'ativo', -142, -150, -146),
+    (3,  8,  6,    '1.03.00.00', 'Detecção de Retinopatia Diabética em Fotos de Celular', 'flexivel', 15000.00, 'Modelo de visão computacional para triagem de retinopatia diabética a partir de fotos de fundo de olho tiradas com celular em unidades básicas de saúde.', -20, 25, 'ativo', -22, -30, -26),
+    (4,  9,  6,    '2.12.00.00', 'Bioprospecção de Fungos da Caatinga com Potencial Antibiótico', 'all-or-nothing', 20000.00, 'Coleta e análise de fungos endofíticos da Caatinga para identificação de compostos com atividade antibacteriana frente a superbactérias.', -150, -105, 'ativo', -152, -165, -154),
+    (5,  9,  6,    '4.06.00.00', 'Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense', 'all-or-nothing', 25000.00, 'Levantamento epidemiológico detalhado dos casos de dengue em municípios da Baixada Fluminense durante o surto mais recente.', -55, -10, 'ativo', -57, -65, -61),
+    (6,  10, 6,    '3.13.00.00', 'Prótese de Baixo Custo com Impressão 3D para Amputados do SUS', 'flexivel', 28000.00, 'Projeto de engenharia biomédica para fabricação de próteses funcionais de membros superiores a custo acessível para o sistema público.', -80, -35, 'ativo', -82, -90, -86),
+    (7,  10, 6,    '3.13.00.00', 'Cadeira de Rodas Motorizada de Baixo Custo com Peças Recicladas', 'all-or-nothing', 5000.00, 'Projeto de uma cadeira de rodas motorizada montada com peças recicladas de bicicletas e patinetes, para doação em comunidades de baixa renda.', -25, 20, 'ativo', -27, -35, -31),
+    (8,  11, 6,    '4.05.00.00', 'Efeito do Exercício Físico na Imunidade de Idosos Pós-Covid', 'all-or-nothing', 10000.00, 'Acompanhamento de marcadores imunológicos em idosos que tiveram covid, comparando grupos com e sem programa de exercício supervisionado.', -48, -3, 'ativo', -50, -58, -54),
+    (9,  12, 6,    '2.05.00.00', 'Levantamento de Espécies Invasoras em Ecossistemas Costeiros', 'flexivel', 18000.00, 'Mapeamento de espécies exóticas invasoras em restingas e manguezais do litoral nordestino e seu impacto na fauna nativa.', -40, 10, 'ativo', -42, -50, -46),
+    (10, 13, 6,    '2.12.00.00', 'Qualidade da Água de Nascentes Urbanas em Belo Horizonte', 'flexivel', 20000.00, 'Análise física, química e microbiológica da água de nascentes em áreas urbanas de Belo Horizonte, com mapa público dos resultados.', -50, 10, 'ativo', -52, -60, -56),
+    (11, 13, 6,    '6.06.00.00', 'Memória Oral das Benzedeiras do Vale do Ribeira', 'flexivel', 10000.00, 'Registro em áudio e vídeo das práticas e saberes das benzedeiras do Vale do Ribeira, com devolução do acervo às comunidades.', -30, 15, 'ativo', -32, -40, -36),
+    (12, 14, 6,    '6.06.00.00', 'Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina', 'all-or-nothing', 22000.00, 'Pesquisa quantitativa e qualitativa sobre indicadores socioeconômicos, acesso a direitos e identidade cultural em quilombos catarinenses.', 7, 45, 'ativo', -2, -12, -8),
+    (13, 14, NULL, '7.02.00.00', 'Análise Discursiva das Fake News sobre Vacinas nas Redes Sociais', 'all-or-nothing', 15000.00, 'Estudo linguístico-computacional sobre estratégias discursivas de desinformação vacinal em redes sociais brasileiras.', NULL, NULL, 'rascunho', NULL, -2, NULL),
+    (14, 15, NULL, '4.01.00.00', 'Adesão ao Tratamento de Hipertensão em Comunidades Ribeirinhas', 'all-or-nothing', 8000.00, 'Estudo sobre os fatores que levam ao abandono do tratamento de hipertensão em comunidades ribeirinhas do Amazonas.', 20, 60, 'rejeitado', NULL, -15, -10),
+    (15, 15, 6,    '4.01.00.00', 'Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal', 'all-or-nothing', 30000.00, 'Ensaio clínico randomizado avaliando o uso de probióticos na microbiota intestinal de neonatos para prevenção de sepse hospitalar.', -35, 10, 'ativo', -37, -45, -41),
+    (16, 16, 6,    '7.08.00.00', 'Avaliação de Programa de Reforço Escolar em Escolas Públicas de Fortaleza', 'flexivel', 18000.00, 'Avaliação do impacto de um programa de reforço escolar em matemática nas escolas municipais de Fortaleza.', -40, 5, 'ativo', -42, -50, -46),
+    (17, 17, NULL, '2.05.00.00', 'Inventário de Abelhas Nativas em Parques Urbanos de Curitiba', 'all-or-nothing', 9000.00, 'Levantamento das espécies de abelhas sem ferrão em parques urbanos, com coleta, identificação e mapa de ocorrência.', 8, 38, 'aguardando_aprovacao', NULL, -18, -15),
+    (18, 11, NULL, '4.05.00.00', 'Estudo sobre Microbiota Intestinal em Pacientes Oncológicos', 'all-or-nothing', 20000.00, 'Caracterização da microbiota intestinal e sua relação com resposta a quimioterapia em pacientes com câncer colorretal.', 12, 52, 'aguardando_aprovacao', NULL, -30, -2),
+    (19, 16, NULL, '6.07.00.00', 'Percepção de Segurança no Transporte Público Noturno', 'all-or-nothing', 6000.00, 'Questionário e entrevistas com usuárias do transporte público noturno sobre percepção de segurança e rotas evitadas.', 6, 36, 'aguardando_aprovacao', NULL, -45, -40),
+    (20, 9,  NULL, '1.03.00.00', 'Nova Plataforma de Diagnóstico por Imagem com Machine Learning', 'all-or-nothing', 30000.00, 'Sistema de apoio ao diagnóstico radiológico baseado em visão computacional, validado com dados de dois hospitais universitários.', 10, 45, 'aguardando_aprovacao', NULL, -5, -3),
+    (21, 7,  6,    '6.07.00.00', 'Campanha de Teste: Comentários e Endosso', 'flexivel', 10000.00, 'Campanha ativa para testar comentários, endosso e atualizações. Comente em nome de um pesquisador na Bancada da Campanha; endosse entrando como Pesquisador Sistema, em Minhas Campanhas.', -5, 40, 'ativo', -5, -7, -6);
 
--- encerrado_em explícito na campanha 7 (única com status 'encerrado' no seed): fn_preenche_encerramento_campanha
--- só dispara em UPDATE, não em INSERT, então um dado histórico que já nasce 'encerrado' precisa do valor
--- explícito (o mesmo avaliado_em da solicitacao_encerramento correspondente, [07-E-5]).
--- Metas das campanhas 2 e 5 ajustadas para não passarem do arrecadado (28.500 e 22.000): "sucesso" abaixo da
--- meta é um estado que o próprio banco proíbe no caminho automático.
-INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo, meta_financeira, taxa_plataforma, descricao, data_inicio, data_fim, status, aprovado_em, criado_em, encerrado_em) VALUES
-(12, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.03.00.00'), 'Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA',      'all-or-nothing', 50000.00, 5.00, 'Pesquisa aplicada em inteligência artificial para detecção precoce da doença de Alzheimer usando redes neurais convolucionais.',                          '2024-02-01', '2024-04-01', 'sucesso',             '2024-02-01', '2024-01-20 10:00:00', '2024-04-01'),
-(13, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '3.13.00.00'), 'Prótese de Baixo Custo com Impressão 3D para Amputados do SUS',                  'flexivel',       28000.00, 5.00, 'Projeto de engenharia biomédica para fabricação de próteses funcionais de membros superiores a custo acessível para o sistema público.',                '2024-02-15', '2024-05-01', 'sucesso',             '2024-02-15', '2024-02-05 11:30:00', '2024-05-01'),
-(14, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.12.00.00'), 'Bioprospecção de Fungos da Caatinga com Potencial Antibiótico',                  'all-or-nothing', 40000.00, 5.00, 'Coleta e análise de fungos endofíticos da Caatinga para identificação de compostos com atividade antibacteriana frente a superbactérias.',              '2024-03-01', '2024-05-30', 'sucesso',             '2024-03-01', '2024-02-20 09:15:00', '2024-05-30'),
-(15, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.06.00.00'), 'Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense 2024',          'all-or-nothing', 25000.00, 5.00, 'Levantamento epidemiológico detalhado dos casos de dengue em municípios da Baixada Fluminense durante o surto de 2024.',                                 '2024-03-10', '2024-04-24', 'nao_atingido',        '2024-03-10', '2024-03-01 14:00:00', '2024-04-24'),
-(16, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '6.06.00.00'), 'Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina',         'flexivel',       22000.00, 5.00, 'Pesquisa quantitativa e qualitativa sobre indicadores socioeconômicos, acesso a direitos e identidade cultural em quilombos catarinenses.',              '2024-04-01', '2024-06-01', 'sucesso',             '2024-04-01', '2024-03-20 08:00:00', '2024-06-01'),
-(17, NULL, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '7.02.00.00'), 'Análise Discursiva das Fake News sobre Vacinas no Twitter (2022–2024)',       'all-or-nothing', 15000.00, 5.00, 'Estudo linguístico-computacional sobre estratégias discursivas de desinformação vacinal em redes sociais brasileiras.',                                  NULL,          NULL,         'rascunho',             NULL,        NOW(),                 NULL),
-(18, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.01.00.00'), 'Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal',  'all-or-nothing', 45000.00, 5.00, 'Ensaio clínico randomizado avaliando o uso de probióticos na microbiota intestinal de neonatos para prevenção de sepse hospitalar.',                    '2024-05-01', '2024-07-30', 'encerrado',           '2024-05-01', '2024-04-15 10:00:00', '2024-07-21 11:00:00'),
--- 3 campanhas novas (ids 8, 9, 10 nesta ordem de inserção), uma para cada pesquisador novo que precisa de
--- histórico real: ver o comentário completo depois do bloco de denuncia sobre por que cada uma dá o resultado de
--- score esperado.
-(19, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.03.00.00'), 'Nova Plataforma de Diagnóstico por Imagem com Machine Learning',              'all-or-nothing', 30000.00, 5.00, 'Sistema de apoio ao diagnóstico radiológico baseado em visão computacional, validado com dados de dois hospitais universitários.',                      '2024-06-01', '2024-07-16', 'sucesso',             '2024-06-01', '2024-05-20 10:00:00', '2024-07-16'),
-(20, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.05.00.00'), 'Estudo sobre Microbiota Intestinal em Pacientes Oncológicos',                 'flexivel',       20000.00, 5.00, 'Caracterização da microbiota intestinal e sua relação com resposta a quimioterapia em pacientes com câncer colorretal.',                                '2024-06-01', '2024-07-21', 'sucesso',             '2024-06-01', '2024-05-22 09:30:00', '2024-07-21'),
-(21, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.05.00.00'), 'Levantamento de Espécies Invasoras em Ecossistemas Costeiros',                'all-or-nothing', 25000.00, 5.00, 'Mapeamento de espécies exóticas invasoras em restingas e manguezais do litoral nordestino e seu impacto na fauna nativa.',                              NOW() - INTERVAL '20 days', NOW() + INTERVAL '25 days', 'ativo', NOW() - INTERVAL '20 days', NOW() - INTERVAL '25 days', NULL),
--- Campanha 11: ativa e sem comentário, para testar comentário e endosso. A dona é a "Pesquisador Sistema" (7), que
--- entra pelo login rápido de desenvolvimento e vê a campanha em Minhas Campanhas; os outros pesquisadores comentam
--- pela Bancada da Campanha (ids acima de 10 não são da demonstração protegida). Datas relativas: ativa por 40 dias
--- depois de o banco ser montado.
-(7, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '6.07.00.00'), 'Campanha de Teste: Comentários e Endosso',                           'flexivel',       10000.00, public.config_numero('taxa_plataforma_padrao', 5.00), 'Campanha ativa para testar comentários, endosso e atualizações. Comente em nome de um pesquisador na Bancada da Campanha; endosse entrando como Pesquisador Sistema, em Minhas Campanhas.', NOW() - INTERVAL '5 days', NOW() + INTERVAL '40 days', 'ativo', NOW() - INTERVAL '5 days', NOW() - INTERVAL '7 days', NULL),
--- Campanha 12: a do Vinícius (22), encerrada por moderação depois de 3 denúncias procedentes (dados inventados). É o
--- que o leva à faixa "Atenção": sem ela, a parte "campanhas" da reputação ficaria inteira (ver o resumo depois das
--- denúncias).
-(22, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '7.08.00.00'), 'Avaliação de Programa de Reforço Escolar em Escolas Públicas de Fortaleza', 'flexivel', 18000.00, 5.00, 'Avaliação do impacto de um programa de reforço escolar em matemática nas escolas municipais de Fortaleza.', '2024-07-01 00:00:00', '2024-08-15 23:59:59', 'encerrado_moderacao', '2024-06-28 10:00:00', '2024-06-20 09:00:00', '2024-07-20 15:00:00');
+-- Desligadas só nesta carga: trg_campanha_valida_prazo_negocio (as datas de início ficam no passado),
+-- trg_campanha_limite_simultaneo (as que vão fechar mais abaixo ainda estão 'ativo' agora; no fim, ninguém passa do
+-- limite de campanhas simultâneas) e trg_campanha_carimba_envio_aprovacao (troca enviado_aprovacao_em por NOW()).
+ALTER TABLE campanha DISABLE TRIGGER trg_campanha_valida_prazo_negocio;
+ALTER TABLE campanha DISABLE TRIGGER trg_campanha_limite_simultaneo;
+ALTER TABLE campanha DISABLE TRIGGER trg_campanha_carimba_envio_aprovacao;
+
+INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo, meta_financeira, taxa_plataforma, descricao, data_inicio, data_fim, status, aprovado_em, criado_em, enviado_aprovacao_em)
+SELECT s.dono, s.aprovador, ac.id_area_conhecimento, s.titulo, s.modelo, s.meta,
+       public.config_numero('taxa_plataforma_padrao', 5.00), s.descricao,
+       NOW() + s.inicio * INTERVAL '1 day', NOW() + s.fim * INTERVAL '1 day', s.status,
+       NOW() + s.aprovada * INTERVAL '1 day', NOW() + s.criada * INTERVAL '1 day', NOW() + s.enviada * INTERVAL '1 day'
+FROM seed_campanha s
+JOIN area_conhecimento ac ON ac.codigo_cnpq = s.area
+ORDER BY s.n;
 
 ALTER TABLE campanha ENABLE TRIGGER trg_campanha_valida_prazo_negocio;
-
--- [07-E-1b] campanha: a fila de aprovação (ids 13 a 17) e uma rejeitada com reenvio (18). Datas relativas ao dia em
--- que o banco é montado, para a coluna "esperando" mostrar as três cores (verde até 7 dias, laranja até 30, vermelho
--- acima: espera_atencao_dias e espera_critica_dias). Cada uma mostra uma situação da fila:
---   13 Bruno (19):   comum, chegou há 3 dias.
---   14 Renata (20):  reenviada depois de uma rejeição ([07-E-6]); o reenvio zera a espera (há 2 dias).
---   15 Gabriel (25): dono na faixa "Atenção" (score 20): a coluna "atenção" mostra "Score baixo"; há 15 dias.
---   16 Camila (26):  também na faixa "Atenção" (score 23); esperando há 40 dias.
---   17 Ana (12):     cronograma com 2 marcos, abaixo do mínimo: o checklist "Pronta para aprovar?" mostra o que falta e
---                    Aprovar fica bloqueado. No uso real o envio já barra isso (fn_valida_completude_campanha); só
---                    aconteceria se os parâmetros mudassem depois do envio. Está aqui para a demonstração.
---   18 Patrícia (18): rejeitada há 5 dias, com reenvio disponível ("Corrigir e reenviar").
--- trg_campanha_carimba_envio_aprovacao fica desligada só nesta carga: ela troca enviado_aprovacao_em por NOW() no INSERT.
-ALTER TABLE campanha DISABLE TRIGGER trg_campanha_carimba_envio_aprovacao;
-INSERT INTO campanha (id_usuario, id_area_conhecimento, titulo, modelo, meta_financeira, taxa_plataforma, descricao, data_inicio, data_fim, status, criado_em, enviado_aprovacao_em) VALUES
-(19, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.03.00.00'), 'Detecção de Retinopatia Diabética em Fotos de Celular',                'all-or-nothing', 12000.00, public.config_numero('taxa_plataforma_padrao', 5.00), 'Modelo de visão computacional para triagem de retinopatia diabética a partir de fotos de fundo de olho tiradas com celular em unidades básicas de saúde.', NOW() + INTERVAL '10 days', NOW() + INTERVAL '45 days', 'aguardando_aprovacao', NOW() - INTERVAL '5 days',  NOW() - INTERVAL '3 days'),
-(20, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.05.00.00'), 'Efeito do Exercício Físico na Imunidade de Idosos Pós-Covid',          'all-or-nothing', 18000.00, public.config_numero('taxa_plataforma_padrao', 5.00), 'Acompanhamento de marcadores imunológicos em idosos que tiveram covid, comparando grupos com e sem programa de exercício supervisionado.', NOW() + INTERVAL '12 days', NOW() + INTERVAL '52 days', 'aguardando_aprovacao', NOW() - INTERVAL '30 days', NOW() - INTERVAL '2 days'),
-(25, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.05.00.00'), 'Inventário de Abelhas Nativas em Parques Urbanos de Curitiba',         'all-or-nothing',  9000.00, public.config_numero('taxa_plataforma_padrao', 5.00), 'Levantamento das espécies de abelhas sem ferrão em parques urbanos, com coleta, identificação e mapa de ocorrência.', NOW() + INTERVAL '8 days',  NOW() + INTERVAL '38 days', 'aguardando_aprovacao', NOW() - INTERVAL '18 days', NOW() - INTERVAL '15 days'),
-(26, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '6.07.00.00'), 'Percepção de Segurança no Transporte Público Noturno',                  'all-or-nothing',  6000.00, public.config_numero('taxa_plataforma_padrao', 5.00), 'Questionário e entrevistas com usuárias do transporte público noturno sobre percepção de segurança e rotas evitadas.', NOW() + INTERVAL '6 days',  NOW() + INTERVAL '36 days', 'aguardando_aprovacao', NOW() - INTERVAL '45 days', NOW() - INTERVAL '40 days'),
-(12, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.03.00.00'), 'Assistente de Leitura para Pessoas com Dislexia Baseado em IA',          'all-or-nothing', 15000.00, public.config_numero('taxa_plataforma_padrao', 5.00), 'Ferramenta de apoio à leitura que adapta fonte, espaçamento e ritmo do texto conforme o perfil de leitura de pessoas com dislexia.', NOW() + INTERVAL '15 days', NOW() + INTERVAL '55 days', 'aguardando_aprovacao', NOW() - INTERVAL '12 days', NOW() - INTERVAL '9 days'),
-(18, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.01.00.00'), 'Adesão ao Tratamento de Hipertensão em Comunidades Ribeirinhas',        'all-or-nothing',  8000.00, public.config_numero('taxa_plataforma_padrao', 5.00), 'Estudo sobre os fatores que levam ao abandono do tratamento de hipertensão em comunidades ribeirinhas do Amazonas.', NOW() + INTERVAL '20 days', NOW() + INTERVAL '60 days', 'rejeitado',            NOW() - INTERVAL '15 days', NOW() - INTERVAL '10 days');
+ALTER TABLE campanha ENABLE TRIGGER trg_campanha_limite_simultaneo;
 ALTER TABLE campanha ENABLE TRIGGER trg_campanha_carimba_envio_aprovacao;
 
--- [07-E-1c] orcamento_campanha e marco_cronograma das campanhas 13 a 18 (as já aprovadas estão em [07-E-1e]). Soma do orçamento = meta, e os marcos depois do início, como o envio exige.
--- Campanha achada pelo título (chave natural), não pelo id.
-INSERT INTO orcamento_campanha (id_campanha, categoria, descricao, valor, ordem)
-SELECT c.id_campanha, v.categoria, v.descricao, v.valor, v.ordem
-FROM (VALUES
-    ('Detecção de Retinopatia Diabética em Fotos de Celular', 'Equipamentos', 'Lentes acopláveis para celular', 4000.00, 1),
-    ('Detecção de Retinopatia Diabética em Fotos de Celular', 'Serviços de terceiros', 'Anotação das imagens por oftalmologistas', 8000.00, 2),
-    ('Efeito do Exercício Físico na Imunidade de Idosos Pós-Covid', 'Material de consumo', 'Kits de exame imunológico', 12000.00, 1),
-    ('Efeito do Exercício Físico na Imunidade de Idosos Pós-Covid', 'Bolsas', 'Bolsa de iniciação científica (6 meses)', 6000.00, 2),
-    ('Inventário de Abelhas Nativas em Parques Urbanos de Curitiba', 'Material de campo', 'Armadilhas e frascos de coleta', 3500.00, 1),
-    ('Inventário de Abelhas Nativas em Parques Urbanos de Curitiba', 'Viagens', 'Deslocamento entre os parques', 2500.00, 2),
-    ('Inventário de Abelhas Nativas em Parques Urbanos de Curitiba', 'Serviços de terceiros', 'Identificação das espécies por especialista', 3000.00, 3),
-    ('Percepção de Segurança no Transporte Público Noturno', 'Serviços de terceiros', 'Transcrição das entrevistas', 4000.00, 1),
-    ('Percepção de Segurança no Transporte Público Noturno', 'Material de consumo', 'Impressão dos questionários', 2000.00, 2),
-    ('Assistente de Leitura para Pessoas com Dislexia Baseado em IA', 'Equipamentos', 'Tablets para os testes com usuários', 9000.00, 1),
-    ('Assistente de Leitura para Pessoas com Dislexia Baseado em IA', 'Serviços de terceiros', 'Avaliação por fonoaudiólogas', 6000.00, 2),
-    ('Adesão ao Tratamento de Hipertensão em Comunidades Ribeirinhas', 'Viagens', 'Barco até as comunidades', 5000.00, 1),
-    ('Adesão ao Tratamento de Hipertensão em Comunidades Ribeirinhas', 'Material de consumo', 'Aparelhos de pressão', 3000.00, 2)
-) AS v(titulo, categoria, descricao, valor, ordem)
-JOIN campanha c ON c.titulo = v.titulo;
+-- Os blocos abaixo usam o número da lista como id_campanha: confere que a renumeração bateu.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM seed_campanha s LEFT JOIN campanha c ON c.id_campanha = s.n WHERE c.titulo IS DISTINCT FROM s.titulo) THEN
+        RAISE EXCEPTION 'seed: os ids das campanhas não seguem a lista de [07-E-1]';
+    END IF;
+END;
+$$;
 
-INSERT INTO marco_cronograma (id_campanha, titulo, descricao, data_prevista, ordem)
-SELECT c.id_campanha, v.titulo_marco, NULL, c.data_inicio + v.dias * INTERVAL '1 day', v.ordem
-FROM (VALUES
-    ('Detecção de Retinopatia Diabética em Fotos de Celular', 'Coleta das imagens', 5, 1),
-    ('Detecção de Retinopatia Diabética em Fotos de Celular', 'Treino do modelo', 20, 2),
-    ('Detecção de Retinopatia Diabética em Fotos de Celular', 'Validação nas unidades de saúde', 33, 3),
-    ('Efeito do Exercício Físico na Imunidade de Idosos Pós-Covid', 'Recrutamento dos participantes', 5, 1),
-    ('Efeito do Exercício Físico na Imunidade de Idosos Pós-Covid', 'Coleta inicial de sangue', 15, 2),
-    ('Efeito do Exercício Físico na Imunidade de Idosos Pós-Covid', 'Coleta final e análise', 38, 3),
-    ('Inventário de Abelhas Nativas em Parques Urbanos de Curitiba', 'Primeira campanha de coleta', 4, 1),
-    ('Inventário de Abelhas Nativas em Parques Urbanos de Curitiba', 'Segunda campanha de coleta', 15, 2),
-    ('Inventário de Abelhas Nativas em Parques Urbanos de Curitiba', 'Mapa de ocorrência publicado', 28, 3),
-    ('Percepção de Segurança no Transporte Público Noturno', 'Aplicação dos questionários', 5, 1),
-    ('Percepção de Segurança no Transporte Público Noturno', 'Entrevistas', 15, 2),
-    ('Percepção de Segurança no Transporte Público Noturno', 'Relatório final', 28, 3),
-    ('Assistente de Leitura para Pessoas com Dislexia Baseado em IA', 'Protótipo do assistente', 10, 1),
-    ('Assistente de Leitura para Pessoas com Dislexia Baseado em IA', 'Testes com usuários', 30, 2),
-    ('Adesão ao Tratamento de Hipertensão em Comunidades Ribeirinhas', 'Visitas às comunidades', 5, 1),
-    ('Adesão ao Tratamento de Hipertensão em Comunidades Ribeirinhas', 'Entrevistas com agentes de saúde', 18, 2),
-    ('Adesão ao Tratamento de Hipertensão em Comunidades Ribeirinhas', 'Relatório final', 35, 3)
-) AS v(titulo, titulo_marco, dias, ordem)
-JOIN campanha c ON c.titulo = v.titulo;
-
--- [07-E-1d] campanha: mais três aprovadas (ids 19 a 21).
---   19 Juliana (16): "Em breve" (RF-059): aprovada, mas começa daqui a 7 dias (selo azul nas listas).
---   20 Beatriz (14): ativa há 50 dias, com contribuições ([07-H-1]) e pedido de encerramento esperando há 40 dias
---                    ([07-E-5]); também é o alvo de uma denúncia pendente ([07-E-8]).
---   21 Patrícia (18): ativa há 30 dias, com contribuições e pedido de encerramento esperando há 15 dias.
--- Com o pedido da campanha 10 (há 1 dia), a coluna "esperando" de Pedidos de Encerramento mostra as três cores.
--- Pedido de encerramento só existe com dinheiro arrecadado (sem arrecadação, o pesquisador encerra direto).
-ALTER TABLE campanha DISABLE TRIGGER trg_campanha_valida_prazo_negocio;
-INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo, meta_financeira, taxa_plataforma, descricao, data_inicio, data_fim, status, aprovado_em, criado_em) VALUES
-(16, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '6.06.00.00'), 'Memória Oral das Benzedeiras do Vale do Ribeira',                  'all-or-nothing', 10000.00, public.config_numero('taxa_plataforma_padrao', 5.00), 'Registro em áudio e vídeo das práticas e saberes das benzedeiras do Vale do Ribeira, com devolução do acervo às comunidades.', NOW() + INTERVAL '7 days',   NOW() + INTERVAL '45 days', 'ativo', NOW() - INTERVAL '2 days',  NOW() - INTERVAL '12 days'),
-(14, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.12.00.00'), 'Qualidade da Água de Nascentes Urbanas em Belo Horizonte',         'all-or-nothing', 20000.00, public.config_numero('taxa_plataforma_padrao', 5.00), 'Análise física, química e microbiológica da água de nascentes em áreas urbanas de Belo Horizonte, com mapa público dos resultados.', NOW() - INTERVAL '50 days', NOW() + INTERVAL '10 days', 'ativo', NOW() - INTERVAL '52 days', NOW() - INTERVAL '60 days'),
-(18, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '3.13.00.00'), 'Cadeira de Rodas Motorizada de Baixo Custo com Peças Recicladas',  'all-or-nothing', 15000.00, public.config_numero('taxa_plataforma_padrao', 5.00), 'Projeto de uma cadeira de rodas motorizada montada com peças recicladas de bicicletas e patinetes, para doação em comunidades de baixa renda.', NOW() - INTERVAL '30 days', NOW() + INTERVAL '15 days', 'ativo', NOW() - INTERVAL '32 days', NOW() - INTERVAL '40 days');
-ALTER TABLE campanha ENABLE TRIGGER trg_campanha_valida_prazo_negocio;
-
--- [07-E-1e] orcamento_campanha e marco_cronograma das campanhas já aprovadas (1 a 12 e 19 a 21). Sem eles a campanha
--- nunca teria sido aprovada (fn_valida_completude_campanha, 05): pelo menos 1 item de orçamento, 3 marcos e a soma
--- do orçamento igual à meta. As congela ficam desligadas só aqui, porque a campanha já nasce aprovada no seed.
+-- [07-E-1b] orcamento_campanha e marco_cronograma de toda campanha que já foi enviada (o rascunho, 13, ainda não
+-- precisa): 3 itens que somam a meta e 3 marcos dentro do prazo, como o envio exige (fn_valida_completude_campanha, 05).
+-- A campanha 20 fica com 2 marcos de propósito (ver [07-E-1]). As congela ficam desligadas só aqui, porque a maioria
+-- já nasce aprovada.
 ALTER TABLE orcamento_campanha DISABLE TRIGGER trg_orcamento_campanha_congela;
 ALTER TABLE marco_cronograma DISABLE TRIGGER trg_marco_cronograma_congela;
+
 INSERT INTO orcamento_campanha (id_campanha, categoria, descricao, valor, ordem)
-SELECT c.id_campanha, v.categoria, v.descricao, v.valor, v.ordem
+SELECT v.n, v.categoria, v.descricao, s.meta * v.fracao, v.ordem
 FROM (VALUES
-    ('Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA', 'Equipamentos', 'Servidor com GPU para treinar o modelo', 25000.00, 1),
-    ('Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA', 'Serviços de terceiros', 'Laudo das imagens por neurologistas', 15000.00, 2),
-    ('Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA', 'Bolsas', 'Bolsa de iniciação científica (6 meses)', 10000.00, 3),
-    ('Prótese de Baixo Custo com Impressão 3D para Amputados do SUS', 'Equipamentos', 'Impressora 3D de grande formato', 14000.00, 1),
-    ('Prótese de Baixo Custo com Impressão 3D para Amputados do SUS', 'Material de consumo', 'Filamentos e componentes mecânicos', 9000.00, 2),
-    ('Prótese de Baixo Custo com Impressão 3D para Amputados do SUS', 'Serviços de terceiros', 'Avaliação por fisioterapeutas', 5000.00, 3),
-    ('Bioprospecção de Fungos da Caatinga com Potencial Antibiótico', 'Viagens', 'Expedições de coleta na Caatinga', 10000.00, 1),
-    ('Bioprospecção de Fungos da Caatinga com Potencial Antibiótico', 'Material de consumo', 'Meios de cultura e reagentes', 18000.00, 2),
-    ('Bioprospecção de Fungos da Caatinga com Potencial Antibiótico', 'Serviços de terceiros', 'Sequenciamento genético das amostras', 12000.00, 3),
-    ('Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense 2024', 'Bolsas', 'Agentes de pesquisa de campo', 12000.00, 1),
-    ('Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense 2024', 'Viagens', 'Deslocamento entre os municípios', 5000.00, 2),
-    ('Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense 2024', 'Serviços de terceiros', 'Análise estatística dos dados', 8000.00, 3),
-    ('Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina', 'Viagens', 'Visitas às comunidades', 9000.00, 1),
-    ('Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina', 'Bolsas', 'Bolsa de iniciação científica (4 meses)', 8000.00, 2),
-    ('Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina', 'Material de consumo', 'Impressão dos questionários e do relatório', 5000.00, 3),
-    ('Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal', 'Material de consumo', 'Probióticos e placebo', 20000.00, 1),
-    ('Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal', 'Serviços de terceiros', 'Exames laboratoriais', 17000.00, 2),
-    ('Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal', 'Bolsas', 'Bolsa de enfermagem de pesquisa', 8000.00, 3),
-    ('Nova Plataforma de Diagnóstico por Imagem com Machine Learning', 'Equipamentos', 'Servidor para a plataforma', 15000.00, 1),
-    ('Nova Plataforma de Diagnóstico por Imagem com Machine Learning', 'Serviços de terceiros', 'Anotação das imagens por radiologistas', 10000.00, 2),
-    ('Nova Plataforma de Diagnóstico por Imagem com Machine Learning', 'Material de consumo', 'Licenças de software', 5000.00, 3),
-    ('Estudo sobre Microbiota Intestinal em Pacientes Oncológicos', 'Serviços de terceiros', 'Sequenciamento das amostras', 12000.00, 1),
-    ('Estudo sobre Microbiota Intestinal em Pacientes Oncológicos', 'Material de consumo', 'Kits de coleta', 5000.00, 2),
-    ('Estudo sobre Microbiota Intestinal em Pacientes Oncológicos', 'Bolsas', 'Bolsa de iniciação científica (3 meses)', 3000.00, 3),
-    ('Levantamento de Espécies Invasoras em Ecossistemas Costeiros', 'Viagens', 'Saídas de campo pelo litoral', 10000.00, 1),
-    ('Levantamento de Espécies Invasoras em Ecossistemas Costeiros', 'Material de campo', 'Equipamentos de coleta e GPS', 9000.00, 2),
-    ('Levantamento de Espécies Invasoras em Ecossistemas Costeiros', 'Serviços de terceiros', 'Identificação das espécies por especialista', 6000.00, 3),
-    ('Campanha de Teste: Comentários e Endosso', 'Material de consumo', 'Material de divulgação', 6000.00, 1),
-    ('Campanha de Teste: Comentários e Endosso', 'Serviços de terceiros', 'Revisão do texto', 4000.00, 2),
-    ('Avaliação de Programa de Reforço Escolar em Escolas Públicas de Fortaleza', 'Bolsas', 'Aplicadores das avaliações', 8000.00, 1),
-    ('Avaliação de Programa de Reforço Escolar em Escolas Públicas de Fortaleza', 'Material de consumo', 'Impressão das provas', 4000.00, 2),
-    ('Avaliação de Programa de Reforço Escolar em Escolas Públicas de Fortaleza', 'Serviços de terceiros', 'Análise estatística', 6000.00, 3),
-    ('Memória Oral das Benzedeiras do Vale do Ribeira', 'Equipamentos', 'Gravador e microfones', 4000.00, 1),
-    ('Memória Oral das Benzedeiras do Vale do Ribeira', 'Viagens', 'Deslocamento até as comunidades', 3500.00, 2),
-    ('Memória Oral das Benzedeiras do Vale do Ribeira', 'Serviços de terceiros', 'Edição do acervo em vídeo', 2500.00, 3),
-    ('Qualidade da Água de Nascentes Urbanas em Belo Horizonte', 'Serviços de terceiros', 'Análises microbiológicas', 9000.00, 1),
-    ('Qualidade da Água de Nascentes Urbanas em Belo Horizonte', 'Material de campo', 'Frascos e sondas de medição', 6000.00, 2),
-    ('Qualidade da Água de Nascentes Urbanas em Belo Horizonte', 'Viagens', 'Deslocamento entre as nascentes', 5000.00, 3),
-    ('Cadeira de Rodas Motorizada de Baixo Custo com Peças Recicladas', 'Material de consumo', 'Baterias e motores', 7000.00, 1),
-    ('Cadeira de Rodas Motorizada de Baixo Custo com Peças Recicladas', 'Equipamentos', 'Ferramentas de montagem', 5000.00, 2),
-    ('Cadeira de Rodas Motorizada de Baixo Custo com Peças Recicladas', 'Serviços de terceiros', 'Avaliação de segurança', 3000.00, 3)
-) AS v(titulo, categoria, descricao, valor, ordem)
-JOIN campanha c ON c.titulo = v.titulo;
+    (1,  'Equipamentos', 'Servidor com GPU para treinar o modelo', 0.5, 1), (1, 'Serviços de terceiros', 'Laudo das imagens por neurologistas', 0.3, 2), (1, 'Bolsas', 'Bolsa de iniciação científica (6 meses)', 0.2, 3),
+    (2,  'Equipamentos', 'Tablets para os testes com usuários', 0.5, 1), (2, 'Serviços de terceiros', 'Avaliação por fonoaudiólogas', 0.3, 2), (2, 'Bolsas', 'Bolsa de iniciação científica (4 meses)', 0.2, 3),
+    (3,  'Equipamentos', 'Lentes acopláveis para celular', 0.5, 1), (3, 'Serviços de terceiros', 'Anotação das imagens por oftalmologistas', 0.3, 2), (3, 'Viagens', 'Visitas às unidades básicas de saúde', 0.2, 3),
+    (4,  'Material de consumo', 'Meios de cultura e reagentes', 0.5, 1), (4, 'Serviços de terceiros', 'Sequenciamento genético das amostras', 0.3, 2), (4, 'Viagens', 'Expedições de coleta na Caatinga', 0.2, 3),
+    (5,  'Bolsas', 'Agentes de pesquisa de campo', 0.5, 1), (5, 'Serviços de terceiros', 'Análise estatística dos dados', 0.3, 2), (5, 'Viagens', 'Deslocamento entre os municípios', 0.2, 3),
+    (6,  'Equipamentos', 'Impressora 3D de grande formato', 0.5, 1), (6, 'Material de consumo', 'Filamentos e componentes mecânicos', 0.3, 2), (6, 'Serviços de terceiros', 'Avaliação por fisioterapeutas', 0.2, 3),
+    (7,  'Material de consumo', 'Baterias e motores', 0.5, 1), (7, 'Equipamentos', 'Ferramentas de montagem', 0.3, 2), (7, 'Serviços de terceiros', 'Avaliação de segurança', 0.2, 3),
+    (8,  'Material de consumo', 'Kits de exame imunológico', 0.5, 1), (8, 'Bolsas', 'Bolsa de iniciação científica (6 meses)', 0.3, 2), (8, 'Serviços de terceiros', 'Educador físico para as sessões', 0.2, 3),
+    (9,  'Viagens', 'Saídas de campo pelo litoral', 0.5, 1), (9, 'Material de campo', 'Equipamentos de coleta e GPS', 0.3, 2), (9, 'Serviços de terceiros', 'Identificação das espécies por especialista', 0.2, 3),
+    (10, 'Serviços de terceiros', 'Análises microbiológicas', 0.5, 1), (10, 'Material de campo', 'Frascos e sondas de medição', 0.3, 2), (10, 'Viagens', 'Deslocamento entre as nascentes', 0.2, 3),
+    (11, 'Equipamentos', 'Gravador e microfones', 0.5, 1), (11, 'Viagens', 'Deslocamento até as comunidades', 0.3, 2), (11, 'Serviços de terceiros', 'Edição do acervo em vídeo', 0.2, 3),
+    (12, 'Viagens', 'Visitas às comunidades', 0.5, 1), (12, 'Bolsas', 'Bolsa de iniciação científica (4 meses)', 0.3, 2), (12, 'Material de consumo', 'Impressão dos questionários e do relatório', 0.2, 3),
+    (14, 'Viagens', 'Barco até as comunidades', 0.5, 1), (14, 'Material de consumo', 'Aparelhos de pressão', 0.3, 2), (14, 'Serviços de terceiros', 'Transcrição das entrevistas', 0.2, 3),
+    (15, 'Material de consumo', 'Probióticos e placebo', 0.5, 1), (15, 'Serviços de terceiros', 'Exames laboratoriais', 0.3, 2), (15, 'Bolsas', 'Bolsa de enfermagem de pesquisa', 0.2, 3),
+    (16, 'Bolsas', 'Aplicadores das avaliações', 0.5, 1), (16, 'Material de consumo', 'Impressão das provas', 0.3, 2), (16, 'Serviços de terceiros', 'Análise estatística', 0.2, 3),
+    (17, 'Material de campo', 'Armadilhas e frascos de coleta', 0.5, 1), (17, 'Viagens', 'Deslocamento entre os parques', 0.3, 2), (17, 'Serviços de terceiros', 'Identificação das espécies por especialista', 0.2, 3),
+    (18, 'Serviços de terceiros', 'Sequenciamento das amostras', 0.5, 1), (18, 'Material de consumo', 'Kits de coleta', 0.3, 2), (18, 'Bolsas', 'Bolsa de iniciação científica (3 meses)', 0.2, 3),
+    (19, 'Serviços de terceiros', 'Transcrição das entrevistas', 0.5, 1), (19, 'Material de consumo', 'Impressão dos questionários', 0.3, 2), (19, 'Bolsas', 'Entrevistadoras de campo', 0.2, 3),
+    (20, 'Equipamentos', 'Servidor para a plataforma', 0.5, 1), (20, 'Serviços de terceiros', 'Anotação das imagens por radiologistas', 0.3, 2), (20, 'Material de consumo', 'Licenças de software', 0.2, 3),
+    (21, 'Material de consumo', 'Material de divulgação', 0.6, 1), (21, 'Serviços de terceiros', 'Revisão do texto', 0.4, 2)
+) AS v(n, categoria, descricao, fracao, ordem)
+JOIN seed_campanha s ON s.n = v.n;
 
 INSERT INTO marco_cronograma (id_campanha, titulo, descricao, data_prevista, ordem)
-SELECT c.id_campanha, v.titulo_marco, NULL, c.data_inicio + v.dias * INTERVAL '1 day', v.ordem
+SELECT s.n, v.titulo_marco, NULL, c.data_inicio + (c.data_fim - c.data_inicio) * v.fracao, v.ordem
 FROM (VALUES
-    ('Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA', 'Base de exames organizada', 10, 1),
-    ('Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA', 'Primeira versão do modelo', 35, 2),
-    ('Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA', 'Validação com o hospital parceiro', 55, 3),
-    ('Prótese de Baixo Custo com Impressão 3D para Amputados do SUS', 'Modelo digital da prótese', 15, 1),
-    ('Prótese de Baixo Custo com Impressão 3D para Amputados do SUS', 'Protótipos impressos', 40, 2),
-    ('Prótese de Baixo Custo com Impressão 3D para Amputados do SUS', 'Testes com pacientes do SUS', 70, 3),
-    ('Bioprospecção de Fungos da Caatinga com Potencial Antibiótico', 'Coleta das amostras de solo', 15, 1),
-    ('Bioprospecção de Fungos da Caatinga com Potencial Antibiótico', 'Isolamento dos fungos', 50, 2),
-    ('Bioprospecção de Fungos da Caatinga com Potencial Antibiótico', 'Testes de atividade antibiótica', 85, 3),
-    ('Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense 2024', 'Levantamento dos casos notificados', 7, 1),
-    ('Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense 2024', 'Visitas aos bairros', 25, 2),
-    ('Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense 2024', 'Relatório epidemiológico', 42, 3),
-    ('Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina', 'Contato com as lideranças', 7, 1),
-    ('Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina', 'Aplicação dos questionários', 30, 2),
-    ('Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina', 'Devolutiva às comunidades', 58, 3),
-    ('Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal', 'Aprovação no comitê de ética do hospital', 10, 1),
-    ('Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal', 'Acompanhamento dos recém-nascidos', 50, 2),
-    ('Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal', 'Análise dos resultados', 85, 3),
-    ('Nova Plataforma de Diagnóstico por Imagem com Machine Learning', 'Base de imagens anotada', 10, 1),
-    ('Nova Plataforma de Diagnóstico por Imagem com Machine Learning', 'Primeira versão da plataforma', 25, 2),
-    ('Nova Plataforma de Diagnóstico por Imagem com Machine Learning', 'Teste com os radiologistas', 42, 3),
-    ('Estudo sobre Microbiota Intestinal em Pacientes Oncológicos', 'Recrutamento dos pacientes', 7, 1),
-    ('Estudo sobre Microbiota Intestinal em Pacientes Oncológicos', 'Coleta das amostras', 25, 2),
-    ('Estudo sobre Microbiota Intestinal em Pacientes Oncológicos', 'Análise do sequenciamento', 46, 3),
-    ('Levantamento de Espécies Invasoras em Ecossistemas Costeiros', 'Primeiras trilhas mapeadas', 5, 1),
-    ('Levantamento de Espécies Invasoras em Ecossistemas Costeiros', 'Catalogação das espécies', 25, 2),
-    ('Levantamento de Espécies Invasoras em Ecossistemas Costeiros', 'Mapa das espécies invasoras', 42, 3),
-    ('Campanha de Teste: Comentários e Endosso', 'Início das atividades', 5, 1),
-    ('Campanha de Teste: Comentários e Endosso', 'Relatório parcial', 20, 2),
-    ('Campanha de Teste: Comentários e Endosso', 'Relatório final', 40, 3),
-    ('Avaliação de Programa de Reforço Escolar em Escolas Públicas de Fortaleza', 'Avaliação inicial dos alunos', 7, 1),
-    ('Avaliação de Programa de Reforço Escolar em Escolas Públicas de Fortaleza', 'Acompanhamento das aulas de reforço', 25, 2),
-    ('Avaliação de Programa de Reforço Escolar em Escolas Públicas de Fortaleza', 'Avaliação final e relatório', 42, 3),
-    ('Memória Oral das Benzedeiras do Vale do Ribeira', 'Primeiras entrevistas gravadas', 7, 1),
-    ('Memória Oral das Benzedeiras do Vale do Ribeira', 'Edição do acervo', 22, 2),
-    ('Memória Oral das Benzedeiras do Vale do Ribeira', 'Devolução do acervo às comunidades', 35, 3),
-    ('Qualidade da Água de Nascentes Urbanas em Belo Horizonte', 'Mapeamento das nascentes', 10, 1),
-    ('Qualidade da Água de Nascentes Urbanas em Belo Horizonte', 'Coleta e análise das amostras', 35, 2),
-    ('Qualidade da Água de Nascentes Urbanas em Belo Horizonte', 'Mapa público dos resultados', 55, 3),
-    ('Cadeira de Rodas Motorizada de Baixo Custo com Peças Recicladas', 'Projeto da cadeira', 7, 1),
-    ('Cadeira de Rodas Motorizada de Baixo Custo com Peças Recicladas', 'Montagem do protótipo', 25, 2),
-    ('Cadeira de Rodas Motorizada de Baixo Custo com Peças Recicladas', 'Testes com usuários', 42, 3)
-) AS v(titulo, titulo_marco, dias, ordem)
-JOIN campanha c ON c.titulo = v.titulo;
+    (1,  'Base de exames organizada', 0.15, 1), (1, 'Primeira versão do modelo', 0.5, 2), (1, 'Validação com o hospital parceiro', 0.9, 3),
+    (2,  'Protótipo do assistente', 0.15, 1), (2, 'Testes com usuários', 0.5, 2), (2, 'Versão publicada', 0.9, 3),
+    (3,  'Coleta das imagens', 0.15, 1), (3, 'Treino do modelo', 0.5, 2), (3, 'Validação nas unidades de saúde', 0.9, 3),
+    (4,  'Coleta das amostras de solo', 0.15, 1), (4, 'Isolamento dos fungos', 0.5, 2), (4, 'Testes de atividade antibiótica', 0.9, 3),
+    (5,  'Levantamento dos casos notificados', 0.15, 1), (5, 'Visitas aos bairros', 0.5, 2), (5, 'Relatório epidemiológico', 0.9, 3),
+    (6,  'Modelo digital da prótese', 0.15, 1), (6, 'Protótipos impressos', 0.5, 2), (6, 'Testes com pacientes do SUS', 0.9, 3),
+    (7,  'Projeto da cadeira', 0.15, 1), (7, 'Montagem do protótipo', 0.5, 2), (7, 'Testes com usuários', 0.9, 3),
+    (8,  'Recrutamento dos participantes', 0.15, 1), (8, 'Coleta inicial de sangue', 0.5, 2), (8, 'Coleta final e análise', 0.9, 3),
+    (9,  'Primeiras trilhas mapeadas', 0.15, 1), (9, 'Catalogação das espécies', 0.5, 2), (9, 'Mapa das espécies invasoras', 0.9, 3),
+    (10, 'Mapeamento das nascentes', 0.15, 1), (10, 'Coleta e análise das amostras', 0.5, 2), (10, 'Mapa público dos resultados', 0.9, 3),
+    (11, 'Primeiras entrevistas gravadas', 0.15, 1), (11, 'Edição do acervo', 0.5, 2), (11, 'Devolução do acervo às comunidades', 0.9, 3),
+    (12, 'Contato com as lideranças', 0.15, 1), (12, 'Aplicação dos questionários', 0.5, 2), (12, 'Devolutiva às comunidades', 0.9, 3),
+    (14, 'Visitas às comunidades', 0.15, 1), (14, 'Entrevistas com agentes de saúde', 0.5, 2), (14, 'Relatório final', 0.9, 3),
+    (15, 'Aprovação no comitê de ética do hospital', 0.15, 1), (15, 'Acompanhamento dos recém-nascidos', 0.5, 2), (15, 'Análise dos resultados', 0.9, 3),
+    (16, 'Avaliação inicial dos alunos', 0.15, 1), (16, 'Acompanhamento das aulas de reforço', 0.5, 2), (16, 'Avaliação final e relatório', 0.9, 3),
+    (17, 'Primeira campanha de coleta', 0.15, 1), (17, 'Segunda campanha de coleta', 0.5, 2), (17, 'Mapa de ocorrência publicado', 0.9, 3),
+    (18, 'Recrutamento dos pacientes', 0.15, 1), (18, 'Coleta das amostras', 0.5, 2), (18, 'Análise do sequenciamento', 0.9, 3),
+    (19, 'Aplicação dos questionários', 0.15, 1), (19, 'Entrevistas', 0.5, 2), (19, 'Relatório final', 0.9, 3),
+    (20, 'Base de imagens anotada', 0.3, 1), (20, 'Teste com os radiologistas', 0.8, 2),
+    (21, 'Início das atividades', 0.15, 1), (21, 'Relatório parcial', 0.5, 2), (21, 'Relatório final', 0.9, 3)
+) AS v(n, titulo_marco, fracao, ordem)
+JOIN seed_campanha s ON s.n = v.n
+JOIN campanha c ON c.id_campanha = s.n;
+
 ALTER TABLE orcamento_campanha ENABLE TRIGGER trg_orcamento_campanha_congela;
 ALTER TABLE marco_cronograma ENABLE TRIGGER trg_marco_cronograma_congela;
 
--- [07-E-2] seguir_campanha
-INSERT INTO seguir_campanha (id_usuario, id_campanha) VALUES
-(13, 1),
-(14, 1),
-(15, 2),
-(16, 3),
-(17, 3),
-(18, 5),
-(12, 7);
+-- [07-E-6] historico_rejeicao
+-- id_usuario_dono e titulo_campanha são o snapshot gravado na rejeição (ver 01). A 14 está rejeitada agora; a 18 foi
+-- rejeitada e reenviada; a 4 foi rejeitada uma vez antes de ser aprovada.
+INSERT INTO historico_rejeicao (id_campanha, id_usuario_dono, titulo_campanha, id_admin, justificativa, rejeitado_em)
+SELECT c.id_campanha, c.id_usuario, c.titulo, 6, v.justificativa, NOW() + v.dias * INTERVAL '1 day'
+FROM (VALUES
+    (14, 'O orçamento não explica como será o acesso às comunidades fora da época de cheia. Detalhe e reenvie.', -5),
+    (18, 'Faltou o parecer do comitê de ética para a coleta de amostras dos pacientes. Anexe e reenvie.', -6),
+    (4,  'Meta financeira sem justificativa de custos detalhada. Detalhe o orçamento e reenvie.', -158)
+) AS v(n, justificativa, dias)
+JOIN campanha c ON c.id_campanha = v.n;
 
--- [07-D-4] seguir_pesquisador
+-- [07-E-3] atualizacao_campanha
+-- Publicadas enquanto a campanha estava no ar (trg_atualizacao_campanha_status, 05, só aceita campanha publicada).
+-- A quantidade pesa na dimensão Atualização do score: a Ana publica com regularidade em todas; os outros, menos.
+-- Imagem e PDF sem arquivo: o seed não sobe nada para o armazenamento (ver [07-C-4]).
+INSERT INTO atualizacao_campanha (id_campanha, titulo, conteudo, publicado_em, fase, tipo)
+SELECT v.n, v.titulo, v.conteudo, NOW() + v.dias * INTERVAL '1 day', v.fase::fase_atualizacao, v.tipo::tipo_atualizacao
+FROM (VALUES
+    (1,  'Início da coleta de dados clínicos', 'Iniciamos a coleta com o hospital parceiro. Primeiros 200 exames de neuroimagem organizados.', -215, 'andamento', 'texto'),
+    (1,  'Artigo submetido com o código aberto', 'O artigo foi submetido e o código e o conjunto de dados estão em repositório público.', -186, 'resultado_final', 'linkexterno'),
+    (2,  'Primeiros testes com leitores', 'Doze leitores com dislexia testaram o protótipo; a velocidade de leitura subiu em média 18%.', -128, 'andamento', 'imagem'),
+    (2,  'Resultado preliminar dos testes', 'A versão com espaçamento adaptável teve a melhor compreensão de texto nos testes.', -102, 'resultado_preliminar', 'texto'),
+    (3,  'Primeiras fotos coletadas', 'Já temos 1.200 fotos de fundo de olho de três unidades básicas de saúde.', -15, 'andamento', 'texto'),
+    (3,  'Primeira versão do modelo', 'A primeira versão acerta 87% dos casos na base de validação; seguimos ajustando.', -4, 'resultado_preliminar', 'texto'),
+    (4,  'Coleta de amostras concluída', 'Coleta concluída em 5 áreas da Caatinga: 120 fungos catalogados para análise.', -130, 'andamento', 'texto'),
+    (4,  'Relatório final dos testes', 'Três compostos mostraram atividade contra bactérias resistentes. Relatório completo em PDF.', -106, 'resultado_final', 'pdf'),
+    (5,  'Visitas aos bairros começaram', 'A equipe de campo começou as visitas em quatro municípios.', -40, 'andamento', 'texto'),
+    (6,  'Protótipos impressos', 'Os primeiros 10 protótipos foram impressos e estão com os fisioterapeutas.', -60, 'andamento', 'imagem'),
+    (7,  'Projeto da cadeira pronto', 'O projeto mecânico foi validado e as peças recicladas já foram separadas.', -10, 'andamento', 'texto'),
+    (8,  'Recrutamento concluído', 'Recrutamos 60 idosos, divididos nos dois grupos do estudo.', -30, 'andamento', 'texto'),
+    (9,  'Primeiras trilhas mapeadas', 'Mapeamos 3 das 8 trilhas previstas em restingas do litoral.', -25, 'andamento', 'texto'),
+    (10, 'Nascentes mapeadas', 'Identificamos 14 nascentes; a coleta das amostras começa na próxima semana.', -30, 'andamento', 'texto')
+) AS v(n, titulo, conteudo, dias, fase, tipo);
+
+-- [07-E-7] comentario
+-- Só pesquisador comenta, nunca na própria campanha, e só em campanha publicada (todas estavam no ar nestas datas).
+-- Todos nascem sem endosso (trg_comentario_ignora_endosso_criacao, 05): endossar é o passo seguinte, feito como o
+-- dono da campanha (bloco logo abaixo).
+INSERT INTO comentario (id_campanha, id_pesquisador, conteudo, criado_em)
+SELECT v.n, v.autor, v.conteudo, NOW() + v.dias * INTERVAL '1 day'
+FROM (VALUES
+    (1,  9,  'Pesquisa extremamente relevante! A detecção precoce de Alzheimer pode mudar vidas.', -212),
+    (1,  10, 'Parabéns pela metodologia. Seria interessante publicar o conjunto de dados aberto.', -200),
+    (1,  13, 'Acompanhei cada etapa desta campanha. Exemplo de transparência e rigor científico.', -190),
+    (3,  9,  'Triagem por celular pode chegar onde não há oftalmologista. Projeto muito bem pensado.', -14),
+    (3,  11, 'Como vocês vão lidar com a qualidade variável das câmeras dos celulares?', -10),
+    (3,  12, 'O cronograma parece realista para a quantidade de fotos prevista.', -6),
+    (3,  16, 'Acho que a acurácia anunciada é otimista demais para fotos de celular.', -3),
+    (4,  8,  'Vocês pretendem depositar as cepas numa coleção de referência? Isso ajudaria outros grupos.', -130),
+    (5,  14, 'Pena que a arrecadação está lenta. O tema é urgente; vou divulgar.', -30),
+    (5,  8,  'Os dados de campo são valiosos mesmo que a meta não seja batida. Torço por uma nova campanha.', -15),
+    (6,  13, 'O custo por unidade ficou muito abaixo do mercado. Ótimo exemplo de retorno direto à sociedade.', -50),
+    (10, 8,  'Mapa público dos resultados é exatamente o que as prefeituras precisam.', -20),
+    (10, 10, 'Vocês vão repetir a coleta na época de chuva? A qualidade da água muda bastante.', -12),
+    (16, 8,  'Não encontrei a autorização da secretaria de educação para a coleta nas escolas.', -30)
+) AS v(n, autor, conteudo, dias);
+
+-- Endossos, feitos como o dono de cada campanha (o mesmo caminho da tela): validar_comentario_endosso_autor (05)
+-- confere que quem endossa é o dono e calcula a posição do endosso na ordem em que eles acontecem.
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN
+        SELECT c.id_comentario, ca.id_usuario AS dono
+        FROM comentario c
+        JOIN campanha ca ON ca.id_campanha = c.id_campanha
+        JOIN (VALUES (1, 9), (1, 10), (3, 9), (3, 11), (4, 8), (5, 14), (6, 13), (10, 8))
+            AS e(id_campanha, id_pesquisador)
+          ON e.id_campanha = c.id_campanha AND e.id_pesquisador = c.id_pesquisador
+        ORDER BY c.criado_em
+    LOOP
+        PERFORM set_config('app.id_usuario_atual', r.dono::TEXT, TRUE);
+        UPDATE comentario SET endossado = TRUE WHERE id_comentario = r.id_comentario;
+    END LOOP;
+    PERFORM set_config('app.id_usuario_atual', '', TRUE);
+END;
+$$;
+
+-- [07-E-2] seguir_campanha / [07-D-4] seguir_pesquisador
+INSERT INTO seguir_campanha (id_usuario, id_campanha) VALUES
+(18, 3), (19, 3), (20, 10), (18, 5), (19, 1), (9, 3), (13, 7);
+
 INSERT INTO seguir_pesquisador (id_usuario, id_pesquisador) VALUES
-(13, 12),
-(14, 12),
-(15, 14),
-(16, 13),
-(17, 18),
-(18, 14),
-(12, 16);
+(18, 8), (19, 8), (20, 13), (9, 8), (8, 9), (18, 10), (13, 8);
 
 -- [07-H-1] contribuicao
--- O seed representa dados históricos já concluídos, então os dois triggers de VALIDAÇÃO (pensados para tráfego
--- em tempo real, que rejeitariam inserir contribuição numa campanha que já não está 'ativo') são desligados só
--- durante a carga do seed e religados em seguida. trg_sincroniza_arrecadado_campanha, diferente dos outros dois,
--- não valida nada, só soma, então fica LIGADA de propósito: é ela quem calcula campanha.valor_bruto_arrecadado
--- (ver [07-E-1]), em vez de alguém digitar o total à mão e errar a conta.
+-- Toda contribuição nasce 'pendente', como no POST /contribuicao, e o resto da vida dela acontece pelas mesmas
+-- funções que o sistema usa com o provedor de verdade ([07-H-5]): o aviso do provedor (webhook) confirma, o
+-- fechamento da campanha cria o repasse ou manda devolver, o worker de estorno devolve. Assim cada status, cada
+-- linha de auditoria_financeira e cada evento de pagamento é o que o sistema realmente produziria.
+-- provedor = 'seed': as cobranças 'pay_seed_...' nunca existiram em provedor nenhum, e os processos automáticos
+-- (devolução, repasse, conferência, reprocessamento de avisos) só tratam o provedor configurado. Assim, ligar o
+-- Asaas ou o provedor de teste não faz o sistema tentar cobrar, devolver ou transferir um dado de demonstração.
+-- A tarifa do provedor (taxa_pagamento) é gravada pela própria trigger (trg_contribuicao_define_taxa_pagamento, 05).
+-- Regras que valem aqui como no uso real: cartão e boleto só em campanha flexível (trg_contribuicao_all_or_nothing_pix
+-- fica LIGADA), cartão entre os limites de valor. Desligada só nesta carga: trg_valida_status_contribuicao (várias
+-- campanhas já passaram do prazo hoje; o apoio foi feito quando estavam no ar). O boleto nasce desligado
+-- (boleto_habilitado): a contribuição 21 é de quando ele estava ligado, e por isso entra com a validação de valor
+-- desligada só para ela.
+CREATE TEMP TABLE seed_contribuicao (
+    k INT PRIMARY KEY, n INT, quem INT, valor DECIMAL(10,2), meio meio_pagamento, anonima BOOLEAN, dias NUMERIC, cobranca BOOLEAN
+);
+INSERT INTO seed_contribuicao VALUES
+    -- k, campanha, quem apoiou (NULL = sem conta), valor, meio, anônima, criada (dias a partir de hoje), tem cobrança
+    (1,  1,  18,   3000.00, 'pix',            FALSE, -228, TRUE),
+    (2,  1,  19,   2500.00, 'pix',            FALSE, -220, TRUE),
+    (3,  1,  20,   2000.00, 'pix',            FALSE, -210, TRUE),
+    (4,  1,  9,    1500.00, 'pix',            FALSE, -205, TRUE),
+    (5,  1,  10,   1200.00, 'pix',            FALSE, -200, TRUE),
+    (6,  1,  NULL,  800.00, 'pix',            TRUE,  -195, TRUE),
+    (7,  1,  14,   1000.00, 'pix',            FALSE, -190, TRUE),
+    (8,  2,  18,   2500.00, 'pix',            FALSE, -138, TRUE),
+    (9,  2,  20,   2000.00, 'pix',            FALSE, -130, TRUE),
+    (10, 2,  19,   1500.00, 'pix',            FALSE, -125, TRUE),
+    (11, 2,  9,    1000.00, 'pix',            TRUE,  -118, TRUE),
+    (12, 2,  18,    300.00, 'cartao_credito', FALSE, -135, TRUE),
+    (13, 2,  20,    450.00, 'cartao_credito', FALSE, -134, TRUE),
+    (14, 2,  19,    250.00, 'cartao_credito', FALSE, -102, TRUE),
+    (15, 3,  18,   2000.00, 'pix',            FALSE, -19,  TRUE),
+    (16, 3,  19,   1500.00, 'pix',            FALSE, -17,  TRUE),
+    (17, 3,  20,   1000.00, 'pix',            FALSE, -15,  TRUE),
+    (18, 3,  9,     800.00, 'pix',            TRUE,  -13,  TRUE),
+    (19, 3,  10,    500.00, 'pix',            FALSE, -18,  TRUE),
+    (20, 3,  18,    200.00, 'cartao_credito', FALSE, -12,  TRUE),
+    (21, 3,  19,    400.00, 'boleto',         FALSE, -11,  TRUE),
+    (22, 3,  14,    300.00, 'pix',            FALSE, -0.08, TRUE),
+    (23, 3,  15,    250.00, 'pix',            FALSE, -3,   TRUE),
+    (24, 3,  12,    100.00, 'pix',            FALSE, -5,   TRUE),
+    (25, 3,  9,      60.00, 'pix',            FALSE, -2,   TRUE),
+    (26, 3,  17,     50.00, 'pix',            FALSE, -0.1, FALSE),
+    (27, 4,  8,    5000.00, 'pix',            FALSE, -148, TRUE),
+    (28, 4,  18,   6000.00, 'pix',            FALSE, -140, TRUE),
+    (29, 4,  19,   4000.00, 'pix',            FALSE, -132, TRUE),
+    (30, 4,  20,   3000.00, 'pix',            FALSE, -120, TRUE),
+    (31, 4,  10,   2000.00, 'pix',            FALSE, -110, TRUE),
+    (32, 5,  18,   1500.00, 'pix',            FALSE, -52,  TRUE),
+    (33, 5,  19,   1200.00, 'pix',            FALSE, -48,  TRUE),
+    (34, 5,  20,   1000.00, 'pix',            FALSE, -45,  TRUE),
+    (35, 5,  8,     800.00, 'pix',            FALSE, -40,  TRUE),
+    (36, 5,  14,    600.00, 'pix',            FALSE, -33,  TRUE),
+    (37, 5,  10,    400.00, 'pix',            FALSE, -25,  TRUE),
+    (38, 5,  NULL,  300.00, 'pix',            TRUE,  -20,  TRUE),
+    (39, 6,  18,   3000.00, 'pix',            FALSE, -78,  TRUE),
+    (40, 6,  8,    2500.00, 'pix',            FALSE, -70,  TRUE),
+    (41, 6,  20,   2000.00, 'pix',            FALSE, -60,  TRUE),
+    (42, 6,  19,    400.00, 'cartao_credito', FALSE, -72,  TRUE),
+    (43, 7,  8,    1200.00, 'pix',            FALSE, -22,  TRUE),
+    (44, 7,  18,    800.00, 'pix',            FALSE, -14,  TRUE),
+    (45, 7,  19,   2000.00, 'pix',            FALSE, -9,   TRUE),
+    (46, 7,  20,   1500.00, 'pix',            FALSE, -4,   TRUE),
+    (47, 8,  18,   4000.00, 'pix',            FALSE, -46,  TRUE),
+    (48, 8,  20,   3000.00, 'pix',            FALSE, -40,  TRUE),
+    (49, 8,  19,   2500.00, 'pix',            FALSE, -30,  TRUE),
+    (50, 8,  8,     500.00, 'pix',            FALSE, -12,  TRUE),
+    (51, 9,  18,   2000.00, 'pix',            FALSE, -38,  TRUE),
+    (52, 9,  19,   1500.00, 'pix',            FALSE, -30,  TRUE),
+    (53, 9,  20,    300.00, 'cartao_credito', FALSE, -28,  TRUE),
+    (54, 10, 8,    2000.00, 'pix',            FALSE, -47,  TRUE),
+    (55, 10, 18,   1500.00, 'pix',            FALSE, -41,  TRUE),
+    (56, 10, 19,    800.00, 'pix',            FALSE, -35,  TRUE),
+    (57, 11, 20,   1000.00, 'pix',            FALSE, -28,  TRUE),
+    (58, 11, 18,    120.00, 'cartao_credito', FALSE, -26,  TRUE),
+    (59, 15, 18,   1000.00, 'pix',            FALSE, -33,  TRUE),
+    (60, 15, 19,    700.00, 'pix',            FALSE, -29,  TRUE),
+    (61, 15, 8,     500.00, 'pix',            FALSE, -20,  TRUE),
+    (62, 16, 18,    600.00, 'pix',            FALSE, -38,  TRUE),
+    (63, 16, 20,    400.00, 'pix',            FALSE, -36,  TRUE),
+    (64, 16, 19,    200.00, 'cartao_credito', FALSE, -30,  TRUE);
+
 ALTER TABLE contribuicao DISABLE TRIGGER trg_valida_status_contribuicao;
-ALTER TABLE contribuicao DISABLE TRIGGER trg_contribuicao_all_or_nothing_pix;
-
--- RF-048: as 4 contribuições marcadas com (*) são pix porque a campanha é all-or-nothing:
--- trg_contribuicao_all_or_nothing_pix existe para impedir cartao_credito/boleto nesse caso, e só deixaria passar
--- porque fica desligada durante a carga. Não afeta o cálculo de score (que usa o status da campanha, não o meio
--- de pagamento da contribuição).
-INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status, anonima, id_transacao_api, criado_em) VALUES
-(1, 13, 5000.00, 'pix', 'repassado',  FALSE, 'TXN-PIX-0001', '2024-02-10 10:00:00'),
-(1, 14, 2300.00, 'pix', 'repassado',  FALSE, 'TXN-PIX-0002', '2024-02-12 14:30:00'), -- (*) era cartao_credito
-(2, 12, 1500.00, 'pix', 'repassado',  TRUE,  'TXN-PIX-0003', '2024-02-20 09:00:00'),
-(3, 16, 8000.00, 'pix', 'repassado',  FALSE, 'TXN-PIX-0004', '2024-03-05 11:00:00'), -- (*) era boleto
-(5, 15, 2200.00, 'cartao_debito',  'repassado',  FALSE, 'TXN-CD-0005',  '2024-04-10 15:00:00'),
-(7, 17,  500.00, 'pix',            'repassado',  TRUE,  'TXN-PIX-0006', '2024-05-10 08:00:00'),
-(4, 18,  800.00, 'pix', 'a_devolver', FALSE, 'TXN-PIX-0007', '2024-03-15 12:00:00'), -- (*) era cartao_credito
--- Contribuições de usuários com papéis diferentes de 'pesquisador', para mostrar que qualquer usuário logado
--- pode apoiar campanha, não só pesquisadores.
-(3, 23,  50.00,  'pix',            'repassado',  FALSE, 'TXN-PIX-0008', '2024-03-05 09:00:00'), -- Fernanda, usuario comum, contribuição pública
-(1, 8, 300.00, 'pix', 'repassado',  TRUE,  'TXN-PIX-0009',  '2024-02-28 10:00:00'), -- (*) era cartao_credito. Diego, moderador, contribuição anônima (anonima=TRUE mas id_usuario preservado p/ auditoria)
-(5, 10, 150.00, 'pix',            'repassado',  FALSE, 'TXN-PIX-0010', '2024-04-12 09:00:00'), -- Thiago, curador, contribuição pública
--- Contribuição de verdade anônima: sem nenhum usuário vinculado (id_usuario NULL; a coluna é nullable
--- justamente para cobrir doador sem conta/ON DELETE SET NULL). Diferente das linhas com anonima=TRUE acima, que
--- só escondem a identidade da exibição pública mas mantêm o vínculo interno.
-(2, NULL, 75.00, 'pix',            'repassado',  TRUE,  'TXN-PIX-0011', '2024-03-02 10:00:00'),
--- O resto de cada campanha, distribuído em várias contribuições de doadores diferentes: o
--- valor_bruto_arrecadado é a soma real dessas linhas, calculada pela trigger (ver [07-E-1]). Campanha
--- 'all-or-nothing' só recebe pix; o resto pode usar qualquer meio de pagamento.
-(1, 15,  15000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0012', '2024-02-14 10:00:00'),
-(1, 16,  12000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0013', '2024-02-16 11:00:00'),
-(1, 18,  10000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0014', '2024-02-18 09:00:00'),
-(1, 23,   5000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0015', '2024-03-01 14:00:00'),
-(1, 9,  2700.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0016', '2024-03-05 10:00:00'),
-
-(2, 14,  8000.00, 'pix',            'repassado', FALSE, 'TXN-PIX-0017', '2024-03-10 10:00:00'),
-(2, 15,  7000.00, 'pix', 'repassado', FALSE, 'TXN-CC-0018',  '2024-03-15 11:00:00'), -- (*) era cartao_credito: acima do teto do cartão (R$ 500)
-(2, 17,  6000.00, 'pix',            'repassado', FALSE, 'TXN-BOL-0019', '2024-03-20 09:00:00'), -- (*) era boleto: o boleto nasce desligado (boleto_habilitado)
-(2, 23,  3925.00, 'pix',            'repassado', FALSE, 'TXN-PIX-0020', '2024-03-25 10:00:00'),
-(2, 11, 2000.00, 'cartao_debito',  'repassado', FALSE, 'TXN-CD-0021',  '2024-04-01 14:00:00'),
-
-(3, 13,  12000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0022', '2024-03-08 10:00:00'),
-(3, 15,   9000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0023', '2024-03-12 11:00:00'),
-(3, 17,   6000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0024', '2024-03-18 09:00:00'),
-(3, 18,   4950.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0025', '2024-03-22 10:00:00'),
-
--- Campanha 4 (nao_atingido): estas 3 ficam 'confirmado', não 'repassado' - a
--- campanha não bateu a meta, então nada foi repassado ao pesquisador. Junto com a
--- linha 'a_devolver' já existente acima (id_usuario=18), representam o instantâneo
--- de quando a campanha foi marcada nao_atingido: uma parte já entrou no fluxo de
--- devolução, o resto ainda esperando o processamento do reembolso em lote.
-(4, 12, 3000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0026', '2024-03-12 10:00:00'),
-(4, 13, 2500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0027', '2024-03-14 11:00:00'),
-(4, 14, 2500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0028', '2024-03-16 09:00:00'),
-
-(5, 12, 8000.00, 'pix',            'repassado', FALSE, 'TXN-PIX-0029', '2024-04-15 10:00:00'),
-(5, 17, 6000.00, 'pix', 'repassado', FALSE, 'TXN-CC-0030',  '2024-04-18 11:00:00'), -- (*) era cartao_credito: acima do teto do cartão (R$ 500)
-(5, 18, 3000.00, 'pix',            'repassado', FALSE, 'TXN-BOL-0031', '2024-04-22 09:00:00'), -- (*) era boleto: o boleto nasce desligado (boleto_habilitado)
-(5, 23, 2650.00, 'cartao_debito',  'repassado', FALSE, 'TXN-CD-0032',  '2024-04-25 10:00:00'),
-
-(7, 12, 15000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0033', '2024-05-15 10:00:00'),
-(7, 13, 12000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0034', '2024-05-20 11:00:00'),
-(7, 15, 10000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0035', '2024-05-25 09:00:00'),
-(7, 16,  7500.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0036', '2024-06-01 10:00:00'),
-
--- Campanhas 8 e 9 (sucesso, sem linha em repasse ainda - ver [07-E-4]): 'confirmado'
--- em vez de 'repassado', pra não sugerir um repasse que ainda não foi registrado.
-(8, 12,  12000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0037', '2024-06-05 10:00:00'),
-(8, 13,  10000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0038', '2024-06-08 11:00:00'),
-(8, 14,   6000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0039', '2024-06-12 09:00:00'),
-(8, 15,   4000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0040', '2024-06-15 10:00:00'),
-
-(9, 16, 8000.00,  'pix',            'confirmado', FALSE, 'TXN-PIX-0041', '2024-06-05 10:00:00'),
-(9, 17, 6000.00,  'pix', 'confirmado', FALSE, 'TXN-CC-0042',  '2024-06-10 11:00:00'), -- (*) era cartao_credito: acima do teto do cartão (R$ 500)
-(9, 18, 4000.00,  'pix',            'confirmado', FALSE, 'TXN-BOL-0043', '2024-06-15 09:00:00'), -- (*) era boleto: o boleto nasce desligado (boleto_habilitado)
-(9, 23, 3000.00,  'cartao_debito',  'confirmado', FALSE, 'TXN-CD-0044',  '2024-06-20 10:00:00'),
-
--- Campanha 10 ('ativo', em andamento): 'confirmado', ainda não há repasse porque
--- a campanha nem terminou.
-(10, 12, 3000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0045', NOW() - INTERVAL '15 days'),
-(10, 13, 2500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0046', NOW() - INTERVAL '12 days'),
-(10, 14, 2000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0047', NOW() - INTERVAL '8 days'),
-(10, 15, 1500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0048', NOW() - INTERVAL '3 days'),
-(20, 12, 2000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0049', NOW() - INTERVAL '48 days'),
-(20, 19, 1500.00, 'pix', 'confirmado', TRUE,  'TXN-PIX-0050', NOW() - INTERVAL '45 days'),
-(20, 23,  800.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0051', NOW() - INTERVAL '42 days'),
-(21, 16, 1200.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0052', NOW() - INTERVAL '28 days'),
-(21, 20, 1000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0053', NOW() - INTERVAL '22 days'),
-(21, 17,  500.00, 'pix', 'confirmado', TRUE,  'TXN-PIX-0054', NOW() - INTERVAL '18 days');
-
--- Provedor próprio do seed: as cobranças 'TXN-...' nunca existiram em provedor nenhum, e os processos automáticos
--- (devolução, repasse, conferência) só tratam o provedor configurado. Assim, ligar o Asaas não faz o sistema tentar
--- devolver ou conferir uma contribuição de demonstração.
-UPDATE contribuicao SET provedor = 'seed' WHERE id_transacao_api LIKE 'TXN-%';
-
+INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, anonima, provedor, id_transacao_api, criado_em)
+SELECT s.n, s.quem, s.valor, s.meio, s.anonima, 'seed',
+       CASE WHEN s.cobranca THEN 'pay_seed_' || lpad(s.k::TEXT, 3, '0') END, NOW() + s.dias * INTERVAL '1 day'
+FROM seed_contribuicao s
+WHERE s.meio <> 'boleto' AND s.k < 21
+ORDER BY s.k;
+ALTER TABLE contribuicao DISABLE TRIGGER trg_contribuicao_valida_valor_minimo;
+INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, anonima, provedor, id_transacao_api, criado_em)
+SELECT s.n, s.quem, s.valor, s.meio, s.anonima, 'seed', 'pay_seed_' || lpad(s.k::TEXT, 3, '0'), NOW() + s.dias * INTERVAL '1 day'
+FROM seed_contribuicao s
+WHERE s.k = 21;
+ALTER TABLE contribuicao ENABLE TRIGGER trg_contribuicao_valida_valor_minimo;
+INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, anonima, provedor, id_transacao_api, criado_em)
+SELECT s.n, s.quem, s.valor, s.meio, s.anonima, 'seed',
+       CASE WHEN s.cobranca THEN 'pay_seed_' || lpad(s.k::TEXT, 3, '0') END, NOW() + s.dias * INTERVAL '1 day'
+FROM seed_contribuicao s
+WHERE s.k > 21
+ORDER BY s.k;
 ALTER TABLE contribuicao ENABLE TRIGGER trg_valida_status_contribuicao;
-ALTER TABLE contribuicao ENABLE TRIGGER trg_contribuicao_all_or_nothing_pix;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM seed_contribuicao s LEFT JOIN contribuicao c ON c.id_contribuicao = s.k
+               WHERE c.id_campanha IS DISTINCT FROM s.n OR c.valor IS DISTINCT FROM s.valor) THEN
+        RAISE EXCEPTION 'seed: os ids das contribuições não seguem a lista de [07-H-1]';
+    END IF;
+END;
+$$;
 
 -- [07-H-3] aceite_termo_contribuicao
--- Sustenta o RF-054/RF-055: a Etapa 2 descreve essa trilha (aceite dos termos por transação) como a defesa
--- principal da plataforma numa disputa de chargeback com operadora de cartão. Gerado a partir da própria tabela
--- contribuicao (não digitado linha por linha): cada contribuição aceitou a versão do termo da conta vigente no
--- instante da contribuição (ver [07-D-6]).
+-- Sustenta o RF-054/RF-055: a trilha do aceite dos termos por transação é a defesa da plataforma numa contestação de
+-- pagamento. Cada contribuição aceitou a versão do termo da conta vigente no instante da contribuição.
 INSERT INTO aceite_termo_contribuicao (id_contribuicao, id_termo, aceito_em, ip_aceite)
 SELECT c.id_contribuicao,
        (SELECT t.id_termo FROM termos_de_uso t
@@ -1435,6 +1395,405 @@ SELECT c.id_contribuicao,
         ORDER BY t.criado_em DESC LIMIT 1),
        c.criado_em, '187.10.20.30'
 FROM contribuicao c;
+
+-- [07-H-5] A vida de cada contribuição, pelas funções do sistema
+-- Cada passo abaixo chama a MESMA função que o Nest chama no uso real (webhook do provedor, fechamento da campanha,
+-- worker de repasse e de estorno, painel de revisão). Essas funções gravam a hora da chamada (NOW()); as funções
+-- temporárias pg_temp.* (somem no fim da sessão, nunca ficam no banco) só fazem o papel do provedor e datam cada
+-- passo no dia em que ele teria acontecido. O que cada uma mostra está no resumo do fim deste arquivo.
+-- seed_relogio guarda o instante em que esta parte começou: tudo o que uma função gravar a partir dele ainda não
+-- foi datado. Funciona com o arquivo rodando numa transação só (SQL Editor do Supabase) ou comando a comando.
+CREATE TEMP TABLE seed_relogio AS SELECT NOW() AS inicio;
+
+CREATE FUNCTION pg_temp.datar(p_quando TIMESTAMPTZ) RETURNS VOID LANGUAGE plpgsql AS $$
+DECLARE
+    v_inicio TIMESTAMPTZ := (SELECT inicio FROM seed_relogio);
+    v_sessao TEXT := COALESCE(current_setting('app.id_usuario_atual', TRUE), '');
+BEGIN
+    UPDATE auditoria_financeira SET timestamp = p_quando WHERE timestamp >= v_inicio;
+    UPDATE evento_pagamento SET recebido_em = p_quando WHERE recebido_em >= v_inicio;
+    UPDATE evento_pagamento SET processado_em = p_quando WHERE processado_em >= v_inicio;
+    UPDATE evento_pagamento SET revisao_manual_em = p_quando WHERE revisao_manual_em >= v_inicio;
+    UPDATE repasse SET repassado_em = p_quando WHERE repassado_em >= v_inicio;
+    UPDATE contribuicao SET dinheiro_liberado_em = p_quando WHERE dinheiro_liberado_em >= v_inicio;
+    UPDATE contribuicao SET cobranca_cancelada_em = p_quando WHERE cobranca_cancelada_em >= v_inicio;
+    UPDATE campanha SET encerrado_em = p_quando WHERE encerrado_em >= v_inicio;
+    -- Pedido já decidido só muda nas mãos de quem decide (fn_valida_transicao_solicitacao, 05): a data é acertada
+    -- como o Admin Sistema, e a sessão de quem estava agindo volta em seguida.
+    PERFORM set_config('app.id_usuario_atual', '1', TRUE);
+    UPDATE solicitacao_encerramento SET solicitado_em = p_quando WHERE solicitado_em >= v_inicio;
+    UPDATE solicitacao_encerramento SET avaliado_em = p_quando WHERE avaliado_em >= v_inicio;
+    PERFORM set_config('app.id_usuario_atual', v_sessao, TRUE);
+    UPDATE denuncia SET julgado_em = p_quando WHERE julgado_em >= v_inicio;
+    UPDATE denuncia SET contestada_em = p_quando WHERE contestada_em >= v_inicio;
+END;
+$$;
+
+-- O aviso que o provedor manda (webhook), gravado na caixa de entrada pelo mesmo registrar_evento_pagamento.
+CREATE FUNCTION pg_temp.aviso(p_tipo TEXT, p_objeto TEXT, p_id TEXT, p_quando TIMESTAMPTZ) RETURNS INT LANGUAGE plpgsql AS $$
+DECLARE
+    v_externo TEXT := 'evt_seed_' || lpad(((SELECT count(*) FROM evento_pagamento) + 1)::TEXT, 4, '0');
+    v_id      INT;
+BEGIN
+    SELECT r.id_evento INTO v_id
+    FROM public.registrar_evento_pagamento('seed', v_externo, p_tipo,
+        jsonb_build_object('id', v_externo, 'event', p_tipo, p_objeto, jsonb_build_object('id', p_id))) r;
+    PERFORM pg_temp.datar(p_quando);
+    RETURN v_id;
+END;
+$$;
+
+-- Aviso de cobrança aplicado como o webhook aplica; confere o resultado esperado.
+CREATE FUNCTION pg_temp.cobranca(p_k INT, p_tipo TEXT, p_status status_contribuicao, p_quando TIMESTAMPTZ,
+                                 p_esperado TEXT, p_liberado BOOLEAN DEFAULT FALSE) RETURNS VOID LANGUAGE plpgsql AS $$
+DECLARE
+    v_cobranca TEXT := (SELECT id_transacao_api FROM contribuicao WHERE id_contribuicao = p_k);
+    v_res      TEXT;
+BEGIN
+    v_res := public.aplicar_evento_pagamento(pg_temp.aviso(p_tipo, 'payment', v_cobranca, p_quando), 'seed',
+                                             v_cobranca, p_status, NULL, p_liberado);
+    IF v_res IS DISTINCT FROM p_esperado THEN
+        RAISE EXCEPTION 'seed: aviso % da contribuição % deu % (esperado %)', p_tipo, p_k, v_res, p_esperado;
+    END IF;
+    PERFORM pg_temp.datar(p_quando);
+END;
+$$;
+
+-- Pagamento confirmado três minutos depois de a contribuição ser criada. Cartão: o provedor confirma e só libera o
+-- dinheiro cerca de 30 dias depois (pg_temp.liberar). Boleto: o dinheiro já chega liberado.
+CREATE FUNCTION pg_temp.pagar(p_k INT) RETURNS VOID LANGUAGE plpgsql AS $$
+DECLARE
+    v_meio meio_pagamento;
+    v_criado TIMESTAMPTZ;
+BEGIN
+    SELECT meio_pagamento, criado_em INTO v_meio, v_criado FROM contribuicao WHERE id_contribuicao = p_k;
+    PERFORM pg_temp.cobranca(p_k, CASE WHEN v_meio = 'cartao_credito' THEN 'PAYMENT_CONFIRMED' ELSE 'PAYMENT_RECEIVED' END,
+                             'confirmado', v_criado + INTERVAL '3 minutes', 'aplicado', v_meio = 'boleto');
+END;
+$$;
+
+CREATE FUNCTION pg_temp.liberar(p_k INT, p_quando TIMESTAMPTZ) RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+    PERFORM pg_temp.cobranca(p_k, 'PAYMENT_RECEIVED', 'confirmado', p_quando, 'sem_mudanca', TRUE);
+END;
+$$;
+
+-- O repasse de uma campanha (o primeiro, ou o adicional do cartão).
+CREATE FUNCTION pg_temp.repasse(p_n INT, p_ordem INT DEFAULT 1) RETURNS INT LANGUAGE sql AS $$
+    SELECT id_repasse FROM repasse WHERE id_campanha = p_n ORDER BY id_repasse OFFSET p_ordem - 1 LIMIT 1;
+$$;
+
+-- O worker de repasse pede a transferência (pendente -> processando) e guarda o id dela, como faz com o provedor.
+CREATE FUNCTION pg_temp.transferir(p_id INT, p_quando TIMESTAMPTZ) RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+    PERFORM public.atualizar_status_repasse(p_id, 'processando', NULL, 'transferência iniciada');
+    PERFORM public.registrar_transferencia_repasse(p_id, 'trf_seed_' || p_id);
+    PERFORM pg_temp.datar(p_quando);
+END;
+$$;
+
+-- Aviso de transferência aplicado como o webhook de repasse aplica.
+CREATE FUNCTION pg_temp.aviso_repasse(p_id INT, p_tipo TEXT, p_status status_repasse, p_motivo TEXT,
+                                      p_quando TIMESTAMPTZ, p_esperado TEXT) RETURNS VOID LANGUAGE plpgsql AS $$
+DECLARE
+    v_res TEXT;
+BEGIN
+    v_res := public.aplicar_evento_repasse(pg_temp.aviso(p_tipo, 'transfer', 'trf_seed_' || p_id, p_quando), 'seed',
+                                           'trf_seed_' || p_id, p_status, p_motivo);
+    IF v_res IS DISTINCT FROM p_esperado THEN
+        RAISE EXCEPTION 'seed: aviso % do repasse % deu % (esperado %)', p_tipo, p_id, v_res, p_esperado;
+    END IF;
+    PERFORM pg_temp.datar(p_quando);
+END;
+$$;
+
+CREATE FUNCTION pg_temp.dia(p_dias NUMERIC) RETURNS TIMESTAMPTZ LANGUAGE sql AS $$
+    SELECT (SELECT inicio FROM seed_relogio) + p_dias * INTERVAL '1 day';
+$$;
+
+-- 1. Os pagamentos confirmados (toda contribuição com cobrança, menos as que ficam pendentes ou vencem).
+DO $$
+DECLARE
+    v_k INT;
+BEGIN
+    FOR v_k IN SELECT k FROM seed_contribuicao WHERE cobranca AND k NOT IN (22, 23, 24, 25) ORDER BY k LOOP
+        PERFORM pg_temp.pagar(v_k);
+    END LOOP;
+END;
+$$;
+
+-- 2. O dinheiro do cartão liberado pelo provedor, cerca de 30 dias depois. Na campanha 2, o cartão 14 foi pago perto
+--    do fim e só é liberado depois do fechamento: vira um repasse adicional (passo 6). Os cartões 20, 53 e 58 ainda
+--    não foram liberados ("Cartão a liberar"); o 64 foi pago numa campanha que a moderação encerrou.
+SELECT pg_temp.liberar(12, pg_temp.dia(-105));
+SELECT pg_temp.liberar(13, pg_temp.dia(-104));
+SELECT pg_temp.liberar(42, pg_temp.dia(-42));
+
+-- 3. Estorno pedido no painel do provedor (quem apoiou pediu de volta): confirmado -> reembolsado, fora da arrecadação.
+SELECT pg_temp.cobranca(19, 'PAYMENT_REFUNDED', 'reembolsado', pg_temp.dia(-6), 'aplicado');
+
+-- 4. Moderação. As denúncias entram pendentes e são julgadas pelo Moderador Sistema (3) do jeito do painel: um UPDATE
+--    com ele logado, que trg_denuncia_registra_julgador (05) carimba com quem julgou e quando. A 10, contra a campanha
+--    16, é julgada por encerrar_campanha_por_denuncia (03), que também encerra a campanha por moderação: o dinheiro
+--    pago vai para devolução (trg_campanha_encerrada_destino_dinheiro, 05). Só 'resolvida' (procedente) pesa no score.
+CREATE TEMP TABLE seed_denuncia (
+    d INT PRIMARY KEY, quem INT, campanha INT, pesquisador INT, motivo TEXT, relato TEXT, dias INT,
+    decisao status_denuncia, justificativa TEXT, julgada INT
+);
+INSERT INTO seed_denuncia VALUES
+    (1,  16, 3,    NULL, 'Campanha com informações falsas ou enganosas', 'A acurácia anunciada não aparece em nenhum artigo publicado.', -8, 'improcedente', 'Os números estão no relatório técnico citado na campanha; a denúncia não procede.', -7),
+    (2,  18, 10,   NULL, 'Campanha fora do escopo acadêmico', 'Parece um serviço de análise de água para empresas, não uma pesquisa.', -45, 'pendente', NULL, NULL),
+    (3,  19, NULL, 10,   'Vínculo institucional falso ou não comprovável', 'Não encontrei o nome dele na página do programa de pós-graduação.', -6, 'pendente', NULL, NULL),
+    (4,  8,  NULL, 12,   'Perfil com dados acadêmicos falsos', 'O título de mestre informado não aparece no currículo Lattes.', -60, 'resolvida', 'O título de mestre não foi confirmado pela universidade na data da análise.', -58),
+    (5,  8,  NULL, 16,   'Perfil com dados acadêmicos falsos', 'Diz ter vínculo com a UFC, mas a universidade não o conhece.', -70, 'resolvida', 'O vínculo informado não existe; confirmado com a universidade.', -68),
+    (6,  9,  NULL, 16,   'Comportamento abusivo ou ofensivo', 'Respondeu de forma agressiva às perguntas nos comentários.', -55, 'resolvida', 'Mensagens ofensivas a outros pesquisadores confirmadas.', -54),
+    (7,  10, NULL, 16,   'Usurpação de identidade de pesquisador real', 'As publicações do perfil são de outro pesquisador.', -50, 'resolvida', 'Usava publicações de outro pesquisador como se fossem suas.', -49),
+    (8,  18, 16,   NULL, 'Campanha com informações falsas ou enganosas', 'As escolas citadas dizem que não participam do projeto.', -20, 'resolvida', 'As escolas citadas não confirmaram nenhuma parceria.', -19),
+    (9,  20, 16,   NULL, 'Campanha sem viabilidade metodológica', 'Não há autorização da secretaria de educação para a coleta.', -16, 'resolvida', 'Não há autorização da secretaria de educação para a coleta.', -15),
+    (10, 19, 16,   NULL, 'Uso indevido de recursos arrecadados', 'O orçamento prevê pagamentos para uma empresa do próprio pesquisador.', -13, 'resolvida', 'Fraude confirmada: a campanha foi encerrada por moderação e o dinheiro volta para quem apoiou.', -12),
+    (11, 8,  NULL, 17,   'Perfil com dados acadêmicos falsos', 'A graduação informada não foi encontrada na instituição.', -30, 'resolvida', 'A graduação informada não foi encontrada na instituição.', -29),
+    (12, 9,  NULL, 17,   'Comportamento abusivo ou ofensivo', 'Ataques pessoais em comentários de outras campanhas.', -25, 'resolvida', 'Ataques pessoais em comentários confirmados.', -24),
+    (13, 18, NULL, 17,   'Usurpação de identidade de pesquisador real', 'As fotos de campo do perfil são de outro grupo de pesquisa.', -20, 'resolvida', 'As fotos de campo do perfil não são dele.', -19);
+
+INSERT INTO denuncia (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_motivo, relato, criado_em)
+SELECT s.quem, s.campanha, s.pesquisador, md.id_motivo, s.relato, pg_temp.dia(s.dias)
+FROM seed_denuncia s
+JOIN motivo_denuncia md ON md.descricao = s.motivo
+ORDER BY s.d;
+
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    PERFORM set_config('app.id_usuario_atual', '3', TRUE);
+    FOR r IN SELECT * FROM seed_denuncia WHERE decisao <> 'pendente' ORDER BY julgada, d LOOP
+        IF r.d = 10 THEN
+            PERFORM public.encerrar_campanha_por_denuncia(r.d, r.justificativa);
+        ELSE
+            UPDATE denuncia SET status = r.decisao, justificativa_moderacao = r.justificativa WHERE id_denuncia = r.d;
+        END IF;
+        PERFORM pg_temp.datar(pg_temp.dia(r.julgada));
+    END LOOP;
+    PERFORM set_config('app.id_usuario_atual', '', TRUE);
+END;
+$$;
+
+-- 5. Pedidos de encerramento antes do prazo (RF-064 a RF-066), pelo caminho do painel: o pesquisador pede, o Admin
+--    Sistema (1) decide com decidir_solicitacao_encerramento (03). Aprovar encerra a campanha e o dinheiro vai para o
+--    pesquisador (trg_campanha_encerrada_destino_dinheiro, 05). A Ana desistiu do pedido dela (cancelado pela dona). A
+--    Patrícia cancelou o projeto (encerrar_campanha_sem_contribuicao, 03): todo o dinheiro volta para quem apoiou.
+INSERT INTO solicitacao_encerramento (id_campanha, justificativa_pesquisador, solicitado_em) VALUES
+(3,  'Os parceiros anteciparam a coleta e talvez não precisemos de todo o prazo. Solicito encerrar antes.', pg_temp.dia(-10)),
+(9,  'A coleta de campo terminou antes do previsto e o valor arrecadado já cobre a catalogação. Solicito encerrar antes do prazo.', pg_temp.dia(-7)),
+(11, 'Uma das comunidades pediu para adiar as entrevistas. Solicito encerrar com o que foi arrecadado.', pg_temp.dia(-25)),
+(10, 'O laboratório parceiro encerrou o convênio e não temos mais onde fazer as análises microbiológicas. Solicito encerrar antes do prazo.', pg_temp.dia(-40));
+
+DO $$
+BEGIN
+    PERFORM set_config('app.id_usuario_atual', '8', TRUE);
+    UPDATE solicitacao_encerramento SET status = 'cancelado' WHERE id_campanha = 3;
+    PERFORM set_config('app.id_usuario_atual', '1', TRUE);
+    PERFORM public.decidir_solicitacao_encerramento(
+        (SELECT id_solicitacao_encerramento FROM solicitacao_encerramento WHERE id_campanha = 11), FALSE,
+        'As entrevistas são a etapa principal do projeto; encerrar agora deixaria a pesquisa sem ela. Reorganize o cronograma.');
+    PERFORM pg_temp.datar(pg_temp.dia(-24));
+    PERFORM public.decidir_solicitacao_encerramento(
+        (SELECT id_solicitacao_encerramento FROM solicitacao_encerramento WHERE id_campanha = 9), TRUE, NULL);
+    PERFORM pg_temp.datar(pg_temp.dia(-5));
+    PERFORM set_config('app.id_usuario_atual', '15', TRUE);
+    PERFORM public.encerrar_campanha_sem_contribuicao(15,
+        'O hospital parceiro suspendeu o estudo e não há como continuar. Todo o dinheiro volta para quem apoiou.');
+    PERFORM pg_temp.datar(pg_temp.dia(-8));
+    PERFORM set_config('app.id_usuario_atual', '', TRUE);
+END;
+$$;
+
+-- Os que continuam esperando a decisão (há 15 dias, há 1 dia; o da campanha 10 há 40).
+INSERT INTO solicitacao_encerramento (id_campanha, justificativa_pesquisador, solicitado_em) VALUES
+(11, 'As comunidades confirmaram que não vão receber a equipe neste ano. Solicito encerrar com o que foi arrecadado.', pg_temp.dia(-15)),
+(7,  'A meta foi batida e as peças já foram compradas com o valor arrecadado. Solicito encerrar antes do prazo.', pg_temp.dia(-1));
+
+-- 6. O fechamento pelo prazo (encerrar_campanhas_vencidas, 05, a tarefa automática "Fechar campanhas vencidas"):
+--    sucesso cria o repasse; tudo-ou-nada que não bateu a meta manda cada contribuição para devolução; o flexível fica
+--    com o que arrecadou. Cada campanha é datada uma hora depois do próprio prazo. Depois, o cartão 14 é liberado e
+--    criar_repasses_liberados (05) cria o repasse adicional dele.
+DO $$
+DECLARE
+    v_n INT;
+BEGIN
+    PERFORM public.encerrar_campanhas_vencidas();
+    UPDATE auditoria_financeira a SET timestamp = ca.data_fim + INTERVAL '1 hour'
+    FROM contribuicao c JOIN campanha ca ON ca.id_campanha = c.id_campanha
+    WHERE a.id_contribuicao = c.id_contribuicao AND a.timestamp >= (SELECT inicio FROM seed_relogio);
+    UPDATE campanha SET encerrado_em = data_fim + INTERVAL '1 hour' WHERE encerrado_em >= (SELECT inicio FROM seed_relogio);
+END;
+$$;
+
+SELECT pg_temp.liberar(14, pg_temp.dia(-72));
+SELECT public.criar_repasses_liberados();
+
+-- Repasse de demonstração só com o provedor do seed: nenhum worker de verdade o pega.
+UPDATE repasse SET provedor = 'seed' WHERE provedor IS NULL;
+
+-- 7. As transferências. Concluídas pelo aviso TRANSFER_DONE (contribuições -> 'repassado'). A do Carlos falhou
+--    (TRANSFER_FAILED: a chave Pix de destino não existe mais) e fica em erro, esperando alguém corrigir e recolocar
+--    na fila; depois chega um TRANSFER_DONE atrasado da mesma transferência, que o sistema não aplica: o provedor diz
+--    que concluiu e o registro diz que falhou, e o aviso vai para revisão manual. A do Eduardo está em andamento. A da
+--    Renata nem começou: ela ainda não cadastrou a chave Pix ("aguardando conta").
+SELECT pg_temp.transferir(pg_temp.repasse(1), pg_temp.dia(-184));
+SELECT pg_temp.aviso_repasse(pg_temp.repasse(1), 'TRANSFER_DONE', 'concluido', NULL, pg_temp.dia(-183), 'aplicado');
+SELECT pg_temp.transferir(pg_temp.repasse(4), pg_temp.dia(-104));
+SELECT pg_temp.aviso_repasse(pg_temp.repasse(4), 'TRANSFER_DONE', 'concluido', NULL, pg_temp.dia(-103), 'aplicado');
+SELECT pg_temp.transferir(pg_temp.repasse(2), pg_temp.dia(-99));
+SELECT pg_temp.aviso_repasse(pg_temp.repasse(2), 'TRANSFER_DONE', 'concluido', NULL, pg_temp.dia(-98), 'aplicado');
+SELECT pg_temp.transferir(pg_temp.repasse(2, 2), pg_temp.dia(-71));
+SELECT pg_temp.aviso_repasse(pg_temp.repasse(2, 2), 'TRANSFER_DONE', 'concluido', NULL, pg_temp.dia(-70), 'aplicado');
+SELECT pg_temp.transferir(pg_temp.repasse(6), pg_temp.dia(-34));
+SELECT pg_temp.aviso_repasse(pg_temp.repasse(6), 'TRANSFER_FAILED', 'erro', 'A chave Pix de destino não existe mais no banco do recebedor.', pg_temp.dia(-33), 'aplicado');
+SELECT pg_temp.aviso_repasse(pg_temp.repasse(6), 'TRANSFER_DONE', 'concluido', NULL, pg_temp.dia(-32), 'revisao_manual');
+SELECT pg_temp.transferir(pg_temp.repasse(9), pg_temp.dia(-4));
+
+-- 8. As devoluções, como o worker de estorno as faz (proximo_estorno_pendente, concluir_estorno e
+--    registrar_falha_estorno, 05). Quem apoiou recebe o valor inteiro; a tarifa do provedor não volta.
+--    Campanha 5 (tudo-ou-nada que não bateu a meta), uma devolução em cada situação:
+--      32 e 33 devolvidas (na 32 chega depois o aviso de estorno do próprio provedor, que o sistema reconhece);
+--      34 o provedor aceitou o pedido e ainda não devolveu; 35 o banco de quem apoiou recusou e a devolução foi para
+--      reembolso manual; 36 também, e uma pessoa já devolveu por fora (concluir_reembolso_manual); 37 falhou por
+--      falta de saldo e vai tentar de novo; 38 ainda está na fila.
+--    Campanha 15 (projeto cancelado): tudo devolvido. Campanha 16 (moderação): os Pix devolvidos, o cartão na fila.
+DO $$
+BEGIN
+    PERFORM public.concluir_estorno(32, 1500.00);
+    PERFORM public.concluir_estorno(33, 1200.00);
+    PERFORM public.registrar_falha_estorno(34, NULL, TRUE, 1000.00, TRUE);
+    PERFORM public.registrar_falha_estorno(35, 'O banco de quem apoiou recusou a devolução: a conta de origem foi encerrada.', FALSE);
+    PERFORM public.registrar_falha_estorno(36, 'O banco de quem apoiou recusou a devolução: a conta de origem foi encerrada.', FALSE);
+    PERFORM public.registrar_falha_estorno(37, 'Saldo insuficiente no provedor para fazer a devolução.', TRUE);
+    PERFORM pg_temp.datar(pg_temp.dia(-9));
+END;
+$$;
+SELECT pg_temp.cobranca(32, 'PAYMENT_REFUNDED', 'reembolsado', pg_temp.dia(-9) + INTERVAL '5 minutes', 'sem_mudanca');
+
+DO $$
+BEGIN
+    PERFORM set_config('app.id_usuario_atual', '1', TRUE);
+    PERFORM public.concluir_reembolso_manual(36, 600.00,
+        'Devolvido por transferência Pix manual para a nova conta informada por quem apoiou; comprovante guardado no atendimento.');
+    PERFORM set_config('app.id_usuario_atual', '', TRUE);
+    PERFORM pg_temp.datar(pg_temp.dia(-6));
+
+    PERFORM public.concluir_estorno(59, 1000.00);
+    PERFORM public.concluir_estorno(60, 700.00);
+    PERFORM public.concluir_estorno(61, 500.00);
+    PERFORM pg_temp.datar(pg_temp.dia(-7));
+
+    PERFORM public.concluir_estorno(62, 600.00);
+    PERFORM public.concluir_estorno(63, 400.00);
+    PERFORM pg_temp.datar(pg_temp.dia(-11));
+END;
+$$;
+
+-- 9. Os Pix que não foram pagos a tempo. O 24 venceu pelo aviso do provedor (PAYMENT_OVERDUE); o 23 e o 25, pela
+--    tarefa automática (expirar_contribuicoes_pendentes, 05), 24 horas depois de criados; a cobrança do 25 foi
+--    cancelada no provedor (marcar_cobranca_cancelada). O 26 nunca chegou a ter cobrança: é uma órfã e vira 'erro'
+--    (encerrar_contribuicoes_orfas, 05) uma hora depois. O 22 foi gerado há 2 horas e continua esperando o pagamento.
+SELECT pg_temp.cobranca(24, 'PAYMENT_OVERDUE', 'expirado', pg_temp.dia(-4), 'aplicado');
+DO $$
+BEGIN
+    PERFORM public.expirar_contribuicoes_pendentes();
+    UPDATE auditoria_financeira a SET timestamp = c.criado_em + public.config_numero('pix_validade_horas', 24) * INTERVAL '1 hour'
+    FROM contribuicao c
+    WHERE a.id_contribuicao = c.id_contribuicao AND a.timestamp >= (SELECT inicio FROM seed_relogio);
+    PERFORM public.marcar_cobranca_cancelada(25);
+    PERFORM pg_temp.datar(pg_temp.dia(-1) + INTERVAL '15 minutes');
+    PERFORM public.encerrar_contribuicoes_orfas();
+    PERFORM pg_temp.datar(pg_temp.dia(-0.1) + INTERVAL '1 hour');
+END;
+$$;
+
+-- 10. A caixa de entrada de avisos que o sistema não resolve sozinho (tela Eventos de Pagamento):
+--     - pagamento que chegou para um Pix já vencido (23): o dinheiro entrou, mas não conta na arrecadação; em revisão
+--       manual, esperando alguém devolver no provedor. O mesmo com o 24, que o Admin já resolveu (resolver_revisao_pagamento);
+--     - aviso de um pagamento que nenhuma contribuição conhece, recebido há 2 horas: fica para tentar de novo;
+--     - outro igual, de 30 horas atrás: a conferência desistiu de achar o dono e o mandou para revisão manual com o
+--       mesmo texto do Nest (pagamento.service.reconcile.ts);
+--     - aviso de cobrança criada (PAYMENT_CREATED), que o sistema grava e ignora.
+SELECT pg_temp.cobranca(23, 'PAYMENT_RECEIVED', 'confirmado', pg_temp.dia(-1), 'revisao_manual');
+SELECT pg_temp.cobranca(24, 'PAYMENT_RECEIVED', 'confirmado', pg_temp.dia(-3), 'revisao_manual');
+DO $$
+DECLARE
+    v_id INT;
+BEGIN
+    PERFORM set_config('app.id_usuario_atual', '1', TRUE);
+    PERFORM public.resolver_revisao_pagamento(
+        (SELECT a.id_evento_pagamento FROM auditoria_financeira a
+         WHERE a.id_contribuicao = 24 AND a.evento = 'pagamento_recebido_em_revisao_manual'),
+        'Valor devolvido pelo painel do provedor a quem pagou o Pix vencido.');
+    PERFORM set_config('app.id_usuario_atual', '', TRUE);
+    PERFORM pg_temp.datar(pg_temp.dia(-2));
+
+    v_id := pg_temp.aviso('PAYMENT_RECEIVED', 'payment', 'pay_seed_901', NOW() - INTERVAL '2 hours');
+    PERFORM public.aplicar_evento_pagamento(v_id, 'seed', 'pay_seed_901', 'confirmado');
+    PERFORM pg_temp.datar(NOW() - INTERVAL '2 hours');
+
+    v_id := pg_temp.aviso('PAYMENT_RECEIVED', 'payment', 'pay_seed_902', NOW() - INTERVAL '30 hours');
+    PERFORM public.aplicar_evento_pagamento(v_id, 'seed', 'pay_seed_902', 'confirmado');
+    PERFORM public.mandar_evento_para_revisao(v_id,
+        'Dinheiro recebido no provedor sem contribuição correspondente no sistema. Confira no provedor de onde veio e, se for o caso, devolva.');
+    PERFORM pg_temp.datar(NOW() - INTERVAL '6 hours');
+
+    v_id := pg_temp.aviso('PAYMENT_CREATED', 'payment', 'pay_seed_022', (SELECT criado_em FROM contribuicao WHERE id_contribuicao = 22));
+    PERFORM public.aplicar_evento_pagamento(v_id, 'seed', 'pay_seed_022', NULL);
+    PERFORM pg_temp.datar((SELECT criado_em FROM contribuicao WHERE id_contribuicao = 22));
+END;
+$$;
+
+-- 11. Contestações (RF-033), uma de cada situação: o Eduardo contesta a dele e espera a análise; o Vinícius contestou
+--     uma das dele e o Admin recusou; o Gabriel provou que a denúncia era falsa e o Admin aceitou (a denúncia vira
+--     improcedente e a nota se recalcula). Quem julgou a denúncia (o Moderador Sistema) nunca decide a contestação.
+DO $$
+BEGIN
+    PERFORM set_config('app.id_usuario_atual', '16', TRUE);
+    PERFORM public.contestar_denuncia(5, 'O vínculo com a universidade existe; trabalho como pesquisador voluntário no laboratório.');
+    PERFORM pg_temp.datar(pg_temp.dia(-66));
+    PERFORM set_config('app.id_usuario_atual', '1', TRUE);
+    PERFORM public.decidir_contestacao(5, FALSE, 'A universidade confirmou por escrito que não há vínculo de nenhum tipo.');
+
+    PERFORM set_config('app.id_usuario_atual', '17', TRUE);
+    PERFORM public.contestar_denuncia(13, 'As fotos são do meu trabalho de campo; enviei os arquivos originais com os dados de localização.');
+    PERFORM pg_temp.datar(pg_temp.dia(-10));
+    PERFORM set_config('app.id_usuario_atual', '1', TRUE);
+    PERFORM public.decidir_contestacao(13, TRUE, 'Os arquivos originais comprovam a autoria das fotos. A denúncia não procede.');
+
+    PERFORM set_config('app.id_usuario_atual', '12', TRUE);
+    PERFORM public.contestar_denuncia(4, 'O título de mestre foi emitido pela UFBA; anexei o diploma ao perfil. Peço a revisão.');
+    PERFORM pg_temp.datar(pg_temp.dia(-1));
+    PERFORM set_config('app.id_usuario_atual', '', TRUE);
+END;
+$$;
+
+-- Nada do que foi gravado acima pode ter ficado com a hora da montagem do banco.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM auditoria_financeira WHERE timestamp >= (SELECT inicio FROM seed_relogio))
+       OR EXISTS (SELECT 1 FROM evento_pagamento WHERE recebido_em >= (SELECT inicio FROM seed_relogio)
+                     OR processado_em >= (SELECT inicio FROM seed_relogio))
+       OR EXISTS (SELECT 1 FROM campanha WHERE encerrado_em >= (SELECT inicio FROM seed_relogio)) THEN
+        RAISE EXCEPTION 'seed: sobrou registro sem data em [07-H-5]';
+    END IF;
+END;
+$$;
+
+-- [07-D-7] notificacao
+-- Linhas em estados diferentes, para exercitar a permissão notificacao_processar e o índice idx_notificacao_status (02).
+INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, status, tentativas, criado_em, enviado_em, ultimo_erro) VALUES
+(8,  'ana.santos@usp.br',          'campanha_aprovada',                 'enviado',   1, NOW() - INTERVAL '22 days',  NOW() - INTERVAL '22 days' + INTERVAL '30 seconds', NULL),
+(18, 'fernanda.souza@gmail.com',   'doacao_confirmada',                 'enviado',   1, NOW() - INTERVAL '19 days',  NOW() - INTERVAL '19 days' + INTERVAL '30 seconds', NULL),
+(15, 'patricia.rocha@unifesp.br',  'campanha_rejeitada',                'pendente',  0, NOW() - INTERVAL '5 days',   NULL, NULL),
+(12, 'eduardo.barbosa@ufba.br',    'solicitacao_encerramento_aprovada', 'pendente',  0, NOW() - INTERVAL '5 days',   NULL, NULL),
+(16, 'vinicius.ferraz@gmail.com',  'denuncia_recebida_contra_perfil',   'falhou',    3, NOW() - INTERVAL '50 days',  NULL, 'SMTP timeout: o servidor de e-mail não respondeu após 3 tentativas'),
+(20, 'helena.campos@outlook.com',  'doacao_confirmada',                 'falhou',    2, NOW() - INTERVAL '15 days',  NULL, 'Endereço de e-mail rejeitado pelo servidor de destino (550 mailbox not found)'),
+(14, 'juliana.ferreira@ufsc.br',   'campanha_proxima_do_prazo',         'cancelado', 0, NOW() - INTERVAL '3 days',   NULL, 'Cancelada: a campanha ainda não começou');
 
 -- [07-H-4] termos_de_uso: rascunhos da próxima versão (v3, id 5 e 6), feitos a partir da vigente com uma seção nova.
 -- Ainda não publicados (ativo = FALSE) e sem aceite: a tela mostra "Rascunho" e deixa editar e excluir. Entram
@@ -1447,250 +1806,41 @@ INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em)
 SELECT tipo, 'v3-rascunho', regexp_replace(conteudo, '6\. ALTERAÇÕES DESTE TERMO(\r?\n)', '6. CONTESTAÇÃO DE DENÚNCIAS\1O pesquisador pode contestar uma vez cada denúncia julgada procedente contra o perfil ou contra uma campanha dele. A contestação é decidida por outra pessoa da moderação, nunca por quem julgou a denúncia.\1\17. ALTERAÇÕES DESTE TERMO\1'), FALSE, NOW()
 FROM termos_de_uso WHERE tipo = 'upgrade_pesquisador' AND ativo;
 
--- [07-H-2] auditoria_financeira
-INSERT INTO auditoria_financeira (id_contribuicao, valor, status_novo, status_anterior, evento, timestamp) VALUES
-(1, 5000.00, 'confirmado', 'pendente',   'pagamento_confirmado_gateway',   '2024-02-10 10:05:00'),
-(1, 5000.00, 'repassado',  'confirmado', 'meta_atingida_repasse_efetuado', '2024-04-05 10:00:00'),
-(2, 2300.00, 'confirmado', 'pendente',   'pagamento_confirmado_gateway',   '2024-02-12 14:35:00'),
-(3, 1500.00, 'confirmado', 'pendente',   'pagamento_confirmado_gateway',   '2024-02-20 09:10:00'),
-(4, 8000.00, 'confirmado', 'pendente',   'pagamento_confirmado_gateway',   '2024-03-05 11:15:00'),
-(7,  800.00, 'confirmado', 'pendente',   'pagamento_confirmado_gateway',   '2024-03-15 12:10:00'),
-(7,  800.00, 'a_devolver', 'confirmado', 'meta_nao_atingida_devolucao',    '2024-04-25 00:00:00');
-
--- [07-E-3] atualizacao_campanha
-ALTER TABLE atualizacao_campanha DISABLE TRIGGER trg_atualizacao_campanha_status;
-
-INSERT INTO atualizacao_campanha (id_campanha, titulo, conteudo, publicado_em, fase, tipo) VALUES
-(1, 'Início da coleta de dados clínicos',        'Iniciamos a coleta de dados clínicos com parceria do Hospital das Clínicas. Primeiros 200 exames de neuroimagem analisados.', '2024-02-20 10:00:00', 'andamento',          'texto'),
-(1, 'Modelo atinge 89% de acurácia',             'Modelo de deep learning atingiu acurácia de 89% na base de validação. Aguardamos revisão por pares..',                        '2024-03-15 14:00:00', 'resultado_preliminar','texto'),
-(2, 'Primeiros protótipos testados',             'Primeiros 10 protótipos de prótese impressos e testados por voluntários. Ajustes ergonômicos em andamento.',                  '2024-03-05 09:30:00', 'andamento',          'imagem'),
-(3, 'Coleta de amostras concluída',              'Coleta de amostras concluída em 5 biomas. 120 espécies de fungos catalogadas para análise laboratorial.',                     '2024-04-01 11:00:00', 'andamento',          'texto'),
-(5, 'Questionários aplicados nas comunidades',   'Questionários aplicados em 12 comunidades quilombolas. Dados sendo sistematizados para análise estatística.',                  '2024-05-01 08:00:00', 'andamento',          'texto'),
-(7, 'Ensaio clínico concluído',                  'Ensaio clínico concluído. Grupo probiótico apresentou redução de 34% nas taxas de sepse versus controle.',                    '2024-09-01 10:00:00', 'resultado_final',    'pdf'),
-(1, 'Artigo submetido à Nature Medicine',        'Artigo submetido ao periódico Nature Medicine. Código e dataset disponibilizados em repositório público.',                     '2024-04-10 16:00:00', 'resultado_final',    'linkexterno'),
-(8,  'Modelo de visão computacional treinado',    'Primeira versão do modelo treinada com 15 mil exames anotados por 2 hospitais parceiros. Acurácia inicial de 91% em validação.', '2024-06-20 10:00:00', 'andamento',          'texto'),
-(8,  'Validação clínica concluída',               'Validação prospectiva concluída com radiologistas de referência. Resultados finais submetidos para publicação.',                  '2024-07-10 14:00:00', 'resultado_final',    'texto'),
-(10, 'Primeiras trilhas de campo mapeadas',        'Concluído o mapeamento de 3 das 8 trilhas previstas em restingas do litoral. Catalogação de espécies em andamento.',             NOW() - INTERVAL '5 days', 'andamento',          'texto');
-
-ALTER TABLE atualizacao_campanha ENABLE TRIGGER trg_atualizacao_campanha_status;
-
--- [07-G-1] arquivo_atualizacao: vazio (ver [07-C-4]).
-
--- [07-E-4] repasse
-ALTER TABLE repasse DISABLE TRIGGER trg_valida_repasse;
-
-INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, repassado_em, taxa_relativa, status) VALUES
-(1, 52300.00, 49685.00, TRUE,  '2024-04-05 10:00:00', 5.00, 'concluido'),
-(2, 28500.00, 27075.00, FALSE, '2024-05-10 10:00:00', 5.00, 'concluido'),
-(3, 40000.00, 38000.00, TRUE,  '2024-06-10 10:00:00', 5.00, 'concluido'),
-(5, 22000.00, 20900.00, FALSE, '2024-06-10 10:00:00', 5.00, 'concluido'),
-(7, 45000.00, 42750.00, TRUE,  '2024-08-10 10:00:00', 5.00, 'concluido');
--- A campanha 4 (all-or-nothing que não bateu a meta) já teve aqui um repasse de líquido 0 com status 'a_devolver'. Esse
--- estado não existe em status_repasse (pendente, processando, concluido, erro): campanha que não atinge a meta NÃO gera
--- repasse, as contribuições dela é que vão para 'a_devolver' (ver encerrar_campanhas_vencidas, 05).
-
-ALTER TABLE repasse ENABLE TRIGGER trg_valida_repasse;
-
--- [07-E-5] solicitacao_encerramento
--- Um caso de cada situação, todos pedidos com a campanha ainda ativa (RF-064): aprovado (a campanha 7 ficou
--- 'encerrado', com encerrado_em igual ao avaliado_em), rejeitado com o porquê do admin, cancelado pelo próprio
--- pesquisador, e um pendente na campanha 10 (ativa, com contribuição confirmada) para o administrador decidir.
--- trg_solicitacao_valida_criacao (05) só aceita pedido de campanha ativa; os históricos são de quando ela estava
--- ativa, então a trigger fica desligada só durante esta carga.
-ALTER TABLE solicitacao_encerramento DISABLE TRIGGER trg_solicitacao_valida_criacao;
-
-INSERT INTO solicitacao_encerramento (id_campanha, id_admin, justificativa_pesquisador, justificativa_admin, status, solicitado_em, avaliado_em) VALUES
-(7, 1,    'Os objetivos do ensaio clínico foram atingidos antes do prazo e os resultados já foram submetidos para publicação. Solicito o encerramento antecipado.', NULL, 'aprovado', '2024-07-20 09:00:00', '2024-07-21 11:00:00'),
-(4, 1,    'A coleta de dados ficou inviável com o fim do surto. Solicito encerrar antes do prazo.', 'O surto ainda está em andamento na região; a coleta continua viável até o fim do prazo.', 'rejeitado', '2024-04-05 10:00:00', '2024-04-06 09:00:00'),
-(2, NULL, 'Pensei em encerrar antes do prazo para começar a fabricação, mas vou esperar a campanha terminar.', NULL, 'cancelado', '2024-03-25 15:00:00', NULL),
-(10, NULL, 'A equipe de campo foi reduzida e não conseguiremos cobrir todos os pontos de coleta. Solicito encerrar antes do prazo.', NULL, 'pendente', NOW() - INTERVAL '1 day', NULL),
-(20, NULL, 'O laboratório parceiro encerrou o convênio e não temos mais onde fazer as análises microbiológicas. Solicito encerrar antes do prazo.', NULL, 'pendente', NOW() - INTERVAL '40 days', NULL),
-(21, NULL, 'Conseguimos as peças por doação de uma empresa e o valor arrecadado já cobre o protótipo. Solicito encerrar antes do prazo.', NULL, 'pendente', NOW() - INTERVAL '15 days', NULL);
-
-ALTER TABLE solicitacao_encerramento ENABLE TRIGGER trg_solicitacao_valida_criacao;
-
--- [07-E-6] historico_rejeicao
--- id_usuario_dono e titulo_campanha são o snapshot gravado na rejeição (ver 01):
--- aqui vêm de campanha pra não repetir dado à mão em cada linha.
-INSERT INTO historico_rejeicao (id_campanha, id_usuario_dono, titulo_campanha, id_admin, justificativa, rejeitado_em)
-SELECT v.id_campanha, c.id_usuario, c.titulo, v.id_admin, v.justificativa, v.rejeitado_em::TIMESTAMPTZ
-FROM (VALUES
-((SELECT id_campanha FROM campanha WHERE titulo = 'Efeito do Exercício Físico na Imunidade de Idosos Pós-Covid'), 1, 'Faltou o parecer do comitê de ética para coleta de sangue em idosos. Anexe e reenvie.', (NOW() - INTERVAL '20 days')::TEXT),
-((SELECT id_campanha FROM campanha WHERE titulo = 'Adesão ao Tratamento de Hipertensão em Comunidades Ribeirinhas'), 1, 'O orçamento não explica como será o acesso às comunidades fora da época de cheia. Detalhe e reenvie.', (NOW() - INTERVAL '5 days')::TEXT),
-(4, 1, 'Campanha não apresentou metodologia clara nem parecer de comitê de ética em pesquisa.',               '2024-03-08 10:00:00'),
-(1, 1, 'Versão inicial sem descrição detalhada dos dados utilizados. Resubmissão solicitada.',                '2024-01-25 09:00:00'),
-(2, 1, 'Faltou anexar declaração institucional da UNICAMP. Campanha devolvida para ajuste.',                  '2024-02-08 14:00:00'),
-(3, 1, 'Meta financeira considerada excessiva sem justificativa de custos detalhada. Ajuste e reenvio.',      '2024-02-22 10:00:00'),
-(5, 1, 'Necessidade de inclusão de termo de consentimento das comunidades quilombolas no projeto.',           '2024-03-22 13:00:00'),
-(7, 1, 'Protocolo de ensaio clínico incompleto. Aprovação pelo CEP obrigatória antes de prosseguir.',        '2024-04-17 11:00:00')
-) AS v(id_campanha, id_admin, justificativa, rejeitado_em)
-JOIN campanha c ON c.id_campanha = v.id_campanha;
-
--- [07-E-7] comentario
--- Comentários de pesquisadores (só pesquisador comenta) nas campanhas publicadas, nunca na própria. Todos nascem sem
--- endosso: trg_comentario_ignora_endosso_criacao (05) zera o endosso na criação, então endossar é o passo seguinte,
--- feito como o dono da campanha (bloco logo abaixo). Os da campanha 10 (ativa) têm datas relativas a hoje.
-INSERT INTO comentario (id_campanha, id_pesquisador, conteudo, criado_em) VALUES
-(1, 13, 'Pesquisa extremamente relevante! A detecção precoce de Alzheimer pode mudar vidas. Apoio totalmente.',          '2024-02-15 10:00:00'),
-(1, 14, 'Parabéns pela metodologia robusta com redes neurais. Seria interessante publicar o dataset aberto.',            '2024-02-18 14:00:00'),
-(1, 18, 'Acompanhei cada etapa desta campanha. Exemplo de transparência e rigor científico.',                           '2024-04-12 13:00:00'),
-(2, 12, 'Iniciativa incrível de engenharia aplicada. A parceria com o SUS é essencial para o impacto real.',            '2024-03-01 09:00:00'),
-(2, 15, 'Como fica a manutenção das próteses depois da entrega? Seria bom prever isso no orçamento.',                   '2024-03-20 11:00:00'),
-(2, 17, 'O custo por unidade ficou muito abaixo do mercado. Ótimo exemplo de pesquisa com retorno direto à sociedade.', '2024-04-02 15:30:00'),
-(3, 16, 'Bioprospecção da Caatinga é subutilizada. Fico feliz em ver investimento nessa área tão rica.',                '2024-03-10 11:00:00'),
-(3, 12, 'Vocês pretendem depositar as cepas numa coleção de referência? Isso ajudaria outros grupos.',                  '2024-04-05 09:30:00'),
-(4, 16, 'Pena que não atingiu a meta. O tema é urgente; espero que tentem de novo com um recorte menor.',               '2024-04-25 10:00:00'),
-(4, 18, 'Os dados de 2024 da Baixada são valiosos mesmo sem a meta cheia. Torço por uma nova campanha.',                '2024-04-20 14:00:00'),
-(5, 18, 'Estudo importantíssimo para as comunidades quilombolas. A metodologia participativa é um diferencial.',         '2024-04-15 16:00:00'),
-(5, 14, 'A devolutiva dos resultados às comunidades está prevista? Esse cuidado faz toda a diferença.',                 '2024-05-02 10:15:00'),
-(7, 13, 'Ensaio clínico com resultado impressionante de 34% de redução de sepse. Esse trabalho merece publicação top.', '2024-09-05 10:00:00'),
-(7, 17, 'Qual foi o tamanho final da amostra? Gostaria de entender melhor o desenho do estudo.',                         '2024-09-10 08:45:00'),
-(8, 12, 'Validar com dados de dois hospitais universitários dá muita confiança ao modelo. Parabéns.',                   '2024-06-20 11:00:00'),
-(8, 20, 'Excelente proposta. O código vai ser aberto? Seria ótimo para outros grupos de pesquisa.',                     '2024-07-01 16:20:00'),
-(9, 13, 'Tema muito promissor. Vocês vão acompanhar os pacientes depois da quimioterapia também?',                      '2024-06-25 09:00:00'),
-(10, 12, 'Mapear espécies invasoras no litoral nordestino é urgente. Contem comigo para divulgar.',                     NOW() - INTERVAL '15 days'),
-(10, 13, 'Vocês vão publicar o mapa das espécies em formato aberto, para as prefeituras usarem?',                       NOW() - INTERVAL '12 days'),
-(10, 16, 'Trabalho de campo em manguezal é caro e difícil. O orçamento parece bem dimensionado.',                       NOW() - INTERVAL '9 days'),
-(10, 22, 'Acho que o cronograma está apertado para cobrir tantos pontos de coleta.',                                    NOW() - INTERVAL '4 days');
-
--- Endossos, feitos como o dono de cada campanha (o mesmo caminho da tela): validar_comentario_endosso_autor (05)
--- confere que quem endossa é o dono e calcula a posição do endosso na ordem em que eles acontecem.
-DO $$
-DECLARE
-    r RECORD;
-BEGIN
-    FOR r IN
-        SELECT c.id_comentario, ca.id_usuario AS dono
-        FROM comentario c
-        JOIN campanha ca ON ca.id_campanha = c.id_campanha
-        JOIN (VALUES (1, 13), (1, 14), (1, 18), (2, 17), (3, 16), (4, 18), (5, 14), (7, 13), (8, 12), (8, 20), (10, 12), (10, 16))
-            AS e(id_campanha, id_pesquisador)
-          ON e.id_campanha = c.id_campanha AND e.id_pesquisador = c.id_pesquisador
-        ORDER BY c.criado_em
-    LOOP
-        PERFORM set_config('app.id_usuario_atual', r.dono::TEXT, TRUE);
-        UPDATE comentario SET endossado = TRUE WHERE id_comentario = r.id_comentario;
-    END LOOP;
-    PERFORM set_config('app.id_usuario_atual', '', TRUE);
-END;
-$$;
-
--- [07-E-8] denuncia
--- Resolve o motivo por `descricao`, única o bastante neste seed para servir de chave de leitura.
--- trg_denuncia_valida_alvo (05) só aceita denúncia de campanha ATIVA; a maioria das denúncias abaixo é histórica,
--- feita quando a campanha ainda estava ativa, então a trigger fica desligada só durante esta carga (mesmo raciocínio
--- das triggers de contribuição, [07-H-1]). Quem decidiu explica por quê em `justificativa_moderacao`.
-ALTER TABLE denuncia DISABLE TRIGGER trg_denuncia_valida_alvo;
-
-INSERT INTO denuncia (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_motivo, relato, status, justificativa_moderacao, criado_em)
-SELECT v.id_usuario, v.id_campanha_alvo, v.id_pesquisador_alvo, md.id_motivo, v.relato, v.status::status_denuncia, v.justificativa, v.criado_em::timestamptz
-FROM (VALUES
-    (13, 9,    NULL::int, 'Campanha com informações falsas ou enganosas', 'Os números de alcance citados na descrição não batem com a fonte.', 'improcedente', 'Os números conferem com a fonte citada; a denúncia não procede.', '2024-06-20 09:00:00'),
-    (14, NULL, 17,        'Perfil com dados acadêmicos falsos',           'O título de doutor não aparece no Lattes dele.', 'pendente', NULL, NOW() - INTERVAL '5 days'),
-    (12, 4,    NULL,      'Campanha com informações falsas ou enganosas', 'O orçamento cita um laboratório que não participa do projeto.', 'resolvida', 'Confirmado com a instituição: o laboratório não participa. Pesquisador orientado a corrigir.', '2024-03-16 11:00:00'),
-    (16, NULL, 15,        'Comportamento abusivo ou ofensivo',            'Respostas agressivas a quem fez perguntas na campanha.', 'pendente',   NULL, NOW() - INTERVAL '12 days'),
-    (17, 2,    NULL,      'Campanha duplicada ou já existente',           NULL, 'improcedente', 'É a segunda fase do mesmo projeto, com outro objetivo; não é duplicada.', '2024-03-02 08:00:00'),
-    (18, NULL, 17,        'Usurpação de identidade de pesquisador real',  NULL, 'pendente', NULL, NOW() - INTERVAL '20 days'),
-    (12, 20,   NULL,      'Campanha fora do escopo acadêmico',            NULL, 'pendente', NULL, NOW() - INTERVAL '45 days'),
-    -- Denúncias que alimentam de propósito a dimensão Reputação da Comunidade (calcular_score_reputacao, 05): só
-    -- 'resolvida' custa pontos. Eduardo (21): 1 procedente contra o perfil (a parte "perfil", 10, cai para 6,67) e 1
-    -- pendente, que não custa nada.
-    (13, NULL, 21, 'Perfil com dados acadêmicos falsos',          NULL, 'resolvida', 'O título informado não foi confirmado pela instituição.', '2024-06-10 09:00:00'),
-    (23, NULL, 21, 'Comportamento abusivo ou ofensivo',           NULL, 'pendente',  NULL, NOW() - INTERVAL '75 days'),
-    -- Vinícius (22): 4 denúncias 'resolvida' (procedentes) de 4 denunciantes diferentes (a UNIQUE é por par
-    -- usuário/alvo): zeram a parte "perfil" da reputação.
-    (12, NULL, 22, 'Perfil com dados acadêmicos falsos',          NULL, 'resolvida', 'O vínculo informado não existe; confirmado com a universidade.', '2024-06-01 09:00:00'),
-    (15, NULL, 22, 'Comportamento abusivo ou ofensivo',           NULL, 'resolvida', 'Mensagens ofensivas confirmadas.', '2024-06-02 10:00:00'),
-    (9,  NULL, 22, 'Usurpação de identidade de pesquisador real', NULL, 'resolvida', 'Usava fotos e publicações de outro pesquisador.', '2024-06-03 11:00:00'),
-    (11, NULL, 22, 'Perfil com dados acadêmicos falsos',          NULL, 'resolvida', 'Título acadêmico não comprovado.', '2024-06-04 12:00:00'),
-    -- Campanha 12 (do Vinícius): 3 procedentes de 3 denunciantes; a última levou ao encerramento por moderação.
-    (13, 12, NULL, 'Campanha com informações falsas ou enganosas', NULL, 'resolvida', 'As escolas citadas não confirmaram nenhuma parceria.', '2024-07-10 09:00:00'),
-    (16, 12, NULL, 'Campanha sem viabilidade metodológica',        NULL, 'resolvida', 'Não há autorização da secretaria de educação para a coleta.', '2024-07-12 10:00:00'),
-    (19, 12, NULL, 'Campanha com informações falsas ou enganosas', NULL, 'resolvida', 'Fraude confirmada; campanha encerrada por moderação.', '2024-07-20 14:00:00'),
-    -- Gabriel (25): 3 procedentes contra o perfil, que zeram a parte "perfil" da reputação (faixa "Atenção").
-    (12, NULL, 25, 'Perfil com dados acadêmicos falsos',          NULL, 'resolvida', 'O título de graduação informado não foi encontrado na instituição.', NOW() - INTERVAL '25 days'),
-    (13, NULL, 25, 'Comportamento abusivo ou ofensivo',           NULL, 'resolvida', 'Mensagens ofensivas a outros pesquisadores confirmadas.', NOW() - INTERVAL '22 days'),
-    (15, NULL, 25, 'Usurpação de identidade de pesquisador real', NULL, 'resolvida', 'Usava publicações de outro pesquisador como se fossem suas.', NOW() - INTERVAL '20 days'),
-    -- Camila (26): 2 procedentes contra o perfil (a parte "perfil" fica em um terço).
-    (14, NULL, 26, 'Perfil com dados acadêmicos falsos',          NULL, 'resolvida', 'O mestrado informado não foi confirmado pelo programa de pós-graduação.', NOW() - INTERVAL '18 days'),
-    (16, NULL, 26, 'Comportamento abusivo ou ofensivo',           NULL, 'resolvida', 'Ataques pessoais em comentários confirmados.', NOW() - INTERVAL '15 days')
-) AS v(id_usuario, id_campanha_alvo, id_pesquisador_alvo, motivo_descricao, relato, status, justificativa, criado_em)
-JOIN motivo_denuncia md ON md.descricao = v.motivo_descricao;
-
--- Campanha 10 (ativa): denúncias recentes, uma em cada etapa da análise, para a moderação ter o que julgar.
-INSERT INTO denuncia (id_usuario, id_campanha_alvo, id_motivo, relato, status, justificativa_moderacao, criado_em)
-SELECT v.id_usuario, 10, md.id_motivo, v.relato, v.status::status_denuncia, v.justificativa, NOW() - v.dias * INTERVAL '1 day'
-FROM (VALUES
-    (12, 'Campanha com informações falsas ou enganosas', 'A área de coleta descrita inclui uma reserva onde a pesquisa não tem autorização.', 'pendente', NULL, 3),
-    (16, 'Campanha sem viabilidade metodológica',        'Não dá para cobrir tantos pontos de coleta com o prazo e a equipe informados.', 'pendente', NULL, 2),
-    (23, 'Campanha duplicada ou já existente',           'Parece igual a outra campanha sobre espécies invasoras.', 'improcedente', 'A outra campanha é de outra região e de outro grupo; não é duplicada.', 6)
-) AS v(id_usuario, motivo_descricao, relato, status, justificativa, dias)
-JOIN motivo_denuncia md ON md.descricao = v.motivo_descricao;
-
-ALTER TABLE denuncia ENABLE TRIGGER trg_denuncia_valida_alvo;
-
--- Quem julgou cada denúncia decidida: o Diego (8), moderador com nome de gente. Fora do seed é a trigger
--- trg_denuncia_registra_julgador (05) que grava, com quem está logado; aqui não há ninguém logado. A contestação
--- esperando análise pode ser decidida por qualquer outro moderador ou admin, nunca pelo Diego (92036).
-UPDATE denuncia SET id_julgador = 8, julgado_em = LEAST(criado_em + INTERVAL '2 days', NOW())
-WHERE status IN ('resolvida', 'improcedente');
-
--- Contestações (RF-033), uma de cada situação que a moderação lê: o Eduardo contesta a dele e espera a análise; o
--- Vinícius contestou uma das dele, e a moderação recusou.
-UPDATE denuncia SET
-    contestacao = 'O título de mestre foi emitido pela UFBA em 2022; anexei o diploma ao perfil. Peço a revisão.',
-    contestacao_status = 'pendente', contestada_em = NOW() - INTERVAL '1 day'
-WHERE id_pesquisador_alvo = 21 AND status = 'resolvida';
-UPDATE denuncia SET
-    contestacao = 'O vínculo com a universidade existe; trabalho como pesquisador voluntário.',
-    contestacao_status = 'recusada', contestada_em = '2024-06-05 10:00:00',
-    justificativa_contestacao = 'A universidade confirmou por escrito que não há vínculo de nenhum tipo.',
-    id_julgador_contestacao = 1
-WHERE id_pesquisador_alvo = 22 AND id_usuario = 12;
-
--- [07-D-7] notificacao
--- 7 linhas em estados diferentes, para exercitar a permissão notificacao_processar e o índice
--- idx_notificacao_status (02) contra linhas reais.
-INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, status, tentativas, criado_em, enviado_em, ultimo_erro) VALUES
-(12, 'ana.santos@usp.br',           'campanha_aprovada',                  'enviado',  1, '2024-02-01 10:05:00', '2024-02-01 10:05:30', NULL),
-(13, 'carlos.melo@unicamp.br',      'doacao_recebida',                    'enviado',  1, '2024-02-10 10:00:30', '2024-02-10 10:01:00', NULL),
-(15, 'rafael.costa@ufrj.br',        'campanha_rejeitada',                 'pendente', 0, '2024-01-25 09:00:10', NULL,                   NULL),
-(17, 'marcos.oliveira@unesp.br',    'solicitacao_encerramento_aprovada',  'pendente', 0, '2024-05-13 10:00:05', NULL,                   NULL),
-(14, 'beatriz.lima@ufmg.br',        'denuncia_recebida_contra_perfil',    'falhou',   3, '2024-03-20 08:00:10', NULL,                   'SMTP timeout: gateway de e-mail não respondeu após 3 tentativas'),
-(23, 'fernanda.souza@gmail.com',    'doacao_confirmada',                  'falhou',   2, '2024-02-25 09:00:10', NULL,                   'Endereço de e-mail rejeitado pelo servidor de destino (550 mailbox not found)'),
-(16, 'juliana.ferreira@ufsc.br',    'campanha_proxima_do_prazo',          'cancelado',0, '2024-05-20 08:00:00', NULL,                   'Cancelada: campanha encerrada antes do envio programado');
-
 -- ----------------------------------------------------------------------------
--- RESUMO: por que cada um dos 4 pesquisadores novos cai na faixa de
--- score_rotulo esperada, tudo calculado por trg_perfil_recalcula_score /
--- trg_link_recalcula_score / trg_campanha_recalcula_score / trg_atualizacao_
--- recalcula_score / trg_denuncia_recalcula_score (05) - nenhum número foi
--- digitado à mão em score_atual.
+-- RESUMO DA DEMONSTRAÇÃO: o que cada pessoa mostra e por que cai na faixa de score que cai. Nenhum número foi
+-- digitado à mão em score_atual: tudo sai das triggers de recálculo (05) sobre os dados acima.
 --
---                    Perfil acad. Histórico Atualização Reputação  Total  Faixa
--- Bruno    (19)          30          25          20         25     100  Referência (75-100)
--- Renata   (20)          10          25           0         25      60  Confiável  (50-74)
--- Eduardo  (21)          10          10           5         22      47  Em Construção (25-49)
--- Vinícius (22)          10          10           0         10      30  Em Construção (25-49)
--- Gabriel  (25)           5           0           0         15      20  Atenção    (0-24)
--- Camila   (26)           5           0           0         18      23  Atenção    (0-24)
---   (Gabriel e Camila: perfil mínimo, só o título; campanha ainda na fila, que não conta no histórico; 3 e 2
---   denúncias procedentes contra o perfil: a parte "perfil" fica em 0 e em 3,33, a parte "campanhas" inteira.)
+--                     Perfil acad. Histórico Atualização Reputação  Total  Faixa
+-- Ana       (8)            30          25          20         25     100  Referência
+-- Bruno     (9)            16          18          14         25      73  Confiável
+-- Renata    (11)            8          25           5         25      63  Confiável
+-- Beatriz   (13)           24          10           2         25      61  Confiável
+-- Carlos    (10)           14          10           5         25      54  Confiável
+-- Juliana   (14)           14          10           0         25      49  Em Construção
+-- Eduardo   (12)            8          10           5         22      45  Em Construção
+-- Patrícia  (15)            8          10           0         25      43  Em Construção
+-- Vinícius  (16)            4          10           0         10      24  Atenção
+-- Gabriel   (17)            4           0           0         18      22  Atenção
 --
--- Cada subitem vale a sua parte da dimensão (peso do subitem / soma dos subitens ativos, vezes o peso da dimensão).
--- Perfil acadêmico: Bruno tem Lattes+ORCID+LinkedIn+instituição+título (8+8+4+5+5=30);
---   os outros 3 só têm instituição+título (5+5=10, obrigatório desde que a coluna virou
---   NOT NULL - não dá pra zerar essa dimensão de propósito).
--- Histórico: Bruno e Renata têm campanha 'sucesso' e aprovada (15+10=25); Eduardo tem
---   campanha 'ativo' aprovada mas ainda não encerrada (só os 10 da aprovação); Vinícius teve a
---   campanha 12 aprovada (10) e encerrada por moderação, que não entra na conclusão (já pesa na reputação).
--- Atualização: Bruno publicou 2 atualizações numa campanha curta = crédito cheio (20);
---   Eduardo publicou 1 numa campanha mais longa = crédito parcial (5); Renata e Vinícius
---   não têm nenhuma atualização (0; a campanha encerrada por moderação não conta).
--- Reputação: perfil (10) e campanhas (15), cada parte zera em 3 (denúncias procedentes contra o perfil; campanhas
---   com denúncia procedente). Bruno e Renata não têm denúncia (25); Eduardo tem 1 procedente contra o perfil
---   (6,67 + 15 = 22) e 1 pendente; Vinícius tem 4 contra o perfil (0) e 3 contra a campanha 12, que contam como
---   1 campanha (10).
+-- Ana: Lattes, ORCID e ResearchGate, instituição e título (30); duas campanhas de sucesso e nenhuma rejeitada (25);
+--   publica atualizações com regularidade (20); nenhuma denúncia procedente. A improcedente contra a campanha 3
+--   não pesa. Na campanha 3 (ativa) estão todos os estados de um apoio em andamento.
+-- Bruno: um sucesso e uma não atingida dão metade da conclusão (7,5) mais a aprovação inteira (10). A campanha 5
+--   mostra cada devolução numa situação; a 20 espera na fila com o checklist incompleto.
+-- Renata: o sucesso da campanha 8 vale a conclusão inteira; o repasse espera a chave Pix dela. A 18 voltou para a
+--   fila depois de uma rejeição (rejeição corrigida não pesa: só a definitiva, a de campanha apagada).
+-- Beatriz: duas campanhas ativas (o limite de campanhas simultâneas), com pedidos de encerramento esperando.
+-- Carlos: a não atingida flexível conta como não concluída (0 na conclusão). A transferência dela falhou.
+-- Juliana: a campanha "Em breve" já foi aprovada (10), mas ainda não começou. Tem também um rascunho.
+-- Eduardo: o encerramento antes do prazo aprovado pelo admin conta como não concluída; 1 denúncia procedente
+--   contra o perfil (a parte "perfil" da reputação cai a 6,67), contestada e esperando análise.
+-- Patrícia: o projeto cancelado por ela não entra na conclusão (só o encerramento aprovado pelo admin entra); a 14
+--   está rejeitada, com reenvio disponível.
+-- Vinícius: 3 denúncias procedentes contra o perfil zeram a parte "perfil"; a campanha 16, encerrada por
+--   moderação, conta como 1 campanha denunciada (15 vira 10). Uma das denúncias foi contestada e a contestação
+--   recusada. Também está com o aceite do termo de pesquisador pendente.
+-- Gabriel: pesquisador novo, sem campanha aprovada; 2 das 3 denúncias contra o perfil seguem procedentes (a
+--   terceira caiu pela contestação aceita): 3,33 + 15 = 18.
 -- ----------------------------------------------------------------------------
 
 -- [07-D-5] Como logar no app depois deste seed (autenticação própria, ver DOCUMENTACAO_BD.md)

@@ -1,13 +1,10 @@
-// Registros REAIS que já nascem com uma "demo" inteira montada em 07_seed_dados.sql: pesquisadores 12-22 (campanha,
-// score e links pré-calculados) e as campanhas 1-10 (orçamento, cronograma, comentário e transação já seedados).
-// Não são protegidos: a faceta "Origem" do T1 e do T2 abre marcada em "teste" e os esconde, para não serem
-// alterados por engano.
-export const ORIGEM_TESTE = 'teste';
+// Origem das contas no T1: as 7 contas "Sistema" do seed (07_seed_dados.sql, ids 1 a 7, uma por papel, usadas pelo
+// login rápido) são "sistema"; todas as outras são "normal". A faceta "Origem" do T1 abre marcada em "normal" e
+// esconde as 7, que não são material de teste.
+export const ORIGEM_NORMAL = 'normal';
+
+const ULTIMO_USUARIO_SISTEMA = 7;
 
 export function origemUsuario(idUsuario: number): string {
-  return idUsuario >= 12 && idUsuario <= 22 ? 'demonstração' : ORIGEM_TESTE;
-}
-
-export function origemCampanha(idCampanha: number): string {
-  return idCampanha <= 10 ? 'demonstração' : ORIGEM_TESTE;
+  return idUsuario <= ULTIMO_USUARIO_SISTEMA ? 'sistema' : ORIGEM_NORMAL;
 }

@@ -1182,6 +1182,12 @@ Nenhum GRANT adicional. `papel`, `permissao` e `papel_permissao` só têm policy
 - **Motivo:** manter um `07` só (decisão do Lucas) e, mesmo assim, ir para produção sem contas de senha conhecida nem permissões de teste. Por algumas horas o seed esteve dividido em dois arquivos; essa versão está guardada, sem manutenção, em `informacoes/sql-guardados/`.
 - **Caso-limite aceito:** a versão antiga de um termo, que a demonstração precisa para o histórico de aceites, entra já desativada (a vigente nasce antes, na referência). Conferido pela suíte PGlite 33, que monta o banco de produção cortando o `07` no marcador.
 
+📌 **Demonstração refeita: uma situação do sistema em cada canto (18-10-2026).**
+- **Em palavras simples:** a demonstração mostra para a banca tudo o que o sistema faz: cada status de campanha, de contribuição, de repasse, de pedido de encerramento, de denúncia e de contestação; Pix, cartão e boleto; cada situação da caixa de avisos do provedor; e pesquisadores nas quatro faixas de score por motivos reais (a Ana chega a Referência com duas campanhas de sucesso). As datas são contadas a partir do dia em que o banco é montado, então ela nunca envelhece.
+- **Decisão:** 23 contas (as 7 "Sistema", 10 pesquisadores, 3 pessoas que apoiam e 3 contas comuns zeradas) e 21 campanhas, uma para cada situação (lista no cabeçalho de `[07-E-1]`). Toda contribuição nasce pendente e o resto acontece pelas mesmas funções que o sistema usa com o provedor de verdade (`[07-H-5]`): o aviso do provedor confirma, o fechamento da campanha cria o repasse ou manda devolver, o worker de repasse e o de estorno andam, a moderação julga e o admin decide. Funções temporárias (`pg_temp`, somem no fim da sessão) só fazem o papel do provedor e datam cada passo. O dinheiro da demonstração usa o provedor `seed`, que nenhuma tarefa automática trata. Saíram as 4 contas da equipe com nome de gente (repetiam os papéis das contas "Sistema") e os nomes repetidos.
+- **Motivo:** o seed antigo tinha datas fixas de 2024, dinheiro escrito à mão (sem eventos de pagamento, sem repasse em andamento, só Pix) e gente sem papel na história. Escrever o resultado à mão também não prova nada; passar pelas funções reais prova que elas aceitam cada caminho.
+- **Caso-limite:** ninguém nasce suspenso (suspender é uma ação demonstrada ao vivo), e as recompensas ficam para quando o módulo existir. A suíte de coerência do seed (PGlite 18) confere que todo status aparece, que a caixa de avisos tem cada situação, que nada passa pelo provedor de verdade, que ninguém passa do limite de campanhas simultâneas e que nenhum registro financeiro fica com a data da montagem do banco. Montar a demonstração achou um defeito real, corrigido em `criar_repasses_liberados` (ver `DOCUMENTACAO_FINANCEIRO.md`, seção 6).
+
 📌 **Datas do seed no horário de Brasília (28-09-2026).**
 - **Em palavras simples:** o seed escreve datas como "01/01/2024 00:00". O Supabase trabalha no horário de Londres, então lia isso como meia-noite de lá, que em Brasília ainda é dia 31/12. Por isso a conta admin aparecia como "Membro desde 12/2023".
 - **Decisão:** `SET TIME ZONE 'America/Sao_Paulo'` no início do `07` e `RESET TIME ZONE` no fim: toda data escrita no seed passa a valer como horário de Brasília.
@@ -1207,30 +1213,29 @@ Povoa o banco com dados de demonstração/teste (mínimo 7 registros por tabela 
 | 7 | `area_conhecimento` | CONFIG | `[07-C-2]` |
 | 8 | `motivo_denuncia` | CONFIG | `[07-C-3]` |
 | 9 | `arquivo` | CONFIG | `[07-C-4]` |
-| 10 | `usuario` | USUÁRIO | `[07-D-1]` |
-| 11 | `usuario_papel` | USUÁRIO | `[07-D-2]` |
-| 12 | `termos_de_uso` / `usuario_termo` | USUÁRIO | `[07-D-6]` |
-| 13 | `configuracoes` (parâmetros de sistema + preferências do admin) | CONFIG | `[07-C-5]` |
-| 14 | `configuracoes` (constantes do motor de score) | SCORE¹ | `[07-I-2]` |
-| 15 | `perfil_pesquisador` (+ aceite do termo de pesquisador) e `verificacao_email` | USUÁRIO | `[07-D-3]`, `[07-D-8]` |
-| 16 | `link_academico` | LINK | `[07-F-1]` |
-| 17 | `campanha` | CAMPANHA | `[07-E-1]` |
-| 18 | `seguir_campanha` | CAMPANHA | `[07-E-2]` |
-| 19 | `seguir_pesquisador` | USUÁRIO | `[07-D-4]` |
-| 20 | `contribuicao` | CONTRIBUIÇÃO | `[07-H-1]` |
-| 21 | `aceite_termo_contribuicao` | CONTRIBUIÇÃO | `[07-H-3]` |
-| 22 | `auditoria_financeira` | CONTRIBUIÇÃO | `[07-H-2]` |
-| 23 | `atualizacao_campanha` | CAMPANHA | `[07-E-3]` |
-| 24 | `configuracoes` (limites de upload de arquivo) | ARQUIVO² | `[07-G]` |
-| 25 | `arquivo_atualizacao` | ARQUIVO | `[07-G-1]` |
-| 26 | `repasse` | CAMPANHA | `[07-E-4]` |
-| 27 | `solicitacao_encerramento` | CAMPANHA | `[07-E-5]` |
-| 28 | `historico_rejeicao` | CAMPANHA | `[07-E-6]` |
-| 29 | `comentario` | CAMPANHA | `[07-E-7]` |
-| 30 | `denuncia` | CAMPANHA | `[07-E-8]` |
-| 31 | `notificacao` | USUÁRIO | `[07-D-7]` |
-| - | Nota sobre como logar após o seed | USUÁRIO | `[07-D-5]` |
-| 32 | Backfill (`recalcular_todos_os_scores()`) | SCORE | `[07-I-3]` |
+| 10 | `configuracoes` (parâmetros de sistema) | CONFIG | `[07-C-5]` |
+| 11 | `configuracoes` (constantes do motor de score) | SCORE¹ | `[07-I-2]` |
+| 12 | `configuracoes` (limites de upload de arquivo) | ARQUIVO² | `[07-G]` |
+| - | Marcador `[07-DEMONSTRACAO]`: daqui para baixo, só desenvolvimento e aula | - | - |
+| 13 | `usuario` | USUÁRIO | `[07-D-1]` |
+| 14 | `usuario_papel` | USUÁRIO | `[07-D-2]` |
+| 15 | `termos_de_uso` (versões antigas) / `usuario_termo` | USUÁRIO | `[07-D-6]` |
+| 16 | `configuracoes` (preferência do admin e Campo de Testes) | CONFIG | `[07-C-5]` |
+| 17 | `perfil_pesquisador` (+ chave Pix e aceite do termo de pesquisador) e `verificacao_email` | USUÁRIO | `[07-D-3]`, `[07-D-8]` |
+| 18 | `link_academico` | LINK | `[07-F-1]` |
+| 19 | `campanha` | CAMPANHA | `[07-E-1]` |
+| 20 | `orcamento_campanha` / `marco_cronograma` | CAMPANHA | `[07-E-1b]` |
+| 21 | `historico_rejeicao` | CAMPANHA | `[07-E-6]` |
+| 22 | `atualizacao_campanha` | CAMPANHA | `[07-E-3]` |
+| 23 | `comentario` (+ endossos feitos como o dono) | CAMPANHA | `[07-E-7]` |
+| 24 | `seguir_campanha` / `seguir_pesquisador` | CAMPANHA, USUÁRIO | `[07-E-2]`, `[07-D-4]` |
+| 25 | `contribuicao` (todas nascem pendentes) | CONTRIBUIÇÃO | `[07-H-1]` |
+| 26 | `aceite_termo_contribuicao` | CONTRIBUIÇÃO | `[07-H-3]` |
+| 27 | A vida de cada contribuição pelas funções do sistema: `evento_pagamento`, `auditoria_financeira`, `repasse`, `denuncia`, `solicitacao_encerramento` e contestações | CONTRIBUIÇÃO, CAMPANHA | `[07-H-5]` |
+| 28 | `notificacao` | USUÁRIO | `[07-D-7]` |
+| 29 | `termos_de_uso` (rascunhos da próxima versão) | USUÁRIO | `[07-H-4]` |
+| - | Resumo da demonstração e nota sobre como logar após o seed | - | `[07-D-5]` |
+| 30 | Backfill (`recalcular_todos_os_scores()`) | SCORE | `[07-I-3]` |
 
 ¹ A *tabela* `configuracoes` é do domínio CONFIG (`01-C`), mas este bloco específico só contém constantes usadas pelo motor de cálculo de score - por isso foi arquivado sob a letra `I`, junto com o resto do que envolve pontuação. É a mesma tabela, mas o **conteúdo** desse bloco pertence a outro domínio; ver nota abaixo.
 

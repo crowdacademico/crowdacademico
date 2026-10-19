@@ -6,6 +6,8 @@ import { IconeGoogle } from '../../components/3-auth/icone-google';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { Campo } from '../../components/input/campo';
 import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
+import { emailValido } from '../../services/constant/util/validacao.util';
 import type { PropsPagina } from '../../services/router/pagina.type';
 
 // Cópia fiel de telas/login/login.html do Projeto de Interface real, com uma mudança deliberada em relação ao
@@ -36,12 +38,26 @@ export function LoginPage({ auth }: PropsPagina) {
   const local = useLocation();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const idSenha = useId();
+  const idErroSenha = useId();
+
+  // Mesma validação do cadastro: o erro aparece embaixo do campo, com o cursor nele, e não num aviso solto. O erro do
+  // servidor sobre um campo (validação do DTO) vai para o mesmo lugar. "E-mail ou senha incorretos" continua no topo,
+  // sem marcar campo: dizer qual dos dois está errado ajudaria quem tenta adivinhar contas.
+  const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
+    email: email.trim() === '' ? 'Informe o e-mail.' : !emailValido(email) && 'E-mail inválido.',
+    senha: senha === '' && 'Informe a senha.',
+  }));
+  const erroEmail = erroDe('email') ?? errosCampo.email;
+  const erroSenha = erroDe('senha') ?? errosCampo.senha;
 
   const aoEntrar = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
+    if (!tentarEnviar()) {
+      return;
+    }
     await executarEnviando(async () => {
       await auth.login(email, senha);
       void navigate(destinoDepoisDoLogin(local.state), { replace: true });
@@ -64,19 +80,23 @@ export function LoginPage({ auth }: PropsPagina) {
           </p>
         </div>
 
-        <form onSubmit={aoEntrar} className="p-10 space-y-6">
+        <form onSubmit={aoEntrar} noValidate className="p-10 space-y-6">
           <MensagemErro texto={erro} className="paragrafo-destaque texto-erro text-center whitespace-pre-line" />
 
-          <Campo rotulo="Seu E-mail">
-            {({ atributos }) => (
+          <Campo rotulo="Seu E-mail" erro={erroEmail}>
+            {({ atributos, classeErro }) => (
               <input
                 {...atributos}
                 type="email"
                 value={email}
-                onChange={(evento) => setEmail(evento.target.value)}
+                onChange={(evento) => {
+                  setEmail(evento.target.value);
+                  limparErroCampo('email');
+                }}
                 required
-                className="input-padrao"
+                className={'input-padrao' + classeErro}
                 placeholder="seu@email.com"
+                autoComplete="email"
               />
             )}
           </Campo>
@@ -91,11 +111,22 @@ export function LoginPage({ auth }: PropsPagina) {
               id={idSenha}
               type="password"
               value={senha}
-              onChange={(evento) => setSenha(evento.target.value)}
+              onChange={(evento) => {
+                setSenha(evento.target.value);
+                limparErroCampo('senha');
+              }}
               required
-              className="input-padrao order-3 w-full"
+              aria-invalid={Boolean(erroSenha)}
+              aria-describedby={erroSenha ? idErroSenha : undefined}
+              className={'input-padrao order-3 w-full' + (erroSenha ? ' borda-erro' : '')}
               placeholder="••••••••"
+              autoComplete="current-password"
             />
+            {erroSenha && (
+              <p id={idErroSenha} className="legenda-destaque erro-campo order-4 w-full">
+                {erroSenha}
+              </p>
+            )}
             <Link to="/esqueci-senha" className="legenda-destaque texto-marca hover:underline mb-2 order-2">
               Esqueceu a senha?
             </Link>

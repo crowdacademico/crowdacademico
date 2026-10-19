@@ -735,8 +735,9 @@
     text-transform: none;
     letter-spacing: normal;
     /* Mesmo motivo: dentro de uma célula de tabela que não quebra linha (DS-100), a dica herdava o nowrap, saía numa
-       linha só e era cortada pela borda da tabela. A dica sempre quebra dentro do max-width. */
-    white-space: normal;
+       linha só e era cortada pela borda da tabela. A dica sempre quebra dentro do max-width, e respeita a quebra de
+       linha que o texto trouxer ("\n"), para separar assuntos numa dica maior. */
+    white-space: pre-line;
     width: max-content;
     max-width: 16rem;
     box-shadow: var(--shadow-md);

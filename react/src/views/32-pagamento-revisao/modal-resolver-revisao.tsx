@@ -82,7 +82,7 @@ export function ModalResolverRevisao({ authFetch, revisao, aoFechar, aoResolvido
             {revisao.revisaoManualEm !== null && <CampoFicha rotulo="Em revisão manual desde" valor={formatarDataHora(revisao.revisaoManualEm)} />}
             <CampoFicha rotulo="Contribuição" valor={revisao.idContribuicao === null ? null : `#${revisao.idContribuicao}`} />
             <CampoFicha rotulo="Repasse" valor={revisao.idRepasse === null ? null : `#${revisao.idRepasse}`} />
-            <CampoFicha rotulo="Por que não foi aplicado" valor={revisao.motivo} largura="cheia" />
+            <CampoFicha rotulo="Motivo" valor={revisao.motivo} largura="cheia" />
           </SecaoFicha>
 
           {podeResolver && (
@@ -103,7 +103,7 @@ export function ModalResolverRevisao({ authFetch, revisao, aoFechar, aoResolvido
             </SecaoFicha>
           )}
 
-          {!emRevisaoManual && (
+          {revisao.situacao === 'vale_tentar_de_novo' && (
             <CaixaAviso titulo="Nada a resolver aqui" icone="fa-circle-info">
               Este evento falhou por um motivo passageiro. Em geral o provedor reenvia o aviso e ele é aplicado sozinho. Se ele continuar nesta lista por
               muito tempo, o motivo acima mostra onde investigar.

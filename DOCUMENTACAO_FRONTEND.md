@@ -413,7 +413,7 @@ Peças de tela compartilhadas entre módulos: `views/1-usuario/modais-usuario.ts
 
 📌 **Peças compartilhadas:** `servicos/hook/use-campanhas-campo-testes.tsx` entrega a toda tela de campanha do Campo de Testes as colunas, as facetas, as ações de quem visita a campanha (Consultar, Comentar, Seguir, Deixar de seguir, Denunciar), as regras de quando cada uma vale e os modais delas. O T2 acrescenta só o que é dele; o T4 só filtra as seguidas. Um "T" novo de campanha começa por esse hook.
 
-📌 **Registros da demonstração:** os pesquisadores 12 a 22 e as campanhas 1 a 10 do seed não são protegidos. A faceta "Origem" (demonstração ou teste, `servicos/util/registros-demonstracao.util.ts`) abre marcada em "teste" no T1 e no T2 e os esconde.
+📌 **Origem no T1:** a faceta "Origem" (sistema ou normal, `servicos/util/registros-demonstracao.util.ts`) abre marcada em "normal" e esconde as 7 contas "Sistema" do seed (1 a 7).
 
 ### Dashboard (`views/admin/dashboard.tsx`)
 

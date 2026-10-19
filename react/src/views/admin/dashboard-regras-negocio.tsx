@@ -8,6 +8,8 @@ import { ModalAlterarTermoUso } from '../5-termo-uso/modal-alterar-termo-uso';
 import { ModalCriarTermoUso } from '../5-termo-uso/modal-criar-termo-uso';
 import { Tooltip } from '../../components/layout/tooltip';
 import { ModalDetalhe } from '../../components/crud/modal-detalhe';
+import { ModalAlterarConfiguracao } from '../11-configuracoes/modal-configuracao';
+import { formatarDuracaoMinutos, formatarTamanhoArquivo } from '../../services/constant/util/formatacao.util';
 import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { ConfiguracoesResponse } from '../../services/11-configuracoes/type/configuracoes.type';
@@ -20,18 +22,25 @@ interface GrupoConfiguracoes {
 
 // Conteúdo do modal "Saiba mais" do grupo Arquivo: a explicação é grande demais para caber num tooltip, por
 // isso é um modal com seções de verdade em vez de um bloco de texto só. Só existe para o grupo Arquivo por
-// enquanto; se outro grupo precisar do mesmo tratamento, isso vira um objeto por grupo em vez de uma constante
-// solta.
-const SECOES_MODAL_ARQUIVO = [
+// enquanto; se outro grupo precisar do mesmo tratamento, isso vira um objeto por grupo em vez de uma função solta.
+// Os números são os parâmetros como estão agora (`valor`, lido da mesma lista que a tela mostra): mudou no Alterar,
+// o texto acompanha.
+const secoesModalArquivo = (valor: (chave: string) => number) => [
   {
-    titulo: 'Valores padrão',
+    titulo: 'Valores atuais',
     conteudo: (
       <ul className="list-disc pl-5 space-y-1">
-        <li>Tamanho mínimo: 100 bytes.</li>
-        <li>Tamanho máximo: 8 MB para imagem (JPEG/PNG/WebP) e 5 MB para PDF.</li>
-        <li>Cota de armazenamento: 50 MB por conta.</li>
-        <li>Rate limit: até 20 uploads a cada 24h.</li>
-        <li>Intervalo mínimo entre um upload e o próximo: 5 segundos.</li>
+        <li>Tamanho mínimo: {formatarTamanhoArquivo(valor('arquivo_tamanho_minimo_bytes'))}.</li>
+        <li>
+          Tamanho máximo: {formatarTamanhoArquivo(valor('arquivo_tamanho_maximo_imagem_bytes'))} para imagem
+          (JPEG/PNG/WebP) e {formatarTamanhoArquivo(valor('arquivo_tamanho_maximo_documento_bytes'))} para PDF.
+        </li>
+        <li>Cota de armazenamento: {formatarTamanhoArquivo(valor('arquivo_cota_bytes_por_usuario'))} por conta.</li>
+        <li>
+          Rate limit: até {valor('arquivo_limite_uploads_janela')} uploads a cada{' '}
+          {formatarDuracaoMinutos(valor('arquivo_janela_limite_uploads_minutos'))}.
+        </li>
+        <li>Intervalo mínimo entre um upload e o próximo: {valor('arquivo_intervalo_minimo_segundos')} segundos.</li>
       </ul>
     ),
   },
@@ -39,7 +48,7 @@ const SECOES_MODAL_ARQUIVO = [
     titulo: 'Por que estes números',
     conteudo: (
       <p>
-        São só o ponto de partida gravado no seed, não um teto técnico do sistema. O plano
+        São parâmetros do sistema, não um teto técnico dele. O plano
         gratuito do Supabase Storage usado neste projeto tem <strong>1 GB de espaço
         TOTAL</strong> e um <strong>teto de 50 MB por arquivo individual</strong>. Configurar
         aqui um valor acima desse teto não adianta: o próprio Supabase recusaria o upload
@@ -209,8 +218,8 @@ function CardTermoUso({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
 
 // Aba "Regras do Negócio": as chaves de `configuracoes` (a aba Configurações as mostra numa tabela CRUD crua)
 // aqui em uma segunda forma de olhar para o MESMO dado, agrupado por assunto, mais fácil de escanear. "Alterar"
-// continua sendo a tela de sempre (modal de Parâmetros do Sistema): não duplica o formulário de edição aqui, só
-// organiza a leitura.
+// abre o MESMO modal de Parâmetros do Sistema (ModalAlterarConfiguracao): não duplica o formulário de edição aqui,
+// só organiza a leitura.
 interface DashboardRegrasNegocioProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
 }
@@ -218,13 +227,15 @@ interface DashboardRegrasNegocioProps {
 export function DashboardRegrasNegocio({ auth }: DashboardRegrasNegocioProps) {
   const [grupos, setGrupos] = useState<GrupoConfiguracoes[] | null>(null);
   const [modalArquivoAberto, setModalArquivoAberto] = useState(false);
+  const [alterando, setAlterando] = useState<ConfiguracoesResponse | null>(null);
+  const [recarga, setRecarga] = useState(0);
 
   useEffect(() => {
     configuracoesApi
       .listar(auth.authFetch)
       .then((lista) => setGrupos(agruparConfiguracoes(lista)))
       .catch(() => setGrupos([]));
-  }, [auth.authFetch]);
+  }, [auth.authFetch, recarga]);
 
   return (
     <div className="space-y-6">
@@ -255,12 +266,13 @@ export function DashboardRegrasNegocio({ auth }: DashboardRegrasNegocioProps) {
                     <span className="paragrafo-destaque texto-forte">
                       {config.valor ?? '-'}
                     </span>
-                    <Link
-                      to={`/configuracoes/${config.idConfig}/alterar`}
+                    <button
+                      type="button"
+                      onClick={() => setAlterando(config)}
                       className="crud-tabela__acao crud-tabela__acao--alterar"
                     >
                       <i className="fa-solid fa-pen" aria-hidden="true"></i> Alterar
-                    </Link>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -269,10 +281,21 @@ export function DashboardRegrasNegocio({ auth }: DashboardRegrasNegocioProps) {
         ))
       )}
 
+      {alterando && (
+        <ModalAlterarConfiguracao
+          auth={auth}
+          configuracao={alterando}
+          aoFechar={() => setAlterando(null)}
+          aoAtualizado={() => setRecarga((n) => n + 1)}
+        />
+      )}
+
       {modalArquivoAberto && (
         <ModalDetalhe
           titulo="Limites de upload de arquivo"
-          secoes={SECOES_MODAL_ARQUIVO}
+          secoes={secoesModalArquivo((chave) =>
+            Number(grupos?.flatMap((g) => g.itens).find((c) => c.chave === chave)?.valor ?? 0),
+          )}
           aoFechar={() => setModalArquivoAberto(false)}
         />
       )}
