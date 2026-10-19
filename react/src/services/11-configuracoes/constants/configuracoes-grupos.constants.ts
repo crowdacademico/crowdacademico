@@ -11,6 +11,7 @@ const GRUPO_CONFIGURACAO: Record<string, string> = {
   tarefa_repasse_ligada: 'Tarefas automáticas',
   tarefa_devolucao_ligada: 'Tarefas automáticas',
   tarefa_conferencia_ligada: 'Tarefas automáticas',
+  tarefa_envio_email_ligada: 'Tarefas automáticas',
   teste_pagamento_automatico_ligado: 'Tarefas automáticas',
   // Moderação: cor do tempo de espera nas filas (coluna "esperando").
   espera_atencao_dias: 'Moderação',
@@ -56,6 +57,11 @@ const GRUPO_CONFIGURACAO: Record<string, string> = {
   cancelamento_cobranca_intervalo_minutos: 'Pagamentos',
   webhook_reprocessar_espera_minutos: 'Pagamentos',
   webhook_reprocessar_horas: 'Pagamentos',
+  // E-mail: ritmo do worker de envio (nest/src/4-mail).
+  email_lease_minutos: 'E-mail',
+  email_max_tentativas: 'E-mail',
+  email_backoff_base_minutos: 'E-mail',
+  email_backoff_max_minutos: 'E-mail',
   // Campanha
   prazo_minimo_campanha_dias: 'Campanha',
   prazo_sugerido_campanha_dias: 'Campanha',
@@ -93,7 +99,7 @@ const GRUPO_CONFIGURACAO: Record<string, string> = {
   notificar_novas_campanhas: 'Geral',
 };
 
-const ORDEM_GRUPOS = ['Segurança', 'Financeiro', 'Pagamentos', 'Tarefas automáticas', 'Campanha', 'Moderação', 'Score / Reputação', 'Arquivo', 'Geral', 'Outras'];
+const ORDEM_GRUPOS = ['Segurança', 'Financeiro', 'Pagamentos', 'E-mail', 'Tarefas automáticas', 'Campanha', 'Moderação', 'Score / Reputação', 'Arquivo', 'Geral', 'Outras'];
 
 export function grupoConfiguracao(chave: string): string {
   return GRUPO_CONFIGURACAO[chave] ?? 'Outras';

@@ -6341,3 +6341,545 @@ BEGIN
     END IF;
 END;
 $$;
+
+-- ============================================================
+-- [05-Q] NOTIFICAÇÃO: a fila de e-mails (RF-121) e os eventos que a alimentam
+-- ============================================================
+-- Todo e-mail nasce como uma linha 'pendente' em notificacao, na MESMA transação do evento que o causou (padrão
+-- "caixa de saída"): se a aprovação, a rejeição ou o encerramento forem desfeitos, o e-mail some junto, e nenhum
+-- aviso se perde se o servidor cair no meio. O worker do Nest (nest/src/4-mail) reserva uma linha por vez, monta o
+-- texto pelo tipo_evento + dados, envia pelo provedor configurado e grava o resultado aqui.
+--
+-- Quem enfileira:
+--   - os gatilhos deste bloco, para tudo que muda de situação no banco (campanha aprovada, rejeitada, encerrada;
+--     devolução concluída; encerramento antecipado decidido; pesquisador suspenso ou reativado; contestação decidida;
+--     atualização publicada). Vale para qualquer caminho: tela, tarefa automática ou função de moderação;
+--   - o Nest, só para verificar a conta e recuperar a senha: o link leva um token que o banco guarda apenas como hash,
+--     então só o Nest o conhece; ele vai cifrado em dados.segredo e é apagado quando o e-mail sai ou é cancelado.
+-- Conta excluída não recebe nada (enfileirar_notificacao devolve NULL). Contribuição sem conta também não: não há
+-- e-mail para onde mandar (RF-080).
+
+-- ----------------------------------------------------------------------------
+-- Função:     enfileirar_notificacao
+-- Assinatura: (p_id_usuario INT, p_tipo VARCHAR, p_dados JSONB DEFAULT '{}') -> INT
+-- Bloco:      [05-Q]
+-- Regra:      Põe um e-mail na fila para uma conta: copia o e-mail e o nome dela NESTE momento (a pessoa pode trocar o
+--             nome depois; o histórico mostra para onde foi). Conta inexistente ou excluída: devolve NULL e não grava
+--             nada. SECURITY DEFINER, sem autorização: quem chama são os gatilhos deste bloco e o Nest (cadastro e
+--             recuperação de senha), sempre por causa de um evento que já passou pelas próprias regras.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.enfileirar_notificacao(p_id_usuario INT, p_tipo VARCHAR, p_dados JSONB DEFAULT '{}'::jsonb)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_email VARCHAR(255);
+    v_nome  VARCHAR(150);
+    v_id    INT;
+BEGIN
+    SELECT u.email, u.nome INTO v_email, v_nome
+    FROM usuario u
+    WHERE u.id_usuario = p_id_usuario AND NOT u.deletado;
+
+    IF NOT FOUND OR v_email IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, dados)
+    VALUES (p_id_usuario, v_email, p_tipo, jsonb_build_object('nome', v_nome) || COALESCE(p_dados, '{}'::jsonb))
+    RETURNING id_notificacao INTO v_id;
+    RETURN v_id;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     enfileirar_notificacao_doadores
+-- Assinatura: (p_id_campanha INT, p_tipo VARCHAR, p_dados JSONB DEFAULT '{}') -> INT
+-- Bloco:      [05-Q]
+-- Regra:      Um e-mail para cada pessoa com conta que pagou alguma contribuição da campanha (uma vez por pessoa, mesmo
+--             com várias contribuições). Contribuição pendente, vencida ou com erro não conta: essa pessoa não pagou.
+--             Os dados ganham o título e o id da campanha. Devolve quantos e-mails entraram na fila.
+--             SECURITY DEFINER, sem autorização (só os gatilhos deste bloco chamam).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.enfileirar_notificacao_doadores(p_id_campanha INT, p_tipo VARCHAR, p_dados JSONB DEFAULT '{}'::jsonb)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_titulo  VARCHAR(255);
+    v_usuario INT;
+    v_total   INT := 0;
+BEGIN
+    SELECT titulo INTO v_titulo FROM campanha WHERE id_campanha = p_id_campanha;
+
+    FOR v_usuario IN
+        SELECT DISTINCT c.id_usuario
+        FROM contribuicao c
+        WHERE c.id_campanha = p_id_campanha
+          AND c.id_usuario IS NOT NULL
+          AND c.status IN ('confirmado', 'repassado', 'a_devolver', 'devolvido', 'reembolsado', 'reembolso_manual')
+        ORDER BY c.id_usuario
+    LOOP
+        IF public.enfileirar_notificacao(
+            v_usuario, p_tipo,
+            jsonb_build_object('id_campanha', p_id_campanha, 'titulo', v_titulo) || COALESCE(p_dados, '{}'::jsonb)
+        ) IS NOT NULL THEN
+            v_total := v_total + 1;
+        END IF;
+    END LOOP;
+    RETURN v_total;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     enfileirar_notificacao_seguidores
+-- Assinatura: (p_id_campanha INT, p_tipo VARCHAR, p_dados JSONB DEFAULT '{}') -> INT
+-- Bloco:      [05-Q]
+-- Regra:      Um e-mail para cada pessoa que segue a campanha (RF-053) OU o pesquisador dono dela (RF-028), uma vez por
+--             pessoa, nunca para o próprio dono. SECURITY DEFINER porque cada conta só enxerga o próprio "seguir"
+--             (RLS de seguir_campanha e seguir_pesquisador). Devolve quantos e-mails entraram na fila.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.enfileirar_notificacao_seguidores(p_id_campanha INT, p_tipo VARCHAR, p_dados JSONB DEFAULT '{}'::jsonb)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_dono    INT;
+    v_titulo  VARCHAR(255);
+    v_usuario INT;
+    v_total   INT := 0;
+BEGIN
+    SELECT id_usuario, titulo INTO v_dono, v_titulo FROM campanha WHERE id_campanha = p_id_campanha;
+    IF NOT FOUND THEN
+        RETURN 0;
+    END IF;
+
+    FOR v_usuario IN
+        SELECT sc.id_usuario FROM seguir_campanha sc WHERE sc.id_campanha = p_id_campanha
+        UNION
+        SELECT sp.id_usuario FROM seguir_pesquisador sp WHERE sp.id_pesquisador = v_dono
+    LOOP
+        CONTINUE WHEN v_usuario = v_dono;
+        IF public.enfileirar_notificacao(
+            v_usuario, p_tipo,
+            jsonb_build_object('id_campanha', p_id_campanha, 'titulo', v_titulo,
+                               'nome_pesquisador', (SELECT nome FROM usuario WHERE id_usuario = v_dono))
+            || COALESCE(p_dados, '{}'::jsonb)
+        ) IS NOT NULL THEN
+            v_total := v_total + 1;
+        END IF;
+    END LOOP;
+    RETURN v_total;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     reservar_proxima_notificacao
+-- Assinatura: () -> TABLE (id_notificacao INT, id_usuario INT, email_destinatario VARCHAR, tipo_evento VARCHAR,
+--             dados JSONB, tentativas INT)
+-- Bloco:      [05-Q]
+-- Regra:      Fila do worker de e-mail. Pega o próximo 'pendente' cuja vez chegou (proxima_tentativa_em <= agora), conta
+--             a tentativa e o RESERVA empurrando proxima_tentativa_em para daqui a email_lease_minutos (padrão 5):
+--             enquanto não vence, ninguém mais pega o mesmo e-mail; se o processo morrer no meio, ele volta sozinho
+--             para a fila quando o prazo vence. FOR UPDATE SKIP LOCKED: duas instâncias nunca reservam o mesmo.
+--             SECURITY DEFINER, SEM AUTORIZAÇÃO DE PROPÓSITO (job de fundo, sem usuário na sessão).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.reservar_proxima_notificacao()
+RETURNS TABLE (
+    id_notificacao INT, id_usuario INT, email_destinatario VARCHAR, tipo_evento VARCHAR, dados JSONB, tentativas INT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_id INT;
+BEGIN
+    SELECT n.id_notificacao INTO v_id
+    FROM notificacao n
+    WHERE n.status = 'pendente' AND n.proxima_tentativa_em <= NOW()
+    ORDER BY n.proxima_tentativa_em, n.id_notificacao
+    LIMIT 1
+    FOR UPDATE SKIP LOCKED;
+
+    IF NOT FOUND THEN
+        RETURN;
+    END IF;
+
+    RETURN QUERY
+    UPDATE notificacao n
+       SET tentativas = n.tentativas + 1,
+           proxima_tentativa_em = NOW() + (public.config_numero('email_lease_minutos', 5) * INTERVAL '1 minute')
+     WHERE n.id_notificacao = v_id
+    RETURNING n.id_notificacao, n.id_usuario, n.email_destinatario, n.tipo_evento, n.dados, n.tentativas;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     concluir_notificacao
+-- Assinatura: (p_id_notificacao INT, p_assunto VARCHAR, p_provedor VARCHAR, p_id_mensagem VARCHAR) -> VOID
+-- Bloco:      [05-Q]
+-- Regra:      O provedor aceitou o e-mail: 'pendente' -> 'enviado', com o assunto, quem enviou e o id da mensagem no
+--             provedor. Apaga dados.segredo (o link com token não fica guardado depois de usado). Só age em
+--             'pendente': chamado de novo, não faz nada. SECURITY DEFINER, sem autorização (job de fundo).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.concluir_notificacao(
+    p_id_notificacao INT, p_assunto VARCHAR, p_provedor VARCHAR, p_id_mensagem VARCHAR
+)
+RETURNS VOID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    UPDATE notificacao
+       SET status = 'enviado', enviado_em = NOW(), assunto = LEFT(p_assunto, 200), provedor = p_provedor,
+           id_mensagem_provedor = LEFT(p_id_mensagem, 200), ultimo_erro = NULL, dados = dados - 'segredo'
+     WHERE id_notificacao = p_id_notificacao AND status = 'pendente';
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     falhar_notificacao
+-- Assinatura: (p_id_notificacao INT, p_assunto VARCHAR, p_erro TEXT, p_recuperavel BOOLEAN, p_provedor VARCHAR) -> VARCHAR
+-- Bloco:      [05-Q]
+-- Regra:      O envio não deu certo. Guarda o motivo e decide:
+--               'pendente' falha recuperável (rede, provedor fora do ar, limite por minuto) com tentativas sobrando:
+--                          volta para a fila com espera crescente (email_backoff_base_minutos * 2^(tentativa-1), até
+--                          email_backoff_max_minutos);
+--               'falhou'   falha NÃO recuperável (endereço recusado, chave do provedor errada, tipo sem modelo de
+--                          texto) ou tentativas esgotadas (email_max_tentativas, padrão 5): aparece no painel para
+--                          alguém reenviar ou cancelar (RF-121);
+--               'ignorado' o e-mail não está mais 'pendente'.
+--             SECURITY DEFINER, sem autorização (job de fundo).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.falhar_notificacao(
+    p_id_notificacao INT, p_assunto VARCHAR, p_erro TEXT, p_recuperavel BOOLEAN, p_provedor VARCHAR
+)
+RETURNS VARCHAR
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_tentativas INT;
+    v_espera     NUMERIC;
+BEGIN
+    SELECT tentativas INTO v_tentativas
+    FROM notificacao
+    WHERE id_notificacao = p_id_notificacao AND status = 'pendente'
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RETURN 'ignorado';
+    END IF;
+
+    IF p_recuperavel AND v_tentativas < public.config_numero('email_max_tentativas', 5) THEN
+        v_espera := LEAST(
+            public.config_numero('email_backoff_base_minutos', 5) * power(2, GREATEST(v_tentativas - 1, 0)),
+            public.config_numero('email_backoff_max_minutos', 720)
+        );
+        UPDATE notificacao
+           SET ultimo_erro = LEFT(p_erro, 1000), assunto = COALESCE(LEFT(p_assunto, 200), assunto),
+               provedor = p_provedor, proxima_tentativa_em = NOW() + (v_espera * INTERVAL '1 minute')
+         WHERE id_notificacao = p_id_notificacao;
+        RETURN 'pendente';
+    END IF;
+
+    UPDATE notificacao
+       SET status = 'falhou', ultimo_erro = LEFT(p_erro, 1000), assunto = COALESCE(LEFT(p_assunto, 200), assunto),
+           provedor = p_provedor
+     WHERE id_notificacao = p_id_notificacao;
+    RETURN 'falhou';
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     reenviar_notificacao
+-- Assinatura: (p_id_notificacao INT) -> VOID
+-- Bloco:      [05-Q]
+-- Regra:      Tratamento manual do RF-121: um e-mail 'falhou' volta para a fila agora, com as tentativas zeradas.
+--             Exige notificacao_processar (92039); só 'falhou' pode voltar (91054: enviado não se manda de novo por
+--             aqui, e cancelado já perdeu o link, se tinha um). SECURITY DEFINER com a checagem por dentro.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.reenviar_notificacao(p_id_notificacao INT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_status status_notificacao;
+BEGIN
+    IF NOT public.tem_permissao('notificacao_processar') THEN
+        RAISE EXCEPTION 'Sem permissão para reenviar e-mails.' USING ERRCODE = '92039';
+    END IF;
+
+    SELECT status INTO v_status FROM notificacao WHERE id_notificacao = p_id_notificacao FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'E-mail não encontrado.' USING ERRCODE = '90039';
+    END IF;
+    IF v_status <> 'falhou' THEN
+        RAISE EXCEPTION 'Só um e-mail que falhou pode ser reenviado.' USING ERRCODE = '91054';
+    END IF;
+
+    UPDATE notificacao
+       SET status = 'pendente', tentativas = 0, proxima_tentativa_em = NOW(), ultimo_erro = NULL
+     WHERE id_notificacao = p_id_notificacao;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     cancelar_notificacao
+-- Assinatura: (p_id_notificacao INT) -> VOID
+-- Bloco:      [05-Q]
+-- Regra:      Tratamento manual do RF-121: um e-mail 'pendente' ou 'falhou' que não deve mais sair vira 'cancelado'
+--             (e perde o link, se tinha um). Exige notificacao_processar (92039); enviado ou já cancelado: 91054.
+--             SECURITY DEFINER com a checagem por dentro.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.cancelar_notificacao(p_id_notificacao INT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_status status_notificacao;
+BEGIN
+    IF NOT public.tem_permissao('notificacao_processar') THEN
+        RAISE EXCEPTION 'Sem permissão para cancelar e-mails.' USING ERRCODE = '92039';
+    END IF;
+
+    SELECT status INTO v_status FROM notificacao WHERE id_notificacao = p_id_notificacao FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'E-mail não encontrado.' USING ERRCODE = '90039';
+    END IF;
+    IF v_status NOT IN ('pendente', 'falhou') THEN
+        RAISE EXCEPTION 'Só um e-mail pendente ou que falhou pode ser cancelado.' USING ERRCODE = '91054';
+    END IF;
+
+    UPDATE notificacao
+       SET status = 'cancelado', dados = dados - 'segredo'
+     WHERE id_notificacao = p_id_notificacao;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_notifica_situacao_campanha (trigger)
+-- Bloco:      [05-Q]
+-- Regra:      E-mails de quando a campanha muda de situação:
+--               aguardando_aprovacao -> ativo: o dono (RF-105) e quem segue o pesquisador (RF-028, campanha nova);
+--               tudo-ou-nada -> sucesso: quem apoiou (RF-080 c);
+--               tudo-ou-nada -> nao_atingido: quem apoiou, avisando que a devolução começou (RF-080 a);
+--               -> encerrado_moderacao: quem apoiou, em qualquer modelo (RF-115; a moderação devolve tudo).
+--             A rejeição tem gatilho próprio em historico_rejeicao, porque a justificativa só existe lá.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_notifica_situacao_campanha()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF OLD.status = 'aguardando_aprovacao' AND NEW.status = 'ativo' THEN
+        PERFORM public.enfileirar_notificacao(NEW.id_usuario, 'campanha_aprovada',
+            jsonb_build_object('id_campanha', NEW.id_campanha, 'titulo', NEW.titulo));
+        PERFORM public.enfileirar_notificacao_seguidores(NEW.id_campanha, 'nova_campanha_pesquisador');
+    ELSIF NEW.status = 'sucesso' AND NEW.modelo = 'all-or-nothing' THEN
+        PERFORM public.enfileirar_notificacao_doadores(NEW.id_campanha, 'campanha_sucesso');
+    ELSIF NEW.status = 'nao_atingido' AND NEW.modelo = 'all-or-nothing' THEN
+        PERFORM public.enfileirar_notificacao_doadores(NEW.id_campanha, 'campanha_nao_atingida');
+    ELSIF NEW.status = 'encerrado_moderacao' THEN
+        PERFORM public.enfileirar_notificacao_doadores(NEW.id_campanha, 'campanha_encerrada_moderacao');
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_notifica_situacao_campanha ON campanha;
+CREATE TRIGGER trg_notifica_situacao_campanha
+AFTER UPDATE OF status ON campanha
+FOR EACH ROW
+WHEN (OLD.status IS DISTINCT FROM NEW.status)
+EXECUTE FUNCTION public.fn_notifica_situacao_campanha();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_notifica_rejeicao_campanha (trigger)
+-- Bloco:      [05-Q]
+-- Regra:      Campanha rejeitada (RF-105): o dono recebe a justificativa, quantos reenvios ainda tem e até quando pode
+--             corrigir, pela mesma conta que a tela e o banco usam (fn_campanha_situacao_reenvio, [05-K-2-B]).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_notifica_rejeicao_campanha()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_situacao RECORD;
+BEGIN
+    IF NEW.id_campanha IS NULL OR NEW.id_usuario_dono IS NULL THEN
+        RETURN NULL;
+    END IF;
+    SELECT * INTO v_situacao FROM public.fn_campanha_situacao_reenvio(NEW.id_campanha);
+    PERFORM public.enfileirar_notificacao(NEW.id_usuario_dono, 'campanha_rejeitada',
+        jsonb_build_object('id_campanha', NEW.id_campanha, 'titulo', NEW.titulo_campanha,
+                           'justificativa', NEW.justificativa,
+                           'reenvios_restantes', v_situacao.reenvios_restantes,
+                           'prazo_reenvio_ate', v_situacao.prazo_reenvio_ate));
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_notifica_rejeicao_campanha ON historico_rejeicao;
+CREATE TRIGGER trg_notifica_rejeicao_campanha
+AFTER INSERT ON historico_rejeicao
+FOR EACH ROW EXECUTE FUNCTION public.fn_notifica_rejeicao_campanha();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_notifica_devolucao (trigger)
+-- Bloco:      [05-Q]
+-- Regra:      Devolução concluída (RF-080 b): quem apoiou com conta recebe o aviso com o valor devolvido.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_notifica_devolucao()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    PERFORM public.enfileirar_notificacao(NEW.id_usuario, 'devolucao_concluida',
+        jsonb_build_object('id_campanha', NEW.id_campanha, 'valor', NEW.valor,
+                           'titulo', (SELECT titulo FROM campanha WHERE id_campanha = NEW.id_campanha)));
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_notifica_devolucao ON contribuicao;
+CREATE TRIGGER trg_notifica_devolucao
+AFTER UPDATE OF status ON contribuicao
+FOR EACH ROW
+WHEN (NEW.status = 'devolvido' AND OLD.status IS DISTINCT FROM NEW.status AND NEW.id_usuario IS NOT NULL)
+EXECUTE FUNCTION public.fn_notifica_devolucao();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_notifica_decisao_encerramento (trigger)
+-- Bloco:      [05-Q]
+-- Regra:      Pedido de encerramento antecipado decidido: o pesquisador recebe a aprovação (RF-066) ou a rejeição com a
+--             justificativa do admin (RF-065).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_notifica_decisao_encerramento()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_dono   INT;
+    v_titulo VARCHAR(255);
+BEGIN
+    SELECT id_usuario, titulo INTO v_dono, v_titulo FROM campanha WHERE id_campanha = NEW.id_campanha;
+    PERFORM public.enfileirar_notificacao(v_dono,
+        CASE NEW.status WHEN 'aprovado' THEN 'encerramento_aprovado' ELSE 'encerramento_rejeitado' END,
+        jsonb_build_object('id_campanha', NEW.id_campanha, 'titulo', v_titulo,
+                           'justificativa', NEW.justificativa_admin));
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_notifica_decisao_encerramento ON solicitacao_encerramento;
+CREATE TRIGGER trg_notifica_decisao_encerramento
+AFTER UPDATE OF status ON solicitacao_encerramento
+FOR EACH ROW
+WHEN (OLD.status = 'pendente' AND NEW.status IN ('aprovado', 'rejeitado'))
+EXECUTE FUNCTION public.fn_notifica_decisao_encerramento();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_notifica_situacao_pesquisador (trigger)
+-- Bloco:      [05-Q]
+-- Regra:      O pesquisador é avisado da suspensão, com o motivo e até quando (RF-117), e da reativação (RF-119), venha
+--             ela do admin ou do fim do prazo (reativar_pesquisadores_vencidos).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_notifica_situacao_pesquisador()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NEW.status_pesquisador = 'suspenso' THEN
+        PERFORM public.enfileirar_notificacao(NEW.id_usuario, 'pesquisador_suspenso',
+            jsonb_build_object('motivo', NEW.motivo_suspensao, 'suspenso_ate', NEW.suspenso_ate));
+    ELSE
+        PERFORM public.enfileirar_notificacao(NEW.id_usuario, 'pesquisador_reativado');
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_notifica_situacao_pesquisador ON perfil_pesquisador;
+CREATE TRIGGER trg_notifica_situacao_pesquisador
+AFTER UPDATE OF status_pesquisador ON perfil_pesquisador
+FOR EACH ROW
+WHEN (OLD.status_pesquisador IS DISTINCT FROM NEW.status_pesquisador)
+EXECUTE FUNCTION public.fn_notifica_situacao_pesquisador();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_notifica_contestacao (trigger)
+-- Bloco:      [05-Q]
+-- Regra:      Contestação de denúncia decidida (RF-033): o pesquisador contestante recebe o resultado e a justificativa.
+--             O alvo é o perfil (id_pesquisador_alvo) ou o dono da campanha denunciada.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_notifica_contestacao()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_pesquisador INT;
+BEGIN
+    v_pesquisador := COALESCE(NEW.id_pesquisador_alvo,
+                              (SELECT id_usuario FROM campanha WHERE id_campanha = NEW.id_campanha_alvo));
+    PERFORM public.enfileirar_notificacao(v_pesquisador,
+        CASE NEW.contestacao_status WHEN 'aceita' THEN 'contestacao_aceita' ELSE 'contestacao_recusada' END,
+        jsonb_build_object('justificativa', NEW.justificativa_contestacao));
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_notifica_contestacao ON denuncia;
+CREATE TRIGGER trg_notifica_contestacao
+AFTER UPDATE OF contestacao_status ON denuncia
+FOR EACH ROW
+WHEN (OLD.contestacao_status = 'pendente' AND NEW.contestacao_status IN ('aceita', 'recusada'))
+EXECUTE FUNCTION public.fn_notifica_contestacao();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_notifica_atualizacao (trigger)
+-- Bloco:      [05-Q]
+-- Regra:      Atualização publicada: quem segue a campanha (RF-053) ou o pesquisador (RF-028) recebe o aviso.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_notifica_atualizacao()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    PERFORM public.enfileirar_notificacao_seguidores(NEW.id_campanha, 'nova_atualizacao',
+        jsonb_build_object('titulo_atualizacao', NEW.titulo));
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_notifica_atualizacao ON atualizacao_campanha;
+CREATE TRIGGER trg_notifica_atualizacao
+AFTER INSERT ON atualizacao_campanha
+FOR EACH ROW
+WHEN (NEW.ativo)
+EXECUTE FUNCTION public.fn_notifica_atualizacao();

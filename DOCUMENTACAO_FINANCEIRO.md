@@ -22,18 +22,18 @@ Como o dinheiro anda no sistema: quem paga, quanto, para onde vai, quando volta,
 | Peça | Onde | O que faz |
 |---|---|---|
 | Contribuição | `nest/src/22-contribuicao` | Recebe o pedido de apoio, calcula a tarifa, pede a cobrança ao provedor e devolve o Pix "copia e cola" ou o link do cartão |
-| Provedor de pagamento | `nest/src/29-pagamento` | Fala com o provedor (adapters), recebe os avisos dele (webhook), responde à validação de saque e roda as tarefas automáticas (repasse, devolução, conferência) |
-| Chave Pix do pesquisador | `nest/src/30-conta-recebimento` | O pesquisador cadastra a chave Pix onde recebe; o sistema confere no provedor se a chave é do mesmo CPF |
-| Pendências do admin | `nest/src/32-pagamento-revisao` | Avisos que precisam de uma pessoa, reembolsos manuais e repasses com erro |
+| Provedor de pagamento | `nest/src/23-pagamento` | Fala com o provedor (adapters), recebe os avisos dele (webhook), responde à validação de saque e roda as tarefas automáticas (repasse, devolução, conferência) |
+| Chave Pix do pesquisador | `nest/src/24-conta-recebimento` | O pesquisador cadastra a chave Pix onde recebe; o sistema confere no provedor se a chave é do mesmo CPF |
+| Pendências do admin | `nest/src/25-pagamento-revisao` | Avisos que precisam de uma pessoa, reembolsos manuais e repasses com erro |
 | Regras do dinheiro | `arquivos_banco_dados/05_regras_negocio.sql` | Máquina de estados, tarifa, destino do dinheiro, filas, auditoria. O banco é quem decide; o Nest executa |
-| Telas | `react/src/views/30-conta-recebimento`, `react/src/views/32-pagamento-revisao`, `react/src/views/20-solicitacao-encerramento` | Chave Pix e repasses em Minha Conta, pendências no painel, cancelar ou encerrar a campanha |
-| Bancada de pagamento (T5) | `react/src/campo-testes`, `nest/src/campo-testes` | Faz o papel de quem paga e do provedor para testar o fluxo inteiro pela tela. Só fora de produção |
+| Telas | `react/src/views/24-conta-recebimento`, `react/src/views/25-pagamento-revisao`, `react/src/views/20-solicitacao-encerramento` | Chave Pix e repasses em Minha Conta, pendências no painel, cancelar ou encerrar a campanha |
+| Bancada de pagamento (T5) | `react/src/30-campo-testes`, `nest/src/30-campo-testes` | Faz o papel de quem paga e do provedor para testar o fluxo inteiro pela tela. Só fora de produção |
 
 📌 **Ainda não existe a tela pública de apoiar (checkout).** Hoje uma contribuição nasce pela T5 ou pela API (`POST /contribuicao`). O fluxo do dinheiro inteiro já funciona por trás dela.
 
 ### 2.1 Provedor trocável e partes desligáveis
 
-O sistema não conhece o Asaas: conhece três "tomadas" (ports, em `nest/src/29-pagamento/ports`), uma para cobrar, uma para transferir e uma para conferir os avisos. Cada provedor é um "plugue" (adapter, em `nest/src/29-pagamento/adapters`): `asaas`, `fake` (o provedor de teste, que funciona sem internet) e `nao-configurado` (recusa tudo com 503). Trocar de provedor é escrever um adapter novo e mudar `PAYMENT_PROVIDER` no `nest/.env`; o banco não muda, porque cada contribuição e cada repasse guarda de qual provedor é.
+O sistema não conhece o Asaas: conhece três "tomadas" (ports, em `nest/src/23-pagamento/ports`), uma para cobrar, uma para transferir e uma para conferir os avisos. Cada provedor é um "plugue" (adapter, em `nest/src/23-pagamento/adapters`): `asaas`, `fake` (o provedor de teste, que funciona sem internet) e `nao-configurado` (recusa tudo com 503). Trocar de provedor é escrever um adapter novo e mudar `PAYMENT_PROVIDER` no `nest/.env`; o banco não muda, porque cada contribuição e cada repasse guarda de qual provedor é.
 
 | Para desligar | Como | Efeito |
 |---|---|---|
@@ -62,7 +62,7 @@ O sistema não conhece o Asaas: conhece três "tomadas" (ports, em `nest/src/29-
 
 ### 2.3 O provedor de teste e o modo rápido (`npm run start:dev:teste`)
 
-**Em palavras simples:** o provedor de teste (`nest/src/29-pagamento/adapters/fake`) é um "Asaas de mentira" que mora dentro do próprio Nest. Ele cumpre as mesmas três tomadas do Asaas (cobrar, transferir, conferir avisos), então o resto do sistema não sabe com qual dos dois está falando: o mesmo código de contribuição, webhook, repasse, devolução e conferência roda nos dois. Nenhum dinheiro existe, não precisa de internet, de conta no Asaas nem de túnel.
+**Em palavras simples:** o provedor de teste (`nest/src/23-pagamento/adapters/fake`) é um "Asaas de mentira" que mora dentro do próprio Nest. Ele cumpre as mesmas três tomadas do Asaas (cobrar, transferir, conferir avisos), então o resto do sistema não sabe com qual dos dois está falando: o mesmo código de contribuição, webhook, repasse, devolução e conferência roda nos dois. Nenhum dinheiro existe, não precisa de internet, de conta no Asaas nem de túnel.
 
 **Como ligar:** na pasta `nest`, `npm run start:dev:teste` no lugar do `npm run start:dev` (`nest/scripts/start-dev-teste.mjs`). Ele sobe o Nest de sempre com `PAYMENT_PROVIDER=fake`, sem mexer no `nest/.env` (a variável de ambiente vale mais que o arquivo). A T5 mostra no topo "Modo rápido: provedor de teste" e todas as ações dela funcionam.
 

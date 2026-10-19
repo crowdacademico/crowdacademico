@@ -9,7 +9,7 @@ import {
   ORDEM_PODER_PAPEL,
   PAPEL_SEM_EXTRA,
 } from '../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
-import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
+import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { ModaisUsuario } from './modais-usuario';
 import { ModalCriarUsuario } from './modal-criar-usuario';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -26,7 +26,7 @@ interface UsuarioLinha extends UsuarioResponse {
 const PAPEL_PADRAO = 'usuario';
 
 // Aba "Usuários" do painel admin: vive na rota /admin/usuarios (ver services/router/rotas.constants.ts,
-// ROTAS_ADMIN). Renderizada dentro do <Outlet/> de views/admin/admin-layout.tsx (sidebar + área de conteúdo já
+// ROTAS_ADMIN). Renderizada dentro do <Outlet/> de components/layout/painel-admin/admin-layout.tsx (sidebar + área de conteúdo já
 // prontos por fora, esta view só cuida do próprio conteúdo).
 //
 // Criar/Alterar/Consultar/Excluir são MODAIS (modal-criar-usuario.tsx, modal-alterar-usuario.tsx,

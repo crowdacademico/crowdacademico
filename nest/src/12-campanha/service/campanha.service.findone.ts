@@ -29,7 +29,29 @@ export class CampanhaServiceFindOne {
       await this.preencherReenvios(resposta);
     }
     await this.preencherCamposBloqueados(resposta);
+    await this.preencherLiquidoEstimado(resposta);
     return resposta;
+  }
+
+  // RF-087. A conta é a do repasse (liquido_repasse, 05 [05-K-2]): mesma taxa mínima, então a estimativa nunca
+  // promete mais do que o repasse vai pagar.
+  private async preencherLiquidoEstimado(
+    resposta: CampanhaResponse,
+  ): Promise<void> {
+    const resultado = await sql<{ liquido: string; taxa: string }>`
+      SELECT public.liquido_repasse(c.valor_bruto_arrecadado,
+               ROUND(c.valor_bruto_arrecadado * (1 - t.taxa / 100), 2)) AS liquido,
+             t.taxa
+      FROM campanha c
+      CROSS JOIN LATERAL (SELECT COALESCE(c.taxa_plataforma, public.config_numero('taxa_plataforma_padrao', 5)) AS taxa) t
+      WHERE c.id_campanha = ${resposta.idCampanha}
+    `.execute(this.database.getDb());
+    const linha = resultado.rows[0] as
+      { liquido: string; taxa: string } | undefined;
+    if (linha) {
+      resposta.valorLiquidoEstimado = Number(linha.liquido);
+      resposta.taxaAplicada = Number(linha.taxa);
+    }
   }
 
   // Lista de campos que o banco trava agora: a MESMA função que a trigger de congelamento usa (05, [05-K-2-D]),

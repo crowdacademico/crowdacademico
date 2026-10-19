@@ -6,7 +6,7 @@ import { Carregando } from '../layout/carregando';
 import { MensagemErro } from './mensagem-erro';
 import { quantasLinhasVazias } from './use-linhas-vazias';
 import type { ResultadoPaginado } from '../../services/constant/type/paginacao.type';
-import type { LogAuditoriaResponse } from '../../services/27-log-auditoria/type/log-auditoria.type';
+import type { LogAuditoriaResponse } from '../../services/28-log-auditoria/type/log-auditoria.type';
 
 interface LogAuditoriaPainelProps {
   buscar: (pagina: number, tamanho: number) => Promise<ResultadoPaginado<LogAuditoriaResponse>>;

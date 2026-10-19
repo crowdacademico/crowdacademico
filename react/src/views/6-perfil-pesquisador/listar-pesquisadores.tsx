@@ -8,7 +8,7 @@ import {
   ROTULO_TITULO_ACADEMICO,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
-import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
+import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { ModaisUsuario } from '../1-usuario/modais-usuario';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';

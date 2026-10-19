@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import type { FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { IconeGoogle } from '../../components/3-auth/icone-google';
+import { IconeGoogle } from '../../components/auth/icone-google';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { Campo } from '../../components/input/campo';
 import { useEnvio } from '../../services/constant/hook/use-envio';

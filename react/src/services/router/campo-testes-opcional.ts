@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 import type { Rota } from './rotas.constants';
 
-// O Campo de Testes (src/campo-testes/) entra no sistema só por aqui, e só em desenvolvimento: em produção a
+// O Campo de Testes (src/30-campo-testes/) entra no sistema só por aqui, e só em desenvolvimento: em produção a
 // rota nem existe e o grupo some do menu. Se a pasta não existir, o glob volta vazio e o sistema compila igual.
 // O ESLint (no-restricted-imports) barra qualquer import direto do sistema para dentro dela.
 interface PluginCampoTestes {
@@ -10,7 +10,7 @@ interface PluginCampoTestes {
 }
 
 const modulos = import.meta.env.DEV
-  ? import.meta.glob<PluginCampoTestes>('../../campo-testes/plugin.ts', { eager: true })
+  ? import.meta.glob<PluginCampoTestes>('../../30-campo-testes/plugin.ts', { eager: true })
   : {};
 
 export const campoTestes = Object.values(modulos).at(0);

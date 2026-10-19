@@ -100,7 +100,7 @@ export interface ConfiguracoesTable {
 // CK_LOG_AUDITORIA_OPERACAO (01) não é CREATE TYPE ... AS ENUM (é CHECK direto na coluna), mas o mesmo
 // raciocínio de TIPOS_MOTIVO_DENUNCIA acima se aplica: array em runtime, tipo derivado dele. Sem isso,
 // `operacao` seria `string` solto aqui, enquanto o tipo em
-// react/src/services/27-log-auditoria/type/log-auditoria.type.ts restringe a esses 4 valores: se a constraint
+// react/src/services/28-log-auditoria/type/log-auditoria.type.ts restringe a esses 4 valores: se a constraint
 // um dia ganhasse um 5º valor, nada nos dois lados avisaria. Os 4 valores são os de CK_LOG_AUDITORIA_OPERACAO
 // em 01_extensoes_enums_tabelas.sql.
 export const OPERACOES_LOG_AUDITORIA = [
@@ -367,7 +367,7 @@ export interface ScorePesquisadorTable {
 }
 
 // Espelham 01_extensoes_enums_tabelas.sql [01-E] CAMPANHA (módulos 12-campanha, 13-orcamento-campanha,
-// 14-marco-cronograma, 15-atualizacao-campanha, 16-seguir-campanha, 17-comentario, 18-recompensa). Campos
+// 14-marco-cronograma, 15-atualizacao-campanha, 16-seguir, 17-comentario, 18-recompensa). Campos
 // DECIMAL (meta_financeira, valor_bruto_arrecadado, taxa_plataforma, valor, valor_minimo) são `string` aqui,
 // nunca `number`, mesmo cuidado de ScoreConfigTable.peso (node-postgres devolve DECIMAL como string para não
 // perder precisão); convertidos para number só no converter de cada módulo.
@@ -453,14 +453,40 @@ export interface SeguirCampanhaTable {
   seguido_em: Generated<Date>;
 }
 
-// Espelha 01_extensoes_enums_tabelas.sql (tabela seguir_pesquisador), sem módulo Nest próprio ainda (RF-026).
-// Primeiro consumidor: exportação de dados do usuário (1-usuario), que precisa ler "quem eu sigo" sem esperar o
-// módulo inteiro existir.
+// Espelha 01_extensoes_enums_tabelas.sql (tabela seguir_pesquisador). Usada por 16-seguir (RF-028) e pela exportação
+// de dados do usuário (1-usuario).
 export interface SeguirPesquisadorTable {
   id_seg_pesquisador: Generated<number>;
   id_usuario: number;
   id_pesquisador: number;
   seguido_em: Generated<Date>;
+}
+
+// CREATE TYPE status_notificacao AS ENUM (...) - 01. A fila de e-mails ([05-Q]): 27-notificacao mostra, 4-mail envia.
+export const STATUS_NOTIFICACAO = [
+  'pendente',
+  'enviado',
+  'falhou',
+  'cancelado',
+] as const;
+export type StatusNotificacao = (typeof STATUS_NOTIFICACAO)[number];
+
+export interface NotificacaoTable {
+  id_notificacao: Generated<number>;
+  id_usuario: number | null;
+  email_destinatario: string;
+  tipo_evento: string;
+  status: Generated<StatusNotificacao>;
+  tentativas: Generated<number>;
+  criado_em: Generated<Date>;
+  enviado_em: Date | null;
+  ultimo_erro: string | null;
+  // O que o texto do e-mail precisa (nome, título da campanha...); um link com token vai cifrado em "segredo".
+  dados: Generated<Record<string, unknown>>;
+  assunto: string | null;
+  proxima_tentativa_em: Generated<Date>;
+  provedor: string | null;
+  id_mensagem_provedor: string | null;
 }
 
 // CREATE TYPE meio_pagamento AS ENUM ('pix','cartao_credito','cartao_debito','boleto') - 01
@@ -597,6 +623,15 @@ export interface RecompensaTable {
   criado_em: Generated<Date>;
 }
 
+// A recompensa que quem apoiou escolheu (RF-101). Simbólica: sem estoque controlado pelo sistema (quantidade sempre 1).
+export interface ContribuicaoRecompensaTable {
+  id_contrib_recompensa: Generated<number>;
+  id_contribuicao: number;
+  id_recompensa: number;
+  quantidade: Generated<number>;
+  adquirida_em: Generated<Date>;
+}
+
 // Satélites de atualizacao_campanha/recompensa (01-F/01-G), dobrados dentro dos módulos
 // 15-atualizacao-campanha/18-recompensa (decisão registrada em PROXIMOS_MODULOS.md: nenhuma das 4 tem pasta
 // numerada própria, o roteiro não as lista como módulo individual).
@@ -633,7 +668,7 @@ export interface ArquivoTable {
   desativado_em: Date | null;
 }
 
-// id_arquivo aqui referencia uma linha da tabela `arquivo` (módulo 25-arquivo); os endpoints de vínculo
+// id_arquivo aqui referencia uma linha da tabela `arquivo` (módulo 26-arquivo); os endpoints de vínculo
 // (INSERT/UPDATE da tabela de associação em si) podem ser testados isoladamente, e o fluxo de ponta a ponta é
 // upload real -> vínculo -> exibição.
 export interface ArquivoAtualizacaoTable {
@@ -711,6 +746,8 @@ export interface DB {
   marco_cronograma: MarcoCronogramaTable;
   comentario: ComentarioTable;
   recompensa: RecompensaTable;
+  contribuicao_recompensa: ContribuicaoRecompensaTable;
+  notificacao: NotificacaoTable;
   link_atualizacao: LinkAtualizacaoTable;
   link_recompensa: LinkRecompensaTable;
   arquivo: ArquivoTable;
@@ -735,4 +772,8 @@ export type AtualizacaoCampanhaEntity = Selectable<AtualizacaoCampanhaTable>;
 export type ArquivoAtualizacaoEntity = Selectable<ArquivoAtualizacaoTable>;
 export type LinkAtualizacaoEntity = Selectable<LinkAtualizacaoTable>;
 export type SeguirCampanhaEntity = Selectable<SeguirCampanhaTable>;
+export type SeguirPesquisadorEntity = Selectable<SeguirPesquisadorTable>;
+export type NotificacaoEntity = Selectable<NotificacaoTable>;
+export type RecompensaEntity = Selectable<RecompensaTable>;
+export type LinkRecompensaEntity = Selectable<LinkRecompensaTable>;
 export type ComentarioEntity = Selectable<ComentarioTable>;

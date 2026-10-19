@@ -517,3 +517,25 @@ GRANT EXECUTE ON FUNCTION public.fn_fator_subitem(INT, TEXT) TO app_nestjs;
 -- desativar_arquivos_orfaos() (05, [05-G]): @Cron diário, sem sessão (higiene de [06-D-2b]).
 REVOKE EXECUTE ON FUNCTION public.desativar_arquivos_orfaos() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.desativar_arquivos_orfaos() TO app_nestjs;
+
+-- ============================================================
+-- [06-Q] NOTIFICAÇÃO (fila de e-mails, 05 [05-Q])
+-- ============================================================
+-- enfileirar_notificacao: o Nest põe na fila os e-mails de verificar a conta e recuperar a senha (só ele conhece o
+-- token do link). reservar/concluir/falhar: o worker de envio (@Cron, sem sessão). reenviar/cancelar: a aba
+-- Notificações do painel, com a permissão checada por dentro (92039). Os enfileiradores de doadores e seguidores só
+-- são chamados pelos gatilhos de [05-Q], por dentro: ninguém recebe EXECUTE.
+REVOKE EXECUTE ON FUNCTION public.enfileirar_notificacao(INT, VARCHAR, JSONB) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.enfileirar_notificacao(INT, VARCHAR, JSONB) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.enfileirar_notificacao_doadores(INT, VARCHAR, JSONB) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.enfileirar_notificacao_seguidores(INT, VARCHAR, JSONB) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.reservar_proxima_notificacao() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.reservar_proxima_notificacao() TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.concluir_notificacao(INT, VARCHAR, VARCHAR, VARCHAR) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.concluir_notificacao(INT, VARCHAR, VARCHAR, VARCHAR) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.falhar_notificacao(INT, VARCHAR, TEXT, BOOLEAN, VARCHAR) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.falhar_notificacao(INT, VARCHAR, TEXT, BOOLEAN, VARCHAR) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.reenviar_notificacao(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.reenviar_notificacao(INT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.cancelar_notificacao(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.cancelar_notificacao(INT) TO app_nestjs;

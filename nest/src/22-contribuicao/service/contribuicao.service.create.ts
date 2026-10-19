@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import {
   BadGatewayException,
+  BadRequestException,
   ForbiddenException,
   HttpException,
   Inject,
@@ -10,17 +11,17 @@ import {
   ServiceUnavailableException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { Pool } from 'pg';
+import { Pool, type PoolClient } from 'pg';
 import { CODIGO_TERMO_PENDENTE } from '../../3-auth/guards/auth.guard.require-auth';
 import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
 import { PG_POOL } from '../../commons/database/database.constants';
 import { executarTransacaoCurta } from '../../commons/database/transacao-curta.util';
-import { GatewayPagamentoErro } from '../../29-pagamento/ports/erro-gateway-pagamento';
-import { ResultadoCobranca } from '../../29-pagamento/dto/resultado-cobranca.dto';
+import { GatewayPagamentoErro } from '../../23-pagamento/ports/erro-gateway-pagamento';
+import { ResultadoCobranca } from '../../23-pagamento/dto/resultado-cobranca.dto';
 import {
   COBRANCA_GATEWAY,
   type CobrancaGatewayPort,
-} from '../../29-pagamento/ports/cobranca-gateway.port';
+} from '../../23-pagamento/ports/cobranca-gateway.port';
 import {
   MENSAGEM_CAMPANHA_NAO_ENCONTRADA,
   MENSAGEM_COBRANCA_FALHOU,
@@ -123,6 +124,14 @@ export class ContribuicaoServiceCreate {
         );
         // A versão do Termo da conta vigente agora, com o IP: prova, numa contestação de pagamento, quais regras
         // valiam no dia (vale também para quem contribui sem conta). Sem versão ativa, não grava.
+        if (dto.idRecompensa !== undefined) {
+          await this.registrarRecompensa(
+            client,
+            dto,
+            idUsuario,
+            resContribuicao.rows[0].id_contribuicao,
+          );
+        }
         await client.query(
           `INSERT INTO aceite_termo_contribuicao (id_contribuicao, id_termo, ip_aceite)
            SELECT $1, id_termo, $2 FROM termos_de_uso WHERE tipo = 'cadastro' AND ativo LIMIT 1`,
@@ -199,6 +208,42 @@ export class ContribuicaoServiceCreate {
     }
 
     return ContribuicaoConverter.paraResponseCreate(contribuicao, cobranca);
+  }
+
+  // RF-100 e RF-101: a recompensa escolhida precisa estar ativa, ser da mesma campanha (o banco também confere,
+  // trg_contrib_recompensa_valida) e o valor da contribuição precisa alcançar o mínimo dela. Recompensa simbólica,
+  // sem estoque: quantidade 1. Na mesma transação da contribuição, com a conta na sessão (pol_contrib_recompensa_insert).
+  private async registrarRecompensa(
+    client: PoolClient,
+    dto: ContribuicaoRequestCreate,
+    idUsuario: number | null,
+    idContribuicao: number,
+  ): Promise<void> {
+    if (idUsuario === null) {
+      throw new BadRequestException(
+        'Para escolher uma recompensa, entre na sua conta.',
+      );
+    }
+    const recompensa = await client.query<{ valor_minimo: string }>(
+      `SELECT valor_minimo FROM recompensa WHERE id_recompensa = $1 AND id_campanha = $2 AND ativo`,
+      [dto.idRecompensa, dto.idCampanha],
+    );
+    const minimo = (recompensa.rows[0] as { valor_minimo: string } | undefined)
+      ?.valor_minimo;
+    if (minimo === undefined) {
+      throw new BadRequestException(
+        'Esta recompensa não está disponível nesta campanha.',
+      );
+    }
+    if (dto.valor < Number(minimo)) {
+      throw new BadRequestException(
+        `Esta recompensa pede uma contribuição de pelo menos R$ ${Number(minimo).toFixed(2).replace('.', ',')}.`,
+      );
+    }
+    await client.query(
+      `INSERT INTO contribuicao_recompensa (id_contribuicao, id_recompensa) VALUES ($1, $2)`,
+      [idContribuicao, dto.idRecompensa],
+    );
   }
 
   // Melhor esforço: se nem isto der, fica 'pendente' sem cobrança, que é um estado válido e recuperável. Nunca

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Dica } from '../tooltip';
-import { logAuditoriaApi } from '../../../services/27-log-auditoria/api/log-auditoria.api';
+import { logAuditoriaApi } from '../../../services/28-log-auditoria/api/log-auditoria.api';
 import { useFecharAoClicarFora } from '../../../services/constant/hook/use-fechar-ao-clicar-fora';
 import { formatarDataHora } from '../../../services/constant/util/formatacao.util';
 import { Carregando } from '../carregando';
 import type { UseAuthReturn } from '../../../services/3-auth/hook/use-auth';
-import type { LogAuditoriaResponse, OperacaoLogAuditoria } from '../../../services/27-log-auditoria/type/log-auditoria.type';
+import type { LogAuditoriaResponse, OperacaoLogAuditoria } from '../../../services/28-log-auditoria/type/log-auditoria.type';
 
 const CHAVE_ULTIMO_VISTO = 'crowdacademico.atividadeUltimoLogVisto';
 
@@ -27,7 +27,7 @@ interface SinoAtividadeProps {
 // trocar de dispositivo; toast é feedback de "o que EU acabei de clicar", isto é "o que aconteceu, mesmo
 // enquanto eu não estava olhando".
 //
-// Rotulado "Atividade recente", não "Notificações": quando 26-notificacao existir de verdade, o dropdown ganha
+// Rotulado "Atividade recente", não "Notificações": quando 27-notificacao existir de verdade, o dropdown ganha
 // uma 2ª aba ("Notificações") e esta vira "Minha atividade".
 export function SinoAtividade({ auth }: SinoAtividadeProps) {
   const [aberto, setAberto] = useState(false);

@@ -61,7 +61,7 @@ crowdacademico/                          (repo único na Organization)
 │       ├── 1-usuario/
 │       ├── 2-papel-permissao/            (papel, permissao, usuario_papel, papel_permissao)
 │       ├── 3-auth/                       (sessao, recuperacao_senha, verificacao_email)
-│       ├── 4-mail/
+│       ├── 4-mail/                   (envio de e-mail: fila, worker, provedores; ver .Tutorial-email.md)
 │       ├── 5-termo-uso/                  (termo_de_uso, usuario_termo)
 │       ├── 6-perfil-pesquisador/         (+ score_config/score_rotulo/score_pesquisador)
 │       ├── 7-link-academico/
@@ -77,7 +77,7 @@ crowdacademico/                          (repo único na Organization)
 │       ├── 13-orcamento-campanha/
 │       ├── 14-marco-cronograma/
 │       ├── 15-atualizacao-campanha/      (+ arquivo_atualizacao)
-│       ├── 16-seguir-campanha/
+│       ├── 16-seguir/                (seguir_campanha; seguir_pesquisador entra aqui)
 │       ├── 17-comentario/
 │       ├── 18-recompensa/                (+ contribuicao_recompensa, arquivo_recompensa, link_recompensa)
 │       ├── 19-denuncia/
@@ -86,14 +86,17 @@ crowdacademico/                          (repo único na Organization)
 │       │
 │       │   --- Cluster 4: Financeiro ---
 │       ├── 22-contribuicao/
-│       ├── 23-repasse/
-│       ├── 24-auditoria-financeira/
+│       ├── 23-pagamento/            (provedor, webhook, tarefas de repasse e devolução)
+│       ├── 24-conta-recebimento/    (chave Pix do pesquisador, repasses dele)
+│       ├── 25-pagamento-revisao/    (revisões, reembolsos manuais, repasses com atenção)
 │       │
 │       │   --- Cluster 5: Infra transversal ---
-│       ├── 25-arquivo/
-│       ├── 26-notificacao/
-│       ├── 27-log-auditoria/        (log_auditoria - só leitura, GET /log-auditoria)
-│       └── 28-dashboard/            (métricas agregadas do painel - GET /dashboard/resumo)
+│       ├── 26-arquivo/
+│       ├── 27-notificacao/          (registro dos e-mails, aba Notificações do Dashboard)
+│       ├── 28-log-auditoria/        (log_auditoria - só leitura, GET /log-auditoria)
+│       ├── 29-dashboard/            (métricas agregadas do painel - GET /dashboard/resumo)
+│       │
+│       └── 30-campo-testes/         (só fora de produção; sempre o último número)
 │
 │       (padrão interno de cada módulo N-nome/, igual ao modelo):
 │       │   ├── constants/
@@ -117,39 +120,27 @@ crowdacademico/                          (repo único na Organization)
 │
 └── react/
     └── src/
-        │   (pasta que tem par no nest/ usa o MESMO número - nunca cria número
-        │   novo aqui; pasta sem par no nest fica sem número, tipo router/)
+        │   (services/ e views/ usam o MESMO número do nest/; services/ só tem o número
+        │   quando o front chama a API do módulo, views/ só quando ele tem tela; pasta
+        │   sem par no nest fica sem número, tipo router/)
         ├── components/
-        │   ├── 3-auth/
+        │   ├── auth/
+        │   ├── crud/
         │   ├── input/
         │   ├── layout/
+        │   │   └── painel-admin/     (casca do painel: menu lateral e moldura)
         │   ├── pagination/
         │   └── search/
         ├── services/
-        │   ├── 1-usuario/
-        │   ├── 3-auth/
-        │   ├── 6-perfil-pesquisador/
-        │   ├── 7-link-academico/
-        │   ├── 8-area-conhecimento/
-        │   ├── 12-campanha/
-        │   ├── 17-comentario/
-        │   ├── 19-denuncia/
-        │   ├── 22-contribuicao/
-        │   ├── 23-repasse/
-        │   ├── 26-notificacao/
-        │   ├── 27-log-auditoria/    (consumido pelo componente "Ver log" do GenericTable)
-        │   ├── admin/                (inclui a busca de métricas do 28-dashboard - sem pasta numerada própria aqui)
+        │   ├── 1-usuario/ … 29-dashboard/
         │   ├── constant/
         │   └── router/
         │       (cada um dos numerados com api/, constants/, hook/, type/ - igual ao modelo)
-        └── views/
-            ├── 1-usuario/
-            ├── 3-auth/
-            ├── 12-campanha/
-            ├── admin/
-            ├── checkout/
-            ├── dash-doador/
-            └── dash-pesquisador/
+        ├── views/
+        │   ├── 1-usuario/ … 25-pagamento-revisao/
+        │   ├── 22-contribuicao/      (checkout, reservada)
+        │   └── 29-dashboard/         (dashboard do admin; doador/ e pesquisador/ reservadas)
+        └── 30-campo-testes/          (só em desenvolvimento; sempre o último número)
 ```
 
 # Arquivos que o git ignora

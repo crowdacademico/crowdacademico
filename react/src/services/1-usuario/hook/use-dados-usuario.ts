@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { usuarioApi } from '../api/usuario.api';
 import { usuarioPapelApi } from '../../2-papel-permissao/api/papel-permissao.api';
 import { perfilPesquisadorApi } from '../../6-perfil-pesquisador/api/perfil-pesquisador.api';
-import { arquivoApi } from '../../25-arquivo/api/arquivo.api';
+import { arquivoApi } from '../../26-arquivo/api/arquivo.api';
 import { useBuscar } from '../../constant/hook/use-buscar';
 import type { useErroToast } from '../../../components/layout/toast/use-erro-toast';
 import type { UseAuthReturn } from '../../3-auth/hook/use-auth';

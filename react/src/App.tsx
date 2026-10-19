@@ -2,7 +2,7 @@ import { Navigate, Route, Routes } from 'react-router';
 import { Layout } from './components/layout/layout';
 import { useAuth } from './services/3-auth/hook/use-auth';
 import { ROTAS, ROTAS_ADMIN } from './services/router/rotas.constants';
-import { AdminLayout } from './views/admin/admin-layout';
+import { AdminLayout } from './components/layout/painel-admin/admin-layout';
 import { campoTestes } from './services/router/campo-testes-opcional';
 
 // useAuth() chamado uma vez só, aqui em cima: Header (dentro de Layout) e cada página recebem o mesmo `auth`

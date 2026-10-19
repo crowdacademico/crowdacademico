@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { formatarDataHora, textoSeguro } from '../../../services/constant/util/formatacao.util';
-import type { LogAuditoriaResponse, OperacaoLogAuditoria } from '../../../services/27-log-auditoria/type/log-auditoria.type';
+import type { LogAuditoriaResponse, OperacaoLogAuditoria } from '../../../services/28-log-auditoria/type/log-auditoria.type';
 import { CaixaTabela } from './caixa-tabela';
 import { TIPOS_COLUNA } from '../colunas/tipos-coluna';
 import { LinhasVazias } from '../linhas-vazias';

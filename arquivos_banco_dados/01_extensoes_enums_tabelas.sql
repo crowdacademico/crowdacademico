@@ -457,6 +457,14 @@ CREATE TABLE notificacao (
     criado_em          TIMESTAMPTZ          NOT NULL DEFAULT NOW(),
     enviado_em         TIMESTAMPTZ,                             -- [melhoria] quando o envio de fato teve sucesso (NULL até lá)
     ultimo_erro        TEXT,                                  -- [melhoria] guarda o motivo da última falha, útil pra debugar retentativas
+    -- Fila de envio (nest/src/4-mail, [05-Q]): o e-mail é montado na hora de enviar, a partir de tipo_evento + dados.
+    -- dados guarda só o que o texto precisa (nome, título da campanha, justificativa); um link com token vai cifrado em
+    -- dados.segredo e é apagado assim que o e-mail sai ou é cancelado.
+    dados                JSONB              NOT NULL DEFAULT '{}'::jsonb,
+    assunto              VARCHAR(200),                        -- preenchido quando o e-mail é montado (envio ou falha)
+    proxima_tentativa_em TIMESTAMPTZ        NOT NULL DEFAULT NOW(), -- espera entre tentativas e reserva do worker
+    provedor             VARCHAR(30),                         -- quem enviou: 'fake', 'brevo', 'smtp'
+    id_mensagem_provedor VARCHAR(200),                        -- id que o provedor devolveu, para achar o e-mail no painel dele
 
     CONSTRAINT "PK_NOTIFICACAO" PRIMARY KEY (id_notificacao),
     CONSTRAINT "FK_NOTIFICACAO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE SET NULL,

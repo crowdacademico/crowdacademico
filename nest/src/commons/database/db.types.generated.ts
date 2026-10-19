@@ -300,11 +300,16 @@ export interface MotivoDenuncia {
 }
 
 export interface Notificacao {
+  assunto: string | null;
   criado_em: Generated<Timestamp>;
+  dados: Generated<Json>;
   email_destinatario: string;
   enviado_em: Timestamp | null;
+  id_mensagem_provedor: string | null;
   id_notificacao: Generated<number>;
   id_usuario: number | null;
+  provedor: string | null;
+  proxima_tentativa_em: Generated<Timestamp>;
   status: Generated<StatusNotificacao>;
   tentativas: Generated<number>;
   tipo_evento: string;

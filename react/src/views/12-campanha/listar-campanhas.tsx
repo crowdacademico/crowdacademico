@@ -3,7 +3,7 @@ import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { emBreve, ORDEM_ROTULOS_STATUS_CAMPANHA, rotuloStatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
-import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
+import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { ModalConsultarCampanha } from './modal-consultar-campanha';
 import { renderizarArrecadado, renderizarStatus, textoStatus } from './colunas-campanha';
 import type { PropsPagina } from '../../services/router/pagina.type';

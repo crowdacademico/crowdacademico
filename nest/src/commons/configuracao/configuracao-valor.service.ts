@@ -4,10 +4,10 @@ import { DatabaseService } from '../database/database.service';
 // Ponte entre regra de negócio hardcoded no Nest e configuracoes (banco): mesmo espírito do useConfiguracoes()
 // do React (services/11-configuracoes), só que do lado do backend. Todo número configurável costumava ser lido
 // pela própria trigger de banco (config_numero(), 03_funcoes_seguranca.sql); este serviço atende as regras de
-// negócio puras do Nest (sem trigger correspondente). 25-arquivo (limites de upload) é o primeiro consumidor.
+// negócio puras do Nest (sem trigger correspondente). 26-arquivo (limites de upload) é o primeiro consumidor.
 //
 // Global (ver commons/storage/storage.module.ts, mesmo padrão): infra compartilhada por qualquer módulo que
-// precise ler um valor de configuracoes, não só 25-arquivo.
+// precise ler um valor de configuracoes, não só 26-arquivo.
 @Injectable()
 export class ConfiguracaoValorService {
   constructor(private readonly database: DatabaseService) {}

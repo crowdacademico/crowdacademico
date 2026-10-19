@@ -1194,7 +1194,7 @@ $$;
 --             total_permissoes INT, total_configuracoes INT, total_campanhas INT, sessoes_ativas
 --             INT)
 -- Bloco:      [03-M]
--- Regra:      GET /dashboard/resumo (nest/src/28-dashboard) precisa de totais confiáveis para os cards do painel. RLS
+-- Regra:      GET /dashboard/resumo (nest/src/29-dashboard) precisa de totais confiáveis para os cards do painel. RLS
 --             filtra LINHA e não é uniforme entre as tabelas (`usuario` só libera não-deletado, `configuracoes` só a
 --             linha global ou a da própria sessão): um COUNT direto de app_nestjs devolveria números DIFERENTES
 --             conforme quem está logado, errado para "total do sistema" (mesmo raciocínio de

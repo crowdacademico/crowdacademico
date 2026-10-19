@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ArquivoServiceResolveAvatar } from '../../25-arquivo/service/arquivo.service.resolve-avatar';
+import { ArquivoServiceResolveAvatar } from '../../26-arquivo/service/arquivo.service.resolve-avatar';
 import { DatabaseService } from '../../commons/database/database.service';
 import { USUARIO_COLUNAS_SELECT } from '../constants/usuario.constants';
 import { UsuarioConverter } from '../dto/converter/usuario.converter';

@@ -1,4 +1,4 @@
-/* Estilos só do Campo de Testes (src/campo-testes/). Último na ordem dos estilos de propósito. */
+/* Estilos só do Campo de Testes (src/30-campo-testes/). Último na ordem dos estilos de propósito. */
 
 /* Registro de Chamadas: gaveta recolhível num cartão próprio no fim das telas do Campo de Testes. */
 .registro-chamadas__linha {
@@ -51,4 +51,15 @@
 
 .registro-chamadas__linha--erro {
   color: var(--cor-texto-erro);
+}
+
+/* Cards de tarefa automática (T5 e T6): o título e o texto de cada card reservam o espaço do mais longo de todos os cards
+   (os outros ficam empilhados e invisíveis na mesma célula), então todo card tem a mesma altura em qualquer tela,
+   sozinho ou numa fileira. */
+.cartao-tarefa__pilha {
+  display: grid;
+}
+
+.cartao-tarefa__pilha > * {
+  grid-area: 1 / 1;
 }

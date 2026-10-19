@@ -4,6 +4,8 @@ import { UsuarioServiceCreate } from '../../1-usuario/service/usuario.service.cr
 import { TermoUsoServiceFindActive } from '../../5-termo-uso/service/termo-uso.service.find-active';
 import { ConfiguracaoValorService } from '../../commons/configuracao/configuracao-valor.service';
 import { DatabaseService } from '../../commons/database/database.service';
+import { TIPO_NOTIFICACAO } from '../../27-notificacao/constants/notificacao.constants';
+import { NotificacaoServiceEnqueue } from '../../27-notificacao/service/notificacao.service.enqueue';
 import {
   CHAVE_CONFIG_VERIFICACAO_EMAIL_HORAS_VALIDADE,
   VERIFICACAO_EMAIL_HORAS_VALIDADE_PADRAO,
@@ -26,6 +28,7 @@ export class AuthServiceRegister {
     private readonly termoUsoServiceAtivo: TermoUsoServiceFindActive,
     private readonly authServiceLogin: AuthServiceLogin,
     private readonly configuracaoValor: ConfiguracaoValorService,
+    private readonly notificacao: NotificacaoServiceEnqueue,
   ) {}
 
   async executar(
@@ -49,10 +52,9 @@ export class AuthServiceRegister {
       db,
     );
 
-    // Token de verificação de e-mail: gerado e gravado desde já, mesmo sem 4-mail existir para enviar de
-    // verdade. tokenVerificacaoEmailDev só viaja no corpo da resposta fora de produção (ver controller); em
-    // produção, a linha em verificacao_email existe do mesmo jeito, só que ninguém recebe o token ainda (nada
-    // de fingir que um e-mail foi mandado).
+    // Token de verificação de e-mail: o banco guarda só o hash; o token vai no link do e-mail (fila de
+    // notificacao, enviada por 4-mail). tokenVerificacaoEmailDev continua na resposta fora de produção (ver
+    // controller), para testar sem abrir a caixa de entrada.
     const { token, hash } = gerarTokenVerificacaoEmail();
     // Configurável pelo Painel Admin: cai no padrão hardcoded (24h) se a chave não existir/estiver inativa (ver
     // ConfiguracaoValorService).
@@ -72,6 +74,12 @@ export class AuthServiceRegister {
         expira_em: expiraEm,
       })
       .execute();
+    await this.notificacao.executar(
+      usuario.idUsuario,
+      TIPO_NOTIFICACAO.verificacaoEmail,
+      {},
+      token,
+    );
 
     const { accessToken, refreshToken, aceitePendente } =
       await this.authServiceLogin.emitirTokens(

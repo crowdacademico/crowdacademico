@@ -16,7 +16,7 @@ interface MenuUsuarioProps {
 // identidade/conta, mesmo padrão GitHub/Linear/Notion.
 //
 // "Minha Conta" linka para /minha-conta: a seção "Preferências" de lá cobre o que seria um item "Configurações"
-// à parte, por isso ele não existe aqui. "Notificações" fica placeholder até 26-notificacao existir: o sino ao
+// à parte, por isso ele não existe aqui. "Notificações" fica placeholder até 27-notificacao existir: o sino ao
 // lado já cobre "o que aconteceu recentemente" nesse meio tempo.
 export function MenuUsuario({ auth }: MenuUsuarioProps) {
   const [aberto, setAberto] = useState(false);

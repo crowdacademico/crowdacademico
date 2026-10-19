@@ -8,11 +8,12 @@ import {
   ORDEM_STATUS_ENCERRAMENTO,
   ROTULO_STATUS_ENCERRAMENTO,
 } from '../../services/20-solicitacao-encerramento/constants/status-encerramento.constants';
-import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
+import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { ModalDecidirEncerramento } from './modal-decidir-encerramento';
 import { celulaArrecadado } from '../12-campanha/colunas-campanha';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { SolicitacaoEncerramentoResponse } from '../../services/20-solicitacao-encerramento/type/solicitacao-encerramento.type';
+import { ordenarFilaSla } from '../../services/constant/util/fila-sla.util';
 
 interface PedidoLinha extends Omit<SolicitacaoEncerramentoResponse, 'status'> {
   status: string;
@@ -33,14 +34,16 @@ export function ListarEncerramentos({ auth }: PropsPagina) {
 
   const listar = useCallback(async (): Promise<PedidoLinha[]> => {
     const pedidos = await solicitacaoEncerramentoApi.listar(auth.authFetch);
-    return pedidos.map((pedido) => ({
+    // Fila do SLA (DS-49): os pendentes primeiro, o mais antigo no topo; depois os decididos, o mais novo primeiro.
+    const esperandoDesde = (pedido: SolicitacaoEncerramentoResponse) => (pedido.status === 'pendente' ? pedido.solicitadoEm : null);
+    return ordenarFilaSla(pedidos, esperandoDesde, (pedido) => pedido.solicitadoEm).map((pedido) => ({
       ...pedido,
       status: ROTULO_STATUS_ENCERRAMENTO[pedido.status],
       statusOriginal: pedido.status,
       campanha: pedido.tituloCampanha ?? '-',
       pesquisador: pedido.nomePesquisador ?? '-',
       modelo: pedido.modeloCampanha ? ROTULO_MODELO_CAMPANHA[pedido.modeloCampanha] : '-',
-      esperandoDesde: pedido.status === 'pendente' ? pedido.solicitadoEm : null,
+      esperandoDesde: esperandoDesde(pedido),
     }));
   }, [auth.authFetch]);
 

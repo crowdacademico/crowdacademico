@@ -4,7 +4,7 @@ import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { BotaoCriar } from '../../components/crud/botao-criar';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
-import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
+import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { ModalCriarTipoLink } from './modal-criar-tipo-link';
 import { ModalAlterarTipoLink, ModalConsultarTipoLink, ModalExcluirTipoLink } from './modal-tipo-link';
 import type { PropsPagina } from '../../services/router/pagina.type';

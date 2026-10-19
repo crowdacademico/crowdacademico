@@ -10,10 +10,11 @@ import { UsuarioModule } from '../1-usuario/usuario.module';
 import { TermoUsoModule } from '../5-termo-uso/termo-uso.module';
 import { PapelPermissaoModule } from '../2-papel-permissao/papel-permissao.module';
 import { AuthModule } from '../3-auth/auth.module';
+import { EmailModule } from '../4-mail/email.module';
 import { ConfiguracoesModule } from '../11-configuracoes/configuracoes.module';
 import { AreaConhecimentoModule } from '../8-area-conhecimento/area-conhecimento.module';
-import { LogAuditoriaModule } from '../27-log-auditoria/log-auditoria.module';
-import { DashboardModule } from '../28-dashboard/dashboard.module';
+import { LogAuditoriaModule } from '../28-log-auditoria/log-auditoria.module';
+import { DashboardModule } from '../29-dashboard/dashboard.module';
 import { HealthController } from './health.controller';
 import { TipoLinkModule } from '../9-tipo-link/tipo-link.module';
 import { MotivoDenunciaModule } from '../10-motivo-denuncia/motivo-denuncia.module';
@@ -23,18 +24,20 @@ import { CampanhaModule } from '../12-campanha/campanha.module';
 import { OrcamentoCampanhaModule } from '../13-orcamento-campanha/orcamento-campanha.module';
 import { MarcoCronogramaModule } from '../14-marco-cronograma/marco-cronograma.module';
 import { AtualizacaoCampanhaModule } from '../15-atualizacao-campanha/atualizacao-campanha.module';
-import { SeguirCampanhaModule } from '../16-seguir-campanha/seguir-campanha.module';
+import { SeguirModule } from '../16-seguir/seguir.module';
 import { ContribuicaoModule } from '../22-contribuicao/contribuicao.module';
-import { ContaRecebimentoModule } from '../30-conta-recebimento/conta-recebimento.module';
-import { PagamentoRevisaoModule } from '../32-pagamento-revisao/pagamento-revisao.module';
+import { ContaRecebimentoModule } from '../24-conta-recebimento/conta-recebimento.module';
+import { PagamentoRevisaoModule } from '../25-pagamento-revisao/pagamento-revisao.module';
 import { ComentarioModule } from '../17-comentario/comentario.module';
+import { RecompensaModule } from '../18-recompensa/recompensa.module';
 import { DenunciaModule } from '../19-denuncia/denuncia.module';
 import { SolicitacaoEncerramentoModule } from '../20-solicitacao-encerramento/solicitacao-encerramento.module';
-import { ArquivoModule } from '../25-arquivo/arquivo.module';
+import { ArquivoModule } from '../26-arquivo/arquivo.module';
+import { NotificacaoModule } from '../27-notificacao/notificacao.module';
 import { HistoricoRejeicaoModule } from '../21-historico-rejeicao/historico-rejeicao.module';
 import { StorageModule } from '../commons/storage/storage.module';
 import { ConfiguracaoValorModule } from '../commons/configuracao/configuracao-valor.module';
-import { CampoTestesModule } from '../campo-testes/campo-testes.module';
+import { CampoTestesModule } from '../30-campo-testes/campo-testes.module';
 
 @Module({
   imports: [
@@ -63,15 +66,16 @@ import { CampoTestesModule } from '../campo-testes/campo-testes.module';
     LoggingModule,
     // Global (ver commons/storage/storage.module.ts) - registrado aqui,
     // junto de DatabaseModule, por ser infra compartilhada por qualquer
-    // módulo, não só 25-arquivo.
+    // módulo, não só 26-arquivo.
     StorageModule,
     // Global também: leitura de configuracoes por qualquer módulo que precise de um número configurável pelo
-    // Painel Admin, sem trigger de banco por trás. Primeiro consumidor: 25-arquivo (limites de upload).
+    // Painel Admin, sem trigger de banco por trás. Primeiro consumidor: 26-arquivo (limites de upload).
     ConfiguracaoValorModule,
     UsuarioModule,
     TermoUsoModule,
     PapelPermissaoModule,
     AuthModule,
+    EmailModule,
     ConfiguracoesModule,
     AreaConhecimentoModule,
     TipoLinkModule,
@@ -82,18 +86,20 @@ import { CampoTestesModule } from '../campo-testes/campo-testes.module';
     OrcamentoCampanhaModule,
     MarcoCronogramaModule,
     AtualizacaoCampanhaModule,
-    SeguirCampanhaModule,
+    SeguirModule,
     ContribuicaoModule,
     ContaRecebimentoModule,
     PagamentoRevisaoModule,
     ComentarioModule,
+    RecompensaModule,
     DenunciaModule,
     SolicitacaoEncerramentoModule,
     HistoricoRejeicaoModule,
     ArquivoModule,
+    NotificacaoModule,
     LogAuditoriaModule,
     DashboardModule,
-    // Campo de Testes (src/campo-testes/): só fora de produção. Último de propósito, como no React.
+    // Campo de Testes (src/30-campo-testes/): só fora de produção. Último de propósito, como no React.
     ...(process.env.NODE_ENV === 'production' ? [] : [CampoTestesModule]),
   ],
   controllers: [HealthController],

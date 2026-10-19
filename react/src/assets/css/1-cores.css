@@ -453,7 +453,7 @@
   /* Bolinha de status de conexão: `dashboard.tsx`/`dashboard-saude.tsx` usam a MESMA lógica de 3 estados.
      Reaproveita os tokens de status já existentes (--cor-texto-sucesso/--cor-texto-erro, os mesmos usados
      nos badges) em vez de inventar uma paleta nova; o estado "verificando" usa --cor-borda-forte. Ver
-     `PontoStatusConexao` em `views/admin/dashboard.tsx`, componente compartilhado que usa estas 3 classes. */
+     `PontoStatusConexao` em `views/29-dashboard/dashboard.tsx`, componente compartilhado que usa estas 3 classes. */
   .ponto-status--neutro {
     background-color: var(--cor-borda-forte);
   }

@@ -21,7 +21,7 @@ function corPorNome(nome: string): string {
 }
 
 // Bolinha do cabeçalho - foto quando `usuario.idImagemPerfil`/`foto` vier
-// preenchido (upload já existe, `25-arquivo` - é o que `SeletorFotoPerfil`
+// preenchido (upload já existe, `26-arquivo` - é o que `SeletorFotoPerfil`
 // usa), inicial do primeiro nome em maiúsculo quando não há foto.
 export type TamanhoAvatar = 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 export type FormaAvatar = 'circulo' | 'quadrado';
