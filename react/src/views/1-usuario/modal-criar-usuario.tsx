@@ -7,7 +7,7 @@ import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { Campo } from '../../components/input/campo';
-import { arquivoApi } from '../../services/25-arquivo/api/arquivo.api';
+import { arquivoApi } from '../../services/26-arquivo/api/arquivo.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';

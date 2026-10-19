@@ -3,7 +3,7 @@
    .admin-shell/.admin-sidebar/.admin-content-area/.admin-sidebar-nav-item), mas com visual próprio: em vez
    de cartão arredondado flutuando com margem, o menu é uma coluna quadrada que encosta no cabeçalho, na
    parede esquerda e no rodapé (grid de 2 colunas, sem sticky: rola junto com a página).
-   Ver views/admin/admin-sidebar.tsx e views/admin/admin-layout.tsx. */
+   Ver components/layout/painel-admin/admin-sidebar.tsx e components/layout/painel-admin/admin-layout.tsx. */
 
 /* O bug que a gente tinha: .admin-pagina levava max-width+margin:auto, o
    que centralizava o GRUPO INTEIRO (sidebar+conteúdo) como um bloco só -

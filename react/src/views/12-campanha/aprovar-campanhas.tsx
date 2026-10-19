@@ -5,6 +5,7 @@ import { ModalConsultarCampanha } from './modal-consultar-campanha';
 import { ModalRevisarCampanha } from './modal-revisar-campanha';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
+import { ordenarFilaSla } from '../../services/constant/util/fila-sla.util';
 
 interface LinhaFila extends CampanhaResponse {
   pesquisador: string;
@@ -23,9 +24,8 @@ export function AprovarCampanhas({ auth }: PropsPagina) {
 
   const listarFila = useCallback(async (): Promise<LinhaFila[]> => {
     const campanhas = await campanhaApi.listar(auth.authFetch, { status: 'aguardando_aprovacao' });
-    const maisAntigaPrimeiro = [...campanhas].sort((a, b) =>
-      (a.enviadoAprovacaoEm ?? a.criadoEm).localeCompare(b.enviadoAprovacaoEm ?? b.criadoEm),
-    );
+    // Toda campanha aqui espera (a fila só traz as aguardando): a mais antiga no topo (DS-49).
+    const maisAntigaPrimeiro = ordenarFilaSla(campanhas, (campanha) => campanha.enviadoAprovacaoEm ?? campanha.criadoEm, (campanha) => campanha.criadoEm);
     return maisAntigaPrimeiro.map((campanha) => ({
       ...campanha,
       pesquisador: campanha.nomePesquisador ?? `#${campanha.idUsuario}`,

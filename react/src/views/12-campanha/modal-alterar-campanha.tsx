@@ -22,8 +22,9 @@ import { formatarData, formatarDataHora, formatarMoeda } from '../../services/co
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
-import { SecaoAtualizacoesCampanha } from './secao-atualizacoes-campanha';
-import { SecaoComentariosRecebidos } from './secao-comentarios-recebidos';
+import { SecaoAtualizacoesCampanha } from '../15-atualizacao-campanha/secao-atualizacoes-campanha';
+import { SecaoRecompensasCampanha } from '../18-recompensa/secao-recompensas-campanha';
+import { SecaoComentariosRecebidos } from '../17-comentario/secao-comentarios-recebidos';
 import { SecaoEncerramentoAntecipado } from '../20-solicitacao-encerramento/secao-encerramento-antecipado';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type {
@@ -262,6 +263,7 @@ export function ModalAlterarCampanha({
               { chave: 'geral', rotulo: 'Geral' },
               { chave: 'dados', rotulo: 'Dados' },
               { chave: 'orcamento', rotulo: 'Orçamento e cronograma' },
+              ...(ehDono ? [{ chave: 'recompensas' as const, rotulo: 'Recompensas' }] : []),
               ...(ehDono && STATUS_PUBLICADA.has(campanha.status)
                 ? [
                     { chave: 'atualizacoes' as const, rotulo: 'Atualizações' },
@@ -402,6 +404,12 @@ export function ModalAlterarCampanha({
                 />
               </div>
 
+              {ehDono && (
+                <div className={ve('recompensas').trim()}>
+                  <SecaoRecompensasCampanha auth={auth} idCampanha={idCampanha} podeGerenciar />
+                </div>
+              )}
+
               {ehDono && STATUS_PUBLICADA.has(campanha.status) && (
                 <>
                   <div className={ve('atualizacoes').trim()}>
@@ -469,4 +477,4 @@ export function ModalAlterarCampanha({
   );
 }
 
-type ParteAlterar = 'geral' | 'dados' | 'orcamento' | 'atualizacoes' | 'comentarios' | 'encerramento';
+type ParteAlterar = 'geral' | 'dados' | 'orcamento' | 'recompensas' | 'atualizacoes' | 'comentarios' | 'encerramento';

@@ -38,6 +38,9 @@ export interface CampanhaResponse {
   somenteLeitura: boolean;
   // Só em GET /campanha/:id: campos que o banco não deixa mudar agora (fn_campanha_campos_bloqueados), com os nomes deste tipo.
   camposBloqueados: string[];
+  // Só em GET /campanha/:id (RF-087): o que o pesquisador receberia hoje e a taxa usada. Nas demais respostas, null.
+  valorLiquidoEstimado: number | null;
+  taxaAplicada: number | null;
 }
 
 // Espelha nest/src/21-historico-rejeicao/dto/response/historico-rejeicao.response.ts. "Onde fica registrado" o

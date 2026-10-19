@@ -57,7 +57,9 @@ CREATE UNIQUE INDEX uq_termos_uso_ativo ON termos_de_uso (tipo) WHERE ativo = TR
 CREATE INDEX idx_usuario_termo_termo        ON usuario_termo(id_termo);
 
 CREATE INDEX idx_notificacao_usuario        ON notificacao(id_usuario);
-CREATE INDEX idx_notificacao_status         ON notificacao(status); -- acelera a fila "pendente" que o worker de envio consulta
+CREATE INDEX idx_notificacao_status         ON notificacao(status); -- contagem por situação no painel (aba Notificações)
+-- Fila do worker de e-mail (reservar_proxima_notificacao, [05-Q]): só as pendentes, na ordem em que podem sair.
+CREATE INDEX idx_notificacao_fila           ON notificacao(proxima_tentativa_em) WHERE status = 'pendente';
 
 -- Autenticação própria (caminho quente: validação de token e refresh de sessão)
 CREATE INDEX idx_verificacao_email_token   ON verificacao_email(token_hash);

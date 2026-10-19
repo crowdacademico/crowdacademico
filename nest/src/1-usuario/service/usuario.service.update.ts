@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { ArquivoServiceRemove } from '../../25-arquivo/service/arquivo.service.remove';
-import { ArquivoServiceResolveAvatar } from '../../25-arquivo/service/arquivo.service.resolve-avatar';
+import { ArquivoServiceRemove } from '../../26-arquivo/service/arquivo.service.remove';
+import { ArquivoServiceResolveAvatar } from '../../26-arquivo/service/arquivo.service.resolve-avatar';
 import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
 import { DatabaseService } from '../../commons/database/database.service';
 import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';

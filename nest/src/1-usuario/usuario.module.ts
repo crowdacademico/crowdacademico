@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ArquivoModule } from '../25-arquivo/arquivo.module';
+import { ArquivoModule } from '../26-arquivo/arquivo.module';
 import { UsuarioControllerCreate } from './controllers/usuario.controller.create';
 import { UsuarioControllerUnlock } from './controllers/usuario.controller.unlock';
 import { UsuarioControllerExportData } from './controllers/usuario.controller.export-data';

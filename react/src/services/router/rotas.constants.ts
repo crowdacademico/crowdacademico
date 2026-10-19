@@ -6,7 +6,7 @@ import { VerificarEmailPage } from '../../views/3-auth/verificar-email-page';
 import { EsqueciSenhaPage } from '../../views/3-auth/esqueci-senha-page';
 import { RedefinirSenhaPage } from '../../views/3-auth/redefinir-senha-page';
 import { MinhaConta } from '../../views/3-auth/minha-conta-page';
-import { Dashboard } from '../../views/admin/dashboard';
+import { Dashboard } from '../../views/29-dashboard/dashboard';
 import { ListarUsuarios } from '../../views/1-usuario/listar-usuarios';
 import { ListarPapeis } from '../../views/2-papel-permissao/listar-papeis';
 import { ListarConfiguracoes } from '../../views/11-configuracoes/listar-configuracoes';
@@ -18,9 +18,9 @@ import { ListarCampanhas } from '../../views/12-campanha/listar-campanhas';
 import { AprovarCampanhas } from '../../views/12-campanha/aprovar-campanhas';
 import { ListarDenuncias } from '../../views/19-denuncia/listar-denuncias';
 import { ListarEncerramentos } from '../../views/20-solicitacao-encerramento/listar-encerramentos';
-import { ListarRevisoesPagamento } from '../../views/32-pagamento-revisao/listar-revisoes-pagamento';
-import { ListarReembolsosManuais } from '../../views/32-pagamento-revisao/listar-reembolsos-manuais';
-import { ListarRepassesAtencao } from '../../views/32-pagamento-revisao/listar-repasses-atencao';
+import { ListarRevisoesPagamento } from '../../views/25-pagamento-revisao/listar-revisoes-pagamento';
+import { ListarReembolsosManuais } from '../../views/25-pagamento-revisao/listar-reembolsos-manuais';
+import { ListarRepassesAtencao } from '../../views/25-pagamento-revisao/listar-repasses-atencao';
 import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
 import { PontuacaoScore } from '../../views/11-configuracoes/pontuacao-score';
 import { campoTestes } from './campo-testes-opcional';
@@ -30,7 +30,7 @@ import { campoTestes } from './campo-testes-opcional';
 //
 // Duas listas porque descrevem coisas diferentes: ROTAS são páginas PÚBLICAS/pré-login (Header/Breadcrumb/
 // Footer, sem sidebar): login, cadastro, verificar e-mail. ROTAS_ADMIN é TUDO que precisa do menu lateral,
-// renderizado dentro do <Outlet/> de views/admin/admin-layout.tsx (sidebar + área de conteúdo compartilhadas).
+// renderizado dentro do <Outlet/> de components/layout/painel-admin/admin-layout.tsx (sidebar + área de conteúdo compartilhadas).
 //
 // rotuloMenu é o que aparece no menu lateral (admin-sidebar.tsx via admin-menu.constants): é a MESMA lista, não
 // uma 3ª cópia. Rotas sem rotuloMenu/grupoMenu (ex.: Minha Conta) nunca viram botão do menu, só ganham a
@@ -224,7 +224,7 @@ export const ROTAS_ADMIN: Rota[] = [
     icone: 'fa-flag-checkered',
   },
 
-  // Pagamentos (módulo 32-pagamento-revisao): as filas do que o sistema deliberadamente NÃO resolve sozinho no
+  // Pagamentos (módulo 25-pagamento-revisao): as filas do que o sistema deliberadamente NÃO resolve sozinho no
   // dinheiro (webhook em revisão manual, estorno que desistiu, repasse em erro). Grupo próprio ('PAGAMENTOS'): não é
   // fila de moderação de conteúdo, e é onde vão morar as próximas telas financeiras (contribuições, repasses,
   // auditoria financeira) quando o Nest expuser as listagens. Quem vê e quem age é decidido pelo banco, por permissão

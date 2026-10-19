@@ -35,6 +35,7 @@
             ".response-accepted-term.ts",
             ".response-active.ts",
             ".response-create.ts",
+            ".response-mine.ts",
             ".response-export-data.ts",
             ".response-find.ts",
             ".response-login-history.ts",

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { BotaoMostrarEsconder } from './botao-mostrar-esconder';
 import { LogAuditoriaPainel } from './log-auditoria-painel';
 import type { ResultadoPaginado } from '../../services/constant/type/paginacao.type';
-import type { LogAuditoriaResponse } from '../../services/27-log-auditoria/type/log-auditoria.type';
+import type { LogAuditoriaResponse } from '../../services/28-log-auditoria/type/log-auditoria.type';
 
 interface BlocoLogAuditoriaProps {
   buscar: (pagina: number, tamanho: number) => Promise<ResultadoPaginado<LogAuditoriaResponse>>;

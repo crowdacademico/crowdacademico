@@ -1,4 +1,4 @@
-// Token de injeção - todo consumidor (25-arquivo, e futuramente qualquer
+// Token de injeção - todo consumidor (26-arquivo, e futuramente qualquer
 // outro módulo) usa @Inject(ARMAZENAMENTO_SERVICE) contra a INTERFACE
 // ArmazenamentoService, nunca a classe concreta. Mesmo padrão de PG_POOL
 // em commons/database/database.constants.ts.

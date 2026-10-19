@@ -12,11 +12,12 @@ import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
-import { SecaoComentariosRecebidos } from './secao-comentarios-recebidos';
+import { SecaoComentariosRecebidos } from '../17-comentario/secao-comentarios-recebidos';
 import { SecaoDenunciasCampanha } from '../19-denuncia/secao-denuncias-campanha';
 import { SecaoPedidosEncerramento } from '../20-solicitacao-encerramento/secao-pedidos-encerramento';
-import { SecaoComentariosEndossados, SecaoComentariosTodos } from './secao-comentarios-campanha';
-import { SecaoAtualizacoesCampanha } from './secao-atualizacoes-campanha';
+import { SecaoComentariosEndossados, SecaoComentariosTodos } from '../17-comentario/secao-comentarios-campanha';
+import { SecaoAtualizacoesCampanha } from '../15-atualizacao-campanha/secao-atualizacoes-campanha';
+import { SecaoRecompensasCampanha } from '../18-recompensa/secao-recompensas-campanha';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
@@ -105,6 +106,7 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
             { chave: 'geral', rotulo: 'Geral' },
             { chave: 'dados', rotulo: 'Dados' },
             { chave: 'orcamento', rotulo: 'Orçamento e cronograma' },
+            { chave: 'recompensas', rotulo: 'Recompensas' },
             ...(STATUS_PUBLICADA.has(campanha.status) ? [{ chave: 'atualizacoes' as const, rotulo: 'Atualizações' }] : []),
             ...(comoDono || campanha.aprovadoEm !== null ? [{ chave: 'comentarios' as const, rotulo: 'Comentários' }] : []),
             ...(!comoDono && denuncias + pedidos > 0 ? [{ chave: 'moderacao' as const, rotulo: 'Moderação' }] : []),
@@ -190,12 +192,24 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
                 rotulo="Taxa da plataforma"
                 valor={campanha.taxaPlataforma === null ? 'Ainda não carimbada (não aprovada)' : `${campanha.taxaPlataforma}%`}
               />
+              {/* RF-087: a mesma conta do repasse (taxa da plataforma, nunca menos que a taxa mínima). */}
+              {campanha.valorLiquidoEstimado !== null && (
+                <CampoFicha
+                  rotulo="Líquido estimado"
+                  valor={`${formatarMoeda(campanha.valorLiquidoEstimado)} (taxa de ${campanha.taxaAplicada ?? '-'}%)`}
+                />
+              )}
             </SecaoFicha>
           </div>
 
           {/* Orçamento e cronograma, só para ler: a consulta mostra a campanha inteira. */}
           <div className={'lg:col-span-3' + ve('orcamento')}>
             <PainelOrcamentoCronograma auth={auth} idCampanha={campanha.idCampanha} podeEditar={false} />
+          </div>
+
+          {/* Recompensas, só para ler: criar e desativar ficam no Alterar do dono. */}
+          <div className={'lg:col-span-3' + ve('recompensas')}>
+            <SecaoRecompensasCampanha auth={auth} idCampanha={campanha.idCampanha} podeGerenciar={false} />
           </div>
 
           {/* Atualizações publicadas, só para ler: o que a página pública mostra e o que quem segue recebe. Publicar e
@@ -240,4 +254,4 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
   );
 }
 
-type ParteConsultar = 'geral' | 'dados' | 'orcamento' | 'atualizacoes' | 'comentarios' | 'moderacao';
+type ParteConsultar = 'geral' | 'dados' | 'orcamento' | 'recompensas' | 'atualizacoes' | 'comentarios' | 'moderacao';

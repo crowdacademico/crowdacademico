@@ -5,13 +5,13 @@ import { Dica } from '../layout/tooltip';
 import type { TamanhoAvatar } from '../layout/avatar-usuario';
 import { ErroHttp } from '../../services/constant/api/http.util';
 import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
-import { arquivoApi } from '../../services/25-arquivo/api/arquivo.api';
-import { reduzirImagemNoNavegador, TIPOS_REDUZIVEIS } from '../../services/25-arquivo/util/reduzir-imagem.util';
+import { arquivoApi } from '../../services/26-arquivo/api/arquivo.api';
+import { reduzirImagemNoNavegador, TIPOS_REDUZIVEIS } from '../../services/26-arquivo/util/reduzir-imagem.util';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { formatarTamanhoArquivo } from '../../services/constant/util/formatacao.util';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 
-// Espelha a lista aceita no backend (nest/src/25-arquivo/constants/arquivo.constants.ts TIPOS_MIME_PERMITIDOS) MENOS
+// Espelha a lista aceita no backend (nest/src/26-arquivo/constants/arquivo.constants.ts TIPOS_MIME_PERMITIDOS) MENOS
 // application/pdf, que não faz sentido como foto de perfil. Se um dia o backend mudar essa lista, mudar aqui
 // também; isto é só uma checagem CLIENTE (evita round-trip óbvio), o backend confere de novo (e de verdade:
 // assinatura mágica dos bytes) na confirmação, então errar aqui não é um risco de segurança, só uma UX pior
@@ -22,7 +22,7 @@ import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 // sem gastar CPU tentando processar no canvas; não tem relação com o teto real do backend (abaixo, via config).
 const TAMANHO_MAXIMO_BRUTO_BYTES = 30 * 1024 * 1024;
 // Mesmos números do perfil 'avatar' em PERFIL_PROCESSAMENTO_POR_CONTEXTO
-// (nest/src/25-arquivo/constants/arquivo.constants.ts) - sem import cruzado entre
+// (nest/src/26-arquivo/constants/arquivo.constants.ts) - sem import cruzado entre
 // os repositórios, mantenha os dois em sincronia manualmente se mudar.
 const PERFIL_REDUCAO_AVATAR = { larguraMaxima: 512, qualidade: 80 };
 
@@ -120,7 +120,7 @@ export function SeletorFotoPerfil({
         tamanhoBytes: arquivo.size,
         // Diz ao backend qual teto de redimensionamento usar (512px pra
         // avatar) - ver PERFIL_PROCESSAMENTO_POR_CONTEXTO em
-        // nest/src/25-arquivo/constants/arquivo.constants.ts.
+        // nest/src/26-arquivo/constants/arquivo.constants.ts.
         contexto: 'avatar',
       });
 

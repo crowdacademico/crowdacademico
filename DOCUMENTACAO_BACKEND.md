@@ -27,9 +27,9 @@ Este documento é o irmão do `DOCUMENTACAO_BD.md`. Ele cobre o backend em NestJ
 5. [Tratamento de erro: como erro de Postgres vira status HTTP](#5-tratamento-de-erro-como-erro-de-postgres-vira-status-http)
 6. [Validação e DTOs (`class-validator` + converters)](#6-validação-e-dtos-class-validator--converters)
 7. [O padrão de módulo - anatomia de `1-usuario` e `12-campanha`](#7-o-padrão-de-módulo--anatomia-de-1-usuario-e-12-campanha)
-8. [Armazenamento e upload de arquivo (`commons/storage` + `25-arquivo`)](#8-armazenamento-e-upload-de-arquivo-commonsstorage--25-arquivo)
+8. [Armazenamento e upload de arquivo (`commons/storage` + `26-arquivo`)](#8-armazenamento-e-upload-de-arquivo-commonsstorage--25-arquivo)
 9. [Dado sensível no processo do Nest: CPF (`commons/seguranca`)](#9-dado-sensível-no-processo-do-nest-cpf-commonsseguranca)
-10. [Módulos de apoio do painel: `27-log-auditoria`, `28-dashboard`, `5-termo-uso`](#10-módulos-de-apoio-do-painel-27-log-auditoria-28-dashboard-5-termo-uso)
+10. [Módulos de apoio do painel: `28-log-auditoria`, `29-dashboard`, `5-termo-uso`](#10-módulos-de-apoio-do-painel-27-log-auditoria-28-dashboard-5-termo-uso)
 11. [Bootstrap, segurança HTTP e infraestrutura (`main.ts`, `app/`)](#11-bootstrap-segurança-http-e-infraestrutura-maints-app)
 12. [Migrations: `aplicar-migrations.script.ts`](#12-migrations-aplicar-migrationsscriptts)
 13. [Inventário de rotas HTTP](#13-inventário-de-rotas-http)
@@ -73,7 +73,7 @@ Sobre Joi: não é bem que rejeitamos Joi - usamos `class-validator` porque ele 
 
 HATEOAS ("*Hypermedia as the Engine of Application State*") resolve um problema específico: um cliente que **não conhece de antemão** a estrutura de URLs da API precisa **descobrir em tempo de execução** o que pode fazer a seguir, seguindo links que vêm dentro da própria resposta - do mesmo jeito que uma pessoa navega um site clicando em links, sem saber o endereço de cada página de cor. Isso tem valor real quando existem **vários clientes diferentes, de times diferentes, evoluindo em ritmos diferentes**, consumindo a mesma API pública (o exemplo clássico é uma API de pagamento ou uma API pública de terceiros, onde o dono da API não controla nem sabe quem está consumindo ela).
 
-**Não é o caso deste projeto.** O CrowdAcadêmico tem **um cliente só** (o painel React), escrito pela **mesma dupla** que escreve o backend, no **mesmo repositório**, evoluindo junto. Quando um endpoint novo é criado no Nest, a pessoa que cria ele já sabe a URL - não existe momento nenhum em que o frontend "descobre" uma rota em tempo de execução, porque quem escreve o `usuarioApi.buscar(authFetch, id)` (`services/1-usuario/api/usuario.api.js`, ver §6) é a mesma pessoa que acabou de escrever o `@Get(':id')` no controller. A "descoberta de rota" já acontece - só que em tempo de desenvolvimento (a pessoa lê/escreve o código), não em tempo de execução (o app perguntando pro servidor "o que posso fazer agora?").
+**Não é o caso deste projeto.** O CrowdAcadêmico tem **um cliente só** (o painel React), escrito pela **mesma dupla** que escreve o backend, no **mesmo repositório**, evoluindo junto. Quando um endpoint novo é criado no Nest, a pessoa que cria ele já sabe a URL - não existe momento nenhum em que o frontend "descobre" uma rota em tempo de execução, porque quem escreve o `usuarioApi.buscar(authFetch, id)` (`services/1-usuario/api/usuario.api.ts`, ver §6) é a mesma pessoa que acabou de escrever o `@Get(':id')` no controller. A "descoberta de rota" já acontece - só que em tempo de desenvolvimento (a pessoa lê/escreve o código), não em tempo de execução (o app perguntando pro servidor "o que posso fazer agora?").
 
 **O custo de adotar HATEOAS aqui seria puro, sem contrapartida:**
 - Todo endpoint do sistema (hoje ~100 rotas, `§1.2`) passaria a carregar um bloco `_link` a mais em toda resposta, sem nenhum consumidor real pra ler esse bloco - o React sempre chama a URL que já sabe de cor, nunca segue um link vindo de uma resposta anterior.
@@ -112,13 +112,13 @@ nest/src/
 │   ├── seguranca/             ← cifra de CPF, validador de CPF, decorator @IsCpf, mensagem do 429
 │   ├── storage/               ← abstração de armazenamento de arquivo (seção 8)
 │   └── validacao/             ← erro de validação por campo, @TextoLimpo, @BooleanoDaQuery (6.1)
-├── 1-usuario/ … 28-dashboard/ ← 29 pastas numeradas, uma por domínio
-└── campo-testes/              ← rotas que só o Campo de Testes do painel usa, só fora de produção (7.4)
+├── 1-usuario/ … 29-dashboard/ ← 29 pastas numeradas, uma por domínio
+└── 30-campo-testes/           ← rotas que só o Campo de Testes do painel usa, só fora de produção (7.4)
 ```
 
-📌 **A numeração das pastas é a mesma ordem de dependência de produto usada em `PROXIMOS_MODULOS.md`** - `1-usuario` antes de `3-auth` porque autenticação precisa de conta; `12-campanha` antes de `15-atualizacao-campanha` porque atualização pendura numa campanha. **Ela não é ordem de importância nem de execução**: `25-arquivo` (número alto) é usado por `1-usuario` (número baixo).
+📌 **A numeração das pastas é a mesma ordem de dependência de produto usada em `PROXIMOS_MODULOS.md`** - `1-usuario` antes de `3-auth` porque autenticação precisa de conta; `12-campanha` antes de `15-atualizacao-campanha` porque atualização pendura numa campanha. **Ela não é ordem de importância nem de execução**: `26-arquivo` (número alto) é usado por `1-usuario` (número baixo).
 
-📌 **Por que `commons/` e não `shared/`/`core/`.** O critério que separa `commons/` de uma pasta numerada é: *tem tabela própria?* `25-arquivo` tem (`arquivo`), então é módulo numerado. `commons/storage` não tem - é só o adaptador que fala com o bucket. Mesma lógica de `commons/database` (não tem tabela; tem a conexão) e `commons/seguranca` (não tem tabela; tem a cifra usada por `6-perfil-pesquisador`).
+📌 **Por que `commons/` e não `shared/`/`core/`.** O critério que separa `commons/` de uma pasta numerada é: *tem tabela própria?* `26-arquivo` tem (`arquivo`), então é módulo numerado. `commons/storage` não tem - é só o adaptador que fala com o bucket. Mesma lógica de `commons/database` (não tem tabela; tem a conexão) e `commons/seguranca` (não tem tabela; tem a cifra usada por `6-perfil-pesquisador`).
 
 ---
 
@@ -223,13 +223,13 @@ const resultado = await paginar(query, { pagina, tamanho });
 
 Monte a query normalmente (`select`/`where`/`orderBy`) e troque o `.execute()` final por `paginar(...)`. Ele aplica `LIMIT`/`OFFSET` e roda a contagem.
 
-📌 **`TAMANHO_PAGINA_PADRAO` e `TAMANHO_PAGINA_MAXIMO` são 500, deliberadamente altos.** Hoje isso é um **teto de segurança** ("nenhum `SELECT` sem limite, nunca mais"), não paginação exposta na tela: o `GenericTable` do React continua buscando a lista inteira e paginando no navegador, o que funciona bem para tabelas pequenas. O comentário no arquivo é explícito sobre quando mudar: **quando um módulo de alto volume existir de verdade** (`22-contribuicao`, `26-notificacao`), *esse* módulo escolhe um tamanho pequeno e o React ganha controles de página - não antes, porque não faz sentido construir paginação contra 17 linhas de teste. `27-log-auditoria` já é o primeiro a fazer isso, com `TAMANHO_PADRAO_LOG = 20` próprio.
+📌 **`TAMANHO_PAGINA_PADRAO` e `TAMANHO_PAGINA_MAXIMO` são 500, deliberadamente altos.** Hoje isso é um **teto de segurança** ("nenhum `SELECT` sem limite, nunca mais"), não paginação exposta na tela: o `GenericTable` do React continua buscando a lista inteira e paginando no navegador, o que funciona bem para tabelas pequenas. O comentário no arquivo é explícito sobre quando mudar: **quando um módulo de alto volume existir de verdade** (`22-contribuicao`, `27-notificacao`), *esse* módulo escolhe um tamanho pequeno e o React ganha controles de página - não antes, porque não faz sentido construir paginação contra 17 linhas de teste. `28-log-auditoria` já é o primeiro a fazer isso, com `TAMANHO_PADRAO_LOG = 20` próprio.
 
 🧩 **As duas queries de `paginar()` são sequenciais, nunca `Promise.all`.** O comentário registra o achado: o driver `pg` emite *"Calling client.query() when the client is already executing a query is deprecated"*. Como há **uma conexão só por requisição** (é isso que faz o `set_config` da RLS funcionar), as duas queries nunca rodavam em paralelo de verdade - o driver só enfileirava por baixo dos panos, e essa fila implícita é justamente o comportamento que o `pg` vai remover. `await` sequencial custa o mesmo tempo total, sem depender de algo que vai sumir.
 
 `PaginacaoQueryDto` (`commons/database/dto/paginacao.query.dto.ts`) é a base que os DTOs de listagem estendem - `@Type(() => Number)` converte a query string antes do `class-validator` rodar. `PorCampanhaQueryDto` (mesma pasta) acrescenta o `idCampanha` obrigatório, para as listas que são sempre de uma campanha (atualizações, comentários).
 
-Usam `paginar()` hoje: `1-usuario`, `6-perfil-pesquisador`, `8-area-conhecimento`, `9-tipo-link`, `10-motivo-denuncia`, `11-configuracoes`, `12-campanha`, `15-atualizacao-campanha`, `17-comentario`, `27-log-auditoria`.
+Usam `paginar()` hoje: `1-usuario`, `6-perfil-pesquisador`, `8-area-conhecimento`, `9-tipo-link`, `10-motivo-denuncia`, `11-configuracoes`, `12-campanha`, `15-atualizacao-campanha`, `17-comentario`, `28-log-auditoria`.
 
 ### 2.8 `commons/logging` - log de requisição com ID (05-09-2026)
 
@@ -305,9 +305,9 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 
 **Cadastro público** (`POST /auth/cadastro` → `auth.service.register.ts`): reaproveita `UsuarioServiceCreate` (a mesmíssima criação que `POST /usuario` do admin usa) e soma o que só faz sentido no auto-cadastro - grava o aceite do termo **ativo** via `registrar_aceite_termo()` (o id do termo é resolvido pelo servidor, **nunca** aceito do corpo da requisição), gera o token de verificação de e-mail em `verificacao_email` (validade em `configuracoes.verificacao_email_horas_validade`, padrão 24h, também configurável pelo Painel Admin desde 04-09-2026), e já devolve tokens de sessão (quem se cadastra termina logado).
 
-📌 **Por que estes dois viraram configuráveis, e o custo de bcrypt não.** `refresh_token_dias_validade` e `verificacao_email_horas_validade` eram constantes fixas em `auth.constants.ts` com um comentário dizendo "parâmetro técnico, não regra de negócio" - revisto em 04-09-2026: os dois são só **janelas de tempo de produto** (por quanto tempo alguém continua logado, por quanto tempo um link de verificação vale), mesmo tipo de número que `configuracoes.bloqueio_login_minutos` já era. Lidos via `ConfiguracaoValorService`, com fallback pro padrão hardcoded se a chave sumir/for desativada - mesmo padrão usado em `25-arquivo` (ver §8.6). `CUSTO_BCRYPT_REFRESH_TOKEN` continua fixo de propósito: é parâmetro de segurança (custo de hash), não regra de produto - baixar isso sem entender a troca enfraquece a defesa contra força bruta offline.
+📌 **Por que estes dois viraram configuráveis, e o custo de bcrypt não.** `refresh_token_dias_validade` e `verificacao_email_horas_validade` eram constantes fixas em `auth.constants.ts` com um comentário dizendo "parâmetro técnico, não regra de negócio" - revisto em 04-09-2026: os dois são só **janelas de tempo de produto** (por quanto tempo alguém continua logado, por quanto tempo um link de verificação vale), mesmo tipo de número que `configuracoes.bloqueio_login_minutos` já era. Lidos via `ConfiguracaoValorService`, com fallback pro padrão hardcoded se a chave sumir/for desativada - mesmo padrão usado em `26-arquivo` (ver §8.6). `CUSTO_BCRYPT_REFRESH_TOKEN` continua fixo de propósito: é parâmetro de segurança (custo de hash), não regra de produto - baixar isso sem entender a troca enfraquece a defesa contra força bruta offline.
 
-⚠️ **`tokenVerificacaoEmailDev`.** Como `4-mail` não existe, ninguém envia o e-mail. A linha em `verificacao_email` é criada de qualquer jeito, e o token só viaja no corpo da resposta **fora de produção** (`NODE_ENV !== 'production'`). Em produção ele simplesmente não é devolvido - a escolha declarada foi não fingir que um e-mail foi mandado.
+📌 **`tokenVerificacaoEmailDev`.** O token vai por e-mail (fila de `notificacao`, enviada pelo `4-mail`, seção 21); fora de produção ele também volta no corpo da resposta, para testar sem abrir a caixa de entrada. Em produção não é devolvido.
 
 **Sessões** (`GET /auth/sessoes`, `DELETE /auth/sessoes`, `DELETE /auth/sessoes/:id`): lista/encerra sessões, usando o `sid` do próprio JWT para marcar qual é a atual.
 
@@ -532,7 +532,7 @@ Este é o "modelo" a copiar ao construir um módulo novo. Os dois exemplos abaix
 ├── dto/response/<nome>.response[-<variante>].ts
 ├── dto/converter/<nome>.converter.ts
 ├── guards/<nome>.guard.<acao>.ts          ← só onde existe (1-usuario, 3-auth)
-└── util/<nome>.util.<acao>.ts            ← só onde faz sentido (3-auth, 12-campanha, 25-arquivo)
+└── util/<nome>.util.<acao>.ts            ← só onde faz sentido (3-auth, 12-campanha, 26-arquivo)
 ```
 
 📌 **Nome de arquivo: `entidade.camada.ação`, ação em inglês (28-09-2026).**
@@ -637,8 +637,8 @@ Junto, a lista dos títulos acadêmicos válidos deixou de ser copiada em cada f
 
 > **Em palavras simples:** três rotas existem só para o Campo de Testes do painel: criar perfil de pesquisador e criar campanha em nome de outra conta, e forçar a exclusão de uma campanha. Elas moram numa pasta própria, fora dos módulos do sistema, e em produção nem existem.
 
-- **Decisão:** `CampoTestesModule` (`src/campo-testes/`) reúne `POST /perfil-pesquisador/:id`, `POST /campanha/:idUsuario` e `POST /campanha/:id/forcar-exclusao`, com as mesmas URLs de antes. Usa o sistema (os serviços de leitura de campanha e de perfil, o `TermoUsoModule`); o sistema nunca importa dele, e a regra `no-restricted-imports` do ESLint acusa qualquer tentativa (a única exceção é o `app.module.ts`). O `app.module.ts` só o carrega com `NODE_ENV` diferente de `production`.
-- **Motivo:** dependência de mão única, a mesma regra do `react/src/campo-testes/`. E duas travas independentes para produção: sem o módulo, a rota responde 404; no banco do deploy, o bloco "modo produção" ainda tira do admin as permissões dessas ferramentas. Conferido com o Nest ligado ao banco local: fora de produção as três respondem (201, 201, 204); com `NODE_ENV=production`, as três dão 404.
+- **Decisão:** `CampoTestesModule` (`src/30-campo-testes/`) reúne `POST /perfil-pesquisador/:id`, `POST /campanha/:idUsuario` e `POST /campanha/:id/forcar-exclusao`, com as mesmas URLs de antes. Usa o sistema (os serviços de leitura de campanha e de perfil, o `TermoUsoModule`); o sistema nunca importa dele, e a regra `no-restricted-imports` do ESLint acusa qualquer tentativa (a única exceção é o `app.module.ts`). O `app.module.ts` só o carrega com `NODE_ENV` diferente de `production`.
+- **Motivo:** dependência de mão única, a mesma regra do `react/src/30-campo-testes/`. E duas travas independentes para produção: sem o módulo, a rota responde 404; no banco do deploy, o bloco "modo produção" ainda tira do admin as permissões dessas ferramentas. Conferido com o Nest ligado ao banco local: fora de produção as três respondem (201, 201, 204); com `NODE_ENV=production`, as três dão 404.
 - **Caso-limite aceito:** apagar a pasta pede tirar 2 linhas do `app.module.ts` (o import e a entrada na lista), diferente do React, que usa um carregamento opcional. Um carregamento opcional no Nest pediria `require` dinâmico sem tipo, e não vale para 2 linhas. `PATCH /perfil-pesquisador/:id` e `POST /link-academico/:idUsuario` têm "for-other" no nome, mas são do sistema (o Alterar Usuário usa) e ficaram nos módulos deles.
 
 
@@ -736,15 +736,15 @@ Módulos exportam services quando outro precisa reaproveitar a regra em vez de d
 |---|---|---|
 | `1-usuario` | `UsuarioServiceFindOne` | `3-auth` devolve o usuário público no corpo do login sem duplicar query/converter |
 | `1-usuario` | `UsuarioServiceCreate` | `POST /auth/cadastro` reaproveita a mesma criação de `POST /usuario` (hash + INSERT + `atribuir_papel_padrao()`) |
-| `25-arquivo` | `ArquivoServiceRemove` | `UsuarioServiceUpdate` limpa a foto anterior na troca |
-| `25-arquivo` | `ArquivoServiceResolveAvatar` | resolve a URL do avatar com o mesmo fallback em qualquer lugar |
+| `26-arquivo` | `ArquivoServiceRemove` | `UsuarioServiceUpdate` limpa a foto anterior na troca |
+| `26-arquivo` | `ArquivoServiceResolveAvatar` | resolve a URL do avatar com o mesmo fallback em qualquer lugar |
 | `5-termo-uso` | `TermoUsoServiceFindActive` | o cadastro grava o aceite do termo **ativo**, resolvido pelo servidor |
 
-📌 **Ciclo de importação é evitado com direção única.** `1-usuario` importa `25-arquivo`; `25-arquivo` não importa `1-usuario` de volta (o comentário no `usuario.module.ts` diz isso explicitamente). `DatabaseModule` e `StorageModule` são `@Global()` - ninguém precisa importá-los, o que corta a maior fonte de ciclos.
+📌 **Ciclo de importação é evitado com direção única.** `1-usuario` importa `26-arquivo`; `26-arquivo` não importa `1-usuario` de volta (o comentário no `usuario.module.ts` diz isso explicitamente). `DatabaseModule` e `StorageModule` são `@Global()` - ninguém precisa importá-los, o que corta a maior fonte de ciclos.
 
 ---
 
-## 8. Armazenamento e upload de arquivo (`commons/storage` + `25-arquivo`)
+## 8. Armazenamento e upload de arquivo (`commons/storage` + `26-arquivo`)
 
 > ⚠️ **Este módulo foi alterado em 01-09-2026** (processamento com `sharp`, cota por usuário, novos tetos de tamanho). O que segue descreve o estado **atual**. Vários números aqui são recentes; confira as constantes no código antes de citá-los em outro lugar.
 
@@ -772,7 +772,7 @@ Métodos do contrato: `gerarUploadPreAssinado`, `obterInfoObjeto`, `lerPrimeiros
 
 **Provedor atual: Supabase Storage** (bucket S3-compatível, no mesmo projeto Supabase que hospeda o Postgres). Confirmado em três lugares: `nest/.env` (`STORAGE_ENDPOINT` aponta para `…storage.supabase.co/storage/v1/s3`), `nest/.env.example` (instruções de criação do bucket no painel do Supabase) e o comentário no topo do service.
 
-📌 **Uma implementação cobre todos os provedores viáveis.** Supabase Storage, Cloudflare R2, Backblaze B2, AWS S3 e MinIO falam o **mesmo protocolo** (S3). Trocar de provedor é trocar variáveis de ambiente - `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, `STORAGE_BUCKET`, `STORAGE_PUBLIC_BASE_URL`, `STORAGE_REGION`, `STORAGE_FORCE_PATH_STYLE` - **sem tocar em uma linha de TypeScript**. Só um provedor com API genuinamente não-S3 exigiria uma classe nova; nesse caso, muda-se o `useExisting` no `storage.module.ts` e nada em `25-arquivo` muda.
+📌 **Uma implementação cobre todos os provedores viáveis.** Supabase Storage, Cloudflare R2, Backblaze B2, AWS S3 e MinIO falam o **mesmo protocolo** (S3). Trocar de provedor é trocar variáveis de ambiente - `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, `STORAGE_BUCKET`, `STORAGE_PUBLIC_BASE_URL`, `STORAGE_REGION`, `STORAGE_FORCE_PATH_STYLE` - **sem tocar em uma linha de TypeScript**. Só um provedor com API genuinamente não-S3 exigiria uma classe nova; nesse caso, muda-se o `useExisting` no `storage.module.ts` e nada em `26-arquivo` muda.
 
 📌 **O comentário do código registra a correção de si mesmo:** *"CORRIGIDO 01-09-2026: este comentário dizia 'Backblaze B2 (provedor atual)' - estava desatualizado, o `.env` real nunca apontou pra B2 nesta fase do projeto."* Também registra a avaliação do R2 feita na mesma data (free tier maior) e a decisão de **ficar no Supabase por enquanto**, já que está funcionando.
 
@@ -817,7 +817,7 @@ NAVEGADOR                       NEST                            BUCKET
 
 ### 8.4 Validação de conteúdo: o navegador mente
 
-`25-arquivo/util/arquivo.util.signature.ts`.
+`26-arquivo/util/arquivo.util.signature.ts`.
 
 📌 **O `Content-Type` que o navegador declara é uma afirmação, não um fato.** Renomear `virus.exe` para `foto.jpg` faz o navegador dizer "é JPEG". A única forma confiável de saber o que subiu é ler os primeiros bytes do objeto **já no bucket** e conferir a assinatura (*magic number*) do formato:
 
@@ -840,7 +840,7 @@ NAVEGADOR                       NEST                            BUCKET
 
 ### 8.5 Processamento de imagem com `sharp`
 
-`25-arquivo/util/arquivo.util.image-processing.ts`. Roda em `confirmar-upload`, **depois** de a assinatura já ter sido conferida - nunca processar bytes que ainda não foram validados como o tipo que afirmam ser.
+`26-arquivo/util/arquivo.util.image-processing.ts`. Roda em `confirmar-upload`, **depois** de a assinatura já ter sido conferida - nunca processar bytes que ainda não foram validados como o tipo que afirmam ser.
 
 Três operações, sempre nesta ordem:
 
@@ -974,7 +974,7 @@ Este é o único dado do sistema que é **cifrado** (não apenas hasheado). O ra
 
 ---
 
-## 10. Módulos de apoio do painel: `27-log-auditoria`, `28-dashboard`, `5-termo-uso`
+## 10. Módulos de apoio do painel: `28-log-auditoria`, `29-dashboard`, `5-termo-uso`
 
 Módulos pequenos, mas reais e em uso pelo painel administrativo.
 
@@ -1029,7 +1029,7 @@ Módulos pequenos, mas reais e em uso pelo painel administrativo.
 - **Motivo:** a trigger de recálculo roda uma vez por comando; item por item, salvar 13 pesos recalcularia todos os pesquisadores 13 vezes. E as regras de soma só fazem sentido no estado final.
 - **Caso-limite aceito:** a requisição do administrador espera o recálculo de todos os pesquisadores terminar.
 
-### `27-log-auditoria` (9 arquivos, 2 endpoints)
+### `28-log-auditoria` (9 arquivos, 2 endpoints)
 
 Somente leitura - a escrita em `log_auditoria` é feita por trigger genérica no banco (letra `L` do `DOCUMENTACAO_BD.md`), nunca pelo Nest.
 
@@ -1039,7 +1039,7 @@ Somente leitura - a escrita em `log_auditoria` é feita por trigger genérica no
 
 📌 **A autorização é 100% RLS, como sempre.** `pol_log_auditoria_select` exige `tem_permissao('log_visualizar')`; sem ela a query volta **vazia**, não dá erro. O comentário registra a dependência: a policy foi ampliada para deixar qualquer usuário ver as próprias linhas - sem essa mudança aplicada no banco, `minha-atividade` volta vazia para quem não é admin, mesmo sendo autor das próprias linhas.
 
-### `28-dashboard` (4 arquivos, 1 endpoint)
+### `29-dashboard` (4 arquivos, 1 endpoint)
 
 **`GET /dashboard/resumo`** - uma única chamada a `SELECT * FROM contar_metricas_dashboard()` (bloco `[03-M]`). Inclui `campanhasParaRevisaoScore`: campanhas na fila de aprovação cujo pesquisador está abaixo do score mínimo, só um sinal para o admin.
 
@@ -1047,7 +1047,7 @@ Somente leitura - a escrita em `log_auditoria` é feita por trigger genérica no
 
 Devolve `totalUsuarios`, `totalPesquisadores`, `totalPapeis`, `totalPermissoes`, `totalConfiguracoes`, `totalCampanhas`, `sessoesAtivas` e `notificacoesPendentes`.
 
-⚠️ **`notificacoesPendentes` é `null` fixo** - `26-notificacao` não existe. Há um precedente comentado no código: `totalCampanhas` **também** era `null` fixo ("campanha ainda não existe") e continuou `null` mesmo depois de `12-campanha` ser construído, até alguém perceber e atualizar a função do banco. **Quando `26-notificacao` existir, este campo não vai começar a funcionar sozinho** - exige atualizar `contar_metricas_dashboard()` no `.sql` *e* trocar o `null` aqui.
+📌 **`notificacoesPendentes` e `notificacoesComFalha` (19-10-2026)** vêm de uma contagem direta de `notificacao` no próprio service do Dashboard, pela RLS da sessão: para quem não pode ver os e-mails do sistema, dão 0. `contar_metricas_dashboard()` não mudou.
 
 ### `5-termo-uso` (19 arquivos, 7 endpoints)
 
@@ -1208,6 +1208,14 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | DELETE | `/comentario/:id` |
 | AUTH | GET · POST | `/seguir-campanha` |
 | AUTH | DELETE | `/seguir-campanha/:idCampanha` |
+| AUTH | GET · POST | `/seguir-pesquisador` *(RF-028: a lista é sempre a da conta logada)* |
+| AUTH | DELETE | `/seguir-pesquisador/:idPesquisador` |
+| pub | GET | `/seguir-pesquisador/:idPesquisador/seguidores` *(só o número, para a página do perfil)* |
+| pub | GET | `/recompensa` *(`?idCampanha=`; o link especial só vem para o dono, o admin e quem ganhou)* |
+| AUTH | GET | `/recompensa/minhas` *(as recompensas que a conta ganhou, com o link)* |
+| AUTH | POST | `/recompensa` · `/recompensa/:id/link` *(só o dono da campanha)* |
+| AUTH | PATCH | `/recompensa/:id` *(alterar ou desativar; não existe excluir)* |
+| AUTH | DELETE | `/recompensa/link/:idLinkRecompensa` |
 | **Moderação** | | |
 | AUTH | GET · POST | `/denuncia` |
 | AUTH | PATCH | `/denuncia/:id` |
@@ -1223,6 +1231,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | **Pagamento** | | |
 | pub | POST | `/contribuicao` *(contribuir não exige conta, RF-073; devolve o Pix "copia e cola" ou o link da página segura do cartão)* |
 | AUTH | GET | `/contribuicao/campanha/:idCampanha/resumo` *(quantas e quanto por meio e situação, para o Consultar da campanha; só o dono ou quem tem `contribuicao_visualizar_sensivel`)* |
+| AUTH | GET | `/contribuicao/minhas` *(o histórico da conta logada, com a recompensa escolhida)* |
 | pub | GET | `/contribuicao/:id` *(acompanhar a contribuição: com login, pelo próprio usuário; sem conta, pelo cabeçalho `X-Token-Sessao`)* |
 | pub | POST | `/pagamento/webhook/:provedor` · `/pagamento/webhook/:provedor/autorizacao-saque` *(quem chama é o provedor; a autenticidade é o token dele, conferido antes de tocar no banco; a segunda responde se uma transferência ou devolução pode sair)* |
 | AUTH | GET · POST · DELETE | `/conta-recebimento` *(a chave Pix do próprio pesquisador, conferida no provedor)* |
@@ -1235,6 +1244,9 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | **Painel** | | |
 | AUTH | GET | `/log-auditoria` · `/log-auditoria/minha-atividade` |
 | AUTH | GET | `/dashboard/resumo` |
+| AUTH | GET | `/notificacao` · `/notificacao/resumo` *(e-mails do sistema; exige `notificacao_processar`)* |
+| AUTH | POST | `/notificacao/:id/reenviar` · `/notificacao/:id/cancelar` *(RF-121; permissão e situação conferidas no banco)* |
+| AUTH | GET · DELETE | `/campo-testes/email` *(T6, caixa do provedor de e-mail de teste: só fora de produção)* |
 
 📌 **Rotas administrativas exigem login (não são `@Publico()`).** `GET /usuario`, `GET /usuario/:id`, `GET /usuario-papel`, `GET /usuario-papel/:idUsuario` e `GET /dashboard/resumo` exigem login. Não vale o argumento "só o admin chega na tela": a API não sabe de tela nenhuma, qualquer requisição direta (um `curl`) chega na rota sem passar pelo `/admin`, e o `AuthGuardJwt` global deixa passar como anônima a requisição sem cabeçalho `Authorization` (comportamento documentado nele). Sobra a RLS, e a RLS de `usuario` é permissiva de propósito (o login precisa achar o usuário pelo e-mail antes de existir alguém autenticado); sem o guard, um visitante anônimo obteria os e-mails de todos os usuários, quem é administrador e as métricas internas.
 
@@ -1244,25 +1256,15 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 ## 14. O que ainda não existe (pastas vazias)
 
-Conferido em 18-10-2026 (`19-denuncia` e `20-solicitacao-encerramento` saíram em 03-10-2026; `22-contribuicao` em 17-10-2026): as 5 pastas abaixo contêm **exatamente um arquivo `.gitkeep`** e **zero `.ts`**. (`21-historico-rejeicao` saiu da lista: ganhou código em 14-09-2026.)
-
-| Pasta | Grupo em `PROXIMOS_MODULOS.md` |
-|---|---|
-| `4-mail` | Comunicação |
-| `18-recompensa` | Engajamento |
-| `23-repasse` | Pagamento *(o repasse foi feito em `29-pagamento` e `30-conta-recebimento`: a pasta ficou sem uso)* |
-| `24-auditoria-financeira` | Pagamento *(a auditoria é gravada pelo banco e lida em `32-pagamento-revisao`: a pasta ficou sem uso)* |
-| `26-notificacao` | Comunicação |
+Conferido em 19-10-2026: **nenhuma pasta de módulo vazia.** `4-mail`, `18-recompensa` e `27-notificacao` ganharam código nesse dia (seção 21); `23-repasse` e `24-auditoria-financeira`, vazias, saíram na reorganização numérica (o repasse vive em `23-pagamento`, `24-conta-recebimento` e `25-pagamento-revisao`; a auditoria financeira é gravada pelo banco).
 
 🗑️ **`27-resources` não está mais na lista - removido em 04-09-2026.** Era sobra do esqueleto de pastas herdado do modelo da disciplina (Programação para Web 2): lá, `resources` é um catálogo estático de metadados de rota (`GET /rest/resources`, uma lista hardcoded de endpoint/verbo por entidade, consumida pelo React pra montar URL sem hardcode) - só faz sentido porque aquele sistema segue uma convenção rígida e uniforme (toda entidade com exatamente 5 endpoints: listar/criar/buscar/alterar/excluir). O CrowdAcadêmico já resolve o mesmo problema de origem (não hardcodar URL no React) de outro jeito - um arquivo `<modulo>.api.js` por módulo, com funções nomeadas - e as rotas daqui não são uniformes o bastante pra caber no molde do `resources` (upload em 2 passos, `/dashboard/resumo` sem entidade, sub-rotas como `/usuario/:id/desbloquear`). Pasta vazia (só `.gitkeep`) desde sempre, sem nenhum código ou decisão ligando ela ao produto - removida, não é lacuna.
 
 📌 **Este documento descreve o que EXISTE.** O que falta, a ordem sugerida e o porquê de cada adiamento estão em **`PROXIMOS_MODULOS.md`**, que é o dono desse assunto e está atualizado. Não duplicar aqui.
 
-Três consequências do que falta são visíveis dentro do código já escrito, e valem registro:
+O que ficou registrado sobre o que faltava:
 
-- **`4-mail` bloqueia dois fluxos prontos no banco.** Verificação de e-mail e recuperação de senha têm tabela, índice e função - e o cadastro **já grava** a linha em `verificacao_email`. Só ninguém envia o e-mail. (`PENDENCIAS e correcoes.md`, item 6.)
-- **`26-notificacao` mantém `notificacoesPendentes: null`** no dashboard (§10).
-- **Pagamento (feito em 17-10-2026):** contribuição (`22-contribuicao`), provedor e tarefas automáticas (`29-pagamento`), chave Pix e repasses do pesquisador (`30-conta-recebimento`) e pendências do admin (`32-pagamento-revisao`). Sobre a antiga pendência de `auditoria_financeira` e `repasse` terem policy de escrita `WITH CHECK (true)`: o Nest nunca grava nessas tabelas direto; toda escrita passa por funções `SECURITY DEFINER` do banco. ⚠️ Mas o `GRANT INSERT` do `app_nestjs` nas duas continua em `06_grants.sql` sem uso (conferido em 18-10-2026): tirá-lo fecharia de vez a porta, decisão em aberto no PENDENCIAS. O fluxo do dinheiro inteiro está em `DOCUMENTACAO_FINANCEIRO.md`.
+- **Pagamento (feito em 17-10-2026):** contribuição (`22-contribuicao`), provedor e tarefas automáticas (`23-pagamento`), chave Pix e repasses do pesquisador (`24-conta-recebimento`) e pendências do admin (`25-pagamento-revisao`). Sobre a antiga pendência de `auditoria_financeira` e `repasse` terem policy de escrita `WITH CHECK (true)`: o Nest nunca grava nessas tabelas direto; toda escrita passa por funções `SECURITY DEFINER` do banco. ⚠️ Mas o `GRANT INSERT` do `app_nestjs` nas duas continua em `06_grants.sql` sem uso (conferido em 18-10-2026): tirá-lo fecharia de vez a porta, decisão em aberto no PENDENCIAS. O fluxo do dinheiro inteiro está em `DOCUMENTACAO_FINANCEIRO.md`.
 
 ---
 
@@ -1305,6 +1307,10 @@ Adicionado em 05-09-2026 pra fechar o RF-057 (encerramento automático de campan
 ### 15.8 Armazenamento de arquivo - `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` + `sharp`
 
 Os dois pacotes da AWS **não implicam usar a AWS** - são o cliente do protocolo S3, que o Supabase Storage (provedor atual, seção 8.2), Cloudflare R2, Backblaze B2 e MinIO também falam. A escolha de usar o SDK oficial da AWS em vez de escrever chamada HTTP crua contra a API S3 é puro pragmatismo: é o cliente mais maduro/testado do protocolo, mesmo apontado para um provedor que não é a AWS. `s3-request-presigner` é o que gera a URL pré-assinada de upload (seção 8.3) - sem ele, o Nest precisaria proxiar o binário do arquivo inteiro através de si mesmo, exatamente o risco que o desenho em 2 passos evita (processo Node ocupado segurando upload grande). `sharp` é o processamento de imagem no servidor (seção 8, redimensionar + converter pra WebP + remover EXIF) - rápido porque roda sobre `libvips` (biblioteca C nativa), não JavaScript puro; o preço dessa velocidade é distribuir binário pré-compilado por sistema operacional, por isso o `node_modules` nunca pode ser commitado nem copiado entre máquinas (precisa rodar `npm install` no próprio ambiente de destino).
+
+### 15.8.1 E-mail - `nodemailer`
+
+Só para o provedor `smtp` do `4-mail` (Gmail com senha de app, Mailpit, MailHog, qualquer SMTP). O Brevo vai pela API HTTPS com o `fetch` do Node, sem biblioteca. Alternativa preterida: o SDK oficial do Brevo, que prenderia o código a um provedor; o `nodemailer` é o padrão do ecossistema Node para SMTP e serve para todos.
 
 ### 15.9 Dependências de desenvolvimento (resumo, sem aprofundar cada uma)
 
@@ -1366,7 +1372,7 @@ Reunidos de todas as seções, para servir de checklist.
 8. ✅ **`perfil-pesquisador.service.create` diferencia as duas `UNIQUE`** pelo mapa central de duplicidade (perfil repetido e CPF repetido têm mensagens próprias). (§5.1)
 9. ✅ **`ordem_endosso` é calculada no banco** (trigger `validar_comentario_endosso_autor`, sob lock por campanha, desde 26-09-2026); a corrida teórica acabou. (§7.4)
 10. ✅ **`GET /dashboard/resumo` exige login e a permissão `relatorio_visualizar`** (checada dentro de `contar_metricas_dashboard()`, ERRCODE 92011, desde 25-09-2026). (§13)
-11. ⚠️ **`notificacoesPendentes` não vai começar a funcionar sozinho** quando `26-notificacao` existir - há precedente comentado no código. (§10)
+11. ✅ **`notificacoesPendentes` funciona** desde 19-10-2026, por contagem direta no service do Dashboard. (§10)
 12. ✅ **`nest/.env.example` existe** (26-09-2026). (§8.8)
 13. ⚠️ **`ARQUIVO - Dica de Arquitetura.md` (em `informacoes/arquivo morto/`) cita Cloudflare R2** como provedor; o atual é Supabase Storage. O desenho continua válido, só o nome mudou. (§8.1)
 14. ⚠️ **`paginacao.util` com padrão 500** é teto de segurança, não paginação real - precisa baixar quando o primeiro módulo de alto volume existir. (§2.7)
@@ -1390,7 +1396,7 @@ Os números da §1.2 e as listas das §13/§14 **envelhecem a cada rodada de tra
 for d in src/*/; do echo "$(find "$d" -name '*.ts' | wc -l)  $d"; done
 
 # confirmar que uma pasta está mesmo vazia
-find src/18-recompensa -type f
+find src/4-mail -type f
 
 # totais
 find src -name '*.ts' | wc -l
@@ -1428,7 +1434,7 @@ console.log('total de rotas:', out.length);
 | `DOCUMENTACAO_ERRCODE.md` | Tabela completa código → função → mensagem dos `RAISE EXCEPTION` com ERRCODE customizado |
 | `PENDENCIAS e correcoes.md` | Decisões em aberto e o log dos últimos dias; o histórico antigo (itens e partes resolvidos até 22-09-2026) está em `informacoes/HISTORICO/HISTORICO_PENDENCIAS_E_CORRECOES.md`, e os itens 5, 6, 7, 8, 9, 11 e 22 citados neste documento estão lá |
 | `PROXIMOS_MODULOS.md` | O que falta construir, em ordem sugerida |
-| `ARQUIVO - Dica de Arquitetura.md` (em `informacoes/arquivo morto/`) | O "doc de arquitetura" citado nos comentários de `commons/storage` e `25-arquivo`; a substância está na seção 8 deste documento |
+| `ARQUIVO - Dica de Arquitetura.md` (em `informacoes/arquivo morto/`) | O "doc de arquitetura" citado nos comentários de `commons/storage` e `26-arquivo`; a substância está na seção 8 deste documento |
 | `nest/.env.example` | Todas as variáveis do `.env` do Nest, com o passo a passo do bucket do Supabase (`STORAGE_*`) |
 | `.Tutorial-rodar-projeto.md` | Instalação, incluindo o `ALTER ROLE app_nestjs LOGIN PASSWORD` obrigatório |
 
@@ -1595,3 +1601,61 @@ Testado com o backend rodando de verdade contra o Postgres real (não só compil
 - **Decisão:** `POST /auth/esqueci-senha` grava um token em `recuperacao_senha` (um ativo por pessoa: pedir de novo apaga o anterior) com a validade de `recuperacao_senha_minutos_validade` (30, Parâmetros do Sistema) e responde igual exista ou não a conta. `POST /auth/redefinir-senha` chama `redefinir_senha_por_token` (03, [03-O], SECURITY DEFINER): usa o token uma vez, troca a senha, zera o bloqueio por senha errada e encerra as sessões do dono. Os dois são públicos e com limite de pedidos. Fora de produção o link volta em `tokenRecuperacaoSenhaDev` (botão <dev> na tela), igual ao token de verificar e-mail.
 - **Motivo:** a tabela, os índices, a RLS e as permissões já existiam; faltavam a função e as telas. Não revelar se o e-mail tem conta e derrubar as sessões ao trocar a senha são padrão de mercado.
 - **Caso-limite aceito:** em produção, até o módulo de e-mail existir, o link é gravado e ninguém o recebe.
+
+---
+
+## 21. E-mail, notificações, recompensa e seguir pesquisador (19-10-2026)
+
+**Em palavras simples:** todo e-mail do sistema entra primeiro numa fila no banco, na mesma hora do evento que o causou; um "carteiro" do Nest entrega um por um, tenta de novo quando falha, e o painel mostra tudo. Junto, entraram a recompensa simbólica, o seguir pesquisador, a lista "minhas contribuições" e o valor líquido estimado da campanha. Passo a passo do e-mail para quem vai configurar: `.Tutorial-email.md`.
+
+### 21.1 `4-mail` (o carteiro) e `27-notificacao` (o registro)
+
+| Peça | Onde | O que faz |
+|---|---|---|
+| Porta | `4-mail/ports/envio-email.port.ts` | A "tomada": `enviar(mensagem)`, erro `ErroEnvioEmail` com `recuperavel` |
+| Provedores | `4-mail/adapters/` | `fake` (caixa em memória, a T6), `brevo` (API HTTPS), `smtp` (nodemailer), `nao-configurado`, `redirecionar` (trava de teste) |
+| Escolha | `4-mail/email.config.ts` | `EMAIL_PROVIDER`, com as mesmas regras de `PAYMENT_PROVIDER` |
+| Textos | `4-mail/modelos/` | Um modelo por `tipo_evento`, HTML e texto puro, nunca quebra por dado faltando |
+| Worker | `4-mail/service/email.service.send-pending.ts` | `@Cron` a cada 1 minuto, interruptor `tarefa_envio_email_ligada` (ligado no banco de produção, desligado no de demonstração: o card fica na T6), lote de 20, `PG_POOL` direto |
+| Fila | `notificacao` + funções de `[05-Q]` | `reservar_proxima_notificacao`, `concluir_notificacao`, `falhar_notificacao` (espera crescente) |
+| Enfileirar pelo Nest | `27-notificacao/service/notificacao.service.enqueue.ts` | Só verificação de conta e recuperação de senha (o token só o Nest conhece) |
+| Painel | `27-notificacao` | `GET /notificacao`, `/notificacao/resumo`, `POST /notificacao/:id/reenviar`, `/cancelar` |
+| Campo de Testes | `30-campo-testes/controllers/email.controller.caixa.ts` | `GET`/`DELETE /campo-testes/email`; o "Rodar agora" do card da T6 chama a tarefa `email` (`POST /campo-testes/pagamento/tarefas/:tarefa`, com `email`) |
+
+- **Decisão:** os e-mails nascem nos gatilhos do banco (`[05-Q]`), não espalhados pelos services do Nest; o Nest só enfileira o que só ele sabe (o token do link).
+- **Motivo:** qualquer caminho que aprove, rejeite, encerre, suspenda ou devolva (tela, tarefa agendada, função de moderação, webhook) gera o aviso, na mesma transação. É o padrão "caixa de saída" (outbox), o mesmo do repasse.
+- **Caso-limite aceito:** o texto é montado na hora de enviar, com os dados gravados na hora do evento; um título de campanha alterado depois sai com o título antigo.
+
+- **Decisão:** o token do link (verificar conta, nova senha) espera na fila cifrado em `dados.segredo` (`commons/seguranca/segredo-email-cifra.util.ts`, a receita do CPF) e é apagado quando o e-mail sai ou é cancelado; a API nunca devolve `segredo`.
+- **Motivo:** o banco guarda esses tokens só como hash; deixá-los em texto puro na fila desfaria essa proteção.
+- **Caso-limite aceito:** reenviar um e-mail que falhou manda o mesmo link, que pode já ter vencido (a pessoa pede outro pela tela).
+
+- **Decisão:** fora de produção, provedor de verdade (`brevo`, `smtp`) exige `EMAIL_REDIRECIONAR_PARA`, e todo e-mail vai para esse endereço com o destinatário original no assunto.
+- **Motivo:** o seed tem endereços com domínio real; um teste no computador não pode escrever para pessoas que podem existir. Padrão de mercado em homologação ("mail redirect").
+- **Caso-limite aceito:** em produção a trava não existe; o banco de produção nasce sem os dados de demonstração.
+
+- **Decisão:** os textos ficam no código (`4-mail/modelos/modelos-email.ts`), não numa tabela editável.
+- **Motivo:** nenhuma regra do sistema depende do texto; uma tabela `template_email` mais a tela dela aumentariam o escopo do TCC.
+- **Caso-limite aceito:** mudar um texto pede uma alteração de código. Se fizer falta, a tabela entra depois sem mudar a fila.
+
+### 21.2 `18-recompensa`
+
+- **Decisão:** recompensa simbólica: título, tipo (`reconhecimento`, `acesso_antecipado`, `digital`), valor mínimo, descrição e um link especial opcional (`link_recompensa`). Sem estoque (`quantidade_disponivel` sempre vazia) e sem excluir (desativa, `ativo = false`).
+- **Motivo:** decisão do Lucas (19-10-2026): "o mais simples possível". A RLS de `link_recompensa` já mostrava o link só ao dono, ao admin e a quem ganhou: é o "link especial" sem nenhuma regra nova.
+- **Caso-limite aceito:** o RF-100 cita quantidade disponível; o sistema não controla (ponto para a revisão externa). O link só aceita tipos de link com `permite_recompensa` (hoje só GitHub); para outro site, o admin cadastra um tipo em Tipos de Link.
+
+- **Decisão:** escolher a recompensa é um campo opcional de `POST /contribuicao` (`idRecompensa`): exige conta, recompensa ativa da mesma campanha e valor igual ou acima do mínimo; grava `contribuicao_recompensa` na mesma transação. A recompensa só conta como ganha quando a contribuição é paga.
+- **Motivo:** a política `pol_contrib_recompensa_insert` já exigia o dono da contribuição; quem contribui sem conta não tem nome para o reconhecimento.
+- **Caso-limite aceito:** a contribuição que vence ou falha guarda a escolha, mas `/recompensa/minhas` e a contagem só olham as pagas.
+
+### 21.3 Seguir pesquisador, minhas contribuições e líquido estimado
+
+- **Seguir pesquisador (RF-028)** fica em `16-seguir` (agora `SeguirModule`): mesma regra do seguir campanha; o alvo precisa ter perfil de pesquisador (400), seguir duas vezes dá 409 e a si mesmo, 400 (as duas do banco). A contagem pública usa `contar_seguidores_pesquisador` (`[03-E]`), sem dizer quem segue.
+- **`GET /contribuicao/minhas`** (RF-009, RF-085): o histórico da conta logada, com a recompensa escolhida; registrado antes de `GET /contribuicao/:id` no módulo.
+- **Líquido estimado (RF-087):** `GET /campanha/:id` traz `valorLiquidoEstimado` e `taxaAplicada`, pela mesma conta do repasse (`liquido_repasse`, taxa mínima incluída).
+
+### 21.4 Como foi provado
+
+- Banco (Postgres em memória, as suítes locais de teste do banco): fila de e-mails e gatilhos (36 casos), recompensa e seguir pesquisador (21 casos), mais todas as anteriores.
+- Ponta a ponta (o Nest de verdade num Postgres local montado de 01 a 08, provedores de teste de e-mail e de pagamento): 45 casos, de cadastro e nova senha até recompensa paga e e-mail de aprovação.
+

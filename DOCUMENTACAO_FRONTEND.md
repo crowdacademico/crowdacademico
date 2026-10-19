@@ -17,7 +17,7 @@
 4. [Roteamento e menu](#4-roteamento-e-menu)
 5. [Autenticação (`use-auth.ts`)](#5-autenticação-use-authts)
 6. [Padrão de service e API](#6-padrão-de-service-e-api)
-7. [Upload de arquivo (`25-arquivo`)](#7-upload-de-arquivo-25-arquivo)
+7. [Upload de arquivo (`26-arquivo`)](#7-upload-de-arquivo-25-arquivo)
 8. [`GenericTable`](#8-generictable)
 9. [Componentes e hooks reutilizáveis](#9-componentes-e-hooks-reutilizáveis)
 10. [Estado global: os providers](#10-estado-global-os-providers)
@@ -33,7 +33,7 @@
 
 O `react/` é hoje **o painel administrativo**: listar, criar, alterar, consultar e excluir os registros dos módulos que o Nest expõe, o Dashboard, a "Minha Conta" e as telas públicas de entrada (login, cadastro, esqueci a senha, criar nova senha, verificar e-mail, aceite de nova versão do Termo de Uso).
 
-**O que NÃO existe:** a área pública do site (página da campanha, home pública, checkout, painel do doador). As pastas `views/checkout/`, `views/dash-doador/` e `views/dash-pesquisador/` estão reservadas, só com `.gitkeep`. O pesquisador também não usa o painel: a área dele nasce junto com a área pública.
+**O que NÃO existe:** a área pública do site (página da campanha, home pública, checkout, painel do doador). As pastas `views/22-contribuicao/` (checkout), `views/29-dashboard/doador/` e `views/29-dashboard/pesquisador/` estão reservadas, só com `.gitkeep`. O pesquisador também não usa o painel: a área dele nasce junto com a área pública.
 
 📌 **O painel não é descartável.** A primeira versão (`views/dev/`, sem roteador) era ferramenta de desenvolvimento; desde 01-08-2026 ela é o admin de verdade. Por isso a pasta se chama `components/crud/` e o CSS, `5-crud.css`.
 
@@ -80,14 +80,16 @@ react/
     ├── components/     - peças reutilizáveis entre módulos
     ├── services/       - comunicação com a API, tipos, regras de tela, estado compartilhado
     ├── views/          - as páginas
-    └── campo-testes/   - o Campo de Testes inteiro (seção 12): paginas/ e servicos/
+    └── 30-campo-testes/ - o Campo de Testes inteiro (seção 12): paginas/ e servicos/; sempre o último número
 ```
 
 ### `services/` e `views/` usam o número do módulo do Nest
 
-`services/9-tipo-link/api/tipo-link.api.ts` fala com `nest/src/9-tipo-link`: o número é a chave estável entre os dois projetos. Pastas que não são módulo do Nest têm nome próprio: `services/constant/` (o que todo módulo usa), `services/router/` (rotas) e `views/admin/` (a casca do painel e o Dashboard).
+`services/9-tipo-link/api/tipo-link.api.ts` fala com `nest/src/9-tipo-link`: o número é a chave estável entre os dois projetos. Pastas que não são módulo do Nest têm nome próprio: `services/constant/` (o que todo módulo usa), `services/router/` (rotas). A casca do painel (menu lateral e moldura) não é módulo: fica em `components/layout/painel-admin/`. O Dashboard é o módulo 29 (`views/29-dashboard/`).
 
-**Subpastas de um módulo em `services/`:** `api/`, `constants/`, `hook/`, `type/` são a base; `context/` só quando o dado é lido por telas sem parentesco e é caro buscar de novo (seção 10); `util/` só para cálculo puro, sem chamada de API nem estado. Módulos que ainda não têm tela (`22-contribuicao`, `23-repasse`, `26-notificacao`) já existem com as pastas reservadas.
+**Tela de um módulo que aparece dentro da tela de outro** mora na pasta do módulo dono do dado (as seções de atualizações em `views/15-atualizacao-campanha/`, as de comentários em `views/17-comentario/`, o `modal-denunciar` em `views/19-denuncia/`). Peça que serve mais de um módulo fica com a tela que a usa (`painel-orcamento-cronograma` atende 13 e 14 e fica em `views/12-campanha/`).
+
+**Subpastas de um módulo em `services/`:** `api/`, `constants/`, `hook/`, `type/` são a base; `context/` só quando o dado é lido por telas sem parentesco e é caro buscar de novo (seção 10); `util/` só para cálculo puro, sem chamada de API nem estado. Pasta de módulo futuro só existe no Nest; no React ela nasce junto com a primeira tela ou chamada de API.
 
 ### Nomes de arquivo
 
@@ -123,7 +125,7 @@ react/
 
 📌 **As rotas do Campo de Testes não estão nesta lista:** entram pela porta `services/router/campo-testes-opcional.ts` (seção 12), só em desenvolvimento.
 
-📌 **O menu é derivado.** `views/admin/admin-menu.constants.ts` filtra `ROTAS_ADMIN` por `grupoMenu` (`itensDoGrupo()`). Grupos: o Dashboard (sem título), `GESTÃO DO USUÁRIO`, `Configurações`, `CAMPANHA`, `MODERAÇÃO` e, por último, `CAMPO DE TESTES` (some sozinho quando não há rota dele). A chave interna do grupo (ex.: `'CADASTROS'`) não muda quando o título visível muda. Item de módulo que ainda não existe aparece apagado com `aria-disabled` (não `disabled`): continua focável pelo teclado, e a dica "Ainda não implementado" aparece também no Tab. Desde 03-10-2026 a MODERAÇÃO não tem mais nenhum (Aprovar Campanhas, Denúncias e Pedidos de Encerramento).
+📌 **O menu é derivado.** `components/layout/painel-admin/admin-menu.constants.ts` filtra `ROTAS_ADMIN` por `grupoMenu` (`itensDoGrupo()`). Grupos: o Dashboard (sem título), `GESTÃO DO USUÁRIO`, `Configurações`, `CAMPANHA`, `MODERAÇÃO` e, por último, `CAMPO DE TESTES` (some sozinho quando não há rota dele). A chave interna do grupo (ex.: `'CADASTROS'`) não muda quando o título visível muda. Item de módulo que ainda não existe aparece apagado com `aria-disabled` (não `disabled`): continua focável pelo teclado, e a dica "Ainda não implementado" aparece também no Tab. Desde 03-10-2026 a MODERAÇÃO não tem mais nenhum (Aprovar Campanhas, Denúncias e Pedidos de Encerramento).
 
 📌 **Acessados recentemente.** O `AdminLayout` registra as páginas do menu que a pessoa abre (`services/router/acessados-recentemente.ts`, `localStorage` com o id do usuário na chave); o Dashboard mostra as últimas 5.
 
@@ -175,9 +177,9 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 
 ---
 
-## 7. Upload de arquivo (`25-arquivo`)
+## 7. Upload de arquivo (`26-arquivo`)
 
-`services/25-arquivo/api/arquivo.api.ts` fala com dois lugares:
+`services/26-arquivo/api/arquivo.api.ts` fala com dois lugares:
 
 | Passo | Chamada | Vai para |
 |---|---|---|
@@ -187,7 +189,7 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 
 📌 **O passo 2 nunca usa `authFetch`:** é outro endereço, não leva `Authorization`, e os cabeçalhos devolvidos no passo 1 precisam ir exatamente como vieram (a assinatura da URL confere). Usa `XMLHttpRequest` para mostrar a porcentagem enviada (`aoProgresso`).
 
-📌 **Redução da imagem no navegador** (`services/25-arquivo/util/reduzir-imagem.util.ts`, Canvas sem biblioteca): sobe mais rápido e evita a URL pré-assinada (5 minutos) vencer no meio do envio. É otimização, nunca segurança: o backend (`sharp`) continua a autoridade. Qualquer falha (navegador sem suporte, imagem corrompida, resultado maior) devolve o arquivo original. Tenta WebP e confere o tipo do resultado; sem WebP, cai para JPEG.
+📌 **Redução da imagem no navegador** (`services/26-arquivo/util/reduzir-imagem.util.ts`, Canvas sem biblioteca): sobe mais rápido e evita a URL pré-assinada (5 minutos) vencer no meio do envio. É otimização, nunca segurança: o backend (`sharp`) continua a autoridade. Qualquer falha (navegador sem suporte, imagem corrompida, resultado maior) devolve o arquivo original. Tenta WebP e confere o tipo do resultado; sem WebP, cai para JPEG.
 
 📌 **Dois tetos de tamanho no `SeletorFotoPerfil`:** um absurdo (30 MB) antes de reduzir, para não processar vídeo renomeado; e o de Parâmetros (`arquivo_tamanho_maximo_imagem_bytes`) depois de reduzir.
 
@@ -394,30 +396,36 @@ Peças de tela compartilhadas entre módulos: `views/1-usuario/modais-usuario.ts
 - **Criar Campanha:** passo a passo de 4 etapas no mesmo modal (Dados, Orçamento, Cronograma, Revisão), salvando como rascunho a cada etapa. A data de fim é sugerida com a duração de Parâmetros (`prazo_sugerido_campanha_dias`, RF-069); meta e prazo são conferidos antes de enviar; a descrição tem contador (RF-072). O clique fora não descarta as etapas.
 - **Alterar Campanha:** os campos protegidos depois da aprovação aparecem só para leitura, com o aviso de por quê (a lista vem do banco). Rascunho e rejeitada têm "Enviar para aprovação" ou "Corrigir e reenviar"; datas vencidas oferecem reagendar mantendo a duração (RF-070). Para o **dono** de uma campanha já publicada: **Atualizações** (`SecaoAtualizacoesCampanha`: publicar com título, conteúdo, fase e formato; ocultar e mostrar, RF-051/052) e **Comentários recebidos** (`SecaoComentariosRecebidos`: endossar até o limite de Parâmetros, excluir ou excluir e bloquear, sem avisar o autor, RF-093/094).
 - **Comentar:** sempre como a conta logada (`comentarioApi.criar`, `POST /comentario`), na Bancada da Campanha; só pesquisador ativo comenta, e quem não é vê o mesmo aviso de Minhas Campanhas, com o caminho do upgrade (`AvisoSoPesquisador`).
-- **Seguir campanha** tem serviço próprio (`services/16-seguir-campanha`): seguir, deixar de seguir e listar as que a conta segue.
+- **Seguir campanha e seguir pesquisador** têm serviços próprios em `services/16-seguir` (`seguir-campanha.api.ts`, `seguir-pesquisador.api.ts`): seguir, deixar de seguir e listar o que a conta segue; a contagem de seguidores do pesquisador é pública (para a página do perfil, que ainda não existe).
+- **Recompensas (`views/18-recompensa/secao-recompensas-campanha.tsx`, 19-10-2026):** parte "Recompensas" do Alterar (o dono cria, desativa e reativa, com o link especial opcional) e do Consultar (só leitura, só as ativas). Recompensa simbólica, sem estoque. Escolher a recompensa é na hora de contribuir, na área pública.
+- **Líquido estimado (RF-087):** no Consultar, grupo Financeiro, o valor que o pesquisador receberia hoje e a taxa usada, vindos do Nest (a mesma conta do repasse).
+- **Minha Conta, aba Contribuições (`views/22-contribuicao/aba-minhas-contribuicoes.tsx`):** o histórico de contribuições da conta (RF-009, RF-085), com a situação e a recompensa escolhida, e as recompensas ganhas com o link especial (RF-101).
 
-### Campo de Testes (`src/campo-testes/`)
+### Campo de Testes (`src/30-campo-testes/`)
 
 > **Em palavras simples:** o Campo de Testes é a parte do painel onde o administrador faz, com a própria conta, o que um usuário ou pesquisador faria na área pública (comentar, seguir, denunciar, pedir upgrade, criar campanha), usando os mesmos endpoints. Serve para achar problema rápido. Tudo dele mora numa pasta só, e apagar essa pasta não quebra o sistema.
 
-- **Decisão:** o Campo de Testes usa o sistema; o sistema nunca importa o Campo de Testes. Ele entra por uma porta só: `src/campo-testes/plugin.ts` exporta as rotas e o contexto, e `services/router/campo-testes-opcional.ts` carrega esse arquivo com `import.meta.glob`, só em desenvolvimento. A regra `no-restricted-imports` do ESLint acusa qualquer import do sistema para dentro da pasta.
+- **Decisão:** o Campo de Testes usa o sistema; o sistema nunca importa o Campo de Testes. Ele entra por uma porta só: `src/30-campo-testes/plugin.ts` exporta as rotas e o contexto, e `services/router/campo-testes-opcional.ts` carrega esse arquivo com `import.meta.glob`, só em desenvolvimento. A regra `no-restricted-imports` do ESLint acusa qualquer import do sistema para dentro da pasta.
 - **Motivo:** dependência de mão única (o padrão "pasta por funcionalidade" do Bulletproof React). Em produção, nem a rota nem o código do Campo de Testes vão para o build.
 - **Caso-limite aceito:** algumas peças do sistema têm uma opção que hoje só o Campo de Testes usa, sem importar nada dele: as ações da seção `AcaoCampoTestes` e o `gerarCpfDeTeste` do campo de CPF e do modal de upgrade. O CSS dele continua em `assets/css/8-campo-testes.css`, por último na ordem dos estilos.
 
 **As telas** (todas com a `GenericTable` e o Registro de Chamadas, que mostra cada chamada feita à API):
-- **T1, Bancada do Pesquisador:** todos os usuários, com papel, título, status e score; colunas "upgrade" (cadeado, só para quem não é pesquisador, com o botão "Gerar CPF válido" no modal) e "denunciar" (só pesquisador, nunca o próprio perfil); Alterar, Consultar e Excluir abrem os modais reais de Usuário.
+- **T1, Bancada do Pesquisador:** todos os usuários, com papel, título, status e score; colunas "upgrade" (cadeado, só para quem não é pesquisador, com o botão "Gerar CPF válido" no modal) e "denunciar" (só pesquisador, nunca o próprio perfil); Alterar, Consultar e Excluir abrem os modais reais de Usuário. Coluna "seguir" (coração, só em pesquisador, nunca o próprio), para o seguir pesquisador (RF-028).
 - **T2, Bancada da Campanha:** todas as campanhas; colunas "comentar", "seguir" e "denunciar"; Criar (em nome de um pesquisador), Alterar (com Aprovar e Rejeitar enquanto aguarda) e Excluir (com a exclusão forçada para quem já passou do rascunho).
 - **T3, Minhas Campanhas:** a tela real de `views/12-campanha`, para testar o fluxo do pesquisador.
-- **T4, Campanhas Seguidas:** as campanhas que a conta segue, com as mesmas colunas do T2 e só Consultar na coluna Ações; deixar de seguir tira a campanha da lista na hora.
+- **T4, Seguindo:** as campanhas que a conta segue, com as mesmas colunas do T2 e só Consultar na coluna Ações; no segundo card, os pesquisadores que ela segue. Cada card tem o próprio Registro de Chamadas, como os da T5 (as chamadas de `/seguir-pesquisador` ficam no dos pesquisadores). Deixar de seguir tira da lista na hora.
+- **T6, Caixa de E-mails (19-10-2026):** o que o provedor de e-mail de teste "enviou" (nada sai para fora): para, assunto, prévia do HTML (num `iframe` com `sandbox`, sem script) e o texto puro; no topo, o card "Enviar os e-mails" (a tarefa automática, com o interruptor e o Rodar agora; nasce desligado no banco de demonstração, então o e-mail espera na fila até alguém conferir) e "Limpar a caixa" esvazia. O card é o mesmo componente dos cards da T5 (`cards-tarefas-automaticas.tsx`, que recebe a lista de cards), na mesma grade e com a mesma altura: título e texto de cada card reservam o espaço do maior de todos os cards (`.cartao-tarefa__pilha`, `8-campo-testes.css`), então um card sozinho mede igual a um da fileira da T5 em qualquer tela. A caixa mora na memória do Nest. Passo a passo em `.Tutorial-email.md`.
 - **Guia de Estilo:** cores nos dois temas, tipografia e componentes reais. A lista de pares de contraste que ele mostra é do sistema (`assets/css/pares-contraste.json`, a mesma que o `npm run contraste` confere).
 
 📌 **Peças compartilhadas:** `servicos/hook/use-campanhas-campo-testes.tsx` entrega a toda tela de campanha do Campo de Testes as colunas, as facetas, as ações de quem visita a campanha (Consultar, Comentar, Seguir, Deixar de seguir, Denunciar), as regras de quando cada uma vale e os modais delas. O T2 acrescenta só o que é dele; o T4 só filtra as seguidas. Um "T" novo de campanha começa por esse hook.
 
 📌 **Origem no T1:** a faceta "Origem" (sistema ou normal, `servicos/util/registros-demonstracao.util.ts`) abre marcada em "normal" e esconde as 7 contas "Sistema" do seed (1 a 7).
 
-### Dashboard (`views/admin/dashboard.tsx`)
+### Dashboard (`views/29-dashboard/dashboard.tsx`)
 
-Quatro abas (`BarraAbasBotoes`): **Visão Geral** (faixa de saúde, cartões de métrica que levam à lista já filtrada, acessados recentemente, prévia de notificações), **Regras do Negócio** (os parâmetros agrupados por assunto, `configuracoes-grupos.constants.ts`; chave sem grupo cai em "Outras"), **Identidade Visual** (espaço reservado: a gestão de logo e favicon não foi construída) e **Saúde**. Saúde e métricas vêm de duas requisições independentes, para a falta de banco aparecer mesmo quando o resumo falha.
+Cinco abas (`BarraAbasBotoes`): **Visão Geral** (faixa de saúde, cartões de métrica que levam à lista já filtrada, acessados recentemente, prévia de notificações), **Regras do Negócio** (os parâmetros agrupados por assunto, `configuracoes-grupos.constants.ts`; chave sem grupo cai em "Outras"), **Identidade Visual** (espaço reservado: a gestão de logo e favicon não foi construída) e **Saúde**. Saúde e métricas vêm de duas requisições independentes, para a falta de banco aparecer mesmo quando o resumo falha.
+
+📌 **Aba Notificações (19-10-2026):** fica entre Regras do Negócio e Identidade Visual e mostra `views/27-notificacao/listar-notificacoes.tsx` (a tela mora no módulo dono do dado). Todos os e-mails do sistema, com situação, tipo, destinatário e assunto; Consultar abre a ficha (dados do texto, erro, tentativas, provedor); as ações Reenviar e Cancelar envio (novas em `AcaoSistema`, `5-coluna-acoes.tsx`) aparecem apagadas, com o motivo, quando não se aplicam. Na Visão Geral, o cartão Notificações mostra quantos estão na fila e quantos falharam, com "Ver os e-mails". Exige `notificacao_processar` (sem ela, a mensagem de 403 da API).
 
 ---
 
@@ -457,7 +465,7 @@ Quatro abas (`BarraAbasBotoes`): **Visão Geral** (faixa de saúde, cartões de 
 ## 15. O que não existe ainda e débitos conhecidos
 
 - **Área pública** (campanha, home, checkout, painel do doador e do pesquisador). Ver `PROXIMOS_MODULOS.md`. Botões do cabeçalho e do rodapé que levariam a ela ainda não têm destino; "Continuar com Google" é simulado.
-- **Telas dos módulos que faltam:** recompensa, notificação, contribuição, repasse.
+- **Telas que dependem da área pública:** escolher a recompensa e o aviso do modelo da campanha no checkout, o botão de seguir pesquisador no perfil público, o painel "Projetos Criados" do pesquisador.
 - ⚠️ **Nenhum teste automatizado no React.**
 - ⚠️ **`react/.gitignore` não cobre `.env`** (inofensivo hoje: o arquivo só tem a URL da API).
 - ⚠️ **Espelhos manuais do Nest:** tipos dos DTOs, perfil de redução de imagem, lista de tipos de imagem aceitos. Sem import entre os dois projetos, cada mudança no Nest precisa ser repetida aqui.

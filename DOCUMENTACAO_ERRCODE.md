@@ -65,6 +65,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90036 | `ajustar_tarifa_pagamento` | `contribuicao` | Tarifa real informada pelo provedor fora do esperado (negativa ou absurda): o ajuste automático não é feito (17-10-2026) |
 | 90037 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | No cartão, a contribuição está abaixo do mínimo (`valor_minimo_contribuicao_cartao`) (17-10-2026) |
 | 90038 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | No cartão, a contribuição está acima do máximo (`valor_maximo_contribuicao_cartao`): para mais, o Pix (17-10-2026) |
+| 90039 | `reenviar_notificacao`, `cancelar_notificacao` | `notificacao` | E-mail não encontrado (19-10-2026) |
 
 ## 91xxx - Conflito de estado/regra de negócio (409)
 
@@ -122,6 +123,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91051 | `fn_valida_solicitacao_encerramento` | `solicitacao_encerramento` | Pedido de "Encerrar antes do prazo" de campanha tudo-ou-nada que ainda não bateu a meta: o caminho é "Cancelar o projeto", que devolve o dinheiro (17-10-2026) |
 | 91052 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | Pagamento com cartão desligado pelo administrador (`cartao_habilitado`) (17-10-2026) |
 | 91053 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | Pagamento com boleto desligado (`boleto_habilitado`, desligado por padrão) (18-10-2026) |
+| 91054 | `reenviar_notificacao`, `cancelar_notificacao` | `notificacao` | Só um e-mail que falhou pode ser reenviado; só um na fila ou que falhou pode ser cancelado (19-10-2026) |
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
 
@@ -164,6 +166,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92036 | `decidir_contestacao` | `denuncia` | Quem julgou a denúncia não decide a contestação contra a própria decisão (10-10-2026) |
 | 92037 | `listar_revisoes_pagamento`, `resolver_revisao_pagamento`, `listar_reembolsos_manuais`, `concluir_reembolso_manual`, `listar_repasses_atencao`, `reenfileirar_repasse` | `evento_pagamento`, `contribuicao`, `repasse` | Sem permissão para ver ou resolver as pendências de pagamento (17-10-2026) |
 | 92038 | `resumo_contribuicoes_campanha` | `contribuicao` | Só o dono da campanha ou quem tem `contribuicao_visualizar_sensivel` vê o resumo das contribuições dela (18-10-2026) |
+| 92039 | `reenviar_notificacao`, `cancelar_notificacao` | `notificacao` | Sem permissão (`notificacao_processar`) para reenviar ou cancelar e-mails (19-10-2026) |
 
 ## 93xxx - Limite de taxa (429)
 

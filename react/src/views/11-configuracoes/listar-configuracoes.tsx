@@ -4,7 +4,7 @@ import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { configuracoesApi } from '../../services/11-configuracoes/api/configuracoes.api';
 import { grupoConfiguracao } from '../../services/11-configuracoes/constants/configuracoes-grupos.constants';
-import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
+import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import {
   ModalAlterarConfiguracao,
   ModalConsultarConfiguracao,

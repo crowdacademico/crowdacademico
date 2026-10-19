@@ -20,7 +20,7 @@ Três módulos pequenos e parecidos entre si - todos seguem o mesmo formato (uma
 
 ## Grupo 3 - Upload de arquivo
 
-- ✅ **`25-arquivo`** - upload de mídia (imagem de perfil, imagens de campanha, anexos), fluxo em 2 passos (URL pré-assinada + confirmação com verificação de assinatura de bytes). **01-09-2026:** ganhou processamento server-side com `sharp` na confirmação (redimensiona + converte pra WebP + remove EXIF, por `contexto`: avatar 512px/qualidade 80, campanha/atualização 1600px/qualidade 78), cota de 50MB por usuário, e tetos de tamanho por tipo baixados pra 8MB imagem / 5MB PDF (o plano grátis do Supabase Storage, provedor atual, só tem 1GB de espaço total). Front (`seletor-foto-perfil.jsx`) também reduz a imagem no navegador antes de subir (Canvas API), como otimização de UX, não de segurança - o `sharp` no backend continua sendo a autoridade final. Detalhe pra quem for construir o upload de campanha/atualização: **hoje só o avatar chama `contexto: 'avatar'`** - a tela de Criar Campanha ainda não existe no React, então `contexto: 'campanha'`/`'atualizacao'` não tem chamador real ainda, só o perfil implementado no backend.
+- ✅ **`26-arquivo`** - upload de mídia (imagem de perfil, imagens de campanha, anexos), fluxo em 2 passos (URL pré-assinada + confirmação com verificação de assinatura de bytes). **01-09-2026:** ganhou processamento server-side com `sharp` na confirmação (redimensiona + converte pra WebP + remove EXIF, por `contexto`: avatar 512px/qualidade 80, campanha/atualização 1600px/qualidade 78), cota de 50MB por usuário, e tetos de tamanho por tipo baixados pra 8MB imagem / 5MB PDF (o plano grátis do Supabase Storage, provedor atual, só tem 1GB de espaço total). Front (`seletor-foto-perfil.jsx`) também reduz a imagem no navegador antes de subir (Canvas API), como otimização de UX, não de segurança - o `sharp` no backend continua sendo a autoridade final. Detalhe pra quem for construir o upload de campanha/atualização: **hoje só o avatar chama `contexto: 'avatar'`** - a tela de Criar Campanha ainda não existe no React, então `contexto: 'campanha'`/`'atualizacao'` não tem chamador real ainda, só o perfil implementado no backend.
 
 ## Grupo 4 - Núcleo da campanha (o mais importante do projeto)
 
@@ -31,11 +31,11 @@ Três módulos pequenos e parecidos entre si - todos seguem o mesmo formato (uma
 
 ## Grupo 5 - Engajamento numa campanha já aprovada
 
-- ✅ **`15-atualizacao-campanha`** - posts de acompanhamento do projeto (andamento, resultado preliminar, resultado final). Junto: `link_atualizacao` e `arquivo_atualizacao` (satélites sem pasta própria, dobrados neste módulo - ver `db.types.ts`). O vínculo de arquivo já funciona (INSERT normal), só não é testável de ponta a ponta até `25-arquivo` existir.
-- ✅ **`16-seguir-campanha`** - seguir/deixar de seguir uma campanha.
+- ✅ **`15-atualizacao-campanha`** - posts de acompanhamento do projeto (andamento, resultado preliminar, resultado final). Junto: `link_atualizacao` e `arquivo_atualizacao` (satélites sem pasta própria, dobrados neste módulo - ver `db.types.ts`). O vínculo de arquivo já funciona (INSERT normal), só não é testável de ponta a ponta até `26-arquivo` existir.
+- ✅ **`16-seguir`** - seguir/deixar de seguir uma campanha e, desde 19-10-2026, um pesquisador (RF-028: `/seguir-pesquisador`, contagem pública de seguidores). As duas tabelas, as mesmas regras, um módulo só. O botão de verdade do seguir pesquisador fica na página pública do perfil (ainda não existe); no painel, o coração da T1 e a lista da T4.
 - ✅ **`17-comentario`** - comentários e endosso, com moderação.
 
-- ❌ **`18-recompensa`** - recompensas oferecidas por faixa de contribuição. Junto (mesmo raciocínio de `15`): `link_recompensa` e `arquivo_recompensa`. **Ainda não implementado** - 22-08-2026, escopo explicitamente parado em `17-comentario` nesta rodada, a pedido do Lucas.
+- ✅ **`18-recompensa`** (19-10-2026) - recompensa **simbólica** (decisão do Lucas: sem estoque, sem entrega): reconhecimento, acesso antecipado ou conteúdo digital, a partir de um valor mínimo, com um link especial opcional que só o dono, o admin e quem ganhou enxergam (`link_recompensa`). O dono cria e desativa na seção Recompensas do Alterar Campanha; quem apoia escolhe em `POST /contribuicao` (`idRecompensa`, só com conta e com o valor mínimo) e vê as ganhas na Minha Conta, aba Contribuições. A escolha na hora de contribuir depende do checkout (área pública).
 
 
 ## Grupo 6 - Moderação e encerramento
@@ -46,8 +46,8 @@ Três módulos pequenos e parecidos entre si - todos seguem o mesmo formato (uma
 
 ## Grupo 7 - Comunicação
 
-- ❌ **`4-mail`** - envio de e-mail (verificação de conta, recuperação de senha, notificações, **e-mail de rejeição de campanha com reenvios restantes e data limite**: os dados já são devolvidos por `GET /campanha/:id`, falta só o módulo). Hoje nada disso é enviado de verdade - é o único módulo que bloqueia outros dois RFs já prontos no banco (verificação de e-mail e recuperação de senha, ver `PENDENCIAS e correcoes.md`, item 6). **Textos de e-mail:** quando o módulo entrar, o conteúdo (aprovação, reprovação, meta atingida) não deveria nascer fixo num `.ts`: muda por decisão de produto e é candidato natural a uma tabela `template_email` editável pelo admin, sem risco, porque nenhuma regra do sistema depende do texto de um e-mail.
-- ❌ **`26-notificacao`** - fila/histórico de notificações (o que já existe na tabela `notificacao`, expor pelo Nest).
+- ✅ **`4-mail`** (19-10-2026) - o "carteiro": a cada minuto pega a fila de `notificacao`, monta o texto (`modelos/`) e entrega pelo provedor de `EMAIL_PROVIDER` (teste, Brevo pela API ou SMTP), com nova tentativa e espera crescente. Os e-mails nascem nos gatilhos do banco (`[05-Q]`) e, para verificar a conta e recuperar a senha, no Nest. Passo a passo e comparação dos serviços: `.Tutorial-email.md`. Sem tela própria: a caixa do provedor de teste é a T6 do Campo de Testes.
+- ✅ **`27-notificacao`** (19-10-2026) - o registro dos e-mails (RF-121): aba **Notificações** do Dashboard, com a situação de cada e-mail, reenviar o que falhou e cancelar; números no cartão da Visão Geral.
 - ✅ **`5-termo-uso`** - versionamento de termos de uso e aceite pelo usuário. **(esta lista tinha ficado desatualizada aqui - o módulo já existia, 4 arquivos, conferido em 01-09-2026)**
 
 ## Grupo 8 - Pagamento (por último, de propósito)
@@ -142,9 +142,10 @@ Muitos intermediadores **não devolvem a própria tarifa quando o pagamento é e
 
 **Fontes (12-10-2026):** [Lei 13.455/2017](https://www.contabeis.com.br/legislacao/1911257/lei-13455-2017/) · [Preço diferente por meio de pagamento e o Pix](https://consumidormoderno.com.br/preco-diferente-dinheiro-pix-cartao/) · [MP 1.288/2025 e a portaria da Senacon sobre taxa no Pix](https://mercadoeconsumo.com.br/27/01/2025/meios-de-pagamento/fecomerciosp-diz-que-norma-da-senacon-contra-taxas-por-uso-do-pix-e-prejudicial-para-economia/) · [Mercado Pago: reembolsos e cancelamentos](https://www.mercadopago.com.br/developers/es/docs/checkout-api-orders/payment-management/refunds-cancellations) · [Dez anos de financiamento coletivo com Catarse](https://prensali.substack.com/p/dez-anos-de-financiamento-coletivo-com-catarse)
 
-- ❌ **`22-contribuicao`** - registrar contribuição/doação, incluindo o recebimento da confirmação de pagamento do gateway escolhido.
-- ❌ **`23-repasse`** - repasse do dinheiro arrecadado pro pesquisador, depois da campanha aprovada/bem-sucedida.
-- ❌ **`24-auditoria-financeira`** - trilha de auditoria dos eventos financeiros (a tabela já existe e já é usada por trigger do banco; expor pelo Nest é o que falta).
+- ✅ **`22-contribuicao`** - registrar contribuição/doação, incluindo o recebimento da confirmação de pagamento do gateway escolhido.
+- ✅ **`23-pagamento`** - provedor (Asaas e provedor de teste), webhook, tarefas automáticas de repasse e devolução.
+- ✅ **`24-conta-recebimento`** - chave Pix do pesquisador e lista dos repasses dele.
+- ✅ **`25-pagamento-revisao`** - telas do admin: revisões de aviso, reembolsos manuais, repasses que pedem atenção.
 
 **Já conhecidos antes de construir o 22 e o 23** (achados da revisão de 24-09-2026, registrados aqui para ninguém depender de lembrar; nada disto foi feito ainda, porque só faz sentido junto com os módulos):
 
@@ -155,15 +156,15 @@ Muitos intermediadores **não devolvem a própria tarifa quando o pagamento é e
   - Fundir as triggers de `contribuicao` (`trg_contribuicao_all_or_nothing_pix` e a de `UPDATE`, mais `trg_valida_status_contribuicao` e `trg_contribuicao_valida_valor_minimo`) numa função por evento.
   - Job para expirar contribuição pendente (`status_contribuicao = 'expirado'` existe no enum e nada o escreve).
   - Lembrar que, desde 24-09-2026, `app_nestjs` **não** atualiza `valor_bruto_arrecadado` (nem `taxa_plataforma` nem `encerrado_em`): o total é mantido pela trigger `trg_sincroniza_arrecadado_campanha`, que é `SECURITY DEFINER`. O service de contribuição só faz `INSERT` em `contribuicao`.
-- **`23-repasse`:** `atualizar_status_repasse()` tem o mesmo problema de `atualizar_status_contribuicao()` (qualquer status, sem checagem). O modelo de campanha `flexivel` (repasse independente da meta) também espera este módulo; hoje o DTO só aceita `all-or-nothing`.
+- **Repasse (`23-pagamento`):** `atualizar_status_repasse()` tem o mesmo problema de `atualizar_status_contribuicao()` (qualquer status, sem checagem). O modelo de campanha `flexivel` (repasse independente da meta) também espera este módulo; hoje o DTO só aceita `all-or-nothing`.
   - **Observação:** de acordo com consulta feita no dia 05/10/2026, o mercado repassa no fim da campanha, também no modelo flexível: o Catarse libera o valor 15 dias corridos após o encerramento (Termos de Uso, cláusula 7.4) e o Indiegogo, no flexível, em até 15 dias úteis. Por isso, o repasse do flexível acontece no encerramento, não a cada contribuição.
 
 ## Grupo 9 - Painel administrativo (não estavam nesta lista, mas já existem)
 
 Estes dois módulos ficaram de fora da lista original - construídos direto, sem passar por aqui como "próximo módulo" antes. Registrados agora (01-09-2026) só pra este documento não mentir sobre o que falta.
 
-- ✅ **`27-log-auditoria`** - trilha de auditoria administrativa (quem alterou o quê, quando, valor antes/depois - letra `L` no `DOCUMENTACAO_BD.md`). Modo somente-inclusão, ninguém edita/apaga.
-- ✅ **`28-dashboard`** - métricas agregadas do painel admin (`GET /dashboard/resumo`), usa `contar_metricas_dashboard()` (`[03-M]`, `DOCUMENTACAO_BD.md`) porque RLS normal não dá número confiável de "total do sistema".
+- ✅ **`28-log-auditoria`** - trilha de auditoria administrativa (quem alterou o quê, quando, valor antes/depois - letra `L` no `DOCUMENTACAO_BD.md`). Modo somente-inclusão, ninguém edita/apaga.
+- ✅ **`29-dashboard`** - métricas agregadas do painel admin (`GET /dashboard/resumo`), usa `contar_metricas_dashboard()` (`[03-M]`, `DOCUMENTACAO_BD.md`) porque RLS normal não dá número confiável de "total do sistema".
 
 ## Já descartado
 

@@ -1,4 +1,4 @@
-import { ResultadoCobranca } from '../../../29-pagamento/dto/resultado-cobranca.dto';
+import { ResultadoCobranca } from '../../../23-pagamento/dto/resultado-cobranca.dto';
 import { ContribuicaoResponseCreate } from '../response/contribuicao.response-create';
 
 // Linha de `contribuicao` como o `pg` devolve (DECIMAL chega como string).

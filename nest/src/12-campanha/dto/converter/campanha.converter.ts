@@ -42,6 +42,8 @@ export class CampanhaConverter {
       prazoReenvioAte: null,
       somenteLeitura: false,
       camposBloqueados: [],
+      valorLiquidoEstimado: null,
+      taxaAplicada: null,
     };
   }
 }

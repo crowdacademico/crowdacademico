@@ -53,6 +53,11 @@ Quem atualiza os requisitos é o Lucas com a revisão externa; aqui fica só o q
 - **Frases para a próxima versão dos requisitos (anotado em 10-10-2026; já funcionando no sistema, ver `DOCUMENTACAO_BD.md`, [01-B-1] e [07-B-3]):**
   - **Curador aprova e rejeita campanhas:** os RFs que dizem "aprovação pelo Administrador" podem ganhar "ou outro papel com a permissão correspondente (o Curador)", do mesmo jeito que o RF-114 cita o Moderador.
   - **Contestação da pontuação:** além de quem registrou a denúncia, quem julgou a denúncia também não decide a contestação dela.
+- **Achados da reconferência do financeiro (19-10-2026):**
+  - **RF-075 (visitante só Pix).** O requisito diz que quem não tem conta só paga com Pix. Hoje nada barra cartão ou boleto de visitante numa campanha flexível (só o tudo-ou-nada força o Pix). Perguntar se o requisito continua valendo assim (o cartão é pago na página do provedor, sem o sistema ver o cartão) antes de mudar o código.
+  - **RF-037 (repasse por split).** O requisito pede o repasse "via split de pagamento" no encerramento. O sistema faz uma transferência Pix automática para a chave verificada do pesquisador, depois da carência de 15 dias (decisão de 19-10-2026, padrão do Catarse). Pedir que o texto passe a descrever a transferência com carência.
+- **Recompensa sem estoque (RF-100, 19-10-2026):** o requisito pede a quantidade disponível e impedir a escolha quando esgotar. Decisão do Lucas: recompensa simbólica, sem estoque nem entrega. Pedir que o texto passe a dizer "recompensa simbólica, sem quantidade".
+- **E-mail pronto (19-10-2026), ideias do mercado de 12-10-2026:** lembretes para quem segue a campanha ("faltam 48 h" e "faltam 8 h" para o fim, como faz o Kickstarter) e o endosso de colegas antes de enviar a campanha para aprovação (como faz o Experiment.com; este só com requisito novo).
 - **Como o Lucas quer esse pedido escrito:** "pegar no pé" da revisão externa, pedir que olhe sistemas de referência e traga ideias próprias, não só responda a lista.
 
 ---
@@ -61,26 +66,21 @@ Quem atualiza os requisitos é o Lucas com a revisão externa; aqui fica só o q
 
 > **Nota do Lucas (27-09-2026):** 18, 19, 20 e 26 podem ganhar tela na área administrativa (nem que seja na área de testes) antes da página pública existir. Não é para fazer agora, mas o lado Nest desses módulos não depende da página pública.
 
-### Módulos `18-recompensa` e `26-notificacao` (ainda não existem)
+### Precisam da área pública (anotado em 19-10-2026; o lado Nest e o que cabe no painel já estão prontos)
 
-- **18:** recompensas por faixa de contribuição, com `link_recompensa` e `arquivo_recompensa`. As regras já estão no banco.
-- **26:** expor pelo Nest a tabela `notificacao`. Destrava a prévia de notificações do Dashboard (hoje um aviso honesto de "não implementado") e a segunda aba do sino.
+A área pública não pode ser feita agora (primeiro termina a área restrita). Estes itens ficam esperando por ela:
 
-### Módulo `4-mail` (ainda não existe)
+- **Seguir pesquisador (RF-028):** o botão "Seguir" e a contagem de seguidores na página pública do perfil. A API existe (`/seguir-pesquisador`, `/seguir-pesquisador/:id/seguidores`); hoje se segue pelo coração da T1 e a lista fica na T4.
+- **Escolher a recompensa ao contribuir (RF-101):** o checkout mostra as recompensas ativas da campanha e manda `idRecompensa` no `POST /contribuicao` (já aceito: exige conta e o valor mínimo).
+- **Checkout:** o aviso do modelo da campanha com a confirmação de ciência (RF-040; a API ainda não registra a ciência), o checkbox do termo de pagamento (RF-082; o aceite com IP já é gravado), a contagem regressiva do Pix (RF-081) e a tela de cada meio (RF-077).
+- **Painel "Projetos Criados" do pesquisador (RF-086, RF-087):** a lista com as métricas e o líquido estimado (o `GET /campanha/:id` já devolve `valorLiquidoEstimado`).
+- **Painel de quem apoia (RF-085):** o histórico já existe na Minha Conta, aba Contribuições; na área pública vira o painel do doador.
 
-#### 🟡 Fluxo de autenticação: falta o que depende de e-mail
+### E-mail: o que ainda é decisão (19-10-2026; o módulo está pronto e testado no modo de teste)
 
-Já existe: cadastro, login, renovação de sessão (o token antigo é revogado a cada renovação), logout, bloqueio da conta por tentativas erradas e limite de tentativas por IP.
-
-Falta, e depende do `4-mail`:
-- recuperação de senha (o prazo de 15 a 30 minutos do token já está documentado no `01`);
-- verificação de e-mail com e-mail de verdade (hoje usa um link de desenvolvimento);
-- e-mail de rejeição de campanha com os reenvios restantes e a data limite (os dados já vêm em `GET /campanha/:id`);
-- e-mails do encerramento antecipado: pedido aprovado ou rejeitado (com a justificativa) para o pesquisador, e o aviso aos apoiadores quando a campanha é encerrada (RF-065, RF-066);
-- e-mail do resultado da contestação do score (aceita ou recusada, com a justificativa) para o pesquisador (RF-033); hoje o resultado aparece na Minha Conta;
-- "modo log" no desenvolvimento, em que o e-mail aparece no log em vez de ser enviado (ideia do `.env` do Atlas, grupo 5).
-
-**Levar para a revisão externa quando o `4-mail` estiver pronto (pesquisa de mercado de 12-10-2026):** lembretes para quem segue a campanha ("faltam 48 h" e "faltam 8 h" para o fim, como faz o Kickstarter) e o endosso de colegas antes de enviar a campanha para aprovação (como faz o Experiment.com; este só com requisito novo).
+- **Serviço de envio de verdade:** recomendação Brevo pela API, com um domínio `.com.br` (cerca de R$ 40 por ano). Sem domínio, só o Gmail com senha de app. Passo a passo e comparação dos planos em `.Tutorial-email.md`. Fica para o fim, como o gateway.
+- **Textos dos e-mails no código** (`nest/src/4-mail/modelos/modelos-email.ts`), decidido para não aumentar o escopo; se o admin precisar editar, uma tabela `template_email` entra depois sem mexer na fila.
+- **"Reenviar o e-mail de verificação" pelo Suporte:** a descrição do papel Suporte cita, mas a ação ainda não existe (seria uma rota pequena que cria um token novo e põe na fila). A conta criada pelo admin no painel nasce sem verificação, como antes.
 
 ### Pagamento (feito em 17 e 18-10-2026; visão completa em `DOCUMENTACAO_FINANCEIRO.md`)
 
@@ -104,15 +104,14 @@ Falta, e depende do `4-mail`:
 
 #### 🟡 Ainda aberto no pagamento
 
-- **Checkout e painel de quem apoia** (`views/checkout` e `views/dash-doador`, pastas vazias): a tela pública de apoiar. Hoje uma contribuição nasce pela T5 ou pela API. Junto vem o **aviso ao apoiador** sobre o modelo da campanha (tudo-ou-nada devolve, flexível não) com confirmação de ciência.
-- **Pastas vazias `nest/src/23-repasse` e `nest/src/24-auditoria-financeira`: NÃO remover agora** (Lucas, 18-10-2026). Entram na **reorganização de pastas, arquivos e nomes**: tudo com número, assuntos parecidos em sequência numérica, e o mesmo número no código (Nest, React) e na documentação. Projeto próprio, a planejar antes de mexer (escopo enxuto: propor o pequeno e seguro primeiro).
+- **Checkout e painel de quem apoia** (`views/22-contribuicao` e `views/29-dashboard/doador`, pastas vazias): a tela pública de apoiar. Hoje uma contribuição nasce pela T5 ou pela API. Junto vem o **aviso ao apoiador** sobre o modelo da campanha (tudo-ou-nada devolve, flexível não) com confirmação de ciência.
 - **Policy sem efeito em `contribuicao`** (`pol_contribuicao_update`, `USING (true)`, 04): o `app_nestjs` não tem `GRANT UPDATE` na tabela, então ela não faz nada e está "mantida só por documentação". Mesma situação das policies de escrita de `repasse` e `auditoria_financeira`, que saíram em 18-10-2026 (Grupo BN). Tirar também? Decisão do Lucas.
 
 ### Página pública da campanha (ainda não existe)
 
 - **Botões de compartilhar** (WhatsApp, Facebook, copiar link) e **prévia de link** (Open Graph, um endpoint pequeno no Nest que devolve as meta tags). Ideias do Atlas (P1 e P2 do roteiro).
 - **Quantas pessoas seguem a campanha:** hoje cada conta só enxerga o próprio "seguir" (regra de acesso de `seguir_campanha`). Mostrar o número no Consultar e na página pública pede uma contagem que o banco devolve sem expor quem segue.
-- Telas públicas de denúncia, recompensa, atualização, comentário e seguir (hoje atualização, comentário e seguir só existem nas telas de teste do painel). Painel do pesquisador (`views/dash-pesquisador`, pasta vazia).
+- Telas públicas de denúncia, recompensa, atualização, comentário e seguir (hoje atualização, comentário e seguir só existem nas telas de teste do painel). Painel do pesquisador (`views/29-dashboard/pesquisador`, pasta vazia).
 
 ### Motor do score (fechado em 03-10-2026; ficaram estes pontos)
 
@@ -137,7 +136,7 @@ O Lucas pediu detalhamento dessa ideia (citada de passagem pelo Lucas numa rodad
 
 **As ações, e uma que precisa de cuidado real:** ver arquivo (URL pública, trivial); desativar (soft delete que o esquema já prevê); **excluir órfão de verdade** - esta é delicada porque excluir a LINHA no banco não apaga o OBJETO no armazenamento (uma exclusão pela metade cria um objeto que ninguém mais enxerga). Precisa: remover do armazenamento primeiro, DEPOIS do banco, nessa ordem, registrando em auditoria; se a remoção do armazenamento falhar, a linha do banco não pode ser removida (senão perde o rastro). **Só pra arquivo comprovadamente órfão, nunca vinculado** - arquivo vinculado se remove removendo o vínculo, no módulo dono dele.
 
-**Onde moraria**: backend, `25-arquivo` (módulo já existe, dono natural) - 2 endpoints novos (resumo com agregados, listagem paginada com filtro), ambos protegidos por permissão de administrador. Frontend, uma tela de listagem no padrão já repetido há meses.
+**Onde moraria**: backend, `26-arquivo` (módulo já existe, dono natural) - 2 endpoints novos (resumo com agregados, listagem paginada com filtro), ambos protegidos por permissão de administrador. Frontend, uma tela de listagem no padrão já repetido há meses.
 
 
 
@@ -199,7 +198,6 @@ Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/todas 
 
 - **Lista de origens permitidas (CORS):** a API do Atlas só aceita chamadas dos endereços de uma lista no `.env`. A nossa aceita chamadas de qualquer site (`app.enableCors()` sem opções, `nest/src/main.ts`). Correção pequena e pré-requisito da pendência do cookie HttpOnly (cookie com credencial exige origem explícita).
 - **Configuração da sessão em cookie:** o Atlas usa cookie HttpOnly com tempo de vida e regras de envio (`SESSION_LIFETIME`, `SESSION_SECURE_COOKIE`, `SESSION_SAME_SITE`) no `.env`. Referência pronta para a pendência "refresh token em cookie HttpOnly".
-- **E-mail em "modo log" no desenvolvimento:** `MAIL_MAILER=log` faz o e-mail aparecer no log em vez de ser enviado. Serve para quando o módulo de e-mail (`nest/src/4-mail`, hoje vazio) for construído.
 
 - **Permissão por rota no painel:** a guarda do `/admin/*` só exige login, não confere o papel (quem vê o quê continua decidido pelo backend). "Fica para perto do fim".
 

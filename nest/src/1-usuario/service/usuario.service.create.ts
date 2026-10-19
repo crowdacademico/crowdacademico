@@ -39,11 +39,8 @@ export class UsuarioServiceCreate {
       db,
     );
 
-    // OBSERVAÇÃO (provavelmente vai mudar): falta criar o registro em
-    // verificacao_email e disparar o e-mail de confirmação - ficou de fora
-    // de propósito nesta primeira versão, porque isso é território do
-    // módulo 4-mail, não deste módulo 1-usuario. `email_verificado` fica
-    // FALSE (o default da coluna) até esse fluxo existir.
+    // A verificação de e-mail (registro em verificacao_email + e-mail na fila) é do cadastro público
+    // (AuthServiceRegister, 3-auth). A conta criada pelo painel nasce com `email_verificado` FALSE e sem e-mail.
     return UsuarioConverter.paraResponseDto(usuario);
   }
 }

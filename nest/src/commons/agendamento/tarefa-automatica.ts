@@ -10,6 +10,7 @@ export const TAREFA_AUTOMATICA = {
   repasse: 'tarefa_repasse_ligada',
   devolucao: 'tarefa_devolucao_ligada',
   conferencia: 'tarefa_conferencia_ligada',
+  envioEmail: 'tarefa_envio_email_ligada',
 } as const;
 
 // De quantos em quantos minutos cada tarefa roda. É daqui que sai o @Cron de cada uma (cronACada) e o "a cada N min"
@@ -22,6 +23,7 @@ export const INTERVALO_TAREFA_MINUTOS: Record<
   repasse: 5,
   devolucao: 5,
   conferencia: 10,
+  envioEmail: 1,
 };
 
 // Expressão de agendamento "a cada N minutos" para o @Cron.

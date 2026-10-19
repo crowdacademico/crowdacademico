@@ -32,7 +32,7 @@ export interface UseAuthReturn {
   atualizarUsuarioLocal: Dispatch<SetStateAction<UsuarioResponse | null>>;
 }
 
-// Hook único de autenticação do painel admin (views/admin, views/3-auth,
+// Hook único de autenticação do painel admin (components/layout/painel-admin, views/3-auth,
 // views/1-usuario) - useAuth() é chamado uma vez em App.tsx e o resultado
 // desce por prop pra Header, Breadcrumb (indiretamente) e cada página.
 // Guarda o accessToken só em memória (nunca localStorage - some ao fechar

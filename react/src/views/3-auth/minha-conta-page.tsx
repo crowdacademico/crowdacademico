@@ -37,7 +37,8 @@ import type { SuspensaoResponseDto } from '../../services/constant/type/suspensa
 import { EstadoVazio } from '../../components/crud/estado-vazio';
 import { BadgeStatusPesquisador } from '../../components/crud/badge-status-pesquisador';
 import { SecaoContestacaoScore } from '../19-denuncia/secao-contestacao-score';
-import { SecaoRecebimento } from '../30-conta-recebimento/secao-recebimento';
+import { SecaoRecebimento } from '../24-conta-recebimento/secao-recebimento';
+import { AbaMinhasContribuicoes } from '../22-contribuicao/aba-minhas-contribuicoes';
 
 // Minha Conta: não é um formulário só, é uma área com seções independentes, cada uma salva por conta própria.
 //
@@ -56,6 +57,7 @@ const ABAS_MINHA_CONTA = [
   { chave: 'seguranca', rotulo: 'Segurança', icone: 'fa-shield-halved' },
   { chave: 'papeis', rotulo: 'Papéis', icone: 'fa-user-tag' },
   { chave: 'academico', rotulo: 'Acadêmico', icone: 'fa-graduation-cap' },
+  { chave: 'contribuicoes', rotulo: 'Contribuições', icone: 'fa-hand-holding-heart' },
   // Privacidade por último de propósito - o botão de excluir conta mora
   // aqui dentro, atrás da confirmação por digitação: ação destrutiva
   // nunca na primeira aba que a pessoa vê.
@@ -126,6 +128,7 @@ export function MinhaConta({ auth }: PropsPagina) {
         {aba === 'seguranca' && <AbaSeguranca auth={auth} />}
         {aba === 'papeis' && <AbaPapeis auth={auth} />}
         {aba === 'academico' && <AbaAcademico auth={auth} />}
+        {aba === 'contribuicoes' && <AbaMinhasContribuicoes auth={auth} />}
         {aba === 'privacidade' && <AbaPrivacidade auth={auth} />}
       </div>
     </div>

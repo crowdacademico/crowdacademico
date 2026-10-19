@@ -1,5 +1,5 @@
 
-**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **43 tabelas**, **119 policies**, **100 triggers** em `05` (96 comuns e 4 `CONSTRAINT TRIGGER`), **165 funções** (126 em `05`, 37 em `03`, 1 em `08`, 1 em `01`), **64 índices** em `02`, e **129 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **43 tabelas**, **119 policies**, **107 triggers** em `05` (103 comuns e 4 `CONSTRAINT TRIGGER`), **180 funções** (141 em `05`, 37 em `03`, 1 em `08`, 1 em `01`), **65 índices** em `02`, e **132 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
 
 **Comentários dos `.sql`.** Cabeçalho curto (`Função`, `Assinatura`, `Bloco` e uma `Regra` objetiva, sem datas nem história) e, dentro de função, trigger e policy, só o comentário que explica uma regra difícil. Não há ponteiro para arquivo fora do git: o porquê longo mora aqui, na seção `[NN-Y]` correspondente, e a história (o que mudou, quando, por quê) fica no arquivo de histórico local, que não é versionado. Os comentários do `07` explicam dado de teste; o `ATUALIZAR O SUPABASE.sql` é o registro datado de cada patch e por isso mantém a narrativa.
 # 📚 Documentação Técnica do Banco de Dados - CrowdAcadêmico
@@ -45,6 +45,7 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 | **N** | MODERAÇÃO SOBRE CONTA (suspensão de usuário e de papel) | `01-D`/`01-B` (colunas), `03-N` (`suspender_usuario()`/`revogar_suspensao_usuario()`/`suspender_papel_usuario()`/`revogar_suspensao_papel_usuario()`) |
 | **O** | OPERAÇÕES DE AUTENTICAÇÃO (confirmação de e-mail, bloqueio por tentativas, exclusão de conta) | `03-O` (`confirmar_email_por_token()`/`registrar_falha_login()`/`liberar_bloqueio_login()`/`registrar_login_sucesso()`/`excluir_conta_usuario()`) |
 | **P** | MODERAÇÃO SOBRE PESQUISADOR - suspensão em cascata (RF-084) | `03-P` (`suspender_pesquisador()`/`reativar_pesquisador()`) |
+| **Q** | NOTIFICAÇÃO (a fila de e-mails, RF-121) | `01-D` (colunas `dados`, `assunto`, `proxima_tentativa_em`, `provedor`, `id_mensagem_provedor` de `notificacao`), `02-D` (`idx_notificacao_fila`), `05-Q` (enfileirar, worker, reenviar/cancelar e os gatilhos), `06-Q` (EXECUTE), `07-D-7` (seed) |
 
 > 🗑️➡️✅ **Colisão de letra corrigida (achada e resolvida em 09-08-2026):** este bloco (`[03-O]`/`[03-P]`) reaproveitava as letras `F`/`G` com um significado DIFERENTE do que esta tabela atribui a elas (`F`=LINK, `G`=ARQUIVO) - mesma classe de bug já corrigida uma vez antes (`[03-K]`→`[03-M]`), só que mais antiga. Renomeado pra `O`/`P` (livres), comentário-only, sem mexer em schema/DDL - ver `PENDENCIAS e correcoes.md`, item 51.
 
@@ -405,7 +406,7 @@ As três funções utilizam os modificadores de segurança essenciais:
 
 * **Campanhas na fila com pesquisador de score baixo:** a coluna `campanhas_para_revisao_score` (a 5ª parte do RF-084) conta campanha `aguardando_aprovacao` cujo pesquisador está abaixo de `score_minimo_campanha` (`fn_precisa_revisao_score`, `[05-I-1]`). É só um SINAL para o admin revisar com mais cuidado, nunca bloqueia nada. A função é **plpgsql** (não `sql`) porque `fn_precisa_revisao_score` mora em `05`, que roda depois de `03`, e só o plpgsql adia a checagem do corpo para a 1ª chamada. Mudar o tipo de retorno de uma função exige `DROP FUNCTION` antes.
 
-* **Motivo:** `GET /dashboard/resumo` (`nest/src/28-dashboard`) precisa de totais confiáveis (usuário, pesquisador, papel, permissão, configuração, sessão ativa) pros cards da tela inicial do painel admin. RLS filtra LINHA e não é uniforme entre as tabelas envolvidas - `usuario` só libera não-deletado (ou quem tem `usuario_visualizar_sensivel`), `configuracoes` só libera a linha global ou a da própria sessão - um `COUNT` direto de `app_nestjs` devolveria um número diferente dependendo de quem está logado, errado pra um card de "total do sistema".
+* **Motivo:** `GET /dashboard/resumo` (`nest/src/29-dashboard`) precisa de totais confiáveis (usuário, pesquisador, papel, permissão, configuração, sessão ativa) pros cards da tela inicial do painel admin. RLS filtra LINHA e não é uniforme entre as tabelas envolvidas - `usuario` só libera não-deletado (ou quem tem `usuario_visualizar_sensivel`), `configuracoes` só libera a linha global ou a da própria sessão - um `COUNT` direto de `app_nestjs` devolveria um número diferente dependendo de quem está logado, errado pra um card de "total do sistema".
 * **`SECURITY DEFINER`, `STABLE`:** mesmo raciocínio de `contar_seguidores_pesquisador`/`contar_seguidores_campanha` (`[03-E]`) - bypassa a RLS restritiva de propósito, devolvendo só os números agregados (nunca linhas individuais).
 * **Permissão (25-09-2026):** a função começa com `IF NOT public.tem_permissao('relatorio_visualizar') THEN RAISE ... ERRCODE '92011'`. Por ser `SECURITY DEFINER` ela bypassa a RLS de propósito, então a checagem tem de estar dentro dela; sem isso qualquer usuário logado (ou a própria API chamada sem tela) lia sessões ativas e denúncias pendentes. O Nest devolve o 92011 como 403.
 * **"Contas ativas" = pessoas com atividade recente (28-09-2026):** `sessoes_ativas` conta **pessoas distintas** (`count(DISTINCT id_usuario)`), não sessões: a mesma pessoa em dois aparelhos conta uma vez (sugestão de uma revisão externa; o card chama "contas ativas agora"). O nome da coluna ficou `sessoes_ativas` porque trocar mudaria o tipo de retorno e o campo que o React lê. Conta sessão não revogada com `criado_em` dentro de `configuracoes.dashboard_sessao_ativa_minutos` (padrão 30). Login e cada renovação do token de acesso criam uma linha nova em `sessao`, então isso aproxima "quem está usando agora". Antes contava toda sessão válida de 30 dias, inflada pelos logins de teste que nunca saíam.
@@ -1018,6 +1019,38 @@ Regras verificadas no PGlite com o banco montado inteiro, usando o papel real `a
 - **Motivo:** o upload é confirmado antes de o dono existir (a tela mostra a foto antes de salvar), então o órfão nasce sempre que alguém envia e não salva. E `pol_arquivo_update` ([04]) dá posse do arquivo a quem o tem como foto: sem a trava, qualquer conta apontava a própria foto para o arquivo de outra pessoa e podia apagá-lo.
 - **Caso-limite aceito:** a regra só vale com alguém logado (o seed e a manutenção direta não têm sessão; o cadastro público não aceita foto). Tabela nova que aponte para `arquivo` precisa entrar nos `NOT EXISTS` da função de órfãos e na regra de posse. Coberto pela suíte de teste do banco de posse de arquivo e órfãos.
 
+### [05-Q] Notificação: a fila de e-mails e os gatilhos que a alimentam (19-10-2026)
+
+**Em palavras simples:** todo e-mail do sistema nasce como uma linha `pendente` em `notificacao`, na mesma transação do evento (aprovar, rejeitar, encerrar, devolver, suspender). O Nest (`4-mail`) reserva uma linha por vez, monta o texto e envia; o resultado volta para a mesma linha. Se a ação for desfeita, o e-mail some junto; se o servidor cair, nada se perde.
+
+| Função | Quem chama | O que faz |
+|---|---|---|
+| `enfileirar_notificacao(id_usuario, tipo, dados)` | gatilhos e o Nest (verificação de conta, nova senha) | Copia o e-mail e o nome da conta; conta excluída ou inexistente: `NULL`, nada gravado |
+| `enfileirar_notificacao_doadores(id_campanha, tipo, dados)` | só gatilhos (sem EXECUTE para o `app_nestjs`) | Um e-mail por pessoa com conta que pagou alguma contribuição da campanha |
+| `enfileirar_notificacao_seguidores(id_campanha, tipo, dados)` | só gatilhos | Quem segue a campanha OU o pesquisador dono, uma vez por pessoa, nunca o dono |
+| `reservar_proxima_notificacao()` | worker (sem sessão) | Pega a próxima `pendente` vencida, conta a tentativa e empurra `proxima_tentativa_em` (`email_lease_minutos`); `FOR UPDATE SKIP LOCKED` |
+| `concluir_notificacao(...)` | worker | `enviado`, com assunto, provedor e id da mensagem; apaga `dados.segredo` |
+| `falhar_notificacao(...)` | worker | Recuperável e com tentativas: volta com espera `email_backoff_base_minutos * 2^(n-1)` até `email_backoff_max_minutos`; senão `falhou` |
+| `reenviar_notificacao(id)` / `cancelar_notificacao(id)` | aba Notificações | Exigem `notificacao_processar` (92039); só `falhou` reenvia, só `pendente`/`falhou` cancela (91054); inexistente: 90039 |
+
+| Gatilho | Tabela e momento | E-mail |
+|---|---|---|
+| `trg_notifica_situacao_campanha` | `campanha`, AFTER UPDATE OF status | aprovada (dono + quem segue o pesquisador), tudo-ou-nada `sucesso` e `nao_atingido` (quem pagou), `encerrado_moderacao` (quem pagou) |
+| `trg_notifica_rejeicao_campanha` | `historico_rejeicao`, AFTER INSERT | rejeitada, com justificativa e `fn_campanha_situacao_reenvio` |
+| `trg_notifica_devolucao` | `contribuicao`, AFTER UPDATE OF status para `devolvido`, com conta | devolução concluída |
+| `trg_notifica_decisao_encerramento` | `solicitacao_encerramento`, `pendente` para `aprovado`/`rejeitado` | decisão do encerramento antecipado |
+| `trg_notifica_situacao_pesquisador` | `perfil_pesquisador`, AFTER UPDATE OF status_pesquisador | suspenso (motivo e prazo) ou reativado |
+| `trg_notifica_contestacao` | `denuncia`, `contestacao_status` `pendente` para `aceita`/`recusada` | resultado da contestação |
+| `trg_notifica_atualizacao` | `atualizacao_campanha`, AFTER INSERT ativa | atualização publicada, para quem segue |
+
+- **Decisão:** os e-mails nascem em gatilhos novos (só `AFTER`, nenhuma função antiga reescrita), e o texto é montado no Nest na hora de enviar, a partir de `tipo_evento` + `dados`.
+- **Motivo:** qualquer caminho que mude a situação (tela, tarefa agendada, função de moderação, webhook, o próprio seed) gera o aviso, sem depender de cada service lembrar. É o padrão "caixa de saída" (outbox), o mesmo desenho da fila do repasse.
+- **Caso-limite aceito:** o seed de demonstração chama as funções reais, então gera e-mails de verdade na fila; o `[07-D-7]` os marca como enviados pelo provedor `seed` (o worker não dispara dezenas de e-mails ao subir) e acrescenta um de cada situação para a aba Notificações. O banco de produção nasce sem esses dados.
+
+- **Decisão:** o link com token (verificar conta, nova senha) espera cifrado em `dados.segredo` e é apagado ao enviar ou cancelar.
+- **Motivo:** `verificacao_email` e `recuperacao_senha` guardam o token só como hash; a fila não pode desfazer essa proteção.
+- **Caso-limite aceito:** reenviar um e-mail que falhou manda o mesmo link, que pode ter vencido.
+
 ### Idempotência
 
 Todas as triggers deste arquivo têm `DROP TRIGGER IF EXISTS` imediatamente antes do `CREATE TRIGGER` correspondente - o arquivo pode ser reaplicado sozinho num banco de desenvolvimento já existente, sem precisar resetar tudo do zero (mesmo padrão já aplicado em `04_rls_policies.sql`). *(Nota 28-07-2026: esta linha tinha ficado presa numa contagem antiga - 33 - enquanto a Visão Geral, no topo deste mesmo capítulo, já dizia o número certo. Achado na 5ª auditoria de IA; as duas contagens do capítulo foram sincronizadas de novo em 03-08-2026, depois de mais uma rodada de auditoria - ver "Como conferir este inventário", ao final do documento.)*
@@ -1081,7 +1114,7 @@ Registro genérico de INSERT/UPDATE/DELETE, pensado pra fechar um buraco real: o
   - os 5 anos do IP do aceite vão além dos 6 meses do Marco Civil: a justificativa é o prazo do CDC (art. 27, decisão acima). A LGPD pede o período mínimo necessário, então o prazo precisa continuar justificado no Termo;
   - o parâmetro aceita 0 (guardar para sempre), que não combina com o "período mínimo necessário" da LGPD. Mantido de propósito (decisão do Lucas, 04-10): é prático para testes. Em operação, o valor fica no prazo que o Termo promete.
 
-- 🗑️➡️✅ **Já é feature de tela (achado desatualizado, corrigido nesta revisão):** este parágrafo dizia "não é feature de tela ainda" - isso ficou pra trás. O módulo `nest/src/27-log-auditoria` (`GET /log-auditoria`, só leitura) e o componente `react/src/components/crud/log-auditoria-painel.jsx` (botão "Ver log" no rodapé de cada `GenericTable`) já existem e consomem esta tabela.
+- 🗑️➡️✅ **Já é feature de tela (achado desatualizado, corrigido nesta revisão):** este parágrafo dizia "não é feature de tela ainda" - isso ficou pra trás. O módulo `nest/src/28-log-auditoria` (`GET /log-auditoria`, só leitura) e o componente `react/src/components/crud/log-auditoria-painel.tsx` (botão "Ver log" no rodapé de cada `GenericTable`) já existem e consomem esta tabela.
 
 ---
 

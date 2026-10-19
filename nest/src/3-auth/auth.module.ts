@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtSignOptions } from '@nestjs/jwt';
 import { UsuarioModule } from '../1-usuario/usuario.module';
 import { TermoUsoModule } from '../5-termo-uso/termo-uso.module';
+import { NotificacaoModule } from '../27-notificacao/notificacao.module';
 import { AuthControllerRegister } from './controllers/auth.controller.register';
 import { AuthControllerLogin } from './controllers/auth.controller.login';
 import { AuthControllerLogout } from './controllers/auth.controller.logout';
@@ -28,6 +29,7 @@ import { AuthServiceResetPassword } from './service/auth.service.reset-password'
   imports: [
     UsuarioModule,
     TermoUsoModule,
+    NotificacaoModule,
     ConfigModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

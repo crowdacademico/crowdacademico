@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ConfiguracaoValorService } from '../../commons/configuracao/configuracao-valor.service';
 import { DatabaseService } from '../../commons/database/database.service';
+import { TIPO_NOTIFICACAO } from '../../27-notificacao/constants/notificacao.constants';
+import { NotificacaoServiceEnqueue } from '../../27-notificacao/service/notificacao.service.enqueue';
 import {
   CHAVE_CONFIG_RECUPERACAO_SENHA_MINUTOS_VALIDADE,
   RECUPERACAO_SENHA_MINUTOS_VALIDADE_PADRAO,
@@ -8,14 +10,15 @@ import {
 import { gerarTokenVerificacaoEmail } from '../util/auth.util.email-verification-token';
 
 // "Esqueci minha senha" (RF-006), primeiro passo: grava um token de recuperação para o dono do e-mail. A resposta
-// é a mesma exista ou não a conta (não revela quem tem cadastro). Como o módulo de e-mail ainda não existe, o
-// link só viaja na resposta fora de produção (`tokenRecuperacaoSenhaDev`), igual ao token de verificar e-mail
-// do cadastro; em produção a linha é gravada do mesmo jeito e ninguém recebe o link ainda.
+// é a mesma exista ou não a conta (não revela quem tem cadastro). O link vai por e-mail (fila de notificacao,
+// enviada por 4-mail); fora de produção ele também volta na resposta (`tokenRecuperacaoSenhaDev`), igual ao
+// token de verificar e-mail do cadastro.
 @Injectable()
 export class AuthServiceForgotPassword {
   constructor(
     private readonly database: DatabaseService,
     private readonly configuracaoValor: ConfiguracaoValorService,
+    private readonly notificacao: NotificacaoServiceEnqueue,
   ) {}
 
   async executar(
@@ -52,6 +55,12 @@ export class AuthServiceForgotPassword {
         expira_em: new Date(Date.now() + minutos * 60 * 1000),
       })
       .execute();
+    await this.notificacao.executar(
+      usuario.id_usuario,
+      TIPO_NOTIFICACAO.recuperacaoSenha,
+      { minutos },
+      token,
+    );
 
     return {
       tokenRecuperacaoSenhaDev:

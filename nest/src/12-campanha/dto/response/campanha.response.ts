@@ -37,4 +37,8 @@ export class CampanhaResponse {
   // Campos que o banco não deixa mudar agora (fn_campanha_campos_bloqueados), com os nomes deste DTO. Só vem em
   // GET /campanha/:id; nas demais respostas fica vazio.
   camposBloqueados: string[];
+  // RF-087: o que o pesquisador receberia hoje (o arrecadado menos a taxa, nunca menos que taxa_minima_repasse) e a
+  // taxa usada (a carimbada na aprovação, ou a padrão antes dela). Só em GET /campanha/:id; nas demais, null.
+  valorLiquidoEstimado: number | null;
+  taxaAplicada: number | null;
 }

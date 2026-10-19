@@ -667,7 +667,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'boleto_habilitado',          'false', 'booleano', 'Aceitar contribuição com boleto (só em campanha flexível)', TRUE, TRUE),
 (NULL, 'taxa_pagamento_boleto',      '1.99',  'decimal',  'Tarifa do provedor por boleto pago, em R$, paga por quem apoia além do valor da contribuição (estimativa; a real vem do provedor)', TRUE, TRUE),
 (NULL, 'boleto_vencimento_dias',     '3',     'inteiro',  'Dias, contados da contribuição, até o vencimento do boleto', TRUE, TRUE),
--- Workers de pagamento (29-pagamento no Nest; funções em 05, [05-K-2]): repasse ao pesquisador, devolução do
+-- Workers de pagamento (23-pagamento no Nest; funções em 05, [05-K-2]): repasse ao pesquisador, devolução do
 -- tudo-ou-nada e reconciliação com o provedor.
 (NULL, 'repasse_carencia_dias',                  '15',   'inteiro', 'Dias, contados de quando o repasse é criado (o fim da campanha), antes de o dinheiro ir para o pesquisador: janela para estorno, contestação de cartão e devolução por fraude do Pix (MED)', TRUE, FALSE),
 (NULL, 'repasse_lease_minutos',                  '10',   'inteiro', 'Minutos que um repasse fica reservado para um worker antes de outro poder tentar',          TRUE, FALSE),
@@ -689,6 +689,12 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'tarefa_repasse_ligada', 'true', 'booleano', 'Tarefa automática: pedir ao provedor a transferência dos repasses na fila. Desligada, a execução agendada fica em pausa', TRUE, FALSE),
 (NULL, 'tarefa_devolucao_ligada', 'true', 'booleano', 'Tarefa automática: devolver as contribuições a devolver. Desligada, a execução agendada fica em pausa', TRUE, FALSE),
 (NULL, 'tarefa_conferencia_ligada', 'true', 'booleano', 'Tarefa automática: conferir com o provedor os pagamentos sem aviso e os avisos parados. Desligada, a execução agendada fica em pausa', TRUE, FALSE),
+(NULL, 'tarefa_envio_email_ligada', 'true', 'booleano', 'Tarefa automática: enviar os e-mails da fila (verificação de conta, avisos de campanha e de contribuição). Desligada, a execução agendada fica em pausa', TRUE, FALSE),
+-- Fila de e-mails (nest/src/4-mail; funções em 05, [05-Q]).
+(NULL, 'email_lease_minutos',                    '5',    'inteiro', 'Minutos que um e-mail fica reservado para um worker antes de outro poder tentar',             TRUE, FALSE),
+(NULL, 'email_max_tentativas',                   '5',    'inteiro', 'Tentativas de envio de um e-mail antes de ele aparecer como falha no painel',                TRUE, FALSE),
+(NULL, 'email_backoff_base_minutos',             '5',    'inteiro', 'Espera, em minutos, antes da 2ª tentativa de envio de um e-mail (dobra a cada falha)',      TRUE, FALSE),
+(NULL, 'email_backoff_max_minutos',              '720',  'inteiro', 'Maior espera, em minutos, entre tentativas de envio de um e-mail',                         TRUE, FALSE),
 (NULL, 'cancelamento_cobranca_intervalo_minutos','15',   'inteiro', 'Minutos entre tentativas de cancelar no provedor a cobrança de uma contribuição que venceu ou deu erro', TRUE, FALSE),
 -- I
 -- score_minimo_campanha: o score NUNCA bloqueia a criação de campanha (nem Catarse nem Experiment fazem isso; o
@@ -751,6 +757,11 @@ ON CONFLICT (chave) DO NOTHING;
 -- Contas de teste (senha DevTcc123!), campanhas, contribuições e as ferramentas de teste. Num banco de produção,
 -- rode este arquivo só até a linha acima deste bloco.
 -- ============================================================================
+
+-- O envio de e-mail nasce DESLIGADO no banco de demonstração (no de produção, ligado, [07-C]): o e-mail espera na
+-- fila até alguém conferir e clicar em Rodar agora na T6, sem sair sozinho nem gastar a cota do provedor nos testes.
+UPDATE configuracoes SET valor = 'false' WHERE chave = 'tarefa_envio_email_ligada' AND id_usuario IS NULL;
+
 
 -- Permissões das ferramentas de teste do painel. trg_permissao_auto_admin (05) dá cada uma ao admin assim que a
 -- linha nasce; um banco de produção não roda esta parte, então nasce sem elas.
@@ -949,7 +960,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (1,   'notificar_novas_campanhas',   'true',  'booleano', 'Admin recebe e-mail sobre novas campanhas',            TRUE, FALSE);
 
 -- Campo de Testes (só desenvolvimento): pagamento automático do provedor de teste, desligado por padrão. Ligado, a
--- cada minuto o provedor de teste paga as cobranças pendentes (nest/src/campo-testes, CHAVE_PAGAMENTO_AUTOMATICO).
+-- cada minuto o provedor de teste paga as cobranças pendentes (nest/src/30-campo-testes, CHAVE_PAGAMENTO_AUTOMATICO).
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
 (NULL, 'teste_pagamento_automatico_ligado', 'false', 'booleano', 'Campo de Testes: o provedor de teste paga sozinho, a cada minuto, as contribuições pendentes (só no modo rápido)', TRUE, FALSE);
 
@@ -1795,16 +1806,64 @@ BEGIN
 END;
 $$;
 
+-- [07-E-8] recompensa, link_recompensa e contribuicao_recompensa
+-- Recompensas simbólicas (RF-099 a RF-101), sem estoque: os três tipos, uma desativada e um link especial (que só o
+-- dono, o admin e quem ganhou enxergam). Cada contribuição paga de quem tem conta ganha a maior recompensa ativa que o
+-- valor dela alcançou; as abaixo de todos os mínimos ficam sem recompensa, como no uso real.
+INSERT INTO recompensa (id_campanha, titulo, descricao, valor_minimo, tipo, ativo, criado_em)
+SELECT v.id_campanha, v.titulo, v.descricao, v.valor_minimo, v.tipo::tipo_recompensa, v.ativo, c.criado_em + INTERVAL '1 day'
+FROM (VALUES
+    (1, 'Seu nome nos agradecimentos', 'O nome de quem apoiou aparece nos agradecimentos do artigo publicado.', 1000.00, 'reconhecimento', TRUE),
+    (1, 'Acesso aos dados da pesquisa', 'O conjunto de dados anonimizado usado no treino do algoritmo.', 2500.00, 'digital', TRUE),
+    (2, 'Seu nome no site do projeto', NULL, 250.00, 'reconhecimento', TRUE),
+    (2, 'Testar o aplicativo antes do lançamento', 'Convite para a versão de testes do assistente de leitura.', 1000.00, 'acesso_antecipado', TRUE),
+    (3, 'Agradecimento no relatório final', NULL, 50.00, 'reconhecimento', TRUE),
+    (3, 'Ler os resultados antes da publicação', NULL, 500.00, 'acesso_antecipado', TRUE),
+    (3, 'Vídeo dos bastidores do laboratório', 'Retirada pelo pesquisador: o vídeo não pôde ser gravado.', 1500.00, 'digital', FALSE)
+) AS v(id_campanha, titulo, descricao, valor_minimo, tipo, ativo)
+JOIN campanha c ON c.id_campanha = v.id_campanha;
+
+INSERT INTO link_recompensa (id_recompensa, id_tipolink, ordem, url)
+SELECT r.id_recompensa, (SELECT id_tipolink FROM tipo_link WHERE codigo = 'GITHUB'), 0, 'https://github.com/crowdacademico-dados'
+FROM recompensa r WHERE r.id_campanha = 1 AND r.tipo = 'digital';
+
+INSERT INTO contribuicao_recompensa (id_contribuicao, id_recompensa, adquirida_em)
+SELECT c.id_contribuicao, escolhida.id_recompensa, c.criado_em
+FROM contribuicao c
+CROSS JOIN LATERAL (
+    SELECT r.id_recompensa FROM recompensa r
+    WHERE r.id_campanha = c.id_campanha AND r.ativo AND r.valor_minimo <= c.valor
+    ORDER BY r.valor_minimo DESC LIMIT 1
+) escolhida
+WHERE c.id_campanha IN (1, 2, 3)
+  AND c.id_usuario IS NOT NULL
+  AND c.status IN ('confirmado', 'repassado', 'a_devolver', 'devolvido', 'reembolso_manual');
+
 -- [07-D-7] notificacao
--- Linhas em estados diferentes, para exercitar a permissão notificacao_processar e o índice idx_notificacao_status (02).
-INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, status, tentativas, criado_em, enviado_em, ultimo_erro) VALUES
-(8,  'ana.santos@usp.br',          'campanha_aprovada',                 'enviado',   1, NOW() - INTERVAL '22 days',  NOW() - INTERVAL '22 days' + INTERVAL '30 seconds', NULL),
-(18, 'fernanda.souza@gmail.com',   'doacao_confirmada',                 'enviado',   1, NOW() - INTERVAL '19 days',  NOW() - INTERVAL '19 days' + INTERVAL '30 seconds', NULL),
-(15, 'patricia.rocha@unifesp.br',  'campanha_rejeitada',                'pendente',  0, NOW() - INTERVAL '5 days',   NULL, NULL),
-(12, 'eduardo.barbosa@ufba.br',    'solicitacao_encerramento_aprovada', 'pendente',  0, NOW() - INTERVAL '5 days',   NULL, NULL),
-(16, 'vinicius.ferraz@gmail.com',  'denuncia_recebida_contra_perfil',   'falhou',    3, NOW() - INTERVAL '50 days',  NULL, 'SMTP timeout: o servidor de e-mail não respondeu após 3 tentativas'),
-(20, 'helena.campos@outlook.com',  'doacao_confirmada',                 'falhou',    2, NOW() - INTERVAL '15 days',  NULL, 'Endereço de e-mail rejeitado pelo servidor de destino (550 mailbox not found)'),
-(14, 'juliana.ferreira@ufsc.br',   'campanha_proxima_do_prazo',         'cancelado', 0, NOW() - INTERVAL '3 days',   NULL, 'Cancelada: a campanha ainda não começou');
+-- As funções que o seed chamou acima (rejeitar, encerrar, devolver, decidir, suspender) já puseram os e-mails delas na
+-- fila, como no uso real ([05-Q]). Aqui eles viram "enviados" na hora em que foram criados (provedor 'seed'), para o
+-- worker não mandar tudo de uma vez ao subir; e entram três casos para a aba Notificações mostrar cada situação: um
+-- esperando nova tentativa, dois que falharam (um por tentativas esgotadas, outro por endereço recusado) e um cancelado.
+UPDATE notificacao
+   SET status = 'enviado', tentativas = 1, enviado_em = criado_em, provedor = 'seed', dados = dados - 'segredo'
+ WHERE status = 'pendente';
+
+INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, dados, status, tentativas, criado_em, proxima_tentativa_em, provedor, assunto, ultimo_erro)
+SELECT u.id_usuario, u.email, v.tipo, jsonb_build_object('nome', u.nome) || v.dados, v.status::status_notificacao, v.tentativas,
+       NOW() - v.idade, NOW() + v.espera, v.provedor, v.assunto, v.erro
+FROM (VALUES
+    (15, 'nova_atualizacao', jsonb_build_object('id_campanha', 1, 'titulo', (SELECT titulo FROM campanha WHERE id_campanha = 1), 'titulo_atualizacao', 'Primeiros resultados'),
+     'pendente', 2, INTERVAL '1 hour', INTERVAL '2 hours', 'brevo', 'Nova atualização na campanha que você segue',
+     'O provedor recusou por excesso de envios no minuto (429); nova tentativa agendada'),
+    (16, 'pesquisador_reativado', '{}'::jsonb, 'falhou', 5, INTERVAL '50 days', INTERVAL '0 seconds', 'brevo',
+     'Seu perfil de pesquisador foi reativado', 'O provedor não respondeu (tempo esgotado) em 5 tentativas'),
+    (20, 'devolucao_concluida', jsonb_build_object('id_campanha', 2, 'titulo', (SELECT titulo FROM campanha WHERE id_campanha = 2), 'valor', 50),
+     'falhou', 1, INTERVAL '15 days', INTERVAL '0 seconds', 'brevo', 'Sua contribuição foi devolvida',
+     'Endereço recusado pelo servidor de destino (550 mailbox not found)'),
+    (14, 'nova_atualizacao', jsonb_build_object('id_campanha', 3, 'titulo', (SELECT titulo FROM campanha WHERE id_campanha = 3), 'titulo_atualizacao', 'Mudança de cronograma'),
+     'cancelado', 0, INTERVAL '3 days', INTERVAL '0 seconds', NULL, NULL, 'Cancelado no painel: a atualização foi retirada')
+) AS v(id, tipo, dados, status, tentativas, idade, espera, provedor, assunto, erro)
+JOIN usuario u ON u.id_usuario = v.id;
 
 -- [07-H-4] termos_de_uso: rascunhos da próxima versão (v3, id 5 e 6), feitos a partir da vigente com uma seção nova.
 -- Ainda não publicados (ativo = FALSE) e sem aceite: a tela mostra "Rascunho" e deixa editar e excluir. Entram

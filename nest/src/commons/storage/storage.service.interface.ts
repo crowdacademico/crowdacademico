@@ -1,5 +1,5 @@
 // Contrato de armazenamento de arquivos - o ÚNICO ponto que o resto da
-// aplicação (25-arquivo, e futuramente qualquer outro módulo) conhece.
+// aplicação (26-arquivo, e futuramente qualquer outro módulo) conhece.
 // Nenhum service fora de commons/storage deve importar diretamente
 // @aws-sdk/*, saber o nome do bucket, ou qualquer detalhe de UM provedor
 // específico - é isso que faz "trocar de Supabase Storage pra Cloudflare
@@ -13,11 +13,11 @@
 // Se um dia entrar um provedor com API genuinamente diferente (não
 // S3-compatível), a mudança é: criar uma nova classe implementando esta
 // interface e trocar o `provide` em storage.module.ts - nada em
-// 25-arquivo muda, porque ele só enxerga ARMAZENAMENTO_SERVICE
+// 26-arquivo muda, porque ele só enxerga ARMAZENAMENTO_SERVICE
 // (storage.constants.ts), nunca a classe concreta.
 export interface ParametrosUploadPreAssinado {
   // Caminho completo do objeto dentro do bucket (ex.: "pendente/<uuid>.jpg")
-  // - decidido pelo service de 25-arquivo, nunca pelo cliente. Ver
+  // - decidido pelo service de 26-arquivo, nunca pelo cliente. Ver
   // arquivo.service.start-upload.ts.
   chave: string;
   tipoMime: string;

@@ -12,10 +12,11 @@ import {
   situacaoDenuncia,
   type SituacaoDenuncia,
 } from '../../services/19-denuncia/constants/status-denuncia.constants';
-import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
+import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { ModalJulgarDenuncia } from './modal-julgar-denuncia';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { DenunciaResponse } from '../../services/19-denuncia/type/denuncia.type';
+import { ordenarFilaSla } from '../../services/constant/util/fila-sla.util';
 
 interface DenunciaLinha extends Omit<DenunciaResponse, 'status'> {
   status: string;
@@ -46,13 +47,7 @@ export function ListarDenuncias({ auth }: PropsPagina) {
         : STATUS_DENUNCIA_DECIDIDA.has(denuncia.status)
           ? null
           : denuncia.criadoEm;
-    const ordenadas = [...denuncias].sort((a, b) => {
-      const esperaA = esperandoDesde(a);
-      const esperaB = esperandoDesde(b);
-      if (esperaA && esperaB) return esperaA.localeCompare(esperaB);
-      if (esperaA || esperaB) return esperaA ? -1 : 1;
-      return b.criadoEm.localeCompare(a.criadoEm);
-    });
+    const ordenadas = ordenarFilaSla(denuncias, esperandoDesde, (denuncia) => denuncia.criadoEm);
     return ordenadas.map((denuncia) => ({
       ...denuncia,
       status: ROTULO_STATUS_DENUNCIA[situacaoDenuncia(denuncia)],
