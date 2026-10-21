@@ -18,7 +18,7 @@ const ORDEM_SITUACAO = [ROTULO_STATUS_REPASSE.erro, ROTULO_AGUARDANDO_CONTA];
 // Repasses em Atenção (moderação financeira): o repasse é o pagamento do que foi arrecadado ao pesquisador.
 // Entram aqui os que estão em "erro" (a transferência falhou de forma definitiva ou as tentativas acabaram) e os
 // "pendentes" cujo dono da campanha ainda não tem chave Pix verificada (o sistema não os pega até ele cadastrar).
-// Alterar abre o reenfileiramento (só repasse em erro); Consultar abre qualquer um só para ler.
+// Alterar abre reenfileirar ou marcar como pago (só repasse em erro); Consultar abre qualquer um só para ler.
 export function ListarRepassesAtencao({ auth }: PropsPagina) {
   const [aberto, setAberto] = useState<{ repasse: RepasseAtencaoResponse; somenteLeitura: boolean } | null>(null);
   const [chaveRecarga, setChaveRecarga] = useState(0);
@@ -37,7 +37,7 @@ export function ListarRepassesAtencao({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable
         titulo="Repasses em Atenção"
-        ajuda="Repasses ao pesquisador que não andam sozinhos. Erro: a transferência falhou e alguém precisa corrigir a causa e reenfileirar. Aguardando chave Pix: o pesquisador ainda não cadastrou (ou não verificou) a chave onde receber; não há o que fazer aqui até ele cadastrar."
+        ajuda="Repasses ao pesquisador que não andam sozinhos. Erro: a transferência falhou e alguém precisa corrigir a causa e reenfileirar, ou marcar como pago se o pesquisador já recebeu. Aguardando chave Pix: o pesquisador ainda não cadastrou (ou não verificou) a chave onde receber; não há o que fazer aqui até ele cadastrar."
         colunas={[
           { chave: 'idRepasse', rotulo: 'id', tipo: 'id' },
           { chave: 'titulo', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
@@ -65,7 +65,7 @@ export function ListarRepassesAtencao({ auth }: PropsPagina) {
         }}
         acaoIndisponivel={(linha, acao) =>
           acao === 'alterar' && linha.status !== 'erro'
-            ? 'Só um repasse em erro pode ser reenfileirado. Este espera o pesquisador cadastrar a chave Pix.'
+            ? 'Só um repasse em erro pede ação. Este espera o pesquisador cadastrar a chave Pix.'
             : undefined
         }
         filtrosFacetados={[{ chave: 'situacao', rotulo: 'Situação', ordem: ORDEM_SITUACAO }]}

@@ -5,12 +5,11 @@ import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalConfirmacao } from '../../components/crud/modal-confirmacao';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
-import { Campo } from '../../components/input/campo';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { ROTULO_MEIO_PAGAMENTO } from '../../services/22-contribuicao/constants/contribuicao.constants';
 import { pagamentoRevisaoApi } from '../../services/25-pagamento-revisao/api/pagamento-revisao.api';
-import { erroObservacaoRevisao, erroValorDevolvido } from '../../services/25-pagamento-revisao/util/observacao-revisao.util';
+import { erroObservacaoRevisao } from '../../services/25-pagamento-revisao/util/observacao-revisao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
@@ -29,11 +28,11 @@ interface ModalConcluirReembolsoProps {
 }
 
 // Registrar que uma contribuição em reembolso manual foi devolvida. O estorno automático desistiu, então uma pessoa
-// devolve o dinheiro FORA do sistema (painel do provedor ou Pix) e só depois registra aqui: o valor que de fato foi
-// devolvido (de R$ 0,01 até o valor da contribuição) e como foi feito. A contribuição passa para "devolvida" e a ação fica na
+// devolve o dinheiro FORA do sistema (painel do provedor ou Pix) e só depois registra aqui como fez. O valor é sempre
+// o inteiro da contribuição (só leitura, o banco recusa outro). A contribuição passa para "devolvida" e a ação fica na
 // auditoria financeira, com quem registrou. Este registro NÃO move dinheiro.
 export function ModalConcluirReembolso({ authFetch, reembolso, tituloCampanha, aoFechar, aoConcluido, somenteLeitura = false }: ModalConcluirReembolsoProps) {
-  const [valor, setValor] = useState(String(reembolso.valorADevolver));
+  const valor = reembolso.valorADevolver;
   const [observacao, setObservacao] = useState('');
   const [confirmando, setConfirmando] = useState(false);
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
@@ -41,7 +40,6 @@ export function ModalConcluirReembolso({ authFetch, reembolso, tituloCampanha, a
   const { ocupado, executar } = useEnvio(reportarErro, limparErro);
 
   const erros = useErrosFormulario(() => ({
-    valor: erroValorDevolvido(valor, reembolso.valorADevolver),
     observacao: erroObservacaoRevisao(observacao),
   }));
 
@@ -53,8 +51,8 @@ export function ModalConcluirReembolso({ authFetch, reembolso, tituloCampanha, a
 
   const concluir = async () => {
     await executar(async () => {
-      await pagamentoRevisaoApi.concluirReembolsoManual(authFetch, reembolso.idContribuicao, Number(valor), observacao.trim());
-      mostrar('Devolução registrada.', `Contribuição #${reembolso.idContribuicao}: ${formatarMoeda(Number(valor))} devolvidos.`);
+      await pagamentoRevisaoApi.concluirReembolsoManual(authFetch, reembolso.idContribuicao, valor, observacao.trim());
+      mostrar('Devolução registrada.', `Contribuição #${reembolso.idContribuicao}: ${formatarMoeda(valor)} devolvidos.`);
       aoConcluido();
       aoFechar();
     });
@@ -98,24 +96,6 @@ export function ModalConcluirReembolso({ authFetch, reembolso, tituloCampanha, a
                 </p>
                 <p>Ao registrar, a contribuição passa para &quot;devolvida&quot; e isso não dá para desfazer.</p>
               </CaixaAviso>
-              <Campo
-                rotulo="Valor devolvido (R$)"
-                dica={`De R$ 0,01 até ${formatarMoeda(reembolso.valorADevolver)} (o valor da contribuição).`}
-                erro={erros.erroDe('valor')}
-              >
-                {({ atributos, classeErro }) => (
-                  <input
-                    {...atributos}
-                    type="number"
-                    inputMode="decimal"
-                    step="0.01"
-                    min="0.01"
-                    value={valor}
-                    onChange={(evento) => setValor(evento.target.value)}
-                    className={'input-padrao' + classeErro}
-                  />
-                )}
-              </Campo>
               <CampoObservacaoRevisao
                 rotulo="Como a devolução foi feita"
                 dica="Data, meio e comprovante. Fica na auditoria financeira, com o seu nome."
@@ -139,7 +119,7 @@ export function ModalConcluirReembolso({ authFetch, reembolso, tituloCampanha, a
           aoCancelar={() => setConfirmando(false)}
         >
           <p>
-            A contribuição #{reembolso.idContribuicao} passa para &quot;devolvida&quot;, com {formatarMoeda(Number(valor))} registrados como devolvidos. Isso não
+            A contribuição #{reembolso.idContribuicao} passa para &quot;devolvida&quot;, com {formatarMoeda(valor)} registrados como devolvidos. Isso não
             dá para desfazer.
           </p>
           <p>Este registro não devolve dinheiro: confirme só se a devolução já foi feita por fora.</p>

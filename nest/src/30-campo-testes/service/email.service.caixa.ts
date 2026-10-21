@@ -15,7 +15,7 @@ import type { StatusNotificacao } from '../../commons/database/db.types';
 export const CHAVE_CAIXA_LIMPA_ATE = 'teste_caixa_email_limpa_ate_id';
 const PERMISSAO = 'notificacao_processar';
 const MENSAGEM_SEM_PERMISSAO =
-  'Só quem cuida dos e-mails do sistema vê a caixa de teste.';
+  'Só quem cuida dos e-mails do sistema limpa a caixa de teste.';
 
 export interface EmailDaCaixa {
   idNotificacao: number;
@@ -50,9 +50,11 @@ interface LinhaNotificacao {
   dados: Record<string, unknown>;
 }
 
-// Caixa de E-mails do Campo de Testes (T6): TODOS os e-mails do banco (na fila, enviados, que falharam, cancelados)
+// Caixa de E-mails do Campo de Testes (T6): os e-mails do banco (na fila, enviados, que falharam, cancelados)
 // desde a última limpeza. Só o "Limpar a caixa" tira alguém da lista; reiniciar o Nest não apaga nada. O conteúdo vem
 // da memória do provedor de teste quando ele tem o e-mail, e senão é montado na hora pelos mesmos modelos do envio.
+// Qualquer conta logada vê a caixa, pela própria sessão: a RLS de notificacao (04) mostra só os e-mails dela, e quem
+// tem notificacao_processar vê todos. O link com código de um e-mail só aparece para o dono dele (ou para o admin).
 @Injectable()
 export class EmailServiceCaixa {
   constructor(
@@ -63,7 +65,6 @@ export class EmailServiceCaixa {
   ) {}
 
   async listar(): Promise<EmailDaCaixa[]> {
-    await this.autorizacao.exigirPermissao(PERMISSAO, MENSAGEM_SEM_PERMISSAO);
     const resultado = await sql<LinhaNotificacao>`
       SELECT * FROM notificacao
       WHERE id_notificacao > public.config_numero(${CHAVE_CAIXA_LIMPA_ATE}, 0)
@@ -86,7 +87,6 @@ export class EmailServiceCaixa {
   }
 
   async previa(idNotificacao: number): Promise<PreviaDoEmail> {
-    await this.autorizacao.exigirPermissao(PERMISSAO, MENSAGEM_SEM_PERMISSAO);
     const resultado = await sql<LinhaNotificacao>`
       SELECT * FROM notificacao WHERE id_notificacao = ${idNotificacao}
     `.execute(this.database.getDb());

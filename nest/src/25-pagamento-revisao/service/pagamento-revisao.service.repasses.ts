@@ -44,4 +44,12 @@ export class PagamentoRevisaoServiceRepasses {
       SELECT public.reenfileirar_repasse(${idRepasse}::int, ${observacao}::text)
     `.execute(this.database.getDb());
   }
+
+  // erro -> concluido quando o dinheiro já chegou ao pesquisador (o provedor confirmou depois do erro, ou foi pago por
+  // fora). O banco marca as contribuições como repassadas, dá baixa nos avisos em revisão do repasse e audita.
+  async marcarPago(idRepasse: number, observacao: string): Promise<void> {
+    await sql`
+      SELECT public.marcar_repasse_pago(${idRepasse}::int, ${observacao}::text)
+    `.execute(this.database.getDb());
+  }
 }

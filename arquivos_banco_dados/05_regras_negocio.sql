@@ -3877,10 +3877,12 @@ $$;
 -- Regra:      Máquina de estados do repasse (PR-09), no mesmo espírito da de contribuição:
 --               pendente    -> processando | erro
 --               processando -> pendente | concluido | erro
---               erro        -> pendente
+--               erro        -> pendente | concluido
 --             pendente = na fila; processando = o worker pegou e pediu a transferência (ou espera o aviso do provedor);
 --             processando -> pendente é a nova tentativa depois de uma falha recuperável (rede); erro -> pendente é uma
---             pessoa recolocando na fila depois de corrigir a causa. concluido é estado final (dinheiro saiu).
+--             pessoa recolocando na fila depois de corrigir a causa; erro -> concluido é uma pessoa confirmando que o
+--             dinheiro chegou ao pesquisador (só por marcar_repasse_pago: concluir_repasse barra o erro, então o webhook
+--             nunca faz essa passagem sozinho). concluido é estado final (dinheiro saiu).
 --             Transição fora disso levanta 91039 (mesma família de 91050).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_valida_transicao_status_repasse()
@@ -3892,7 +3894,8 @@ BEGIN
         ('processando', 'pendente'),
         ('processando', 'concluido'),
         ('processando', 'erro'),
-        ('erro',        'pendente')
+        ('erro',        'pendente'),
+        ('erro',        'concluido')
     ) THEN
         RETURN NEW;
     END IF;
@@ -4090,7 +4093,8 @@ $$;
 -- Regra:      A transferência foi concluída: processando -> concluido (repassado_em = agora) e cada contribuição do repasse
 --             ainda 'confirmado' vira 'repassado' (via atualizar_status_contribuicao, auditado). Tudo na mesma transação.
 --             Idempotente: chamada de novo (o worker e o webhook podem chegar juntos) não repete nada. Se o repasse já está
---             'erro', a transição é barrada (91039) e quem chamou decide (o webhook manda para revisão manual).
+--             'erro', levanta 91039 e quem chamou decide (o webhook manda para revisão manual); erro -> concluido só por
+--             marcar_repasse_pago, com uma pessoa confirmando.
 --             SECURITY DEFINER, sem autorização (job de fundo/webhook).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.concluir_repasse(
@@ -4104,6 +4108,12 @@ AS $$
 DECLARE
     v_id_contribuicao INT;
 BEGIN
+    IF (SELECT r.status FROM repasse r WHERE r.id_repasse = p_id_repasse) = 'erro' THEN
+        RAISE EXCEPTION 'Transição de status de repasse não permitida: erro -> concluido.'
+            USING ERRCODE = '91039',
+                  DETAIL  = json_build_object('de', 'erro', 'para', 'concluido')::text;
+    END IF;
+
     IF p_id_transferencia IS NOT NULL THEN
         UPDATE repasse SET id_transferencia_api = COALESCE(id_transferencia_api, p_id_transferencia)
         WHERE id_repasse = p_id_repasse;
@@ -4799,13 +4809,16 @@ $$;
 -- Função:     resolver_revisao_pagamento
 -- Assinatura: (p_id_evento INT, p_observacao TEXT) -> VOID
 -- Bloco:      [05-K-2]
--- Regra:      Dá baixa num evento que estava em REVISÃO MANUAL depois de uma pessoa ter decidido e agido fora do sistema
---             (ex.: devolveu no painel do provedor um pagamento que chegou para uma contribuição já expirada). Marca o evento
---             como processado (processado_em = agora; revisao_manual_em fica, é o histórico de que passou por revisão), junta
---             a observação ao motivo e grava uma linha de auditoria 'revisao_manual_resolvida: <observação>' no mesmo alvo
---             (contribuição ou repasse) com quem resolveu. NÃO muda contribuição nem repasse nem move dinheiro: o estado
---             que a revisão deixou intacto continua como está. Só evento em revisão manual (91049); observação obrigatória
---             (90034); exige 'pagamento_revisao_resolver' (92037).
+-- Regra:      Dá baixa num evento que ainda não foi processado depois de uma pessoa ter decidido e agido fora do sistema
+--             (ex.: devolveu no painel do provedor um pagamento que chegou para uma contribuição já expirada). Vale para o
+--             evento em REVISÃO MANUAL e para o que está em "tentar de novo" (a pessoa conferiu no provedor e não quer
+--             esperar o prazo de webhook_reprocessar_horas; se era um pagamento de verdade, a conferência periódica ainda
+--             o aplica pela contribuição pendente). Marca o evento como processado (processado_em = agora;
+--             revisao_manual_em fica, é o histórico de que passou por revisão), junta a observação ao motivo e grava uma
+--             linha de auditoria 'revisao_manual_resolvida: <observação>' no mesmo alvo (contribuição ou repasse) com quem
+--             resolveu. NÃO muda contribuição nem repasse nem move dinheiro: o estado que a revisão deixou intacto continua
+--             como está. Só evento não processado (91049); observação obrigatória (90034); exige
+--             'pagamento_revisao_resolver' (92037).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.resolver_revisao_pagamento(p_id_evento INT, p_observacao TEXT)
 RETURNS VOID
@@ -4815,7 +4828,6 @@ SET search_path = public
 AS $$
 DECLARE
     v_processado_em TIMESTAMPTZ;
-    v_revisao_em    TIMESTAMPTZ;
     v_motivo        TEXT;
     v_obs           TEXT := NULLIF(BTRIM(p_observacao), '');
     v_alvo          RECORD;
@@ -4827,13 +4839,13 @@ BEGIN
         RAISE EXCEPTION 'Escreva o que foi feito para resolver esta revisão.' USING ERRCODE = '90034';
     END IF;
 
-    SELECT e.processado_em, e.revisao_manual_em, e.erro_processamento INTO v_processado_em, v_revisao_em, v_motivo
+    SELECT e.processado_em, e.erro_processamento INTO v_processado_em, v_motivo
     FROM evento_pagamento e
     WHERE e.id_evento_pagamento = p_id_evento
     FOR UPDATE;
 
-    IF NOT FOUND OR v_revisao_em IS NULL OR v_processado_em IS NOT NULL THEN
-        RAISE EXCEPTION 'Só um evento em revisão manual pode ser resolvido.' USING ERRCODE = '91049';
+    IF NOT FOUND OR v_processado_em IS NOT NULL THEN
+        RAISE EXCEPTION 'Só um evento ainda não processado pode receber baixa.' USING ERRCODE = '91049';
     END IF;
 
     UPDATE evento_pagamento
@@ -4913,10 +4925,10 @@ $$;
 -- Assinatura: (p_id_contribuicao INT, p_valor DECIMAL, p_observacao TEXT) -> VOID
 -- Bloco:      [05-K-2]
 -- Regra:      Uma pessoa devolveu, por fora do sistema, o dinheiro de uma contribuição em 'reembolso_manual': registra que
---             isso foi feito. reembolso_manual -> devolvido, com p_valor (o que de fato foi devolvido, de 0,01 até o valor da
---             contribuição) em auditoria_financeira.valor, e uma linha extra 'reembolso_manual_concluido: <observação>' com
---             quem registrou. Só contribuição em 'reembolso_manual' (91049); observação obrigatória (90034); valor
---             inválido (90035); exige 'pagamento_revisao_resolver' (92037). Não move dinheiro. A transição
+--             isso foi feito. reembolso_manual -> devolvido, com p_valor (sempre o valor inteiro da contribuição: a tela
+--             não deixa digitar e o banco recusa outro valor) em auditoria_financeira.valor, e uma linha extra
+--             'reembolso_manual_concluido: <observação>' com quem registrou. Só contribuição em 'reembolso_manual' (91049);
+--             observação obrigatória (90034); valor diferente (90035); exige 'pagamento_revisao_resolver' (92037). Não move dinheiro. A transição
 --             reembolso_manual -> devolvido existe na máquina de estados só para isto.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.concluir_reembolso_manual(p_id_contribuicao INT, p_valor DECIMAL, p_observacao TEXT)
@@ -4946,8 +4958,8 @@ BEGIN
     IF NOT FOUND OR v_status <> 'reembolso_manual' THEN
         RAISE EXCEPTION 'Só uma contribuição em reembolso manual pode ser concluída.' USING ERRCODE = '91049';
     END IF;
-    IF p_valor IS NULL OR p_valor <= 0 OR p_valor > v_valor THEN
-        RAISE EXCEPTION 'O valor devolvido deve ser maior que zero e não passar do valor da contribuição.' USING ERRCODE = '90035';
+    IF p_valor IS DISTINCT FROM v_valor THEN
+        RAISE EXCEPTION 'O valor devolvido deve ser o valor inteiro da contribuição.' USING ERRCODE = '90035';
     END IF;
 
     PERFORM public.atualizar_status_contribuicao(p_id_contribuicao, 'devolvido', NULL, NULL, p_valor);
@@ -5020,8 +5032,9 @@ $$;
 --             IDEMPOTÊNCIA só é trocada quando o provedor chegou a criar uma transferência e a reportou como falha
 --             (id_transferencia_api preenchido): um novo pedido com a mesma chave devolveria a transferência que falhou. Sem id
 --             de transferência (erro por rede/tentativas), a chave NÃO muda: pode ter existido uma transferência que o
---             sistema não viu, e é a chave antiga que a busca por referência usa para não pagar duas vezes. Só repasse
---             em 'erro' (91049); observação obrigatória (90034); exige 'pagamento_revisao_resolver' (92037).
+--             sistema não viu, e é a chave antiga que a busca por referência usa para não pagar duas vezes. Com a chave
+--             nova, o repasse também fica livre do provedor antigo (provedor = NULL) e sai pelo provedor que estiver
+--             ligado. Só repasse em 'erro' (91049); observação obrigatória (90034); exige 'pagamento_revisao_resolver' (92037).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.reenfileirar_repasse(p_id_repasse INT, p_observacao TEXT)
 RETURNS VOID
@@ -5054,10 +5067,73 @@ BEGIN
     SET tentativas_transferencia = 0,
         proxima_tentativa_em = NULL,
         chave_idempotencia = CASE WHEN v_id_trf IS NOT NULL THEN gen_random_uuid() ELSE chave_idempotencia END,
+        provedor = CASE WHEN v_id_trf IS NOT NULL THEN NULL ELSE provedor END,
         id_transferencia_api = NULL
     WHERE id_repasse = p_id_repasse;
 
     PERFORM public.atualizar_status_repasse(p_id_repasse, 'pendente', NULL, 'reenfileirado: ' || v_obs);
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     marcar_repasse_pago
+-- Assinatura: (p_id_repasse INT, p_observacao TEXT) -> VOID
+-- Bloco:      [05-K-2]
+-- Regra:      Uma pessoa confirmou que o dinheiro de um repasse em 'erro' chegou ao pesquisador (o provedor avisou que a
+--             transferência foi concluída depois de o sistema marcar erro, ou a transferência foi feita por fora). É a
+--             alternativa ao reenfileirar, que pagaria duas vezes. erro -> concluido (repassado_em = agora, auditado com a
+--             observação e quem fez), as contribuições do repasse ainda 'confirmado' viram 'repassado', e os avisos do
+--             provedor sobre este repasse que estavam em revisão manual recebem baixa com a mesma observação. Não move
+--             dinheiro. Só repasse em 'erro' (91049); observação obrigatória (90034); exige 'pagamento_revisao_resolver' (92037).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.marcar_repasse_pago(p_id_repasse INT, p_observacao TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_status          status_repasse;
+    v_obs             TEXT := NULLIF(BTRIM(p_observacao), '');
+    v_id_contribuicao INT;
+BEGIN
+    IF NOT public.tem_permissao('pagamento_revisao_resolver') THEN
+        RAISE EXCEPTION 'Sem permissão para marcar repasses como pagos.' USING ERRCODE = '92037';
+    END IF;
+    IF v_obs IS NULL THEN
+        RAISE EXCEPTION 'Escreva como confirmou que o pesquisador recebeu (data, comprovante, painel do provedor).' USING ERRCODE = '90034';
+    END IF;
+
+    SELECT r.status INTO v_status
+    FROM repasse r
+    WHERE r.id_repasse = p_id_repasse
+    FOR UPDATE;
+
+    IF NOT FOUND OR v_status <> 'erro' THEN
+        RAISE EXCEPTION 'Só um repasse em erro pode ser marcado como pago.' USING ERRCODE = '91049';
+    END IF;
+
+    PERFORM public.atualizar_status_repasse(p_id_repasse, 'concluido', NOW(), 'marcado como pago: ' || v_obs);
+    UPDATE repasse SET proxima_tentativa_em = NULL WHERE id_repasse = p_id_repasse;
+
+    FOR v_id_contribuicao IN
+        SELECT c.id_contribuicao
+        FROM contribuicao c
+        WHERE c.id_repasse = p_id_repasse AND c.status = 'confirmado'
+        ORDER BY c.id_contribuicao
+    LOOP
+        PERFORM public.atualizar_status_contribuicao(v_id_contribuicao, 'repassado', NULL, NULL);
+    END LOOP;
+
+    UPDATE evento_pagamento e
+    SET processado_em = NOW(),
+        erro_processamento = LEFT(COALESCE(e.erro_processamento, '') || ' | RESOLVIDO: ' || v_obs, 2000)
+    WHERE e.processado_em IS NULL
+      AND e.revisao_manual_em IS NOT NULL
+      AND EXISTS (
+          SELECT 1 FROM auditoria_financeira a
+          WHERE a.id_evento_pagamento = e.id_evento_pagamento AND a.id_repasse = p_id_repasse
+      );
 END;
 $$;
 

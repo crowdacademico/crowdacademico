@@ -334,6 +334,8 @@ REVOKE EXECUTE ON FUNCTION public.listar_repasses_atencao(INT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.listar_repasses_atencao(INT) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.reenfileirar_repasse(INT, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.reenfileirar_repasse(INT, TEXT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.marcar_repasse_pago(INT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.marcar_repasse_pago(INT, TEXT) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.encerrar_contribuicoes_orfas() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.encerrar_contribuicoes_orfas() TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.listar_eventos_nao_processados(INT) FROM PUBLIC;

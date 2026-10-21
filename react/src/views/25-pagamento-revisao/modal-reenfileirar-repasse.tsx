@@ -26,14 +26,22 @@ interface ModalReenfileirarRepasseProps {
   somenteLeitura?: boolean;
 }
 
-// Reenfileirar um repasse em erro. A causa (chave Pix errada, saldo na conta do provedor, etc.) é corrigida FORA do
-// sistema; aqui a pessoa diz o que corrigiu e o repasse volta para a fila (erro -> pendente, tentativas zeradas) para o
-// sistema tentar a transferência de novo. A ação é auditada com a observação e quem a fez. Se a transferência já foi
-// feita por fora, NÃO reenfileirar: o pesquisador receberia em duplicidade. Repasse que só espera a chave Pix do
-// pesquisador não tem o que reenfileirar (ele sai da lista sozinho quando a chave for verificada).
+// Repasse em erro, duas saídas, as duas auditadas com a observação e quem fez:
+//  - Reenfileirar: a causa (chave Pix errada, saldo na conta do provedor, etc.) foi corrigida FORA do sistema e o repasse
+//    volta para a fila (erro -> pendente, tentativas zeradas) para o sistema tentar a transferência de novo;
+//  - Marcar como pago: o dinheiro já chegou ao pesquisador (o provedor confirmou depois do erro, ou foi pago por fora).
+//    erro -> concluido, sem nova transferência; reenfileirar aqui pagaria duas vezes.
+// Repasse que só espera a chave Pix do pesquisador não tem ação (sai da lista sozinho quando a chave for verificada).
+type AcaoRepasse = 'reenfileirar' | 'marcarPago';
+
+const CONFIRMACAO: Record<AcaoRepasse, { titulo: string; rotulo: string }> = {
+  reenfileirar: { titulo: 'Reenfileirar este repasse?', rotulo: 'Reenfileirar' },
+  marcarPago: { titulo: 'Marcar este repasse como pago?', rotulo: 'Marcar como pago' },
+};
+
 export function ModalReenfileirarRepasse({ authFetch, repasse, aoFechar, aoReenfileirado, somenteLeitura = false }: ModalReenfileirarRepasseProps) {
   const [observacao, setObservacao] = useState('');
-  const [confirmando, setConfirmando] = useState(false);
+  const [confirmando, setConfirmando] = useState<AcaoRepasse | null>(null);
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { mostrar } = useToast();
   const { ocupado, executar } = useEnvio(reportarErro, limparErro);
@@ -42,20 +50,25 @@ export function ModalReenfileirarRepasse({ authFetch, repasse, aoFechar, aoReenf
 
   const erros = useErrosFormulario(() => ({ observacao: erroObservacaoRevisao(observacao) }));
 
-  const pedirConfirmacao = () => {
+  const pedirConfirmacao = (acao: AcaoRepasse) => {
     if (erros.tentarEnviar()) {
-      setConfirmando(true);
+      setConfirmando(acao);
     }
   };
 
-  const reenfileirar = async () => {
+  const aplicar = async (acao: AcaoRepasse) => {
     await executar(async () => {
-      await pagamentoRevisaoApi.reenfileirarRepasse(authFetch, repasse.idRepasse, observacao.trim());
-      mostrar('Repasse reenfileirado.', `Repasse #${repasse.idRepasse}: o sistema vai tentar a transferência de novo.`);
+      if (acao === 'reenfileirar') {
+        await pagamentoRevisaoApi.reenfileirarRepasse(authFetch, repasse.idRepasse, observacao.trim());
+        mostrar('Repasse reenfileirado.', `Repasse #${repasse.idRepasse}: o sistema vai tentar a transferência de novo.`);
+      } else {
+        await pagamentoRevisaoApi.marcarRepassePago(authFetch, repasse.idRepasse, observacao.trim());
+        mostrar('Repasse marcado como pago.', `Repasse #${repasse.idRepasse}: concluído, sem nova transferência.`);
+      }
       aoReenfileirado();
       aoFechar();
     });
-    setConfirmando(false);
+    setConfirmando(null);
   };
 
   return (
@@ -70,8 +83,15 @@ export function ModalReenfileirarRepasse({ authFetch, repasse, aoFechar, aoReenf
           <RodapeAcoes
             aoCancelar={aoFechar}
             rotuloCancelar={podeReenfileirar ? 'Cancelar' : 'Fechar'}
-            largura={podeReenfileirar ? 'md' : undefined}
-            acao={podeReenfileirar ? { rotulo: 'Reenfileirar repasse', ocupado, aoClicar: pedirConfirmacao } : undefined}
+            largura={podeReenfileirar ? 'xl' : undefined}
+            acao={
+              podeReenfileirar
+                ? [
+                    { rotulo: 'Marcar como pago', ocupado, aoClicar: () => pedirConfirmacao('marcarPago') },
+                    { rotulo: 'Reenfileirar', ocupado, aoClicar: () => pedirConfirmacao('reenfileirar') },
+                  ]
+                : undefined
+            }
           />
         }
       >
@@ -89,13 +109,16 @@ export function ModalReenfileirarRepasse({ authFetch, repasse, aoFechar, aoReenf
           </SecaoFicha>
 
           {podeReenfileirar && (
-            <SecaoFicha titulo="Reenfileirar" colunas={1}>
-              <CaixaAviso titulo="Corrija a causa antes de reenfileirar" icone="fa-triangle-exclamation" tom="erro" espacado>
+            <SecaoFicha titulo="Resolver o erro" colunas={1}>
+              <CaixaAviso titulo="Confira no painel do provedor antes de escolher" icone="fa-triangle-exclamation" tom="erro" espacado>
                 <p>
-                  Reenfileirar zera as tentativas e devolve o repasse para a fila: o sistema tenta a transferência de novo, e se ela der certo o dinheiro
-                  sai de verdade para o pesquisador.
+                  <strong>Reenfileirar</strong>: a causa foi corrigida e o sistema tenta a transferência de novo. Se der certo, o dinheiro sai de verdade
+                  para o pesquisador.
                 </p>
-                <p>Se a transferência já foi feita por fora do sistema, não reenfileire: o pesquisador receberia duas vezes.</p>
+                <p>
+                  <strong>Marcar como pago</strong>: o pesquisador já recebeu (o provedor confirmou depois do erro, ou a transferência foi feita por fora).
+                  Conclui o repasse sem transferir de novo. Nesse caso, nunca reenfileire: ele receberia duas vezes.
+                </p>
               </CaixaAviso>
               {repasse.aguardandoConta && (
                 <CaixaAviso titulo="O pesquisador ainda não tem chave Pix verificada" icone="fa-circle-info" tom="aviso">
@@ -103,8 +126,8 @@ export function ModalReenfileirarRepasse({ authFetch, repasse, aoFechar, aoReenf
                 </CaixaAviso>
               )}
               <CampoObservacaoRevisao
-                rotulo="O que foi corrigido"
-                dica="Fica na auditoria financeira, com o seu nome. Ex.: chave Pix do pesquisador corrigida, saldo da conta do provedor reposto."
+                rotulo="O que foi feito"
+                dica="Fica na auditoria financeira, com o seu nome. Ex.: chave Pix do pesquisador corrigida; ou transferência confirmada no painel do provedor em 21/10."
                 valor={observacao}
                 aoMudar={setObservacao}
                 erro={erros.erroDe('observacao')}
@@ -113,7 +136,7 @@ export function ModalReenfileirarRepasse({ authFetch, repasse, aoFechar, aoReenf
           )}
 
           {!emErro && (
-            <CaixaAviso titulo="Nada a reenfileirar aqui" icone="fa-circle-info">
+            <CaixaAviso titulo="Nada a fazer aqui" icone="fa-circle-info">
               Este repasse espera o pesquisador cadastrar e verificar a chave Pix onde vai receber. Quando isso acontecer, ele sai desta lista e entra
               na fila de transferência sozinho.
             </CaixaAviso>
@@ -123,20 +146,32 @@ export function ModalReenfileirarRepasse({ authFetch, repasse, aoFechar, aoReenf
 
       {confirmando && (
         <ModalConfirmacao
-          titulo="Reenfileirar este repasse?"
-          rotuloConfirmar="Reenfileirar"
+          titulo={CONFIRMACAO[confirmando].titulo}
+          rotuloConfirmar={CONFIRMACAO[confirmando].rotulo}
           rotuloOcupado="Salvando..."
           ocupado={ocupado}
           perigo
           exigirCiencia
-          aoConfirmar={() => void reenfileirar()}
-          aoCancelar={() => setConfirmando(false)}
+          aoConfirmar={() => void aplicar(confirmando)}
+          aoCancelar={() => setConfirmando(null)}
         >
-          <p>
-            O repasse #{repasse.idRepasse} ({formatarMoeda(repasse.valorLiquido)}) volta para a fila e o sistema tenta transferir de novo. Se der certo, o
-            dinheiro sai para o pesquisador.
-          </p>
-          <p>Confirme só se a causa do erro foi corrigida e a transferência não foi feita por fora.</p>
+          {confirmando === 'reenfileirar' ? (
+            <>
+              <p>
+                O repasse #{repasse.idRepasse} ({formatarMoeda(repasse.valorLiquido)}) volta para a fila e o sistema tenta transferir de novo. Se der
+                certo, o dinheiro sai para o pesquisador.
+              </p>
+              <p>Confirme só se a causa do erro foi corrigida e a transferência não foi feita por fora.</p>
+            </>
+          ) : (
+            <>
+              <p>
+                O repasse #{repasse.idRepasse} ({formatarMoeda(repasse.valorLiquido)}) fica concluído, sem nova transferência, e as contribuições dele
+                passam para repassadas. Isso não dá para desfazer.
+              </p>
+              <p>Confirme só se viu no painel do provedor, ou no comprovante, que o pesquisador recebeu.</p>
+            </>
+          )}
         </ModalConfirmacao>
       )}
     </>

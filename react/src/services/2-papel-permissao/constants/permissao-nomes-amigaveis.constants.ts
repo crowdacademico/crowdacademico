@@ -336,9 +336,9 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
   },
   pagamento_revisao_resolver: {
     nome: 'Resolver Revisão de Pagamento',
-    resumo: 'Dar baixa em eventos, registrar devolução manual e reenfileirar repasse.',
+    resumo: 'Dar baixa em eventos, registrar devolução manual, reenfileirar ou marcar como pago um repasse.',
     oQueFaz:
-      'Permite dar baixa num evento em revisão manual, registrar que uma contribuição foi devolvida por fora do sistema e recolocar na fila um repasse em erro. Nenhuma dessas ações move dinheiro por si, mas reenfileirar faz o sistema tentar a transferência de novo.',
+      'Permite dar baixa num evento ainda não processado, registrar que uma contribuição foi devolvida por fora do sistema e, num repasse em erro, recolocá-lo na fila ou marcá-lo como pago quando o dinheiro já chegou ao pesquisador. Nenhuma dessas ações move dinheiro por si, mas reenfileirar faz o sistema tentar a transferência de novo.',
     porQueExiste:
       'É o ponto onde uma pessoa assume a decisão sobre dinheiro que o sistema se recusou a decidir sozinho. Toda ação exige uma observação e fica na auditoria financeira, com o nome de quem fez.',
     impacto: 'alto',

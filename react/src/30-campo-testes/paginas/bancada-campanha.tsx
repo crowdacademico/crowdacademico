@@ -32,13 +32,12 @@ import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisa
 // O painel de orçamento/cronograma e o passo a passo de criação vivem em views/12-campanha (compartilhados com
 // Minhas Campanhas).
 
-// T2, Bancada da Campanha. Toda chamada usa a sessão REAL do painel (`auth`, sempre um admin): leituras sempre
-// funcionaram assim (relatorio_visualizar vê tudo); as ESCRITAS que fazem sentido aqui (Alterar,
-// orçamento/cronograma, Aprovar, Rejeitar, Excluir) também: o admin já tem
-// `campanha_editar`/`campanha_aprovar`/`campanha_rejeitar`, e a RLS libera não importa quem seja o dono de
-// verdade (04_rls_policies.sql, pol_campanha_update). Criar campanha aqui usa o endpoint de suporte/admin (POST
-// /campanha/:idUsuario), porque a RLS exige id_usuario = id_usuario_atual() e não dá para "criar em nome de" um
-// pesquisador escolhido sem personificação.
+// T2, Bancada da Campanha. Toda chamada usa a sessão REAL do painel (`auth`), de qualquer papel: a RLS e as
+// permissões decidem o que cada um vê e faz. O admin vê tudo (relatorio_visualizar) e escreve em qualquer campanha
+// (`campanha_editar`/`campanha_aprovar`/`campanha_rejeitar`, 04_rls_policies.sql, pol_campanha_update); o
+// pesquisador vê as publicadas e as próprias, e só mexe nas próprias. Criar para outro pesquisador usa o endpoint de
+// suporte/admin (POST /campanha/:idUsuario), porque a RLS exige id_usuario = id_usuario_atual() e não dá para
+// "criar em nome de" alguém sem personificação; para a própria conta, a rota normal.
 //
 // Colunas, consultar, comentar, seguir e denunciar vêm de use-campanhas-campo-testes (os mesmos da T4); aqui fica
 // o que é só do T2: criar, alterar (com Aprovar/Rejeitar) e excluir.
@@ -317,6 +316,10 @@ export function BancadaCampanha({ auth }: PropsPagina) {
           criar={(dados) => {
             if (!pesquisadorEscolhido) {
               return Promise.reject(new Error('Escolha o dono da campanha.'));
+            }
+            // A própria conta cria pela rota normal (o pesquisador sem a permissão de criar para outro também testa).
+            if (pesquisadorEscolhido.idUsuario === auth.usuario?.idUsuario) {
+              return campanhaApi.criar(authRegistrado.authFetch, dados);
             }
             return campanhaApi.criarParaOutro(authRegistrado.authFetch, pesquisadorEscolhido.idUsuario, dados);
           }}

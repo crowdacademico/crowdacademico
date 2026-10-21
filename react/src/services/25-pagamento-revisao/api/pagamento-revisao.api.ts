@@ -35,7 +35,7 @@ export const pagamentoRevisaoApi = {
     authFetch(`${BASE}/revisoes${paraQueryString({ limite: TAMANHO_PAGINA_MAXIMO_API, ...filtro })}`)
       .then(tratarResposta<RevisaoPagamentoResponse[]>)
       .then(avisarSeTruncada('eventos em revisão')),
-  // Só evento em revisão manual (409 nos outros casos). Não muda contribuição nem repasse.
+  // Só evento ainda não processado (409 nos outros casos). Não muda contribuição nem repasse.
   resolverRevisao: (authFetch: AuthFetch, idEvento: number, observacao: string): Promise<void> =>
     authFetch(`${BASE}/revisoes/${idEvento}/resolver`, corpo({ observacao })).then(tratarResposta<void>),
 
@@ -44,7 +44,7 @@ export const pagamentoRevisaoApi = {
     authFetch(`${BASE}/reembolsos-manuais${paraQueryString({ limite: TAMANHO_PAGINA_MAXIMO_API })}`)
       .then(tratarResposta<ReembolsoManualResponse[]>)
       .then(avisarSeTruncada('reembolsos manuais')),
-  // reembolso_manual -> devolvido, com o valor que de fato foi devolvido (em reais; o banco confere o status e o valor).
+  // reembolso_manual -> devolvido, sempre com o valor inteiro da contribuição (em reais; o banco confere o status e o valor).
   concluirReembolsoManual: (authFetch: AuthFetch, idContribuicao: number, valor: number, observacao: string): Promise<void> =>
     authFetch(`${BASE}/reembolsos-manuais/${idContribuicao}/concluir`, corpo({ valor, observacao })).then(tratarResposta<void>),
 
@@ -56,4 +56,7 @@ export const pagamentoRevisaoApi = {
   // erro -> pendente, depois de a causa ter sido corrigida (só repasse em erro; 409 nos outros casos).
   reenfileirarRepasse: (authFetch: AuthFetch, idRepasse: number, observacao: string): Promise<void> =>
     authFetch(`${BASE}/repasses/${idRepasse}/reenfileirar`, corpo({ observacao })).then(tratarResposta<void>),
+  // erro -> concluido quando o dinheiro já chegou ao pesquisador (só repasse em erro; 409 nos outros casos).
+  marcarRepassePago: (authFetch: AuthFetch, idRepasse: number, observacao: string): Promise<void> =>
+    authFetch(`${BASE}/repasses/${idRepasse}/marcar-pago`, corpo({ observacao })).then(tratarResposta<void>),
 };

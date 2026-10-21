@@ -12,7 +12,7 @@ import {
   type PreviaDoEmail,
 } from '../service/email.service.caixa';
 
-// Caixa de E-mails do Campo de Testes (T6). Exige notificacao_processar, como a aba Notificações.
+// Caixa de E-mails do Campo de Testes (T6). Qualquer conta vê os próprios e-mails (RLS); limpar exige notificacao_processar.
 @Controller('campo-testes/email')
 export class EmailControllerCaixa {
   constructor(private readonly service: EmailServiceCaixa) {}

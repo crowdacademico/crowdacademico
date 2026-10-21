@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { GenericTable } from '../../components/crud/generic-table';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
-import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
+import { listarUsuariosVisiveis } from '../servicos/util/usuarios-visiveis.util';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { ORDEM_PODER_PAPEL, PAPEL_SEM_EXTRA } from '../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
 import {
@@ -27,7 +27,8 @@ import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisa
 // Perfil pode não existir (upgrade nunca feito): os campos do perfil ficam opcionais.
 interface PesquisadorLinha extends Partial<PerfilPesquisadorResponse> {
   idUsuario: number;
-  usuario: UsuarioResponse;
+  // null: pesquisador cuja conta a sessão não pode ler (quem não tem usuario_visualizar_sensivel vê só a própria).
+  usuario: UsuarioResponse | null;
   nome: string;
   // Papéis além do padrão 'usuario', separados por vírgula (ou PAPEL_SEM_EXTRA).
   papel: string;
@@ -37,7 +38,8 @@ interface PesquisadorLinha extends Partial<PerfilPesquisadorResponse> {
 }
 
 // T1, Bancada do Pesquisador. Trabalha em cima de REGISTROS REAIS (todos os usuários, com o perfil de
-// pesquisador quando existe). Toda escrita usa a sessão REAL do painel (`auth`).
+// pesquisador quando existe). Toda escrita usa a sessão REAL do painel (`auth`), de qualquer papel: sem permissão de
+// listar usuários, a tabela mostra a própria conta (Upgrade, Alterar) e os pesquisadores (Seguir, Denunciar).
 //
 // Os modais são os de Usuário (`views/1-usuario/`, o CRUD real), não duplicados aqui. O Upgrade abre o mesmo
 // ModalUpgradePesquisador de qualquer conta, que decide sozinho entre o endpoint self-service e o "para outro".
@@ -85,25 +87,31 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   // Papéis de todo mundo numa requisição só; papel padrão 'usuario' não conta como "extra".
   const listar = useCallback(async (): Promise<PesquisadorLinha[]> => {
     const [usuarios, perfis, vinculos] = await Promise.all([
-      usuarioApi.listar(auth.authFetch),
+      listarUsuariosVisiveis(auth),
       perfilPesquisadorApi.listar(auth.authFetch).catch(() => []),
       usuarioPapelApi.listarTudo(auth.authFetch).catch(() => []),
     ]);
+    const usuarioPorId = new Map(usuarios.map((usuario) => [usuario.idUsuario, usuario]));
     const perfilPorId = new Map(perfis.map((perfil) => [perfil.idUsuario, perfil]));
-    return usuarios.map((usuario) => {
-      const perfil = perfilPorId.get(usuario.idUsuario);
-      const papeis = vinculos.filter((v) => v.idUsuario === usuario.idUsuario && v.nomePapel !== 'usuario');
+    // Contas visíveis e perfis de pesquisador (a RLS mostra todos): sem a lista de usuários, o pesquisador ainda
+    // aparece para seguir e denunciar, só sem o nome.
+    const ids = [...new Set([...usuarioPorId.keys(), ...perfilPorId.keys()])].sort((a, b) => a - b);
+    return ids.map((idUsuario) => {
+      const usuario = usuarioPorId.get(idUsuario) ?? null;
+      const perfil = perfilPorId.get(idUsuario);
+      const papeis = vinculos.filter((v) => v.idUsuario === idUsuario && v.nomePapel !== 'usuario');
       return {
         ...perfil,
-        idUsuario: usuario.idUsuario,
+        idUsuario,
         usuario,
-        nome: usuario.nome,
+        nome: usuario?.nome ?? `Pesquisador #${idUsuario}`,
         papel: papeis.map((v) => v.nomePapel).join(', ') || PAPEL_SEM_EXTRA,
         titulo: perfil?.tituloAcademico ? ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico] : '',
         status: perfil?.statusPesquisador ? ROTULO_STATUS_PESQUISADOR[perfil.statusPesquisador] : '',
-        origem: origemUsuario(usuario.idUsuario),
+        origem: origemUsuario(idUsuario),
       };
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.authFetch]);
 
   return (
@@ -138,6 +146,9 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
         // Upgrade só para quem não é pesquisador; seguir e denunciar só perfil de pesquisador, nunca o próprio.
         acaoIndisponivel={(linha, acao) => {
           const ehPesquisador = linha.statusPesquisador !== undefined;
+          if (linha.usuario === null && (acao === 'alterar' || acao === 'consultar' || acao === 'excluir' || acao === 'upgrade')) {
+            return 'Sem permissão para ver os dados desta conta.';
+          }
           if (acao === 'upgrade') return ehPesquisador ? null : undefined;
           if (acao === 'seguir' || acao === 'deixarDeSeguir') {
             if (!ehPesquisador || acao === (seguidos.has(linha.idUsuario) ? 'seguir' : 'deixarDeSeguir')) return null;
@@ -157,7 +168,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
         auth={authRegistrado}
         alterando={alterando}
         consultando={consultando}
-        excluindo={excluindo && excluindo.usuario}
+        excluindo={excluindo?.usuario ?? null}
         fecharAlterando={() => setAlterando(null)}
         fecharConsultando={() => setConsultando(null)}
         fecharExcluindo={() => setExcluindo(null)}

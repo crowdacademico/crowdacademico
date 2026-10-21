@@ -34,4 +34,14 @@ export class PagamentoRevisaoControllerRepasses {
   ): Promise<void> {
     await this.service.reenfileirar(idRepasse, dto.observacao);
   }
+
+  // Exige pagamento_revisao_resolver. Só repasse em 'erro' (409 nos outros casos).
+  @Post(':idRepasse/marcar-pago')
+  @HttpCode(204)
+  async marcarPago(
+    @Param('idRepasse', ParseIntPipe) idRepasse: number,
+    @Body() dto: PagamentoRevisaoRequestObservacao,
+  ): Promise<void> {
+    await this.service.marcarPago(idRepasse, dto.observacao);
+  }
 }

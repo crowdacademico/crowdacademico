@@ -25,7 +25,8 @@ export class PagamentoRevisaoControllerEventos {
     return this.service.listar(query.situacao, query.limite);
   }
 
-  // Exige pagamento_revisao_resolver. Só evento em revisão manual (409 nos outros casos).
+  // Exige pagamento_revisao_resolver. Só evento ainda não processado: em revisão manual ou em "tentar de novo" (409 nos
+  // outros casos).
   @Post(':idEvento/resolver')
   @HttpCode(204)
   async resolver(

@@ -33,6 +33,9 @@ export const CLASSE_BADGE_SITUACAO_REVISAO: Record<SituacaoRevisao, string> = {
   processado: 'badge-sucesso',
 };
 
+/*
+// RETIRADO DO CODIGO, para manter o nome do evento como veio do provedor (nest/src/23-pagamento/adapters/asaas/asaas-webhook.adapter.ts).
+
 // `tipo_evento` guarda o nome do evento COMO O PROVEDOR mandou (nest/src/23-pagamento/adapters/asaas/asaas-webhook.adapter.ts).
 // Aqui só a tradução para quem opera; nome fora do dicionário aparece como veio (nunca quebra, só fica menos bonito).
 const ROTULO_TIPO_EVENTO: Partial<Record<string, string>> = {
@@ -53,3 +56,4 @@ const ROTULO_TIPO_EVENTO: Partial<Record<string, string>> = {
 export function rotuloTipoEvento(tipoEvento: string): string {
   return ROTULO_TIPO_EVENTO[tipoEvento] ?? tipoEvento;
 }
+*/

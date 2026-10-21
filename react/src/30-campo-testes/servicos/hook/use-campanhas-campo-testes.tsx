@@ -13,7 +13,7 @@ import {
   STATUS_ACEITA_SEGUIR,
 } from '../../../services/12-campanha/constants/status-campanha.constants';
 import { seguirCampanhaApi } from '../../../services/16-seguir/api/seguir-campanha.api';
-import { usuarioApi } from '../../../services/1-usuario/api/usuario.api';
+import { listarUsuariosVisiveis } from '../util/usuarios-visiveis.util';
 import { renderizarArrecadado } from '../../../views/12-campanha/colunas-campanha';
 import { ModalConsultarCampanha } from '../../../views/12-campanha/modal-consultar-campanha';
 import { ModalDenunciar } from '../../../views/19-denuncia/modal-denunciar';
@@ -58,7 +58,7 @@ export function useCampanhasCampoTestes(auth: UseAuthReturn, aoMudarSeguidas?: (
     if (auth.carregando) {
       return [];
     }
-    const [campanhas, todos] = await Promise.all([campanhaApi.listar(auth.authFetch), usuarioApi.listar(auth.authFetch)]);
+    const [campanhas, todos] = await Promise.all([campanhaApi.listar(auth.authFetch), listarUsuariosVisiveis(auth)]);
     setUsuarios(todos);
     return campanhas.map((campanha) => ({
       ...campanha,

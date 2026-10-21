@@ -6,7 +6,6 @@ import {
   ORDEM_SITUACAO_REVISAO,
   ROTULO_SITUACAO_REVISAO,
   SITUACOES_PENDENTES,
-  rotuloTipoEvento,
 } from '../../services/25-pagamento-revisao/constants/pagamento-revisao.constants';
 import { ModalResolverRevisao } from './modal-resolver-revisao';
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
@@ -28,7 +27,7 @@ interface RevisaoLinha extends RevisaoPagamentoResponse {
 // (DS-49): primeiro o que ainda pede algo, o mais antigo no topo: "Em revisão manual" é o caso sério (o provedor diz que o
 // dinheiro se moveu e o sistema NÃO aplicou de propósito, ex.: pagamento de uma contribuição que já expirou), e "Tentar de
 // novo" foi um erro passageiro. Depois, o histórico, do mais novo para o mais antigo. Abre sem filtro. Alterar abre
-// a baixa (só nos em revisão manual); Consultar abre qualquer evento só para ler.
+// a baixa (nos que ainda não foram processados); Consultar abre qualquer evento só para ler.
 // O sinal diz para onde o dinheiro andou na conta da plataforma: "+" entrou (verde), "-" saiu (estorno, devolução,
 // repasse; cor normal: sair dinheiro é o sistema funcionando, não um erro). Sem sinal quando nada se moveu.
 const SINAL = { entrada: '+', saida: '-' } as const;
@@ -51,7 +50,7 @@ export function ListarRevisoesPagamento({ auth }: PropsPagina) {
     const esperandoDesde = (revisao: RevisaoPagamentoResponse) => (SITUACOES_PENDENTES.includes(revisao.situacao) ? revisao.recebidoEm : null);
     return ordenarFilaSla(revisoes, esperandoDesde, (revisao) => revisao.recebidoEm).map((revisao) => ({
       ...revisao,
-      tipo: rotuloTipoEvento(revisao.tipoEvento),
+      tipo: revisao.tipoEvento,
       situacaoRotulo: ROTULO_SITUACAO_REVISAO[revisao.situacao],
       motivoTexto: revisao.motivo ?? '-',
       recebidoEmData: revisao.recebidoEm,
@@ -67,7 +66,7 @@ export function ListarRevisoesPagamento({ auth }: PropsPagina) {
         ajuda="Todos os avisos do provedor de pagamento, do mais novo para o mais antigo. Processado: o sistema aplicou o aviso. Em revisão manual: o provedor diz que o dinheiro se moveu e o sistema não aplicou de propósito, então uma pessoa precisa decidir. Tentar de novo: erro passageiro; o sistema tenta de novo sozinho e, se o aviso continuar sem dono depois do prazo do parâmetro webhook_reprocessar_horas, ele passa para revisão manual. Revisão resolvida: uma pessoa já deu baixa.. O que ainda pede algo vem primeiro, o mais antigo no topo."
         colunas={[
           { chave: 'idEvento', rotulo: 'id', tipo: 'id' },
-          { chave: 'motivoTexto', rotulo: 'motivo', tipo: 'nome', umaLinha: true },
+          { chave: 'motivoTexto', rotulo: 'erro de processamento', tipo: 'nome', umaLinha: true },
           { chave: 'tipo', rotulo: 'evento', tipo: 'texto' },
           { chave: 'recebidoEmData', rotulo: 'recebido em', tipo: 'dataHora' },
           { chave: 'valor', rotulo: 'valor', tipo: 'dinheiro', renderizar: renderizarValor, textoExibido: textoValor },
@@ -93,8 +92,8 @@ export function ListarRevisoesPagamento({ auth }: PropsPagina) {
           consultar: (linha) => setAberto({ revisao: linha, somenteLeitura: true }),
         }}
         acaoIndisponivel={(linha, acao) =>
-          acao === 'alterar' && linha.situacao !== 'em_revisao_manual'
-            ? 'Só um evento em revisão manual pode ser resolvido.'
+          acao === 'alterar' && !SITUACOES_PENDENTES.includes(linha.situacao)
+            ? 'Este evento já foi processado.'
             : undefined
         }
         filtrosFacetados={[

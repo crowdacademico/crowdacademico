@@ -1237,7 +1237,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | GET · POST · DELETE | `/conta-recebimento` *(a chave Pix do próprio pesquisador, conferida no provedor)* |
 | AUTH | GET | `/conta-recebimento/repasses` · `/conta-recebimento/cartao-a-liberar` |
 | AUTH | GET | `/pagamento-admin/revisoes` · `/pagamento-admin/reembolsos-manuais` · `/pagamento-admin/repasses/atencao` |
-| AUTH | POST | `/pagamento-admin/revisoes/:id/resolver` · `/pagamento-admin/reembolsos-manuais/:id/concluir` · `/pagamento-admin/repasses/:id/reenfileirar` |
+| AUTH | POST | `/pagamento-admin/revisoes/:id/resolver` · `/pagamento-admin/reembolsos-manuais/:id/concluir` · `/pagamento-admin/repasses/:id/reenfileirar` · `/pagamento-admin/repasses/:id/marcar-pago` |
 | AUTH | GET | `/campo-testes/pagamento` *(T5, bancada de pagamento: só fora de produção, como todo o Campo de Testes)* |
 | AUTH | POST | `/campo-testes/pagamento/contribuicoes/:id/pagar` · `/campo-testes/pagamento/contribuicoes/:id/vencer` · `/campo-testes/pagamento/contribuicoes/:id/liberar` · `/campo-testes/pagamento/contribuicoes/:id/repetir-aviso` |
 | AUTH | POST | `/campo-testes/pagamento/repasses/:id/concluir` · `/campo-testes/pagamento/repasses/:id/falhar` · `/campo-testes/pagamento/tarefas/:tarefa` · `/campo-testes/pagamento/chave-pix` |

@@ -60,8 +60,8 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90031 | `fn_valida_soma_pesos_score_config` | `score_config` | Dimensão ativa precisa de pelo menos um item ativo com peso maior que zero (03-10-2026) |
 | 90032 | `contestar_denuncia` | `denuncia` | Contestação sem texto (03-10-2026) |
 | 90033 | `decidir_contestacao` | `denuncia` | Decidir contestação sem justificativa (03-10-2026) |
-| 90034 | `resolver_revisao_pagamento`, `concluir_reembolso_manual` | `evento_pagamento`, `contribuicao` | Toda ação manual sobre pagamento exige uma observação escrita do que foi feito (17-10-2026) |
-| 90035 | `listar_revisoes_pagamento`, `concluir_reembolso_manual` | `evento_pagamento`, `contribuicao` | Filtro de situação inválido, ou valor devolvido à mão igual a zero ou acima do valor da contribuição (17-10-2026) |
+| 90034 | `resolver_revisao_pagamento`, `concluir_reembolso_manual`, `reenfileirar_repasse`, `marcar_repasse_pago` | `evento_pagamento`, `contribuicao`, `repasse` | Toda ação manual sobre pagamento exige uma observação escrita do que foi feito (17-10-2026) |
+| 90035 | `listar_revisoes_pagamento`, `concluir_reembolso_manual` | `evento_pagamento`, `contribuicao` | Filtro de situação inválido, ou valor devolvido à mão diferente do valor inteiro da contribuição (21-10-2026) |
 | 90036 | `ajustar_tarifa_pagamento` | `contribuicao` | Tarifa real informada pelo provedor fora do esperado (negativa ou absurda): o ajuste automático não é feito (17-10-2026) |
 | 90037 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | No cartão, a contribuição está abaixo do mínimo (`valor_minimo_contribuicao_cartao`) (17-10-2026) |
 | 90038 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | No cartão, a contribuição está acima do máximo (`valor_maximo_contribuicao_cartao`): para mais, o Pix (17-10-2026) |
@@ -118,7 +118,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91046 | `contestar_denuncia` | `denuncia` | O pesquisador já tem uma contestação esperando análise (03-10-2026) |
 | 91047 | `decidir_contestacao` | `denuncia` | Só contestação esperando análise se decide (03-10-2026) |
 | 91048 | `fn_valida_contestacao_pendente` | `denuncia` | Com contestação esperando, a situação da denúncia só muda pela decisão dela (03-10-2026) |
-| 91049 | `resolver_revisao_pagamento`, `concluir_reembolso_manual`, `reenfileirar_repasse` | `evento_pagamento`, `contribuicao`, `repasse` | A ação manual só vale para o item na situação certa: evento em revisão manual, contribuição em reembolso manual, repasse em erro (17-10-2026) |
+| 91049 | `resolver_revisao_pagamento`, `concluir_reembolso_manual`, `reenfileirar_repasse`, `marcar_repasse_pago` | `evento_pagamento`, `contribuicao`, `repasse` | A ação manual só vale para o item na situação certa: evento ainda não processado, contribuição em reembolso manual, repasse em erro (21-10-2026) |
 | 91050 | `fn_valida_transicao_status_contribuicao` | `contribuicao` | Mudança de situação da contribuição fora da máquina de estados (ex.: sair de "devolvido") (17-10-2026) |
 | 91051 | `fn_valida_solicitacao_encerramento` | `solicitacao_encerramento` | Pedido de "Encerrar antes do prazo" de campanha tudo-ou-nada que ainda não bateu a meta: o caminho é "Cancelar o projeto", que devolve o dinheiro (17-10-2026) |
 | 91052 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | Pagamento com cartão desligado pelo administrador (`cartao_habilitado`) (17-10-2026) |
@@ -164,7 +164,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92034 | `contestar_denuncia` | `denuncia` | Só o pesquisador penalizado pela denúncia a contesta (03-10-2026) |
 | 92035 | `decidir_contestacao` | `denuncia` | Sem permissão (`denuncia_responder`) para decidir contestação (03-10-2026) |
 | 92036 | `decidir_contestacao` | `denuncia` | Quem julgou a denúncia não decide a contestação contra a própria decisão (10-10-2026) |
-| 92037 | `listar_revisoes_pagamento`, `resolver_revisao_pagamento`, `listar_reembolsos_manuais`, `concluir_reembolso_manual`, `listar_repasses_atencao`, `reenfileirar_repasse` | `evento_pagamento`, `contribuicao`, `repasse` | Sem permissão para ver ou resolver as pendências de pagamento (17-10-2026) |
+| 92037 | `listar_revisoes_pagamento`, `resolver_revisao_pagamento`, `listar_reembolsos_manuais`, `concluir_reembolso_manual`, `listar_repasses_atencao`, `reenfileirar_repasse`, `marcar_repasse_pago` | `evento_pagamento`, `contribuicao`, `repasse` | Sem permissão para ver ou resolver as pendências de pagamento (17-10-2026) |
 | 92038 | `resumo_contribuicoes_campanha` | `contribuicao` | Só o dono da campanha ou quem tem `contribuicao_visualizar_sensivel` vê o resumo das contribuições dela (18-10-2026) |
 | 92039 | `reenviar_notificacao`, `cancelar_notificacao` | `notificacao` | Sem permissão (`notificacao_processar`) para reenviar ou cancelar e-mails (19-10-2026) |
 

@@ -276,7 +276,7 @@ export const ROTAS_ADMIN: Rota[] = [
   // Sem rota própria (são modais abertos direto pela listagem): Criar/Alterar/Consultar/Excluir de Usuário,
   // Parâmetro do Sistema, Área de Conhecimento, Tipo de Link e Motivo de Denúncia; Alterar de Papel; Consultar
   // de Campanha e de Pesquisador; Criar, Consultar, Alterar e Excluir de Termo de Uso; Consultar e dar baixa
-  // (Eventos de Pagamento), registrar devolução (Reembolsos Manuais) e reenfileirar (Repasses em Atenção).
+  // (Eventos de Pagamento), registrar devolução (Reembolsos Manuais) e reenfileirar ou marcar como pago (Repasses em Atenção).
 
   // Campo de Testes: só em desenvolvimento e só se a pasta existir (ver campo-testes-opcional.ts).
   ...(campoTestes?.ROTAS_CAMPO_TESTES ?? []),
