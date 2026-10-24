@@ -2,7 +2,7 @@
 
 > **Em palavras simples:** este documento explica como o app React (`react/`) está organizado hoje e por quê, para quem for criar uma tela nova (os módulos que faltam e a área pública) encontrar o padrão pronto e não reinventar nada. Ele descreve o **estado atual**: a história das decisões antigas foi guardada na pasta de informações, fora do repositório, em 03-10-2026. As regras visuais (cores, tipografia, larguras, componentes de interface) ficam no documento de design system da mesma pasta.
 
-> 📌 **Requisitos:** 122 RFs. A numeração de RF citada aqui é a mesma da `MATRIZ-RASTREABILIDADE-RF.md`.
+> 📌 **Requisitos:** 125 RFs desde 24-10-2026, quando a numeração mudou. Citação de RF escrita antes dessa data está na numeração antiga; a `MATRIZ-RASTREABILIDADE-RF.md` traz a conversão.
 
 | Símbolo | Significado |
 |---|---|
@@ -403,18 +403,23 @@ Peças de tela compartilhadas entre módulos: `views/1-usuario/modais-usuario.ts
 
 ### Campo de Testes (`src/30-campo-testes/`)
 
-> **Em palavras simples:** o Campo de Testes é a parte do painel onde o administrador faz, com a própria conta, o que um usuário ou pesquisador faria na área pública (comentar, seguir, denunciar, pedir upgrade, criar campanha), usando os mesmos endpoints. Serve para achar problema rápido. Tudo dele mora numa pasta só, e apagar essa pasta não quebra o sistema.
+> **Em palavras simples:** o Campo de Testes é a parte do painel onde qualquer conta (o administrador, um usuário comum ou um pesquisador) faz, com a própria sessão, o que faria na área pública (comentar, seguir, denunciar, pedir upgrade, criar campanha), usando os mesmos endpoints. Serve para achar problema rápido. Tudo dele mora numa pasta só, e apagar essa pasta não quebra o sistema.
 
 - **Decisão:** o Campo de Testes usa o sistema; o sistema nunca importa o Campo de Testes. Ele entra por uma porta só: `src/30-campo-testes/plugin.ts` exporta as rotas e o contexto, e `services/router/campo-testes-opcional.ts` carrega esse arquivo com `import.meta.glob`, só em desenvolvimento. A regra `no-restricted-imports` do ESLint acusa qualquer import do sistema para dentro da pasta.
 - **Motivo:** dependência de mão única (o padrão "pasta por funcionalidade" do Bulletproof React). Em produção, nem a rota nem o código do Campo de Testes vão para o build.
 - **Caso-limite aceito:** algumas peças do sistema têm uma opção que hoje só o Campo de Testes usa, sem importar nada dele: as ações da seção `AcaoCampoTestes` e o `gerarCpfDeTeste` do campo de CPF e do modal de upgrade. O CSS dele continua em `assets/css/8-campo-testes.css`, por último na ordem dos estilos.
 
+- **Decisão (21-10-2026):** o Campo de Testes funciona logado com qualquer papel, não só com o admin. Dentro dele, nenhuma tela exige permissão de admin: cada uma lê pela sessão de quem está logado, e as regras de acesso do banco decidem o que aparece. Sem permissão de listar usuários, a lista cai para a própria conta (`servicos/util/usuarios-visiveis.util.ts`).
+- **Motivo:** testar os fluxos do usuário comum e do pesquisador (contribuir e pagar, o próprio upgrade, criar a própria campanha, ver os próprios e-mails) enquanto a área pública não existe. A barreira do Campo de Testes é não existir em produção.
+- **Caso-limite:** o que tem efeito para todo mundo continua com permissão: "Limpar a caixa" da T6 (`notificacao_processar`) e os interruptores das tarefas automáticas, que são Parâmetros do sistema. O "Rodar agora" da T5 fica liberado, porque faz o mesmo que o sistema faz sozinho de tempos em tempos.
+
 **As telas** (todas com a `GenericTable` e o Registro de Chamadas, que mostra cada chamada feita à API):
-- **T1, Bancada do Pesquisador:** todos os usuários, com papel, título, status e score; colunas "upgrade" (cadeado, só para quem não é pesquisador, com o botão "Gerar CPF válido" no modal) e "denunciar" (só pesquisador, nunca o próprio perfil); Alterar, Consultar e Excluir abrem os modais reais de Usuário. Coluna "seguir" (coração, só em pesquisador, nunca o próprio), para o seguir pesquisador (RF-028).
-- **T2, Bancada da Campanha:** todas as campanhas; colunas "comentar", "seguir" e "denunciar"; Criar (em nome de um pesquisador), Alterar (com Aprovar e Rejeitar enquanto aguarda) e Excluir (com a exclusão forçada para quem já passou do rascunho).
+- **T1, Bancada do Pesquisador:** todos os usuários (sem permissão de listar usuários: a própria conta e os pesquisadores, estes como "Pesquisador #id"), com papel, título, status e score; colunas "upgrade" (cadeado, só para quem não é pesquisador, com o botão "Gerar CPF válido" no modal) e "denunciar" (só pesquisador, nunca o próprio perfil); Alterar, Consultar e Excluir abrem os modais reais de Usuário. Coluna "seguir" (coração, só em pesquisador, nunca o próprio), para o seguir pesquisador (RF-028).
+- **T2, Bancada da Campanha:** todas as campanhas; colunas "comentar", "seguir" e "denunciar"; Criar (em nome de um pesquisador; escolhendo a própria conta, pela rota normal), Alterar (com Aprovar e Rejeitar enquanto aguarda) e Excluir (com a exclusão forçada para quem já passou do rascunho).
 - **T3, Minhas Campanhas:** a tela real de `views/12-campanha`, para testar o fluxo do pesquisador.
 - **T4, Seguindo:** as campanhas que a conta segue, com as mesmas colunas do T2 e só Consultar na coluna Ações; no segundo card, os pesquisadores que ela segue. Cada card tem o próprio Registro de Chamadas, como os da T5 (as chamadas de `/seguir-pesquisador` ficam no dos pesquisadores). Deixar de seguir tira da lista na hora.
-- **T6, Caixa de E-mails (19-10-2026):** o que o provedor de e-mail de teste "enviou" (nada sai para fora): para, assunto, prévia do HTML (num `iframe` com `sandbox`, sem script) e o texto puro; no topo, o card "Enviar os e-mails" (a tarefa automática, com o interruptor e o Rodar agora; nasce desligado no banco de demonstração, então o e-mail espera na fila até alguém conferir) e "Limpar a caixa" esvazia. O card é o mesmo componente dos cards da T5 (`cards-tarefas-automaticas.tsx`, que recebe a lista de cards), na mesma grade e com a mesma altura: título e texto de cada card reservam o espaço do maior de todos os cards (`.cartao-tarefa__pilha`, `8-campo-testes.css`), então um card sozinho mede igual a um da fileira da T5 em qualquer tela. A caixa mora na memória do Nest. Passo a passo em `.Tutorial-email.md`.
+- **T5, Bancada de Pagamento:** faz o papel de quem paga e do provedor (contribuir, Pagar, Vencer, Liberar, Repetir aviso, Concluir e Falhar a transferência) e roda as tarefas automáticas na hora. Cada conta vê as próprias contribuições e os repasses das próprias campanhas; o admin vê tudo. Detalhe em `DOCUMENTACAO_FINANCEIRO.md`, seção 2.3.
+- **T6, Caixa de E-mails (19-10-2026):** o que o provedor de e-mail de teste "enviou" (nada sai para fora; cada conta vê os próprios e-mails, o admin vê todos): para, assunto, prévia do HTML (num `iframe` com `sandbox`, sem script) e o texto puro; no topo, o card "Enviar os e-mails" (a tarefa automática, com o interruptor e o Rodar agora; nasce desligado no banco de demonstração, então o e-mail espera na fila até alguém conferir) e "Limpar a caixa" esvazia. O card é o mesmo componente dos cards da T5 (`cards-tarefas-automaticas.tsx`, que recebe a lista de cards), na mesma grade e com a mesma altura: título e texto de cada card reservam o espaço do maior de todos os cards (`.cartao-tarefa__pilha`, `8-campo-testes.css`), então um card sozinho mede igual a um da fileira da T5 em qualquer tela. A caixa mora na memória do Nest. Passo a passo em `.Tutorial-email.md`.
 - **Guia de Estilo:** cores nos dois temas, tipografia e componentes reais. A lista de pares de contraste que ele mostra é do sistema (`assets/css/pares-contraste.json`, a mesma que o `npm run contraste` confere).
 
 📌 **Peças compartilhadas:** `servicos/hook/use-campanhas-campo-testes.tsx` entrega a toda tela de campanha do Campo de Testes as colunas, as facetas, as ações de quem visita a campanha (Consultar, Comentar, Seguir, Deixar de seguir, Denunciar), as regras de quando cada uma vale e os modais delas. O T2 acrescenta só o que é dele; o T4 só filtra as seguidas. Um "T" novo de campanha começa por esse hook.
@@ -426,6 +431,41 @@ Peças de tela compartilhadas entre módulos: `views/1-usuario/modais-usuario.ts
 Cinco abas (`BarraAbasBotoes`): **Visão Geral** (faixa de saúde, cartões de métrica que levam à lista já filtrada, acessados recentemente, prévia de notificações), **Regras do Negócio** (os parâmetros agrupados por assunto, `configuracoes-grupos.constants.ts`; chave sem grupo cai em "Outras"), **Identidade Visual** (espaço reservado: a gestão de logo e favicon não foi construída) e **Saúde**. Saúde e métricas vêm de duas requisições independentes, para a falta de banco aparecer mesmo quando o resumo falha.
 
 📌 **Aba Notificações (19-10-2026):** fica entre Regras do Negócio e Identidade Visual e mostra `views/27-notificacao/listar-notificacoes.tsx` (a tela mora no módulo dono do dado). Todos os e-mails do sistema, com situação, tipo, destinatário e assunto; Consultar abre a ficha (dados do texto, erro, tentativas, provedor); as ações Reenviar e Cancelar envio (novas em `AcaoSistema`, `5-coluna-acoes.tsx`) aparecem apagadas, com o motivo, quando não se aplicam. Na Visão Geral, o cartão Notificações mostra quantos estão na fila e quantos falharam, com "Ver os e-mails". Exige `notificacao_processar` (sem ela, a mensagem de 403 da API).
+
+### Pagamentos (`views/25-pagamento-revisao`)
+
+Três telas para o que pede uma pessoa: **Eventos de Pagamento** (todos os avisos do provedor; Dar baixa nos que ainda não foram processados), **Reembolsos Manuais** (registrar a devolução feita por fora, sempre com o valor inteiro da contribuição) e **Repasses em Atenção** (repasse em erro: Reenfileirar ou Marcar como pago). As regras do dinheiro estão em `DOCUMENTACAO_FINANCEIRO.md`.
+
+#### Nome do evento: como o provedor manda
+
+- **Decisão (21-10-2026):** a coluna "evento" e o subtítulo do modal de baixa mostram o nome do evento exatamente como o provedor manda (`PAYMENT_RECEIVED`, `TRANSFER_DONE`...), sem tradução. A coluna que mostra o motivo de o aviso não ter sido aplicado se chama "erro de processamento".
+- **Motivo:** pedido do Lucas: soa técnico, é o que se vê nos painéis de gateway e bate com o painel do Asaas, então quem opera procura o mesmo nome nos dois lugares.
+- **Caso-limite:** como nada é traduzido, todo evento novo do provedor aparece sozinho, sem lista para manter. Para voltar a traduzir, basta recolocar o dicionário abaixo em `services/25-pagamento-revisao/constants/pagamento-revisao.constants.ts` e chamar `rotuloTipoEvento(revisao.tipoEvento)` em `listar-revisoes-pagamento.tsx` (coluna evento) e em `modal-resolver-revisao.tsx` (subtítulo). Nome fora do dicionário aparece como veio.
+
+O dicionário que existia até 21-10-2026:
+
+| Evento do provedor | Tradução |
+|---|---|
+| `PAYMENT_CONFIRMED` | Pagamento confirmado |
+| `PAYMENT_RECEIVED` | Pagamento recebido |
+| `PAYMENT_OVERDUE` | Cobrança vencida |
+| `PAYMENT_DELETED` | Cobrança removida |
+| `PAYMENT_REFUNDED` | Pagamento estornado |
+| `PAYMENT_PARTIALLY_REFUNDED` | Pagamento estornado em parte |
+| `TRANSFER_DONE` | Repasse concluído |
+| `TRANSFER_FAILED` | Repasse falhou |
+| `TRANSFER_CANCELLED` | Repasse cancelado |
+| `PAYMENT_CHARGEBACK_REQUESTED` | Contestação de cartão aberta |
+| `PAYMENT_CHARGEBACK_DISPUTE` | Contestação de cartão em disputa |
+| `PAYMENT_AWAITING_CHARGEBACK_REVERSAL` | Contestação de cartão ganha |
+
+```ts
+const ROTULO_TIPO_EVENTO: Partial<Record<string, string>> = { PAYMENT_CONFIRMED: 'Pagamento confirmado', /* ...a tabela acima... */ };
+
+export function rotuloTipoEvento(tipoEvento: string): string {
+  return ROTULO_TIPO_EVENTO[tipoEvento] ?? tipoEvento;
+}
+```
 
 ---
 

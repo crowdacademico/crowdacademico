@@ -1,6 +1,6 @@
 # ERRCODE customizado - `05_regras_negocio.sql`
 
-> 📌 **Numeração de RF:** os requisitos têm 122 RFs. Citações de RF por número neste documento foram escritas em datas diferentes e podem estar numa numeração anterior (a numeração mudou em 06-09, 21-09 e 29-09-2026). A `MATRIZ-RASTREABILIDADE-RF.md` está inteira na numeração vigente e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
+> 📌 **Numeração de RF:** os requisitos têm 125 RFs. Citações de RF por número neste documento foram escritas em datas diferentes e podem estar numa numeração anterior (a numeração mudou em 06-09, 21-09 e 29-09-2026). A `MATRIZ-RASTREABILIDADE-RF.md` está inteira na numeração vigente e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
 
 Referência rápida dos `RAISE EXCEPTION` com ERRCODE customizado dos arquivos `arquivos_banco_dados/05_regras_negocio.sql` (e de `deslizar_datas_campanha`/`suspender_pesquisador`, quando aplicável). Nasceu com 42 códigos em 03-08-2026 e hoje tem 55, todos com `USING ERRCODE = '<código>'`. Antes desta mudança, todas caíam no SQLSTATE genérico do Postgres para qualquer `RAISE EXCEPTION` sem código explícito (`P0001`) - o que impedia o Nest de diferenciar "sem permissão" de "dado inválido" de "estado conflitante".
 
@@ -33,7 +33,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90004 | `fn_valida_area_conhecimento_nivel2` | `campanha` | Área de conhecimento precisa ser nível 2 (não a grande área raiz) |
 | 90005 | `trg_valida_tipo_motivo_denuncia` | `denuncia` | Motivo selecionado não é válido para denúncia de campanha |
 | 90006 | `trg_valida_tipo_motivo_denuncia` | `denuncia` | Motivo selecionado não é válido para denúncia de perfil |
-| 90007 | `validar_contribuicao_all_or_nothing` | `contribuicao` | Campanhas all-or-nothing aceitam apenas contribuições via PIX |
+| 90007 | `validar_contribuicao_all_or_nothing` | `contribuicao` | Meio de pagamento não aceito: campanha all-or-nothing só aceita PIX, e quem contribui sem conta só usa PIX em qualquer modelo (24-10-2026) |
 | 90008 | `fn_valida_data_marco_cronograma` | `marco_cronograma` | Data do marco anterior à data de início da campanha |
 | 90009 | `fn_valida_completude_campanha` | `campanha` | Faltam itens de orçamento mínimos para aprovar |
 | 90010 | `fn_valida_completude_campanha` | `campanha` | Faltam marcos de cronograma mínimos para aprovar |
@@ -112,7 +112,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91039 | `fn_valida_transicao_status_repasse`, `aplicar_evento_repasse` | `repasse` | Mudança de situação do repasse fora da máquina de estados (ex.: mexer num repasse já concluído) (17-10-2026) |
 | 91041 | `fn_valida_transicao_solicitacao`, `decidir_solicitacao_encerramento` | `solicitacao_encerramento` | Só um pedido pendente muda de situação (03-10-2026) |
 | 91042 | `decidir_solicitacao_encerramento` | `campanha` | A campanha já não está ativa: o pedido não pode ser aprovado (03-10-2026) |
-| 91043 | `encerrar_campanha_sem_contribuicao` | `contribuicao` | Há Pix pendente ainda válido: espere ou envie pedido ao administrador (03-10-2026) |
+| 91043 | `encerrar_campanha_sem_contribuicao` | `contribuicao` | Há contribuição pendente ou confirmada: com dinheiro em jogo, o encerramento é só por pedido ao administrador (24-10-2026) |
 | 91044 | `contestar_denuncia` | `denuncia` | Só denúncia julgada procedente se contesta (03-10-2026) |
 | 91045 | `contestar_denuncia` | `denuncia` | Denúncia já contestada: uma contestação por denúncia (03-10-2026) |
 | 91046 | `contestar_denuncia` | `denuncia` | O pesquisador já tem uma contestação esperando análise (03-10-2026) |
@@ -120,7 +120,6 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91048 | `fn_valida_contestacao_pendente` | `denuncia` | Com contestação esperando, a situação da denúncia só muda pela decisão dela (03-10-2026) |
 | 91049 | `resolver_revisao_pagamento`, `concluir_reembolso_manual`, `reenfileirar_repasse`, `marcar_repasse_pago` | `evento_pagamento`, `contribuicao`, `repasse` | A ação manual só vale para o item na situação certa: evento ainda não processado, contribuição em reembolso manual, repasse em erro (21-10-2026) |
 | 91050 | `fn_valida_transicao_status_contribuicao` | `contribuicao` | Mudança de situação da contribuição fora da máquina de estados (ex.: sair de "devolvido") (17-10-2026) |
-| 91051 | `fn_valida_solicitacao_encerramento` | `solicitacao_encerramento` | Pedido de "Encerrar antes do prazo" de campanha tudo-ou-nada que ainda não bateu a meta: o caminho é "Cancelar o projeto", que devolve o dinheiro (17-10-2026) |
 | 91052 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | Pagamento com cartão desligado pelo administrador (`cartao_habilitado`) (17-10-2026) |
 | 91053 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | Pagamento com boleto desligado (`boleto_habilitado`, desligado por padrão) (18-10-2026) |
 | 91054 | `reenviar_notificacao`, `cancelar_notificacao` | `notificacao` | Só um e-mail que falhou pode ser reenviado; só um na fila ou que falhou pode ser cancelado (19-10-2026) |

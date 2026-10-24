@@ -1462,7 +1462,10 @@ EXECUTE FUNCTION fn_valida_repasse_all_or_nothing();
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
 -- Regra:      Campanhas all-or-nothing aceitam apenas contribuições via PIX
---             (nenhum outro meio de pagamento é permitido nesse modelo).
+--             (nenhum outro meio de pagamento é permitido nesse modelo). Quem contribui
+--             sem conta (id_usuario vazio) também só usa PIX, em qualquer modelo: cartão e
+--             boleto ficam para quem tem conta, pela facilidade de devolver e acompanhar.
+--             As duas recusas usam 90007.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_contribuicao_all_or_nothing()
 RETURNS trigger
@@ -1477,6 +1480,11 @@ BEGIN
 
     IF FOUND AND v_modelo = 'all-or-nothing' AND NEW.meio_pagamento <> 'pix' THEN
         RAISE EXCEPTION 'Campanhas all-or-nothing aceitam apenas contribuições via PIX'
+            USING ERRCODE = '90007';
+    END IF;
+
+    IF NEW.id_usuario IS NULL AND NEW.meio_pagamento <> 'pix' THEN
+        RAISE EXCEPTION 'Sem conta, a contribuição só pode ser feita com Pix. Entre na sua conta para usar cartão ou boleto.'
             USING ERRCODE = '90007';
     END IF;
 
@@ -3015,10 +3023,10 @@ EXECUTE FUNCTION fn_valida_meta_campanha_negocio();
 -- Função:     fn_valida_solicitacao_encerramento
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      Pedido de encerramento só de campanha ativa (91038) e sempre com justificativa (90028), RF-064. Pedido ao
---             admin (pendente) só de campanha flexível ou com a meta batida (91051). Um pendente
---             por vez é o índice uq_solicitacao_encerramento_pendente (02). SECURITY DEFINER: lê a campanha sem depender
---             do que a RLS mostra.
+-- Regra:      Pedido de encerramento só de campanha ativa (91038) e sempre com justificativa (90028). Vale para qualquer
+--             modelo: aprovado, o dinheiro vai para onde destino_dinheiro_campanha() manda (flexível ou tudo-ou-nada com
+--             a meta batida, repasse; tudo-ou-nada sem a meta, devolução). Um pendente por vez é o índice
+--             uq_solicitacao_encerramento_pendente (02). SECURITY DEFINER: lê a campanha sem depender do que a RLS mostra.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_valida_solicitacao_encerramento()
 RETURNS TRIGGER
@@ -3032,16 +3040,6 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM campanha WHERE id_campanha = NEW.id_campanha AND status = 'ativo') THEN
         RAISE EXCEPTION 'Só uma campanha ativa pode ser encerrada antecipadamente.' USING ERRCODE = '91038';
-    END IF;
-    -- Pedido ao admin é para encerrar antes do prazo E receber o dinheiro: só cabe se o dinheiro já é do pesquisador
-    -- (flexível, ou tudo-ou-nada com a meta batida). O cancelamento do projeto (devolve tudo) não passa por aqui: o
-    -- pesquisador faz direto (encerrar_campanha_sem_contribuicao, 03), que grava o pedido já aprovado e sem admin.
-    IF NEW.status = 'pendente' AND EXISTS (
-        SELECT 1 FROM campanha
-        WHERE id_campanha = NEW.id_campanha AND modelo = 'all-or-nothing' AND valor_bruto_arrecadado < meta_financeira
-    ) THEN
-        RAISE EXCEPTION 'Esta campanha ainda não bateu a meta. Para encerrar agora, cancele o projeto: todo o dinheiro volta para quem apoiou.'
-            USING ERRCODE = '91051';
     END IF;
     RETURN NEW;
 END;
@@ -6843,6 +6841,40 @@ AFTER UPDATE OF status ON contribuicao
 FOR EACH ROW
 WHEN (NEW.status = 'devolvido' AND OLD.status IS DISTINCT FROM NEW.status AND NEW.id_usuario IS NOT NULL)
 EXECUTE FUNCTION public.fn_notifica_devolucao();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_notifica_repasse_previsto (trigger)
+-- Bloco:      [05-Q]
+-- Regra:      Repasse criado (RF-026): o dono da campanha recebe o aviso com o valor líquido, a data prevista (a criação
+--             do repasse mais repasse_carencia_dias, a mesma conta da fila do repasse) e o lembrete de conferir a chave
+--             Pix. tem_chave_verificada diz se ele já tem chave com titularidade conferida: sem ela, o repasse espera.
+--             Vale para o repasse do encerramento e para o da parte do cartão liberada depois.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_notifica_repasse_previsto()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_dono   INT;
+    v_titulo VARCHAR;
+BEGIN
+    SELECT c.id_usuario, c.titulo INTO v_dono, v_titulo FROM campanha c WHERE c.id_campanha = NEW.id_campanha;
+    PERFORM public.enfileirar_notificacao(v_dono, 'repasse_previsto',
+        jsonb_build_object('id_campanha', NEW.id_campanha, 'titulo', v_titulo, 'valor', NEW.valor_liquido,
+                           'data_prevista', NEW.criado_em + public.config_numero('repasse_carencia_dias', 15) * INTERVAL '1 day',
+                           'tem_chave_verificada', EXISTS (
+                               SELECT 1 FROM perfil_pesquisador pp
+                               WHERE pp.id_usuario = v_dono AND pp.chave_pix_verificada_em IS NOT NULL)));
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_notifica_repasse_previsto ON repasse;
+CREATE TRIGGER trg_notifica_repasse_previsto
+AFTER INSERT ON repasse
+FOR EACH ROW EXECUTE FUNCTION public.fn_notifica_repasse_previsto();
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_notifica_decisao_encerramento (trigger)

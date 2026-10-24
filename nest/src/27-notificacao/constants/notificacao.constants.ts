@@ -11,6 +11,7 @@ export const TIPO_NOTIFICACAO = {
   campanhaNaoAtingida: 'campanha_nao_atingida',
   campanhaEncerradaModeracao: 'campanha_encerrada_moderacao',
   devolucaoConcluida: 'devolucao_concluida',
+  repassePrevisto: 'repasse_previsto',
   encerramentoAprovado: 'encerramento_aprovado',
   encerramentoRejeitado: 'encerramento_rejeitado',
   pesquisadorSuspenso: 'pesquisador_suspenso',

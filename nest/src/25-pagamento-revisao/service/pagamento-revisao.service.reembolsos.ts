@@ -38,7 +38,7 @@ export class PagamentoRevisaoServiceReembolsos {
     }));
   }
 
-  // reembolso_manual -> devolvido, com o valor que de fato foi devolvido. O banco confere o status e o valor.
+  // reembolso_manual -> devolvido, sempre com o valor inteiro da contribuição. O banco confere o status e o valor.
   async concluir(
     idContribuicao: number,
     valor: number,

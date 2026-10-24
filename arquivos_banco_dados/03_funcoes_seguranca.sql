@@ -760,11 +760,11 @@ BEGIN
 END;
 $$;
 
--- encerrar_campanha_sem_contribuicao: "cancelar o projeto". O dono encerra direto uma campanha ativa (RF-064), sem
--- passar pelo administrador, e TODO o dinheiro já pago volta para quem apoiou (trg_campanha_encerrada_destino_dinheiro,
--- 05). Não precisa de admin porque ninguém sai prejudicado. Registra o encerramento como um pedido já aprovado e sem
--- admin (id_admin vazio = encerrado pelo próprio pesquisador), com a justificativa dele. Recusa enquanto houver Pix
--- pendente ainda válido: quem pagasse depois perderia a tarifa do Pix. SECURITY DEFINER: o app_nestjs só insere a
+-- encerrar_campanha_sem_contribuicao: "cancelar o projeto". O dono encerra direto uma campanha ativa, sem passar pelo
+-- administrador, só quando não há dinheiro em jogo: nenhuma contribuição pendente (de qualquer meio) nem confirmada
+-- (91043). Pix vencido, pagamento com erro ou contribuição já devolvida não contam. Com qualquer contribuição em jogo,
+-- o caminho é o pedido ao administrador. Registra o encerramento como um pedido já aprovado e sem admin (id_admin
+-- vazio = encerrado pelo próprio pesquisador), com a justificativa dele. SECURITY DEFINER: o app_nestjs só insere a
 -- justificativa (GRANT por coluna, 06); fn_valida_transicao_campanha (05) só deixa o dono encerrar com esse pedido.
 CREATE OR REPLACE FUNCTION public.encerrar_campanha_sem_contribuicao(p_id_campanha INT, p_justificativa TEXT)
 RETURNS INT
@@ -789,10 +789,9 @@ BEGIN
     END IF;
     IF EXISTS (
         SELECT 1 FROM contribuicao
-        WHERE id_campanha = p_id_campanha AND status = 'pendente' AND meio_pagamento = 'pix'
-          AND criado_em > NOW() - (public.config_numero('pix_validade_horas', 24) * INTERVAL '1 hour')
+        WHERE id_campanha = p_id_campanha AND status IN ('pendente', 'confirmado')
     ) THEN
-        RAISE EXCEPTION 'Há um pagamento Pix em andamento nesta campanha. Espere ele ser confirmado ou vencer.'
+        RAISE EXCEPTION 'Esta campanha já tem contribuição paga ou a caminho. Para encerrar, envie o pedido ao administrador.'
             USING ERRCODE = '91043';
     END IF;
 

@@ -144,13 +144,18 @@ Decidido por `destino_dinheiro_campanha()` (05), no mesmo instante em que a camp
 | Prazo acabou e bateu a meta (`sucesso`) | Repasse |
 | Prazo acabou sem bater a meta (`nao_atingido`), flexível | Repasse |
 | Prazo acabou sem bater a meta (`nao_atingido`), tudo-ou-nada | Devolução |
-| "Cancelar o projeto" (o dono desiste; vale com ou sem contribuição) | Devolução |
-| "Encerrar antes do prazo" aprovado pelo admin (só flexível, ou tudo-ou-nada que já bateu a meta: 91051) | Repasse |
+| "Cancelar o projeto" (o dono encerra sozinho; só sem contribuição pendente nem confirmada: 91043) | Nada a devolver |
+| Pedido de encerramento antes do prazo aprovado pelo admin, flexível ou tudo-ou-nada que já bateu a meta | Repasse |
+| Pedido de encerramento antes do prazo aprovado pelo admin, tudo-ou-nada sem a meta | Devolução |
 | Derrubada pela moderação (`encerrado_moderacao`) | Devolução |
 
 - **Decisão:** dois caminhos de "desistir" com destinos diferentes: "Cancelar o projeto" sempre devolve; "Encerrar antes do prazo" repassa, mas só com aprovação do admin.
 - **Motivo:** quem apoiou uma campanha que não vai acontecer recebe o dinheiro de volta sem depender de ninguém; repassar antes do prazo é exceção e precisa de uma pessoa olhando.
 - **Caso-limite:** tudo-ou-nada que não bateu a meta não pode pedir "Encerrar antes do prazo" (91051): o caminho é cancelar, e todo o dinheiro volta.
+
+- **Decisão (24-10-2026, substitui a de cima):** o pesquisador só encerra sozinho ("Cancelar o projeto") quando não há dinheiro em jogo: nenhuma contribuição pendente, de qualquer meio, nem confirmada (91043). Com uma contribuição que seja, o caminho é o pedido ao admin, em qualquer modelo; aprovado, o dinheiro segue `destino_dinheiro_campanha()`: repasse no flexível ou no tudo-ou-nada que bateu a meta, devolução no tudo-ou-nada sem a meta. O 91051 deixou de existir.
+- **Motivo:** como em qualquer sistema que lida com dinheiro de verdade, desistir com dinheiro de terceiros na mesa passa por uma pessoa. A versão de 17-10-2026 deixava o pesquisador cancelar sozinho mesmo com contribuição confirmada, o que não era o pedido do Lucas; os requisitos de 24-10-2026 descrevem esta regra.
+- **Caso-limite:** Pix vencido, pagamento com erro e contribuição já devolvida não bloqueiam o encerramento direto, porque não há dinheiro em jogo. No seed, a campanha 15 (tudo-ou-nada sem a meta) passou do "Cancelar o projeto" para um pedido aprovado pelo admin, com o mesmo resultado: tudo devolvido.
 
 ---
 

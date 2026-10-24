@@ -32,6 +32,7 @@ const ROTULO_TIPO_NOTIFICACAO: Partial<Record<string, string>> = {
   campanha_nao_atingida: 'Campanha apoiada não bateu a meta',
   campanha_encerrada_moderacao: 'Campanha apoiada encerrada pela moderação',
   devolucao_concluida: 'Devolução concluída',
+  repasse_previsto: 'Repasse programado',
   encerramento_aprovado: 'Encerramento antecipado aprovado',
   encerramento_rejeitado: 'Encerramento antecipado rejeitado',
   pesquisador_suspenso: 'Pesquisador suspenso',

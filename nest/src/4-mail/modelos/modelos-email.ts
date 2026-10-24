@@ -182,6 +182,28 @@ const MODELOS: Record<TipoNotificacao, Modelo> = {
     };
   },
 
+  [TIPO_NOTIFICACAO.repassePrevisto]: (contexto) => {
+    const valor = moeda(contexto.dados.valor);
+    const quando = data(contexto.dados.data_prevista);
+    const paragrafos = [
+      `O repasse de ${campanha(contexto.dados)} foi programado` +
+        (valor ? `: ${valor}` : '') +
+        (quando ? `, com data prevista para ${quando}.` : '.'),
+      'O dinheiro vai para a chave Pix cadastrada na sua conta. Confira se ela está certa: a correção da chave é sua responsabilidade.',
+    ];
+    if (contexto.dados.tem_chave_verificada !== true) {
+      paragrafos.push(
+        'Você ainda não tem chave Pix verificada. Cadastre a chave em Minha Conta; sem ela, o repasse fica esperando.',
+      );
+    }
+    return {
+      assunto: 'Seu repasse foi programado',
+      saudacao: saudacao(contexto.dados),
+      paragrafos,
+      botao: entrar(contexto),
+    };
+  },
+
   [TIPO_NOTIFICACAO.encerramentoAprovado]: (contexto) => ({
     assunto: 'Seu pedido de encerramento foi aprovado',
     saudacao: saudacao(contexto.dados),

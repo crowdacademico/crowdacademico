@@ -33,27 +33,5 @@ export const CLASSE_BADGE_SITUACAO_REVISAO: Record<SituacaoRevisao, string> = {
   processado: 'badge-sucesso',
 };
 
-/*
-// RETIRADO DO CODIGO, para manter o nome do evento como veio do provedor (nest/src/23-pagamento/adapters/asaas/asaas-webhook.adapter.ts).
-
-// `tipo_evento` guarda o nome do evento COMO O PROVEDOR mandou (nest/src/23-pagamento/adapters/asaas/asaas-webhook.adapter.ts).
-// Aqui só a tradução para quem opera; nome fora do dicionário aparece como veio (nunca quebra, só fica menos bonito).
-const ROTULO_TIPO_EVENTO: Partial<Record<string, string>> = {
-  PAYMENT_CONFIRMED: 'Pagamento confirmado',
-  PAYMENT_RECEIVED: 'Pagamento recebido',
-  PAYMENT_OVERDUE: 'Cobrança vencida',
-  PAYMENT_DELETED: 'Cobrança removida',
-  PAYMENT_REFUNDED: 'Pagamento estornado',
-  PAYMENT_PARTIALLY_REFUNDED: 'Pagamento estornado em parte',
-  TRANSFER_DONE: 'Repasse concluído',
-  TRANSFER_FAILED: 'Repasse falhou',
-  TRANSFER_CANCELLED: 'Repasse cancelado',
-  PAYMENT_CHARGEBACK_REQUESTED: 'Contestação de cartão aberta',
-  PAYMENT_CHARGEBACK_DISPUTE: 'Contestação de cartão em disputa',
-  PAYMENT_AWAITING_CHARGEBACK_REVERSAL: 'Contestação de cartão ganha',
-};
-
-export function rotuloTipoEvento(tipoEvento: string): string {
-  return ROTULO_TIPO_EVENTO[tipoEvento] ?? tipoEvento;
-}
-*/
+// O nome do evento vai para a tela como o provedor manda, sem tradução. A decisão e o dicionário que existia:
+// DOCUMENTACAO_FRONTEND.md, seção 12, "Pagamentos", "Nome do evento: como o provedor manda".

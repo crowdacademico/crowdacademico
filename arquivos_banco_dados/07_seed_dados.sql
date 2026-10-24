@@ -1065,7 +1065,7 @@ JOIN tipo_link tl ON tl.codigo = v.tipolink_codigo;
 --   12 Juliana   tudo-ou-nada  "Em breve" (RF-059): aprovada, começa daqui a 7 dias
 --   13 Juliana   tudo-ou-nada  rascunho
 --   14 Patrícia  tudo-ou-nada  rejeitada há 5 dias, com reenvio disponível
---   15 Patrícia  tudo-ou-nada  projeto cancelado pela pesquisadora: todo o dinheiro voltou
+--   15 Patrícia  tudo-ou-nada  encerrada antes do prazo, sem a meta, com pedido aprovado: todo o dinheiro voltou
 --   16 Vinícius  flexível      encerrada por moderação depois de denúncias procedentes
 --   17 Gabriel   tudo-ou-nada  na fila há 15 dias; dono na faixa Atenção ("Score baixo")
 --   18 Renata    tudo-ou-nada  na fila, reenviada depois de uma rejeição (há 2 dias)
@@ -1594,14 +1594,16 @@ END;
 $$;
 
 -- 5. Pedidos de encerramento antes do prazo (RF-064 a RF-066), pelo caminho do painel: o pesquisador pede, o Admin
---    Sistema (1) decide com decidir_solicitacao_encerramento (03). Aprovar encerra a campanha e o dinheiro vai para o
---    pesquisador (trg_campanha_encerrada_destino_dinheiro, 05). A Ana desistiu do pedido dela (cancelado pela dona). A
---    Patrícia cancelou o projeto (encerrar_campanha_sem_contribuicao, 03): todo o dinheiro volta para quem apoiou.
+--    Sistema (1) decide com decidir_solicitacao_encerramento (03). Aprovar encerra a campanha e o dinheiro segue
+--    destino_dinheiro_campanha (05): o da campanha 9, flexível, vai para o pesquisador; o da 15, tudo-ou-nada que não
+--    bateu a meta, volta para quem apoiou. A Ana desistiu do pedido dela (cancelado pela dona). O "cancelar o projeto"
+--    sem administrador (encerrar_campanha_sem_contribuicao, 03) só vale sem contribuição em jogo, então não aparece aqui.
 INSERT INTO solicitacao_encerramento (id_campanha, justificativa_pesquisador, solicitado_em) VALUES
 (3,  'Os parceiros anteciparam a coleta e talvez não precisemos de todo o prazo. Solicito encerrar antes.', pg_temp.dia(-10)),
 (9,  'A coleta de campo terminou antes do previsto e o valor arrecadado já cobre a catalogação. Solicito encerrar antes do prazo.', pg_temp.dia(-7)),
 (11, 'Uma das comunidades pediu para adiar as entrevistas. Solicito encerrar com o que foi arrecadado.', pg_temp.dia(-25)),
-(10, 'O laboratório parceiro encerrou o convênio e não temos mais onde fazer as análises microbiológicas. Solicito encerrar antes do prazo.', pg_temp.dia(-40));
+(10, 'O laboratório parceiro encerrou o convênio e não temos mais onde fazer as análises microbiológicas. Solicito encerrar antes do prazo.', pg_temp.dia(-40)),
+(15, 'O hospital parceiro suspendeu o estudo e não há como continuar. Solicito encerrar; todo o dinheiro volta para quem apoiou.', pg_temp.dia(-9));
 
 DO $$
 BEGIN
@@ -1615,9 +1617,8 @@ BEGIN
     PERFORM public.decidir_solicitacao_encerramento(
         (SELECT id_solicitacao_encerramento FROM solicitacao_encerramento WHERE id_campanha = 9), TRUE, NULL);
     PERFORM pg_temp.datar(pg_temp.dia(-5));
-    PERFORM set_config('app.id_usuario_atual', '15', TRUE);
-    PERFORM public.encerrar_campanha_sem_contribuicao(15,
-        'O hospital parceiro suspendeu o estudo e não há como continuar. Todo o dinheiro volta para quem apoiou.');
+    PERFORM public.decidir_solicitacao_encerramento(
+        (SELECT id_solicitacao_encerramento FROM solicitacao_encerramento WHERE id_campanha = 15), TRUE, NULL);
     PERFORM pg_temp.datar(pg_temp.dia(-8));
     PERFORM set_config('app.id_usuario_atual', '', TRUE);
 END;
@@ -1683,7 +1684,7 @@ SELECT pg_temp.transferir(pg_temp.repasse(9), pg_temp.dia(-4));
 --      34 o provedor aceitou o pedido e ainda não devolveu; 35 o banco de quem apoiou recusou e a devolução foi para
 --      reembolso manual; 36 também, e uma pessoa já devolveu por fora (concluir_reembolso_manual); 37 falhou por
 --      falta de saldo e vai tentar de novo; 38 ainda está na fila.
---    Campanha 15 (projeto cancelado): tudo devolvido. Campanha 16 (moderação): os Pix devolvidos, o cartão na fila.
+--    Campanha 15 (encerrada antes do prazo sem a meta): tudo devolvido. Campanha 16 (moderação): os Pix devolvidos, o cartão na fila.
 DO $$
 BEGIN
     PERFORM public.concluir_estorno(32, 1500.00);
@@ -1906,7 +1907,7 @@ FROM termos_de_uso WHERE tipo = 'upgrade_pesquisador' AND ativo;
 -- Juliana: a campanha "Em breve" já foi aprovada (10), mas ainda não começou. Tem também um rascunho.
 -- Eduardo: o encerramento antes do prazo aprovado pelo admin conta como não concluída; 1 denúncia procedente
 --   contra o perfil (a parte "perfil" da reputação cai a 6,67), contestada e esperando análise.
--- Patrícia: o projeto cancelado por ela não entra na conclusão (só o encerramento aprovado pelo admin entra); a 14
+-- Patrícia: a 15, encerrada antes do prazo com o pedido aprovado pelo admin, conta como não concluída; a 14
 --   está rejeitada, com reenvio disponível.
 -- Vinícius: 3 denúncias procedentes contra o perfil zeram a parte "perfil"; a campanha 16, encerrada por
 --   moderação, conta como 1 campanha denunciada (15 vira 10). Uma das denúncias foi contestada e a contestação
