@@ -22,6 +22,8 @@ import { ListarRevisoesPagamento } from '../../views/25-pagamento-revisao/listar
 import { ListarReembolsosManuais } from '../../views/25-pagamento-revisao/listar-reembolsos-manuais';
 import { ListarRepassesAtencao } from '../../views/25-pagamento-revisao/listar-repasses-atencao';
 import { ListarAuditoriaFinanceira } from '../../views/25-pagamento-revisao/listar-auditoria-financeira';
+import { ListarContribuicoes } from '../../views/25-pagamento-revisao/listar-contribuicoes';
+import { ListarRepasses } from '../../views/25-pagamento-revisao/listar-repasses';
 import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
 import { PontuacaoScore } from '../../views/11-configuracoes/pontuacao-score';
 import { campoTestes } from './campo-testes-opcional';
@@ -255,6 +257,26 @@ export const ROTAS_ADMIN: Rota[] = [
     rotuloBreadcrumb: 'Repasses em Atenção',
     grupoMenu: 'PAGAMENTOS',
     icone: 'fa-hand-holding-dollar',
+  },
+  // Só leitura: todas as contribuições, com a situação do repasse (contribuicao_visualizar_sensivel: admin).
+  {
+    caminho: '/admin/contribuicoes',
+    caminhoRelativo: 'contribuicoes',
+    elemento: ListarContribuicoes,
+    rotuloMenu: 'Contribuições',
+    rotuloBreadcrumb: 'Contribuições',
+    grupoMenu: 'PAGAMENTOS',
+    icone: 'fa-hand-holding-heart',
+  },
+  // Só leitura: todos os repasses ao pesquisador (repasse_aprovar: admin).
+  {
+    caminho: '/admin/repasses',
+    caminhoRelativo: 'repasses',
+    elemento: ListarRepasses,
+    rotuloMenu: 'Repasses',
+    rotuloBreadcrumb: 'Repasses',
+    grupoMenu: 'PAGAMENTOS',
+    icone: 'fa-money-check-dollar',
   },
   // Só leitura: cada mudança de dinheiro com quem fez (auditoria_financeira_visualizar: admin e revisor).
   {

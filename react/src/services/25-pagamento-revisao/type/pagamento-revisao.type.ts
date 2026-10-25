@@ -1,4 +1,4 @@
-import type { MeioPagamento, StatusRepasse } from '../../constant/type/enums-do-banco.gerado';
+import type { MeioPagamento, StatusContribuicao, StatusRepasse } from '../../constant/type/enums-do-banco.gerado';
 
 // Espelha nest/src/25-pagamento-revisao/dto/response/pagamento-revisao.response.ts. As datas chegam como texto ISO.
 // Os três painéis são as FILAS do que o sistema deliberadamente não resolve sozinho: nenhum deles move dinheiro, só
@@ -57,6 +57,38 @@ export interface RepasseAtencaoResponse {
   ultimoMotivo: string | null;
   // true = o dono da campanha ainda não cadastrou/verificou a chave Pix: o repasse espera na fila, sem erro.
   aguardandoConta: boolean;
+}
+
+// Espelha ContribuicaoAdminResponse (nest/src/25-pagamento-revisao/dto/response). idApoiador null = contribuição sem
+// conta; idRepasse null = ainda não entrou em repasse.
+export interface ContribuicaoAdminResponse {
+  idContribuicao: number;
+  idCampanha: number;
+  tituloCampanha: string;
+  idApoiador: number | null;
+  nomeApoiador: string | null;
+  anonima: boolean;
+  valor: number;
+  meioPagamento: MeioPagamento;
+  status: StatusContribuicao;
+  criadoEm: string;
+  idRepasse: number | null;
+  statusRepasse: StatusRepasse | null;
+}
+
+// Espelha RepasseAdminResponse (nest/src/25-pagamento-revisao/dto/response). aguardandoConta: como em
+// RepasseAtencaoResponse (só muda o rótulo de um repasse pendente).
+export interface RepasseAdminResponse {
+  idRepasse: number;
+  idCampanha: number;
+  tituloCampanha: string;
+  valorBruto: number;
+  valorLiquido: number;
+  metaAtingida: boolean;
+  status: StatusRepasse;
+  aguardandoConta: boolean;
+  criadoEm: string;
+  repassadoEm: string | null;
 }
 
 // Espelha AuditoriaFinanceiraResponse (nest/src/25-pagamento-revisao/dto/response). Uma linha é de UMA contribuição OU

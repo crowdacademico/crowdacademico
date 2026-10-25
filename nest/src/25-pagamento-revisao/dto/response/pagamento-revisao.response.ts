@@ -51,6 +51,40 @@ export class RepasseAtencaoResponse {
   aguardandoConta: boolean;
 }
 
+// Uma contribuição na lista do painel, com a situação do repasse em que entrou.
+export class ContribuicaoAdminResponse {
+  idContribuicao: number;
+  idCampanha: number;
+  tituloCampanha: string;
+  // null = contribuição sem conta (ou conta excluída depois).
+  idApoiador: number | null;
+  nomeApoiador: string | null;
+  // Escondida do público; quem tem a permissão vê o nome mesmo assim.
+  anonima: boolean;
+  valor: number;
+  meioPagamento: string;
+  status: string;
+  criadoEm: Date;
+  // null = ainda não entrou em repasse (só contribuição paga de campanha encerrada entra).
+  idRepasse: number | null;
+  statusRepasse: string | null;
+}
+
+// Um repasse na lista do painel (todos, não só os que pedem atenção).
+export class RepasseAdminResponse {
+  idRepasse: number;
+  idCampanha: number;
+  tituloCampanha: string;
+  valorBruto: number;
+  valorLiquido: number;
+  metaAtingida: boolean;
+  status: string;
+  // Mesmo sentido de RepasseAtencaoResponse.aguardandoConta (só muda o rótulo de um repasse pendente).
+  aguardandoConta: boolean;
+  criadoEm: Date;
+  repassadoEm: Date | null;
+}
+
 // Uma linha da auditoria financeira: cada mudança de dinheiro (contribuição ou repasse), com quem fez.
 export class AuditoriaFinanceiraResponse {
   idAuditoria: number;

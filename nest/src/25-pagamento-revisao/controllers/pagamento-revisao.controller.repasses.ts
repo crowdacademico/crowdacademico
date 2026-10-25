@@ -13,12 +13,19 @@ import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.
 import { SemTransacaoGlobal } from '../../commons/database/sem-transacao-global.decorator';
 import { PagamentoRevisaoRequestLimite } from '../dto/request/pagamento-revisao.request-list';
 import { PagamentoRevisaoRequestObservacao } from '../dto/request/pagamento-revisao.request-observacao';
-import { RepasseAtencaoResponse } from '../dto/response/pagamento-revisao.response';
+import {
+  RepasseAdminResponse,
+  RepasseAtencaoResponse,
+} from '../dto/response/pagamento-revisao.response';
 import { PagamentoRevisaoServiceRepasses } from '../service/pagamento-revisao.service.repasses';
+import { PagamentoRevisaoServiceRepassesTodos } from '../service/pagamento-revisao.service.repasses-todos';
 
 @Controller('pagamento-admin/repasses')
 export class PagamentoRevisaoControllerRepasses {
-  constructor(private readonly service: PagamentoRevisaoServiceRepasses) {}
+  constructor(
+    private readonly service: PagamentoRevisaoServiceRepasses,
+    private readonly todos: PagamentoRevisaoServiceRepassesTodos,
+  ) {}
 
   // Exige evento_pagamento_visualizar.
   @Get('atencao')
@@ -26,6 +33,14 @@ export class PagamentoRevisaoControllerRepasses {
     @Query() query: PagamentoRevisaoRequestLimite,
   ): Promise<RepasseAtencaoResponse[]> {
     return this.service.listar(query.limite);
+  }
+
+  // Todos os repasses, só leitura. Exige repasse_aprovar (403 sem ela).
+  @Get()
+  listarTodos(
+    @Query() query: PagamentoRevisaoRequestLimite,
+  ): Promise<RepasseAdminResponse[]> {
+    return this.todos.listar(query.limite);
   }
 
   // Exige pagamento_revisao_resolver. Só repasse em 'erro' (409 nos outros casos).

@@ -4,8 +4,10 @@ import { TAMANHO_PAGINA_MAXIMO_API } from '../../constant/type/paginacao.type';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type {
   AuditoriaFinanceiraResponse,
+  ContribuicaoAdminResponse,
   FiltroRevisaoPagamento,
   ReembolsoManualResponse,
+  RepasseAdminResponse,
   RepasseAtencaoResponse,
   RevisaoPagamentoResponse,
 } from '../type/pagamento-revisao.type';
@@ -66,4 +68,16 @@ export const pagamentoRevisaoApi = {
     authFetch(`${BASE}/auditoria-financeira${paraQueryString({ limite: TAMANHO_PAGINA_MAXIMO_API })}`)
       .then(tratarResposta<AuditoriaFinanceiraResponse[]>)
       .then(avisarSeTruncada('auditoria financeira')),
+
+  // Todas as contribuições, só leitura, a mais nova primeiro. Exige `contribuicao_visualizar_sensivel` (403 sem ela).
+  listarContribuicoes: (authFetch: AuthFetch): Promise<ContribuicaoAdminResponse[]> =>
+    authFetch(`${BASE}/contribuicoes${paraQueryString({ limite: TAMANHO_PAGINA_MAXIMO_API })}`)
+      .then(tratarResposta<ContribuicaoAdminResponse[]>)
+      .then(avisarSeTruncada('contribuições')),
+
+  // Todos os repasses, só leitura, o mais novo primeiro. Exige `repasse_aprovar` (403 sem ela).
+  listarRepasses: (authFetch: AuthFetch): Promise<RepasseAdminResponse[]> =>
+    authFetch(`${BASE}/repasses${paraQueryString({ limite: TAMANHO_PAGINA_MAXIMO_API })}`)
+      .then(tratarResposta<RepasseAdminResponse[]>)
+      .then(avisarSeTruncada('repasses')),
 };
