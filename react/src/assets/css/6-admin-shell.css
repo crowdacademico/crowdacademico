@@ -57,10 +57,12 @@
 .admin-sidebar {
   background-color: var(--cor-fundo-cartao);
   border-bottom: 1px solid var(--cor-borda);
-  /* Lateral menor que o topo: com a barra de rolagem vertical do Windows, 1.5rem deixava ~146px para o
-     rótulo, e o negrito do item ativo (2 a 3px mais largo) quebrava "Papéis & Permissões" ao clicar. Com
-     1rem sobram ~162px: os rótulos de até ~160px cabem numa linha nos dois pesos. */
-  padding: 1.5rem 1rem;
+  /* Laterais menores que o topo, e a direita menor que a esquerda: com a barra de rolagem vertical do Windows,
+     1.5rem dos dois lados deixava ~146px para o rótulo, e o negrito do item ativo (2 a 3px mais largo) quebrava
+     "Papéis & Permissões" ao clicar. Com 1rem à esquerda, 0.5rem à direita (o botão fica a 8px da barra de
+     rolagem, folga contra clique errado) e o recuo do ícone abaixo, os rótulos de até ~170px ("Áreas do
+     Conhecimento", "T3 - Minhas Campanhas") cabem numa linha nos dois pesos; nenhum muda de linha ao clicar. */
+  padding: 1.5rem 0.5rem 1.5rem 1rem;
 }
 
 .admin-sidebar__titulo {
@@ -94,11 +96,22 @@
   margin: 0.5rem 0 0.5rem 0.5rem;
   /* flex: só entra em jogo para os grupos que passam `dica` (Tooltip do lado direito, ver
      admin-sidebar.tsx); com 1 filho só (os outros grupos, sem dica), flex não muda nada do visual.
-     `padding-right` evita o ícone colar na borda do menu (260px é estreito). */
+     `padding-right` igual ao recuo do ícone dentro do item (a borda de 1px + o padding da direita), para o ⓘ do
+     grupo cair na mesma coluna dos ícones dos itens. */
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-right: 0.5rem;
+  padding-right: calc(0.25rem + 1px);
+}
+
+/* A coluna dos ícones: cada ícone (e o ⓘ do grupo) numa caixa de largura fixa, com o desenho centralizado. Sem
+   isso cada ícone encosta na direita com a largura dele, e um largo (a cédula) fica mais à esquerda que um
+   estreito (a bandeira). */
+.admin-sidebar__item > i,
+.admin-sidebar__grupo-titulo > .dica {
+  flex: none;
+  width: var(--largura-icone-menu);
+  text-align: center;
 }
 
 /* O ícone do Tooltip (components/layout/tooltip.tsx) fica encostado na borda DIREITA do grupo "CAMPO DE
@@ -119,7 +132,8 @@
   width: 100%;
   text-align: left;
   text-decoration: none;
-  padding: 0.625rem 0.75rem;
+  /* Direita menor que a esquerda: a coluna dos ícones fica mais perto da borda e sobra mais largura para o rótulo. */
+  padding: 0.625rem 0.25rem 0.625rem 0.75rem;
   display: flex;
   align-items: center;
   justify-content: space-between;

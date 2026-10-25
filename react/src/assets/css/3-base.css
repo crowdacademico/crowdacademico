@@ -34,6 +34,7 @@
   --altura-modal: 90vh;
   --altura-cartao-solto: calc(100vh - 2rem);
   --largura-sidebar: 260px;
+  --largura-icone-menu: 1.25rem; /* caixa de cada ícone do menu lateral: todos centralizados na mesma coluna */
   /* Barra de progresso (arrecadado em relação à meta, components/crud/barra-progresso.tsx). `--barra-progresso-*`: a
      barra ao lado do texto (Consultar), trilho de comprimento fixo e o vão até a porcentagem. `--barra-progresso-sob-*`:
      a barra fina por baixo do valor numa célula de tabela, a espessura e a distância do texto. */

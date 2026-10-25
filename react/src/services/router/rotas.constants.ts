@@ -221,7 +221,7 @@ export const ROTAS_ADMIN: Rota[] = [
     caminho: '/admin/pedidos-encerramento',
     caminhoRelativo: 'pedidos-encerramento',
     elemento: ListarEncerramentos,
-    rotuloMenu: 'Pedidos de Encerramento',
+    rotuloMenu: 'Pedido de Encerramento',
     rotuloBreadcrumb: 'Pedidos de Encerramento',
     grupoMenu: 'MODERACAO',
     icone: 'fa-flag-checkered',
