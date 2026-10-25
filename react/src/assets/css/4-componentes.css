@@ -27,6 +27,14 @@
     cursor: not-allowed;
   }
 
+  /* Parece indisponível, mas o clique acontece (aria-disabled, não disabled): o sistema responde dizendo o que falta,
+     em vez de um botão morto sem explicação. Ex.: Enviar para aprovação com etapa incompleta. Sem o hover de
+     botão clicável (as regras de hover abaixo pulam o [aria-disabled]). */
+  .btn[aria-disabled="true"] {
+    opacity: var(--opacidade-desabilitado);
+    box-shadow: none;
+  }
+
   /* Botão principal do painel e dos modais: verde sólido, sem brilho (como os painéis de Stripe, Linear e Vercel).
      O brilho fica só no .btn-destaque, abaixo. */
   .btn-primary {
@@ -34,7 +42,7 @@
     color: var(--cor-texto-sobre-cor);
   }
 
-  .btn-primary:hover:not(:disabled) {
+  .btn-primary:hover:not(:disabled):not([aria-disabled="true"]) {
     background-color: var(--cor-fundo-marca-forte-hover);
   }
 

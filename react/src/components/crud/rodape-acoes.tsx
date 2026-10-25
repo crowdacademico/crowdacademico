@@ -16,6 +16,8 @@ export interface AcaoRodape {
   aoClicar?: () => void;
   formulario?: string;
   perigo?: boolean;
+  // Parece indisponível, mas continua clicável: o clique mostra o motivo (ver .btn[aria-disabled] em 4-componentes.css).
+  aparenciaIndisponivel?: boolean;
 }
 
 interface RodapeAcoesProps {
@@ -71,6 +73,7 @@ export function RodapeAcoes({
           {...(item.formulario ? { form: item.formulario } : {})}
           onClick={item.aoClicar}
           disabled={item.ocupado || item.desabilitado}
+          aria-disabled={item.aparenciaIndisponivel ? true : undefined}
           className={'btn flex-1 whitespace-nowrap ' + (item.perigo ? 'btn-danger' : 'btn-primary')}
         >
           {item.ocupado && item.rotuloOcupado ? item.rotuloOcupado : item.rotulo}

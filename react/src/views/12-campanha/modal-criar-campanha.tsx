@@ -80,15 +80,16 @@ const ETAPAS = [
 ] as const;
 
 // Criar campanha em 4 etapas do MESMO modal: Dados, Orçamento, Cronograma e Revisão, com o indicador de etapas no
-// topo. Os itens de orçamento e os marcos só existem depois de a campanha ter um id (FK), por isso "Próximo" na
-// etapa Dados já cria a campanha como rascunho; voltando para Dados e avançando de novo, ela é ALTERADA (PATCH),
+// topo. Os itens de orçamento e os marcos só existem depois de a campanha ter um id (FK), por isso o botão da etapa
+// Dados se chama "Salvar rascunho": ele cria a campanha como rascunho e avança; voltando para Dados e avançando de novo, ela é ALTERADA (PATCH),
 // nunca criada outra vez. O mínimo de itens e de marcos só é exigido no envio: dá para fechar e continuar depois,
 // e o rascunho reabre neste mesmo passo a passo (idRascunho).
 //
-// "Enviar para aprovação" não tem checagem no front, de propósito: quem cobra orçamento, soma, cronograma e
-// prazo é o banco (trg_campanha_valida_completude), e o erro chega traduzido. O clique acontece e o sistema DIZ o
-// que falta, em vez de um botão desabilitado sem explicação. Se falhar, o modal continua aberto e a campanha
-// continua rascunho: nada se perde.
+// O selo no topo ("Rascunho #N salvo") fica à vista em todas as etapas: o aviso flutuante some, e a pessoa
+// precisa saber que a campanha já está guardada. Na Revisão, "Salvar rascunho" fecha o modal (tudo já está
+// gravado) e "Enviar para aprovação" parece indisponível enquanto o checklist tiver item vermelho, mas continua
+// clicável: quem cobra orçamento, soma, cronograma e prazo é o banco (trg_campanha_valida_completude), e o erro
+// chega traduzido. Se falhar, o modal continua aberto e a campanha continua rascunho: nada se perde.
 export function ModalCriarCampanha({
   auth,
   idRascunho,
@@ -112,6 +113,8 @@ export function ModalCriarCampanha({
   const [etapa, setEtapa] = useState<Etapa>('dados');
   const [idCampanha, setIdCampanha] = useState<number | null>(idRascunho ?? null);
   const [carregandoRascunho, setCarregandoRascunho] = useState(idRascunho !== undefined);
+  // O checklist da Revisão está todo verde (só muda a aparência do Enviar).
+  const [revisaoPronta, setRevisaoPronta] = useState(false);
 
   // Rascunho que já existe: o formulário da etapa 1 começa com o que está salvo.
   useEffect(() => {
@@ -217,21 +220,42 @@ export function ModalCriarCampanha({
     });
   };
 
+  // Tudo já está gravado (os Dados ao sair da etapa, orçamento e cronograma na hora): só fecha e confirma.
+  const salvarRascunhoESair = () => {
+    if (idCampanha === null) {
+      return;
+    }
+    mostrar('Rascunho salvo.', `ID: ${idCampanha}. Dá para continuar depois, de onde parou.`);
+    aoFechar();
+  };
+
   // Fechar com mudança não gravada na etapa Dados pergunta antes. Orçamento e cronograma gravam na hora.
   const fechar = useFecharComAviso(sujo, aoFechar);
 
   const subtitulo = [
     contexto,
-    idCampanha === null ? subtituloDados : `Rascunho #${idCampanha}. Cada etapa é salva ao avançar; dá para fechar e continuar depois.`,
+    idCampanha === null ? subtituloDados : 'Cada etapa é salva ao avançar; dá para fechar e continuar depois.',
   ]
     .filter(Boolean)
     .join(' ');
+
+  // O selo do topo: diz, em todas as etapas, se a campanha já está guardada.
+  const selo =
+    idCampanha === null ? (
+      <span key="selo" className="badge badge-neutro">Ainda não salva</span>
+    ) : etapa === 'dados' && sujo ? (
+      <span key="selo" className="badge badge-aviso">Rascunho #{idCampanha}: alterações não salvas</span>
+    ) : (
+      <span key="selo" className="badge badge-sucesso">
+        <i className="fa-solid fa-circle-check" aria-hidden="true"></i> Rascunho #{idCampanha} salvo
+      </span>
+    );
 
   const rodape =
     etapa === 'dados' ? (
       <RodapeAcoes
         aoCancelar={fechar}
-        acao={{ rotulo: 'Próximo', ocupado: trabalhando, aoClicar: () => void avancarDosDados() }}
+        acao={{ rotulo: 'Salvar rascunho', rotuloOcupado: 'Salvando...', ocupado: trabalhando, aoClicar: () => void avancarDosDados() }}
       />
     ) : etapa === 'orcamento' ? (
       <RodapeAcoes
@@ -249,13 +273,16 @@ export function ModalCriarCampanha({
       <RodapeAcoes
         aoCancelar={() => setEtapa('cronograma')}
         rotuloCancelar="Voltar"
-        largura="md"
-        acao={{
-          rotulo: 'Enviar para aprovação',
-          rotuloOcupado: 'Enviando...',
-          ocupado: trabalhando,
-          aoClicar: () => void enviarParaAprovacao(),
-        }}
+        acao={[
+          { rotulo: 'Salvar rascunho', desabilitado: trabalhando, aoClicar: salvarRascunhoESair },
+          {
+            rotulo: 'Enviar para aprovação',
+            rotuloOcupado: 'Enviando...',
+            ocupado: trabalhando,
+            aparenciaIndisponivel: !revisaoPronta,
+            aoClicar: () => void enviarParaAprovacao(),
+          },
+        ]}
       />
     );
 
@@ -268,6 +295,7 @@ export function ModalCriarCampanha({
       // Depois da etapa 1 a campanha já está salva como rascunho: fechar não perde nada.
       fecharAoClicarFora={false}
       subtitulo={subtitulo}
+      badges={[selo]}
       aoFechar={fechar}
       rodape={rodape}
     >
@@ -291,6 +319,7 @@ export function ModalCriarCampanha({
           prazoValido={duracaoValida && form.dataInicio >= hoje}
           minimoItensOrcamento={regras.minimoItensOrcamento}
           minimoMarcosCronograma={regras.minimoMarcosCronograma}
+          aoAvaliar={setRevisaoPronta}
         />
       ) : (etapa === 'orcamento' || etapa === 'cronograma') && idCampanha !== null ? (
         <SecaoFicha titulo={etapa === 'orcamento' ? 'Orçamento' : 'Cronograma'}>

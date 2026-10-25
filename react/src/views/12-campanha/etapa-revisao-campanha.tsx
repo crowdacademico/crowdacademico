@@ -23,11 +23,14 @@ interface EtapaRevisaoCampanhaProps {
   prazoValido: boolean;
   minimoItensOrcamento: number;
   minimoMarcosCronograma: number;
+  // Avisa quem abriu se o checklist está todo verde (o botão Enviar muda de aparência, ver ModalCriarCampanha).
+  aoAvaliar?: (pronto: boolean) => void;
 }
 
 // Última etapa do passo a passo: tudo o que vai para a avaliação, num lugar só, e o checklist do que o banco vai
-// cobrar no envio (os mesmos critérios do "Pronta para aprovar?" do Revisar). O checklist só orienta: o botão
-// Enviar continua clicável, e quem decide é o banco (trg_campanha_valida_completude), que diz o que falta.
+// cobrar no envio (os mesmos critérios do "Pronta para aprovar?" do Revisar). O checklist só orienta: com algo
+// faltando, o botão Enviar parece indisponível mas continua clicável, e quem decide é o banco
+// (trg_campanha_valida_completude), que diz o que falta.
 export function EtapaRevisaoCampanha({
   auth,
   idCampanha,
@@ -40,6 +43,7 @@ export function EtapaRevisaoCampanha({
   prazoValido,
   minimoItensOrcamento,
   minimoMarcosCronograma,
+  aoAvaliar,
 }: EtapaRevisaoCampanhaProps) {
   const { reportarErro } = useErroToast();
   const [orcamento, setOrcamento] = useState<OrcamentoCampanhaResponse[]>([]);
@@ -59,6 +63,10 @@ export function EtapaRevisaoCampanha({
   const orcamentoOk = orcamento.length >= minimoItensOrcamento && soma === meta;
   const cronogramaOk = cronograma.length >= minimoMarcosCronograma;
   const tudoPronto = orcamentoOk && cronogramaOk && prazoValido;
+
+  useEffect(() => {
+    aoAvaliar?.(tudoPronto);
+  }, [aoAvaliar, tudoPronto]);
 
   const item = (ok: boolean, texto: string) => (
     <li className={'paragrafo flex items-start gap-2 texto-herdado ' + (ok ? 'texto-sucesso' : 'texto-erro')}>
