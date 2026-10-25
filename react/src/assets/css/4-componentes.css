@@ -191,13 +191,10 @@
   /* Input/select de formulário fora da tabela de CRUD (login, criar
      usuário) - mesma moldura em todo lugar: borda, fundo levemente cinza,
      foco em verde. */
-  /* As medidas do campo viram variáveis do próprio campo (espaço interno vertical, borda, altura da linha): a lista
-     (select, abaixo) calcula a altura com elas, e quem precisa de um campo mais baixo (a tabela editável) troca só
-     a variável. */
+  /* As medidas do campo são variáveis (3-base.css, :root): a lista (select, abaixo) e o botão ao lado do campo
+     (.altura-de-campo) calculam a altura com elas, e quem precisa de um campo mais baixo (a tabela editável) troca
+     só a variável. */
   .input-padrao {
-    --campo-espaco-vertical: 0.875rem;
-    --campo-borda: 2px;
-    --campo-altura-linha: 1.5;
     width: 100%;
     background-color: var(--cor-fundo-sutil);
     border: var(--campo-borda) solid var(--cor-borda-campo);
@@ -215,6 +212,12 @@
      variáveis acima; nenhum número escrito aqui. */
   select.input-padrao {
     min-height: calc(1em * var(--campo-altura-linha) + 2 * var(--campo-espaco-vertical) + 2 * var(--campo-borda));
+  }
+
+  /* Botão com a altura de um campo de formulário, para ficar ao lado de um sem degrau (Trocar senha e Cancelar, ao lado
+     da caixa "Nova senha" no Alterar Usuário). A mesma conta da lista, com a letra do campo. */
+  .altura-de-campo {
+    min-height: calc(var(--font-size-sm) * var(--campo-altura-linha) + 2 * var(--campo-espaco-vertical) + 2 * var(--campo-borda));
   }
 
   /* Variações do campo (depois do .input-padrao, para vencer o tamanho e a fonte dele): texto de código
@@ -424,6 +427,16 @@
     align-items: start;
   }
 
+  /* Item que ocupa a largura toda do bloco, embaixo da foto e dos campos (o medidor de força da senha): o bloco tem uma
+     linha a mais que a foto atravessa (`--linhas-foto` menor que `--linhas-bloco`). Usa as colunas do bloco
+     (subgrid): o que vai embaixo de um campo fica na coluna dos campos (`__campo`), o que ocupa tudo, em `__inteiro`. */
+  .ficha-bloco-com-foto__largo {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+    row-gap: 0.375rem;
+  }
+
   @media (min-width: 640px) {
     .ficha-bloco-com-foto {
       grid-template-columns: auto minmax(0, 1fr);
@@ -431,7 +444,12 @@
 
     .ficha-bloco-com-foto__foto {
       grid-column: 1;
-      grid-row: span var(--linhas-bloco);
+      grid-row: span var(--linhas-foto, var(--linhas-bloco));
+    }
+
+    /* Dentro do item largo: o que ocupa a largura toda (a lista de requisitos da senha). */
+    .ficha-bloco-com-foto__inteiro {
+      grid-column: 1 / -1;
     }
 
     .ficha-bloco-com-foto__campo {
@@ -444,6 +462,17 @@
       grid-row: span var(--linhas-bloco);
       grid-template-rows: subgrid;
     }
+  }
+
+  /* Duas versões de um trecho no mesmo lugar, uma em cima da outra (ex.: os botões de senha e a caixa "Nova senha" do
+     Alterar Usuário): o trecho tem sempre a altura da maior, então trocar de uma para a outra não empurra o que vem
+     embaixo. A que não está em uso fica `invisible` (ocupa o lugar) e `inert` (sem clique nem Tab). */
+  .camadas {
+    display: grid;
+  }
+
+  .camadas > * {
+    grid-area: 1 / 1;
   }
 
   .ficha-lado-a-lado__esquerda {

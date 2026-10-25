@@ -1,4 +1,4 @@
-import { Fragment, useId, useState } from 'react';
+import { Fragment, useEffect, useId, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { FichaLadoALado, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { FiltroPartes } from '../../components/crud/filtro-partes';
@@ -89,6 +89,21 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
   const { lerScore, avisarScore } = useAvisoScore(auth.authFetch, idUsuario, base.nome);
   const [nome, setNome] = useState('');
   const [trocandoSenha, setTrocandoSenha] = useState(false);
+  // A caixa "Nova senha" já existe (invisível) antes de abrir: o foco vai para ela ao abrir, não ao montar.
+  const campoNovaSenha = useRef<HTMLInputElement>(null);
+  // Cópia invisível de "Trocar senha" e "Cancelar", uma em cima da outra (.camadas): tem a largura do maior dos dois,
+  // sem número escrito. A barra de força termina antes dela (onde a caixa termina) e o Atribuir fica da largura dela.
+  const larguraBotoesSenha = (
+    <span className="camadas shrink-0 invisible" aria-hidden="true" inert>
+      <span className="btn btn-secondary altura-de-campo whitespace-nowrap">
+        <i className="fa-solid fa-key" aria-hidden="true"></i> Trocar senha
+      </span>
+      <span className="btn btn-secondary altura-de-campo whitespace-nowrap">Cancelar</span>
+    </span>
+  );
+  useEffect(() => {
+    if (trocandoSenha) campoNovaSenha.current?.focus();
+  }, [trocandoSenha]);
   const [novaSenha, setNovaSenha] = useState('');
   const [fotoNova, setFotoNova] = useState<FotoNova>(undefined);
   // Pesquisador: idem.
@@ -317,13 +332,14 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
               altura, e Metadados e Aceites também. "Perfil de Pesquisador" vem depois, na largura de Dados. Os papéis
               fazem parte de "Conta" no filtro. */}
           <div className={ve('conta') + ' grade-ficha gap-x-8 gap-y-10'}>
-            <div className="lg:col-span-3 space-y-10">
+            <div className="lg:col-span-3 space-y-6">
               <PapeisDoUsuario
                 auth={auth}
                 idUsuario={idUsuario}
                 papeis={papeis ?? []}
                 aoMudarPapeis={setPapeis}
                 aoAtualizado={aoAtualizado}
+                larguraDoBotao={larguraBotoesSenha}
               >
                 {({ lista, escolha, acao }) => {
                   // Os campos ao lado da foto, um por linha: cada um fica na linha da parte vizinha de Papéis.
@@ -343,54 +359,87 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                     </Fragment>,
                     // O e-mail não se troca pela interface (RF-008): só leitura, na mesma caixa dos campos ao lado.
                     <CaixaSomenteLeitura key="email" rotulo="E-mail" valor={usuario.email} />,
-                    <Fragment key="senha">
-                      {trocandoSenha ? (
-                        <Campo rotulo="Nova senha" erro={conta.erroDe('senha')}>
-                          {({ atributos, classeErro }) => (
-                            <>
-                              <div className="flex gap-2">
+                    // Duas camadas (.camadas), cada uma com a altura da maior versão: abrir e fechar não empurram Metadados e
+                    // Aceites. À direita, "Trocar senha" e "Cancelar" no mesmo lugar e com a mesma altura da caixa
+                    // (.altura-de-campo): um vira o outro sem pular. À esquerda, a caixa "Nova senha" no lugar do
+                    // "Redefinir senha dev". Embaixo, o medidor de força numa linha, com o lugar sempre reservado (invisível
+                    // enquanto não há senha): começar a digitar também não empurra nada.
+                    <div key="senha">
+                      <div className="flex items-end gap-2">
+                        <div className="camadas flex-1 min-w-0">
+                          <div className={trocandoSenha ? undefined : 'invisible'} inert={!trocandoSenha}>
+                            <Campo rotulo="Nova senha" erro={conta.erroDe('senha')}>
+                              {({ atributos, classeErro }) => (
                                 <input
                                   {...atributos}
                                   type="password"
                                   value={novaSenha}
                                   onChange={(evento) => setNovaSenha(evento.target.value)}
-                                  className={'input-padrao flex-1' + classeErro}
+                                  className={'input-padrao' + classeErro}
                                   autoComplete="new-password"
-                                  autoFocus
+                                  ref={campoNovaSenha}
                                 />
-                                <button type="button" onClick={cancelarTrocaSenha} className="btn btn-secondary shrink-0">
-                                  Cancelar
-                                </button>
-                              </div>
-                              <MedidorSenha senha={novaSenha} />
-                            </>
-                          )}
-                        </Campo>
-                      ) : (
-                        // Os dois lado a lado, dividindo a largura do campo (texto sem quebrar, como no RodapeAcoes).
-                        <div className="flex gap-3">
-                          <button type="button" onClick={() => setTrocandoSenha(true)} className="btn btn-secondary flex-1 whitespace-nowrap">
-                            <i className="fa-solid fa-key" aria-hidden="true"></i> Trocar senha
-                          </button>
+                              )}
+                            </Campo>
+                          </div>
                           {/* Só em desenvolvimento: põe a senha da pessoa em SENHA_DEV na hora, para testar login. Fica aqui
                               (e não na Minha Conta) porque trocar a senha de OUTRA pessoa não pede a senha atual. */}
-                          {import.meta.env.DEV && (
-                            <button
-                              type="button"
-                              onClick={aoRedefinirSenhaDev}
-                              disabled={redefinindoSenhaDev}
-                              className="btn btn-dev-acao flex-1 whitespace-nowrap"
-                              title={`Redefine a senha para "${SENHA_DEV}", sem digitar nada.`}
-                            >
-                              <i className="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>{' '}
-                              {redefinindoSenhaDev ? 'Redefinindo...' : 'Redefinir senha dev'}
-                            </button>
-                          )}
+                          <div className={'self-end' + (trocandoSenha ? ' invisible' : '')} inert={trocandoSenha}>
+                            {import.meta.env.DEV && (
+                              <button
+                                type="button"
+                                onClick={aoRedefinirSenhaDev}
+                                disabled={redefinindoSenhaDev}
+                                className="btn btn-dev-acao altura-de-campo w-full whitespace-nowrap"
+                                title={`Redefine a senha para "${SENHA_DEV}", sem digitar nada.`}
+                              >
+                                <i className="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>{' '}
+                                {redefinindoSenhaDev ? 'Redefinindo...' : 'Redefinir senha dev'}
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </Fragment>,
+                        <div className="camadas shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setTrocandoSenha(true)}
+                            className={'btn btn-secondary altura-de-campo whitespace-nowrap' + (trocandoSenha ? ' invisible' : '')}
+                            inert={trocandoSenha}
+                          >
+                            <i className="fa-solid fa-key" aria-hidden="true"></i> Trocar senha
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelarTrocaSenha}
+                            className={'btn btn-secondary altura-de-campo whitespace-nowrap' + (trocandoSenha ? '' : ' invisible')}
+                            inert={!trocandoSenha}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    </div>,
                   ];
-                  const partesPapeis = [lista, escolha, acao];
+                  // Embaixo da foto e dos campos, na largura toda do bloco: o medidor de força numa linha só, com o lugar
+                  // sempre reservado (invisível enquanto não há senha), para começar a digitar não empurrar nada.
+                  const medidor = (
+                    <div className={'contents' + (trocandoSenha ? '' : ' invisible')} inert={!trocandoSenha}>
+                      <MedidorSenha
+                        senha={novaSenha}
+                        emLinha
+                        reservarEspaco
+                        classeBarra="ficha-bloco-com-foto__campo"
+                        classeLista="ficha-bloco-com-foto__inteiro"
+                        aoLadoDaBarra={larguraBotoesSenha}
+                      />
+                    </div>
+                  );
+                  // O botão Atribuir encosta embaixo (self-end): fica na linha da caixa "Nova senha" e do Cancelar.
+                  const partesPapeis = [
+                    { parte: lista, classe: '' },
+                    { parte: escolha, classe: '' },
+                    { parte: acao, classe: ' self-end' },
+                  ];
                   return (
                     // A mesma grade da FichaLadoALado (DS-115), com um bloco à esquerda que tem a foto numa coluna
                     // própria, atravessando as linhas dos campos (.ficha-bloco-com-foto, DS-119).
@@ -399,7 +448,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                       <h3 className="titulo-bloco titulo-bloco--linha mb-0 sm:col-span-2 ficha-lado-a-lado__direita max-lg:mt-2">Papéis</h3>
                       <div
                         className="ficha-bloco-com-foto sm:col-span-2 ficha-lado-a-lado__esquerda"
-                        style={{ '--linhas-bloco': campos.length } as CSSProperties}
+                        style={{ '--linhas-bloco': campos.length + 1, '--linhas-foto': campos.length } as CSSProperties}
                       >
                         <div className="ficha-bloco-com-foto__foto flex flex-col items-start gap-3">
                           <span className="rotulo-campo">Foto do perfil</span>
@@ -416,9 +465,11 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                             {campo}
                           </div>
                         ))}
+                        {/* Sobe metade do vão da grade (-mt-2): o medidor fica a 8 px da caixa, como no Cadastro e na Minha Conta. */}
+                        <div className="ficha-bloco-com-foto__largo -mt-2">{medidor}</div>
                       </div>
-                      {partesPapeis.map((parte, indice) => (
-                        <div key={indice} className="sm:col-span-2 ficha-lado-a-lado__direita">
+                      {partesPapeis.map(({ parte, classe }, indice) => (
+                        <div key={indice} className={'sm:col-span-2 ficha-lado-a-lado__direita' + classe}>
                           {parte}
                         </div>
                       ))}
@@ -560,11 +611,13 @@ interface PapeisDoUsuarioProps {
   // As três partes vão para linhas diferentes da grade (FichaLadoALado), cada uma ao lado da parte de "Dados da conta"
   // que tem a mesma altura: as pílulas ao lado da foto, a escolha ao lado do Nome, o botão ao lado do resto.
   children: (partes: { lista: ReactNode; escolha: ReactNode; acao: ReactNode }) => ReactNode;
+  // Cópia invisível dos botões de senha (Trocar senha e Cancelar): o Atribuir fica com a largura deles.
+  larguraDoBotao: ReactNode;
 }
 
 // Papéis da conta: atribuir, suspender por um prazo com motivo, reativar e revogar. Tudo grava na hora. Uma ação por
 // vez (`ocupado` guarda qual), e depois de cada uma a lista é buscada de novo.
-function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado, children }: PapeisDoUsuarioProps) {
+function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado, children, larguraDoBotao }: PapeisDoUsuarioProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const opcoesDiasSuspensao = useOpcoesDiasSuspensao();
@@ -763,13 +816,17 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado,
     </Campo>
   );
 
+  // O botão à direita, com a largura dos botões de senha ao lado (a cópia invisível deles na mesma camada).
   const acao = todosAtribuidos ? null : (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col items-end gap-2">
       {/* O que o papel escolhido libera, antes de atribuir. */}
-      {descricaoEscolhido && <p className="legenda texto-fraco">{descricaoEscolhido}</p>}
-      <button type="button" onClick={() => void aoAtribuir()} disabled={ocupado === 'atribuir'} className="btn btn-primary">
-        {ocupado === 'atribuir' ? 'Atribuindo...' : 'Atribuir'}
-      </button>
+      {descricaoEscolhido && <p className="legenda texto-fraco text-right">{descricaoEscolhido}</p>}
+      <div className="camadas">
+        <button type="button" onClick={() => void aoAtribuir()} disabled={ocupado === 'atribuir'} className="btn btn-primary altura-de-campo">
+          {ocupado === 'atribuir' ? 'Atribuindo...' : 'Atribuir'}
+        </button>
+        {larguraDoBotao}
+      </div>
     </div>
   );
 

@@ -9,6 +9,12 @@
    Cor (paleta, tokens semânticos, tema escuro, utilitários `.fundo-*`/`.texto-*`/`.borda-*`) mora em
    1-cores.css; tamanho de fonte e a escala tipográfica nomeada (`.titulo-*` etc.) moram em 2-tipografia.css. */
 :root {
+  /* Medidas do campo de formulário (.input-padrao, 4-componentes.css). Na raiz para servir também a quem precisa da
+     mesma altura do campo (a lista, DS-117; um botão ao lado do campo, .altura-de-campo). Quem quer um campo mais
+     baixo troca a variável no próprio elemento (a tabela editável, 5-crud.css). */
+  --campo-espaco-vertical: 0.875rem;
+  --campo-borda: 2px;
+  --campo-altura-linha: 1.5;
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
