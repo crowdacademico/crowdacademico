@@ -16,42 +16,51 @@ interface SecaoAceitesTermoProps {
   // `null` = ainda carregando. A busca fica no modal, que espera por ela antes de aparecer (não "dança").
   termosAceitos: UsuarioResponseAcceptedTerm[] | null;
   aoErro: (erro: unknown) => void;
+  // false: só a lista, sem o título da seção (quem usa já dá o título, como a FichaLadoALado do Alterar Usuário).
+  comTitulo?: boolean;
 }
 
 // Aceites do Termo de Uso de uma pessoa (Consultar e Alterar Usuário): só o ÚLTIMO aceite de cada tipo, um embaixo
 // do outro, "Conta e contribuições" primeiro e o de pesquisador depois, se houver (decisão do Lucas: o histórico
 // inteiro não ajuda aqui). A lista vem do mais novo para o mais antigo, então o primeiro de cada tipo é o último
 // aceite. Clicar num aceite abre o texto daquela versão no modal de termo do Criar conta.
-export function SecaoAceitesTermo({ auth, termosAceitos, aoErro }: SecaoAceitesTermoProps) {
+export function SecaoAceitesTermo({ auth, termosAceitos, aoErro, comTitulo = true }: SecaoAceitesTermoProps) {
   const [termoLido, setTermoLido] = useState<TermoUsoResponse | null>(null);
   const lerTermo = (idTermo: number) => void termoUsoApi.buscar(auth.authFetch, idTermo).then(setTermoLido, aoErro);
   const ultimos = TIPOS_TERMO.flatMap((tipo) => termosAceitos?.find((termo) => termo.tipo === tipo) ?? []);
 
+  const lista =
+    termosAceitos === null ? (
+      <Carregando />
+    ) : ultimos.length === 0 ? (
+      <EstadoVazio compacto icone="fa-file-signature" titulo="Nenhum termo aceito registrado." />
+    ) : (
+      ultimos.map((termo) => (
+        <CampoFicha
+          key={termo.tipo}
+          rotulo={ROTULO_TIPO_TERMO[termo.tipo]}
+          valor={
+            <button
+              type="button"
+              onClick={() => lerTermo(termo.idTermo)}
+              className="texto-marca underline underline-offset-2 hover-texto-forte text-left"
+            >
+              {termo.versao} - {formatarDataHora(termo.aceitoEm)}
+            </button>
+          }
+        />
+      ))
+    );
+
   return (
     <>
-      <SecaoFicha titulo="Aceites do Termo de Uso" colunas={1}>
-        {termosAceitos === null ? (
-          <Carregando />
-        ) : ultimos.length === 0 ? (
-          <EstadoVazio compacto icone="fa-file-signature" titulo="Nenhum termo aceito registrado." />
-        ) : (
-          ultimos.map((termo) => (
-            <CampoFicha
-              key={termo.tipo}
-              rotulo={ROTULO_TIPO_TERMO[termo.tipo]}
-              valor={
-                <button
-                  type="button"
-                  onClick={() => lerTermo(termo.idTermo)}
-                  className="texto-marca underline underline-offset-2 hover-texto-forte text-left"
-                >
-                  {termo.versao} - {formatarDataHora(termo.aceitoEm)}
-                </button>
-              }
-            />
-          ))
-        )}
-      </SecaoFicha>
+      {comTitulo ? (
+        <SecaoFicha titulo="Aceites do Termo de Uso" colunas={1}>
+          {lista}
+        </SecaoFicha>
+      ) : (
+        <div className="grid grid-cols-1 gap-y-4">{lista}</div>
+      )}
       {termoLido && (
         <ModalTermo
           titulo={`Termo de Uso - ${ROTULO_TIPO_TERMO[termoLido.tipo]}`}

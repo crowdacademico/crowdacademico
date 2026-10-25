@@ -413,6 +413,39 @@
     }
   }
 
+  /* Um bloco da esquerda com uma coluna de foto ao lado dos campos (o Alterar Usuário: a foto grande ao lado de Nome,
+     E-mail e senha). A foto atravessa as linhas dos campos (`--linhas-bloco`, a quantidade de campos, vem de quem
+     usa). A partir de 1024 px, as linhas do bloco são as linhas da grade de fora (subgrid): cada campo fica na mesma
+     linha da parte vizinha da direita (o E-mail ao lado da lista de papel). As colunas moram só aqui. */
+  .ficha-bloco-com-foto {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem 1.5rem;
+    align-items: start;
+  }
+
+  @media (min-width: 640px) {
+    .ficha-bloco-com-foto {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .ficha-bloco-com-foto__foto {
+      grid-column: 1;
+      grid-row: span var(--linhas-bloco);
+    }
+
+    .ficha-bloco-com-foto__campo {
+      grid-column: 2;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .ficha-bloco-com-foto {
+      grid-row: span var(--linhas-bloco);
+      grid-template-rows: subgrid;
+    }
+  }
+
   .ficha-lado-a-lado__esquerda {
     order: 1;
   }

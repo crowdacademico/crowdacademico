@@ -1,5 +1,6 @@
-import { useId, useState } from 'react';
-import { SecaoFicha } from '../../components/crud/ficha-consulta';
+import { Fragment, useId, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
+import { FichaLadoALado, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { FiltroPartes } from '../../components/crud/filtro-partes';
 import type { ParteTela } from '../../components/crud/filtro-partes';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
@@ -310,98 +311,142 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
           <FiltroPartes partes={partes} atual={parte} aoEscolher={setParte} />
           <MensagemErro texto={erro} />
 
-          {/* "Dados da conta" (com os Metadados embaixo) à esquerda; na coluna da direita, Papéis e, logo embaixo, os
-              Aceites do Termo. "Perfil de Pesquisador" vem depois, na largura de Dados. Os papéis fazem parte de
-              "Conta" no filtro. */}
+          {/* Duas grades de linhas alinhadas (FichaLadoALado, DS-115): "Dados da conta" ao lado de Papéis e, embaixo,
+              Metadados ao lado dos Aceites do Termo. Cada linha tem as partes dos dois lados (a foto e as pílulas dos
+              papéis; o Nome e a lista de papel; o resto e o botão Atribuir), então o Nome e a lista ficam na mesma
+              altura, e Metadados e Aceites também. "Perfil de Pesquisador" vem depois, na largura de Dados. Os papéis
+              fazem parte de "Conta" no filtro. */}
           <div className={ve('conta') + ' grade-ficha gap-x-8 gap-y-10'}>
-            <div className="lg:col-span-2 space-y-10">
-              <SecaoFicha titulo="Dados da conta">
-                <div className="sm:col-span-2 flex items-center gap-4">
-                  <SeletorFotoPerfil
-                    authFetch={auth.authFetch}
-                    nome={nome || base.nome}
-                    url={fotoNova !== undefined ? fotoNova.url : base.avatarUrl}
-                    tamanho="lg"
-                    aoAlterar={(id, url) => setFotoNova({ id, url })}
-                  />
-                  <p className="legenda texto-fraco">A foto nova só vale depois de "Salvar".</p>
-                </div>
-                <Campo rotulo="Nome" erro={conta.erroDe('nome')} className="sm:col-span-2">
-                  {({ atributos, classeErro }) => (
-                    <input
-                      {...atributos}
-                      type="text"
-                      value={nome}
-                      onChange={(evento) => setNome(evento.target.value)}
-                      className={'input-padrao' + classeErro}
-                    />
-                  )}
-                </Campo>
-                {trocandoSenha ? (
-                  <Campo rotulo="Nova senha" erro={conta.erroDe('senha')} className="sm:col-span-2">
-                    {({ atributos, classeErro }) => (
-                      <>
-                        <div className="flex gap-2">
+            <div className="lg:col-span-3 space-y-10">
+              <PapeisDoUsuario
+                auth={auth}
+                idUsuario={idUsuario}
+                papeis={papeis ?? []}
+                aoMudarPapeis={setPapeis}
+                aoAtualizado={aoAtualizado}
+              >
+                {({ lista, escolha, acao }) => {
+                  // Os campos ao lado da foto, um por linha: cada um fica na linha da parte vizinha de Papéis.
+                  const campos = [
+                    <Fragment key="nome">
+                      <Campo rotulo="Nome" erro={conta.erroDe('nome')}>
+                        {({ atributos, classeErro }) => (
                           <input
                             {...atributos}
-                            type="password"
-                            value={novaSenha}
-                            onChange={(evento) => setNovaSenha(evento.target.value)}
-                            className={'input-padrao flex-1' + classeErro}
-                            autoComplete="new-password"
-                            autoFocus
+                            type="text"
+                            value={nome}
+                            onChange={(evento) => setNome(evento.target.value)}
+                            className={'input-padrao' + classeErro}
                           />
-                          <button type="button" onClick={cancelarTrocaSenha} className="btn btn-secondary shrink-0">
-                            Cancelar
+                        )}
+                      </Campo>
+                    </Fragment>,
+                    // O e-mail não se troca pela interface (RF-008): só leitura, na mesma caixa dos campos ao lado.
+                    <CaixaSomenteLeitura key="email" rotulo="E-mail" valor={usuario.email} />,
+                    <Fragment key="senha">
+                      {trocandoSenha ? (
+                        <Campo rotulo="Nova senha" erro={conta.erroDe('senha')}>
+                          {({ atributos, classeErro }) => (
+                            <>
+                              <div className="flex gap-2">
+                                <input
+                                  {...atributos}
+                                  type="password"
+                                  value={novaSenha}
+                                  onChange={(evento) => setNovaSenha(evento.target.value)}
+                                  className={'input-padrao flex-1' + classeErro}
+                                  autoComplete="new-password"
+                                  autoFocus
+                                />
+                                <button type="button" onClick={cancelarTrocaSenha} className="btn btn-secondary shrink-0">
+                                  Cancelar
+                                </button>
+                              </div>
+                              <MedidorSenha senha={novaSenha} />
+                            </>
+                          )}
+                        </Campo>
+                      ) : (
+                        // Os dois lado a lado, dividindo a largura do campo (texto sem quebrar, como no RodapeAcoes).
+                        <div className="flex gap-3">
+                          <button type="button" onClick={() => setTrocandoSenha(true)} className="btn btn-secondary flex-1 whitespace-nowrap">
+                            <i className="fa-solid fa-key" aria-hidden="true"></i> Trocar senha
                           </button>
+                          {/* Só em desenvolvimento: põe a senha da pessoa em SENHA_DEV na hora, para testar login. Fica aqui
+                              (e não na Minha Conta) porque trocar a senha de OUTRA pessoa não pede a senha atual. */}
+                          {import.meta.env.DEV && (
+                            <button
+                              type="button"
+                              onClick={aoRedefinirSenhaDev}
+                              disabled={redefinindoSenhaDev}
+                              className="btn btn-dev-acao flex-1 whitespace-nowrap"
+                              title={`Redefine a senha para "${SENHA_DEV}", sem digitar nada.`}
+                            >
+                              <i className="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>{' '}
+                              {redefinindoSenhaDev ? 'Redefinindo...' : 'Redefinir senha dev'}
+                            </button>
+                          )}
                         </div>
-                        <MedidorSenha senha={novaSenha} />
-                      </>
-                    )}
-                  </Campo>
-                ) : (
-                  <div className="sm:col-span-2 flex flex-wrap gap-3">
-                    <button type="button" onClick={() => setTrocandoSenha(true)} className="btn btn-secondary">
-                      <i className="fa-solid fa-key" aria-hidden="true"></i> Trocar senha
-                    </button>
-                    {/* Só em desenvolvimento: põe a senha da pessoa em SENHA_DEV na hora, para testar login. Fica aqui
-                        (e não na Minha Conta) porque trocar a senha de OUTRA pessoa não pede a senha atual. */}
-                    {import.meta.env.DEV && (
-                      <button
-                        type="button"
-                        onClick={aoRedefinirSenhaDev}
-                        disabled={redefinindoSenhaDev}
-                        className="btn btn-dev-acao"
-                        title={`Redefine a senha para "${SENHA_DEV}", sem digitar nada.`}
+                      )}
+                    </Fragment>,
+                  ];
+                  const partesPapeis = [lista, escolha, acao];
+                  return (
+                    // A mesma grade da FichaLadoALado (DS-115), com um bloco à esquerda que tem a foto numa coluna
+                    // própria, atravessando as linhas dos campos (.ficha-bloco-com-foto, DS-119).
+                    <div className="ficha-lado-a-lado grid gap-x-6 gap-y-4">
+                      <h3 className="titulo-bloco titulo-bloco--linha mb-0 sm:col-span-2 ficha-lado-a-lado__esquerda">Dados da conta</h3>
+                      <h3 className="titulo-bloco titulo-bloco--linha mb-0 sm:col-span-2 ficha-lado-a-lado__direita max-lg:mt-2">Papéis</h3>
+                      <div
+                        className="ficha-bloco-com-foto sm:col-span-2 ficha-lado-a-lado__esquerda"
+                        style={{ '--linhas-bloco': campos.length } as CSSProperties}
                       >
-                        <i className="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>{' '}
-                        {redefinindoSenhaDev ? 'Redefinindo...' : 'Redefinir senha dev'}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </SecaoFicha>
+                        <div className="ficha-bloco-com-foto__foto flex flex-col items-start gap-3">
+                          <span className="rotulo-campo">Foto do perfil</span>
+                          <SeletorFotoPerfil
+                            authFetch={auth.authFetch}
+                            nome={nome || base.nome}
+                            url={fotoNova !== undefined ? fotoNova.url : base.avatarUrl}
+                            tamanho="xxl"
+                            aoAlterar={(id, url) => setFotoNova({ id, url })}
+                          />
+                        </div>
+                        {campos.map((campo) => (
+                          <div key={campo.key} className="ficha-bloco-com-foto__campo">
+                            {campo}
+                          </div>
+                        ))}
+                      </div>
+                      {partesPapeis.map((parte, indice) => (
+                        <div key={indice} className="sm:col-span-2 ficha-lado-a-lado__direita">
+                          {parte}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }}
+              </PapeisDoUsuario>
 
-              {/* "Metadados", não "Auditoria": tem o id, que não é registro de quando algo aconteceu. Os três numa linha. */}
-              <SecaoFicha titulo="Metadados" colunas={3}>
-                <CampoSomenteLeitura rotulo="id" valor={idUsuario} />
-                <CampoSomenteLeitura rotulo="Criado em" valor={usuario.criadoEm && formatarData(usuario.criadoEm)} />
-                <CampoSomenteLeitura rotulo="Último login" valor={usuario.ultimoLoginEm ? formatarData(usuario.ultimoLoginEm) : 'Nunca'} />
-              </SecaoFicha>
-            </div>
-
-            <div className="space-y-10">
-              <SecaoFicha titulo="Papéis" colunas={1}>
-                <PapeisDoUsuario
-                  auth={auth}
-                  idUsuario={idUsuario}
-                  papeis={papeis ?? []}
-                  aoMudarPapeis={setPapeis}
-                  aoAtualizado={aoAtualizado}
-                />
-              </SecaoFicha>
-
-              <SecaoAceitesTermo auth={auth} termosAceitos={termosAceitos} aoErro={reportarErro} />
+              <FichaLadoALado
+                tituloEsquerda="Metadados"
+                tituloDireita="Aceites do Termo de Uso"
+                linhas={[
+                  {
+                    esquerda: [
+                      // "Metadados", não "Auditoria": tem o id, que não é registro de quando algo aconteceu. Os três
+                      // numa linha.
+                      <div key="metadados" className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4">
+                        <CampoSomenteLeitura rotulo="id" valor={idUsuario} />
+                        <CampoSomenteLeitura rotulo="Criado em" valor={usuario.criadoEm && formatarData(usuario.criadoEm)} />
+                        <CampoSomenteLeitura rotulo="Último login" valor={usuario.ultimoLoginEm ? formatarData(usuario.ultimoLoginEm) : 'Nunca'} />
+                      </div>,
+                    ],
+                    direita: [
+                      <SecaoAceitesTermo key="aceites" auth={auth} termosAceitos={termosAceitos} aoErro={reportarErro} comTitulo={false} />,
+                    ],
+                  },
+                ]}
+              />
             </div>
 
             {formPerfil && perfilPesquisador && (
@@ -512,11 +557,14 @@ interface PapeisDoUsuarioProps {
   papeis: UsuarioPapelResponse[];
   aoMudarPapeis: (papeis: UsuarioPapelResponse[]) => void;
   aoAtualizado: () => void;
+  // As três partes vão para linhas diferentes da grade (FichaLadoALado), cada uma ao lado da parte de "Dados da conta"
+  // que tem a mesma altura: as pílulas ao lado da foto, a escolha ao lado do Nome, o botão ao lado do resto.
+  children: (partes: { lista: ReactNode; escolha: ReactNode; acao: ReactNode }) => ReactNode;
 }
 
 // Papéis da conta: atribuir, suspender por um prazo com motivo, reativar e revogar. Tudo grava na hora. Uma ação por
 // vez (`ocupado` guarda qual), e depois de cada uma a lista é buscada de novo.
-function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado }: PapeisDoUsuarioProps) {
+function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado, children }: PapeisDoUsuarioProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const opcoesDiasSuspensao = useOpcoesDiasSuspensao();
@@ -609,112 +657,121 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado 
     );
   };
 
-  return (
+  const lista = (
     <div className="space-y-4">
       <MensagemErro texto={erro} />
 
-      <div className="flex flex-wrap gap-2">
-        {papeis.length === 0 && <EstadoVazio compacto icone="fa-user-tag" titulo="Nenhum papel atribuído ainda." texto="Escolha um papel no campo abaixo para atribuir." />}
-        {papeis.map((papel) => {
-          const suspenso = papel.suspensoAte && new Date(papel.suspensoAte) > new Date();
-          return (
-            <span key={papel.idPapel} className="inline-flex flex-col items-start gap-1">
-              <span className={'badge flex items-center gap-2 ' + (suspenso ? 'fundo-aviso texto-aviso' : 'badge-neutro')}>
-                {papel.nomePapel}
-                {suspenso && <i className="fa-solid fa-clock icone-pequeno" aria-hidden="true"></i>}
-                {suspenso ? (
-                  <button
-                    type="button"
-                    onClick={() => aoReativar(papel)}
-                    disabled={ocupado === papel.idPapel}
-                    className="dica enfase hover:underline disabled:opacity-60"
-                  >
-                    {ocupado === papel.idPapel ? '…' : 'reativar'}
-                    <Dica texto="Reativar agora" curta />
-                  </button>
-                ) : (
-                  <>
+        <div className="flex flex-wrap gap-2">
+          {papeis.length === 0 && <EstadoVazio compacto icone="fa-user-tag" titulo="Nenhum papel atribuído ainda." texto="Escolha um papel no campo abaixo para atribuir." />}
+          {papeis.map((papel) => {
+            const suspenso = papel.suspensoAte && new Date(papel.suspensoAte) > new Date();
+            return (
+              <span key={papel.idPapel} className="inline-flex flex-col items-start gap-1">
+                <span className={'badge flex items-center gap-2 ' + (suspenso ? 'fundo-aviso texto-aviso' : 'badge-neutro')}>
+                  {papel.nomePapel}
+                  {suspenso && <i className="fa-solid fa-clock icone-pequeno" aria-hidden="true"></i>}
+                  {suspenso ? (
                     <button
                       type="button"
-                      onClick={() => setPapelSuspendendoId((atual) => (atual === papel.idPapel ? null : papel.idPapel))}
-                      className="dica texto-fraco hover-texto-forte"
-                      aria-label={`Suspender "${papel.nomePapel}" por um tempo`}
-                    >
-                      <i className="fa-solid fa-clock icone-pequeno" aria-hidden="true"></i>
-                      <Dica texto={`Suspender "${papel.nomePapel}" por um tempo`} curta />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => aoRevogar(papel)}
+                      onClick={() => aoReativar(papel)}
                       disabled={ocupado === papel.idPapel}
-                      className="dica texto-erro enfase hover-texto-erro disabled:opacity-60"
-                      aria-label={`Revogar "${papel.nomePapel}"`}
+                      className="dica enfase hover:underline disabled:opacity-60"
                     >
-                      ×
-                      <Dica texto={`Revogar "${papel.nomePapel}"`} curta />
+                      {ocupado === papel.idPapel ? '…' : 'reativar'}
+                      <Dica texto="Reativar agora" curta />
                     </button>
-                  </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setPapelSuspendendoId((atual) => (atual === papel.idPapel ? null : papel.idPapel))}
+                        className="dica texto-fraco hover-texto-forte"
+                        aria-label={`Suspender "${papel.nomePapel}" por um tempo`}
+                      >
+                        <i className="fa-solid fa-clock icone-pequeno" aria-hidden="true"></i>
+                        <Dica texto={`Suspender "${papel.nomePapel}" por um tempo`} curta />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => aoRevogar(papel)}
+                        disabled={ocupado === papel.idPapel}
+                        className="dica texto-erro enfase hover-texto-erro disabled:opacity-60"
+                        aria-label={`Revogar "${papel.nomePapel}"`}
+                      >
+                        ×
+                        <Dica texto={`Revogar "${papel.nomePapel}"`} curta />
+                      </button>
+                    </>
+                  )}
+                </span>
+                {papelSuspendendoId === papel.idPapel && (
+                  <span className="flex flex-col gap-1 fundo-cartao border borda-forte rounded-lg p-1.5">
+                    <input
+                      value={motivoSuspensao}
+                      onChange={(evento) => setMotivoSuspensao(evento.target.value)}
+                      placeholder="Motivo (obrigatório)"
+                      aria-label={`Motivo da suspensão de "${papel.nomePapel}"`}
+                      aria-invalid={Boolean(suspensao.erroDe('motivo'))}
+                      className={'input-padrao input-padrao--pequeno py-1' + (suspensao.erroDe('motivo') ? ' borda-erro' : '')}
+                    />
+                    {suspensao.erroDe('motivo') && (
+                      <span className="legenda-destaque texto-erro">{suspensao.erroDe('motivo')}</span>
+                    )}
+                    <span className="flex gap-1">
+                      {opcoesDiasSuspensao.map((dias) => (
+                        <button
+                          key={dias}
+                          type="button"
+                          onClick={() => void aoSuspender(papel, dias)}
+                          disabled={ocupado === papel.idPapel}
+                          className="legenda-destaque texto-padrao hover-fundo-sutil px-1.5 py-0.5 rounded"
+                        >
+                          {dias}d
+                        </button>
+                      ))}
+                    </span>
+                  </span>
                 )}
               </span>
-              {papelSuspendendoId === papel.idPapel && (
-                <span className="flex flex-col gap-1 fundo-cartao border borda-forte rounded-lg p-1.5">
-                  <input
-                    value={motivoSuspensao}
-                    onChange={(evento) => setMotivoSuspensao(evento.target.value)}
-                    placeholder="Motivo (obrigatório)"
-                    aria-label={`Motivo da suspensão de "${papel.nomePapel}"`}
-                    aria-invalid={Boolean(suspensao.erroDe('motivo'))}
-                    className={'input-padrao input-padrao--pequeno py-1' + (suspensao.erroDe('motivo') ? ' borda-erro' : '')}
-                  />
-                  {suspensao.erroDe('motivo') && (
-                    <span className="legenda-destaque texto-erro">{suspensao.erroDe('motivo')}</span>
-                  )}
-                  <span className="flex gap-1">
-                    {opcoesDiasSuspensao.map((dias) => (
-                      <button
-                        key={dias}
-                        type="button"
-                        onClick={() => void aoSuspender(papel, dias)}
-                        disabled={ocupado === papel.idPapel}
-                        className="legenda-destaque texto-padrao hover-fundo-sutil px-1.5 py-0.5 rounded"
-                      >
-                        {dias}d
-                      </button>
-                    ))}
-                  </span>
-                </span>
-              )}
-            </span>
-          );
-        })}
-      </div>
-
-      {catalogo !== null && papeisDisponiveis.length === 0 ? (
-        <p className="legenda texto-fraco">Esta conta já tem todos os papéis que existem.</p>
-      ) : (
-        <div className="flex flex-col gap-2 max-w-(--largura-formulario)">
-          <select
-            value={idPapelParaAtribuir}
-            onChange={(evento) => setIdPapelParaAtribuir(evento.target.value)}
-            aria-label="Papel para atribuir"
-            aria-invalid={Boolean(atribuicao.erroDe('papel'))}
-            className={'input-padrao' + (atribuicao.erroDe('papel') ? ' borda-erro' : '')}
-          >
-            <option value="">Selecione um papel...</option>
-            {papeisDisponiveis.map((papel) => (
-              <option key={papel.idPapel} value={papel.idPapel}>
-                {papel.nome}
-              </option>
-            ))}
-          </select>
-          {atribuicao.erroDe('papel') && <p className="legenda-destaque texto-erro">{atribuicao.erroDe('papel')}</p>}
-          {/* O que o papel escolhido libera, antes de atribuir. */}
-          {descricaoEscolhido && <p className="legenda texto-fraco">{descricaoEscolhido}</p>}
-          <button type="button" onClick={() => void aoAtribuir()} disabled={ocupado === 'atribuir'} className="btn btn-primary">
-            {ocupado === 'atribuir' ? 'Atribuindo...' : 'Atribuir'}
-          </button>
+            );
+          })}
         </div>
-      )}
     </div>
   );
+
+  const todosAtribuidos = catalogo !== null && papeisDisponiveis.length === 0;
+  // Com rótulo visível, como o Nome: a caixa da lista começa na mesma altura da caixa do Nome, na linha ao lado.
+  const escolha = todosAtribuidos ? (
+    <p className="legenda texto-fraco">Esta conta já tem todos os papéis que existem.</p>
+  ) : (
+    <Campo rotulo="Atribuir papel" erro={atribuicao.erroDe('papel')}>
+      {({ atributos, classeErro }) => (
+        <select
+          {...atributos}
+          value={idPapelParaAtribuir}
+          onChange={(evento) => setIdPapelParaAtribuir(evento.target.value)}
+          className={'input-padrao' + classeErro}
+        >
+          <option value="">Selecione um papel...</option>
+          {papeisDisponiveis.map((papel) => (
+            <option key={papel.idPapel} value={papel.idPapel}>
+              {papel.nome}
+            </option>
+          ))}
+        </select>
+      )}
+    </Campo>
+  );
+
+  const acao = todosAtribuidos ? null : (
+    <div className="flex flex-col gap-2">
+      {/* O que o papel escolhido libera, antes de atribuir. */}
+      {descricaoEscolhido && <p className="legenda texto-fraco">{descricaoEscolhido}</p>}
+      <button type="button" onClick={() => void aoAtribuir()} disabled={ocupado === 'atribuir'} className="btn btn-primary">
+        {ocupado === 'atribuir' ? 'Atribuindo...' : 'Atribuir'}
+      </button>
+    </div>
+  );
+
+  return <>{children({ lista, escolha, acao })}</>;
 }
