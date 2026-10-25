@@ -335,6 +335,80 @@
     overflow: hidden;
   }
 
+  /* Ficha centralizada (SecaoFicha `centralizada`, ficha-consulta.tsx): a partir de 1024 px, uma linha só, de ponta a
+     ponta. Cada coluna tem a largura do seu campo (auto) e o espaço que sobra vai para entre elas (space-between): o
+     primeiro encosta na borda esquerda, o último na direita, quantos campos houver. Cada rótulo fica centralizado
+     sobre o seu valor; a barra fina do arrecadado tem a largura do número, então vem junto. Abaixo de 1024 px, 2
+     colunas iguais (1 no celular). As colunas moram só aqui, sem `grid-cols-*` do Tailwind, que venceria. */
+  .ficha-centralizada {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  @media (min-width: 640px) {
+    .ficha-centralizada {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .ficha-centralizada {
+      grid-template-columns: none;
+      grid-auto-flow: column;
+      grid-auto-columns: auto;
+      justify-content: space-between;
+    }
+  }
+
+  .ficha-centralizada .campo-ficha {
+    text-align: center;
+  }
+
+  .ficha-centralizada .campo-ficha__valor {
+    justify-content: center;
+  }
+
+  /* A linha do valor de um campo de ficha (CampoFicha): o valor e, se houver, o controle ao lado. No CSS, não em
+     classes do Tailwind: utilitário vence regra de componente, e a ficha centralizada (acima) não conseguiria trocar
+     o alinhamento. */
+  .campo-ficha__valor {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  /* Duas seções lado a lado com as linhas alinhadas (FichaLadoALado, ficha-consulta.tsx). Abaixo de 1024 px, uma
+     embaixo da outra: a ordem põe todos os campos da esquerda antes dos da direita (no HTML eles vêm intercalados,
+     linha a linha). A partir de 1024 px, a esquerda tem 2/3 e a direita 1/3, como `.grade-ficha`. */
+  .ficha-lado-a-lado {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  @media (min-width: 640px) {
+    .ficha-lado-a-lado {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .ficha-lado-a-lado__esquerda {
+    order: 1;
+  }
+
+  .ficha-lado-a-lado__direita {
+    order: 2;
+  }
+
+  @media (min-width: 1024px) {
+    .ficha-lado-a-lado {
+      grid-template-columns: repeat(2, minmax(0, 2fr)) repeat(2, minmax(0, 1fr));
+    }
+
+    .ficha-lado-a-lado__esquerda,
+    .ficha-lado-a-lado__direita {
+      order: 0;
+    }
+  }
+
   .barra-progresso__trilho--completo .barra-progresso__preenchido {
     background-color: var(--cor-fundo-marca-forte);
   }

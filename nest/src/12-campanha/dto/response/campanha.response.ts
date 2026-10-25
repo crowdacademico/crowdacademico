@@ -41,4 +41,7 @@ export class CampanhaResponse {
   // taxa usada (a carimbada na aprovação, ou a padrão antes dela). Só em GET /campanha/:id; nas demais, null.
   valorLiquidoEstimado: number | null;
   taxaAplicada: number | null;
+  // Nome de quem aprovou (campanha.id_admin, carimbado na aprovação). Só em GET /campanha/:id e só para quem pode
+  // aprovar campanha: o dono e, no futuro, a página pública não veem qual pessoa da equipe aprovou. Senão, null.
+  nomeAprovador: string | null;
 }

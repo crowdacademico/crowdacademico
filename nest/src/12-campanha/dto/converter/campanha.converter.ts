@@ -43,6 +43,7 @@ export class CampanhaConverter {
       somenteLeitura: false,
       camposBloqueados: [],
       valorLiquidoEstimado: null,
+      nomeAprovador: null,
       taxaAplicada: null,
     };
   }

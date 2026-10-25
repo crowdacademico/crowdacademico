@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { BadgeStatusCampanha } from '../../components/crud/badge-status-campanha';
 import { ROTULO_MODELO_CAMPANHA, STATUS_PUBLICADA } from '../../services/12-campanha/constants/status-campanha.constants';
-import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
+import { CampoFicha, FichaLadoALado, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { FiltroPartes } from '../../components/crud/filtro-partes';
 import type { ParteTela } from '../../components/crud/filtro-partes';
-import { BarraProgresso } from '../../components/crud/barra-progresso';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
@@ -18,6 +17,7 @@ import { SecaoPedidosEncerramento } from '../20-solicitacao-encerramento/secao-p
 import { SecaoComentariosEndossados, SecaoComentariosTodos } from '../17-comentario/secao-comentarios-campanha';
 import { SecaoAtualizacoesCampanha } from '../15-atualizacao-campanha/secao-atualizacoes-campanha';
 import { SecaoRecompensasCampanha } from '../18-recompensa/secao-recompensas-campanha';
+import { celulaArrecadado } from './colunas-campanha';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
@@ -50,8 +50,11 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
   const [denuncias, setDenuncias] = useState(0);
   const [pedidos, setPedidos] = useState(0);
   const ve = (alvo: ParteConsultar) => (parte === 'geral' || parte === alvo ? '' : ' hidden');
+  // "Por" ao lado de "Aprovada em": antes da aprovação (os dois com "-") ou com o nome de quem aprovou (só vem para
+  // quem pode aprovar). Aprovada sem o nome: "Aprovada em" ocupa a linha sozinha.
+  const mostrarAprovador = !campanha?.aprovadoEm || campanha.nomeAprovador !== null;
   // Quantas contribuições estão pagas e quantas existem. null = sem permissão para ver (só o dono e quem tem a
-  // permissão): a linha some.
+  // permissão): o campo mostra "-".
   const [resumoContribuicoes, setResumoContribuicoes] = useState<ResumoContribuicoes | null>(null);
   // Quantas pessoas seguem (só o número). null = a busca falhou: a linha some.
   const [seguidores, setSeguidores] = useState<number | null>(null);
@@ -121,32 +124,58 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
       )}
       {campanha && (
         <div className="grade-ficha">
-          <div className={'lg:col-span-2 space-y-6' + ve('dados')}>
-            {campanha.precisaRevisaoScore && (
-              <p className="legenda-destaque fundo-aviso texto-aviso rounded-lg p-3">
-                O pesquisador está abaixo do score mínimo para campanhas. É só um sinal para revisar esta campanha
-                com mais cuidado; não impede a aprovação.
-              </p>
-            )}
-            <SecaoFicha titulo="Dados">
-              <CampoFicha rotulo="id" valor={campanha.idCampanha} />
-              <CampoFicha rotulo="Área do conhecimento" valor={campanha.nomeArea ?? `#${campanha.idAreaConhecimento}`} />
-              {seguidores !== null && <CampoFicha rotulo="Seguidores" valor={seguidores} />}
-              <CampoFicha rotulo="Descrição" valor={campanha.descricao} largura="cheia" />
-              <CampoFicha rotulo="Vídeo de apresentação" valor={campanha.videoApresentacaoUrl} largura="cheia" />
-            </SecaoFicha>
+          {campanha.precisaRevisaoScore && (
+            <p className={'lg:col-span-3 legenda-destaque fundo-aviso texto-aviso rounded-lg p-3' + ve('dados')}>
+              O pesquisador está abaixo do score mínimo para campanhas. É só um sinal para revisar esta campanha
+              com mais cuidado; não impede a aprovação.
+            </p>
+          )}
 
-            <SecaoFicha titulo="Datas">
-              <CampoFicha rotulo="Início" valor={formatarData(campanha.dataInicio)} />
-              <CampoFicha rotulo="Fim (previsto)" valor={formatarData(campanha.dataFim)} />
-              <CampoFicha rotulo="Criada em" valor={formatarDataHora(campanha.criadoEm)} />
-              <CampoFicha rotulo="Aprovada em" valor={formatarDataHora(campanha.aprovadoEm)} />
-              <CampoFicha rotulo="Encerrada em" valor={formatarDataHora(campanha.encerradoEm)} />
-            </SecaoFicha>
+          {/* Dados à esquerda e Auditoria à direita, numa grade só: cada linha tem os dois lados, então os campos
+              vizinhos ficam alinhados mesmo quando a descrição ocupa várias linhas. Auditoria fica no canto superior
+              direito, onde as outras fichas deixam os metadados. Aprovada com "Por" ao lado (quem aprovou, só para
+              quem pode aprovar; sem o nome, Aprovada ocupa a linha). Hora sem os segundos: em meia coluna,
+              "25/10/2026, 14:30:45" quebrava. */}
+          <div className={'lg:col-span-3' + ve('dados')}>
+            <FichaLadoALado
+              tituloEsquerda="Dados"
+              tituloDireita="Auditoria"
+              linhas={[
+                {
+                  esquerda: [
+                    <CampoFicha key="id" rotulo="id" valor={campanha.idCampanha} />,
+                    <CampoFicha key="area" rotulo="Área do conhecimento" valor={campanha.nomeArea ?? `#${campanha.idAreaConhecimento}`} />,
+                  ],
+                  direita: [
+                    <CampoFicha key="inicio" rotulo="Início" valor={formatarData(campanha.dataInicio)} />,
+                    <CampoFicha key="fim" rotulo="Fim (previsto)" valor={formatarData(campanha.dataFim)} />,
+                  ],
+                },
+                {
+                  esquerda: seguidores === null ? [] : [<CampoFicha key="seguidores" rotulo="Seguidores" valor={seguidores} />],
+                  direita: [<CampoFicha key="criada" rotulo="Criada em" valor={formatarDataHora(campanha.criadoEm, true)} />],
+                },
+                {
+                  esquerda: [<CampoFicha key="descricao" rotulo="Descrição" valor={campanha.descricao} />],
+                  direita: mostrarAprovador
+                    ? [
+                        <CampoFicha key="aprovada" rotulo="Aprovada em" valor={formatarDataHora(campanha.aprovadoEm, true)} />,
+                        <CampoFicha key="por" rotulo="Por" valor={campanha.nomeAprovador} />,
+                      ]
+                    : [<CampoFicha key="aprovada" rotulo="Aprovada em" valor={formatarDataHora(campanha.aprovadoEm, true)} />],
+                },
+                {
+                  esquerda: [<CampoFicha key="video" rotulo="Vídeo de apresentação" valor={campanha.videoApresentacaoUrl} />],
+                  direita: [<CampoFicha key="encerrada" rotulo="Encerrada em" valor={formatarDataHora(campanha.encerradoEm, true)} />],
+                },
+              ]}
+            />
+          </div>
 
-            {/* Escondida quando vazia, de propósito: rejeição é minoria, mostrar "nenhuma" sempre seria
-                ruído. */}
-            {historicoRejeicao.length > 0 && (
+          {/* Escondida quando vazia, de propósito: rejeição é minoria, mostrar "nenhuma" sempre seria
+              ruído. */}
+          {historicoRejeicao.length > 0 && (
+            <div className={'lg:col-span-2' + ve('dados')}>
               <SecaoFicha titulo="Histórico de Rejeições">
                 {historicoRejeicao.map((item) => (
                   <CampoFicha
@@ -157,58 +186,40 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
                   />
                 ))}
               </SecaoFicha>
-            )}
-          </div>
+            </div>
+          )}
 
-          <div className={'space-y-6' + ve('dados')}>
-            <SecaoFicha titulo="Financeiro">
+          {/* Financeiro na linha inteira, embaixo de Dados e Auditoria, numa linha só de ponta a ponta, na ordem do
+              dinheiro: quanto entrou, contra a meta, a taxa e o que sobra para o pesquisador; por último, de quantas
+              contribuições. */}
+          <div className={'lg:col-span-3' + ve('dados')}>
+            <SecaoFicha titulo="Financeiro" centralizada>
+              {/* A mesma célula da coluna "arrecadado" das tabelas (DS-105): a barra fina colada embaixo do número, na
+                  largura dele, mostrando quanto da meta já foi atingido. */}
+              <CampoFicha rotulo="Arrecadado" valor={celulaArrecadado(campanha.valorBrutoArrecadado, campanha.metaFinanceira)} />
               <CampoFicha rotulo="Meta" valor={formatarMoeda(campanha.metaFinanceira)} />
-              {/* Arrecadado com a barra de quanto da meta já foi atingido (como no Kickstarter e no Catarse). */}
               <CampoFicha
-                rotulo="Arrecadado"
-                valor={
-                  <span className="block space-y-1.5">
-                    <span className="block">{formatarMoeda(campanha.valorBrutoArrecadado)}</span>
-                    <BarraProgresso
-                      valor={campanha.valorBrutoArrecadado}
-                      total={campanha.metaFinanceira}
-                      rotulo="Arrecadado em relação à meta"
-                    />
-                  </span>
-                }
-              />
-              {resumoContribuicoes && (
-                <CampoFicha
-                  rotulo="Contribuições"
-                  largura="cheia"
-                  valor={
-                    resumoContribuicoes.total === 0 ? (
-                      'Nenhuma ainda.'
-                    ) : (
-                      <span className="block">
-                        <span className="block">{resumoContribuicoes.pagas} pagas</span>
-                        <span className="block">{resumoContribuicoes.total} no total</span>
-                      </span>
-                    )
-                  }
-                />
-              )}
-              <CampoFicha
-                rotulo="Taxa da plataforma"
+                rotulo="Taxa"
                 valor={campanha.taxaPlataforma === null ? 'Ainda não carimbada (não aprovada)' : `${campanha.taxaPlataforma}%`}
               />
-              {/* RF-087: a mesma conta do repasse (taxa da plataforma, nunca menos que a taxa mínima). */}
-              {campanha.valorLiquidoEstimado !== null && (
-                <CampoFicha
-                  rotulo="Líquido estimado"
-                  valor={`${formatarMoeda(campanha.valorLiquidoEstimado)} (taxa de ${campanha.taxaAplicada ?? '-'}%)`}
-                />
-              )}
+              {/* RF-087: o que o pesquisador receberia hoje, pela mesma conta do repasse (taxa mínima incluída); antes
+                  da aprovação, com a taxa padrão. */}
+              <CampoFicha rotulo="Líquido estimado" valor={formatarMoeda(campanha.valorLiquidoEstimado)} />
+              <CampoFicha
+                rotulo="Contribuições"
+                valor={
+                  resumoContribuicoes &&
+                  (resumoContribuicoes.total === 0
+                    ? 'Nenhuma ainda.'
+                    : `${resumoContribuicoes.pagas} pagas de ${resumoContribuicoes.total}`)
+                }
+              />
             </SecaoFicha>
           </div>
 
-          {/* Orçamento e cronograma, só para ler: a consulta mostra a campanha inteira. */}
-          <div className={'lg:col-span-3' + ve('orcamento')}>
+          {/* Orçamento e cronograma, só para ler: a consulta mostra a campanha inteira. Um respiro a mais antes (mt-4,
+              além do vão da grade): as tabelas começam outro assunto, depois dos campos de Dados, Auditoria e Financeiro. */}
+          <div className={'lg:col-span-3 mt-4' + ve('orcamento')}>
             <PainelOrcamentoCronograma auth={auth} idCampanha={campanha.idCampanha} podeEditar={false} />
           </div>
 

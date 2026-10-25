@@ -25,8 +25,10 @@ interface PainelOrcamentoCronogramaProps {
   // Consultar não precisa.
   aoCarregar?: (orcamento: OrcamentoCampanhaResponse[], cronograma: MarcoCronogramaResponse[]) => void;
   // `abaFixa`: mostra só uma das duas partes (Orçamento e Cronograma são etapas diferentes de Criar Campanha).
-  // Sem isto (Alterar Campanha, consulta da Bancada da Campanha), as duas aparecem uma embaixo da outra, cada uma com o seu título:
-  // nada escondido atrás de botões de trocar.
+  // Sem isto (Consultar e Alterar Campanha), as duas aparecem juntas, cada uma com o seu título: nada escondido atrás
+  // de botões de trocar. Lado a lado, com uma linha entre elas, quando o espaço do painel passa de 48rem (`@3xl`); senão,
+  // uma embaixo da outra. Conta o espaço do PAINEL, não da tela: no Consultar ele tem o modal inteiro (lado a lado),
+  // no Alterar divide o modal com o Resumo (uma embaixo da outra), e no celular nunca cabe.
   abaFixa?: 'orcamento' | 'cronograma';
   // `metaFinanceira`: opcional; quando presente, a tabela de Orçamento mostra o total em relação à meta acima dela.
   metaFinanceira?: number;
@@ -53,6 +55,7 @@ export function PainelOrcamentoCronograma({
   const mostrarCronograma = abaFixa !== 'orcamento';
   // Título de cada parte só quando as duas aparecem juntas (com `abaFixa`, quem usa já dá o título).
   const titulo = (texto: string) => !abaFixa && <h3 className="titulo-bloco titulo-bloco--linha">{texto}</h3>;
+  const juntas = abaFixa === undefined;
 
   // Ref (não dependência de `carregar`): `aoCarregar` recebe uma arrow function nova a cada render do modal
   // pai; colocá-la nas dependências de `useCallback` recriaria `carregar` toda hora, disparando o efeito de
@@ -94,35 +97,37 @@ export function PainelOrcamentoCronograma({
   };
 
   return (
-    <div className="space-y-6">
-      {mostrarOrcamento && (
-        <div>
-          {titulo('Orçamento')}
-          <TabelaItensOrcamento
-            itens={orcamento}
-            podeEditar={podeEditar}
-            metaFinanceira={metaFinanceira}
-            aoAdicionar={(dados: DadosItemOrcamento) => executar(() => orcamentoCampanhaApi.criar(auth.authFetch, { idCampanha, ...dados }))}
-            aoSalvar={(item, dados) => executar(() => orcamentoCampanhaApi.atualizar(auth.authFetch, item.idOrcamento, dados))}
-            aoExcluir={(item) => void executar(() => orcamentoCampanhaApi.remover(auth.authFetch, item.idOrcamento))}
-          />
-        </div>
-      )}
+    <div className="@container">
+      <div className={juntas ? 'grid grid-cols-1 gap-6 @3xl:grid-cols-2 @3xl:gap-0' : undefined}>
+        {mostrarOrcamento && (
+          <div className={juntas ? 'min-w-0 @3xl:pr-6' : undefined}>
+            {titulo('Orçamento')}
+            <TabelaItensOrcamento
+              itens={orcamento}
+              podeEditar={podeEditar}
+              metaFinanceira={metaFinanceira}
+              aoAdicionar={(dados: DadosItemOrcamento) => executar(() => orcamentoCampanhaApi.criar(auth.authFetch, { idCampanha, ...dados }))}
+              aoSalvar={(item, dados) => executar(() => orcamentoCampanhaApi.atualizar(auth.authFetch, item.idOrcamento, dados))}
+              aoExcluir={(item) => void executar(() => orcamentoCampanhaApi.remover(auth.authFetch, item.idOrcamento))}
+            />
+          </div>
+        )}
 
-      {mostrarCronograma && (
-        <div>
-          {titulo('Cronograma')}
-          <TabelaMarcosCronograma
-            marcos={cronograma}
-            podeEditar={podeEditar}
-            dataInicioCampanha={dataInicioCampanha}
-            minimoMarcos={minimoMarcosCronograma}
-            aoAdicionar={(dados: DadosMarco) => executar(() => marcoCronogramaApi.criar(auth.authFetch, { idCampanha, ...dados }))}
-            aoSalvar={(marco, dados) => executar(() => marcoCronogramaApi.atualizar(auth.authFetch, marco.idMarco, dados))}
-            aoExcluir={(marco) => void executar(() => marcoCronogramaApi.remover(auth.authFetch, marco.idMarco))}
-          />
-        </div>
-      )}
+        {mostrarCronograma && (
+          <div className={juntas ? 'min-w-0 @3xl:pl-6 @3xl:border-l borda-padrao' : undefined}>
+            {titulo('Cronograma')}
+            <TabelaMarcosCronograma
+              marcos={cronograma}
+              podeEditar={podeEditar}
+              dataInicioCampanha={dataInicioCampanha}
+              minimoMarcos={minimoMarcosCronograma}
+              aoAdicionar={(dados: DadosMarco) => executar(() => marcoCronogramaApi.criar(auth.authFetch, { idCampanha, ...dados }))}
+              aoSalvar={(marco, dados) => executar(() => marcoCronogramaApi.atualizar(auth.authFetch, marco.idMarco, dados))}
+              aoExcluir={(marco) => void executar(() => marcoCronogramaApi.remover(auth.authFetch, marco.idMarco))}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

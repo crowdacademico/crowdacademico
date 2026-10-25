@@ -30,7 +30,20 @@ export class CampanhaServiceFindOne {
     }
     await this.preencherCamposBloqueados(resposta);
     await this.preencherLiquidoEstimado(resposta);
+    await this.preencherAprovador(resposta);
     return resposta;
+  }
+
+  // Quem aprovou: id_admin só é carimbado na aprovação ou na rejeição, e a rejeição só acontece antes de aprovar,
+  // então numa campanha aprovada ele é sempre quem aprovou. Só para quem pode aprovar (ver nomeAprovador no DTO).
+  private async preencherAprovador(resposta: CampanhaResponse): Promise<void> {
+    const resultado = await sql<{ nome: string | null }>`
+      SELECT CASE WHEN public.tem_permissao('campanha_aprovar') THEN u.nome END AS nome
+      FROM campanha c
+      LEFT JOIN usuario u ON u.id_usuario = c.id_admin
+      WHERE c.id_campanha = ${resposta.idCampanha} AND c.aprovado_em IS NOT NULL
+    `.execute(this.database.getDb());
+    resposta.nomeAprovador = resultado.rows[0]?.nome ?? null;
   }
 
   // RF-087. A conta é a do repasse (liquido_repasse, 05 [05-K-2]): mesma taxa mínima, então a estimativa nunca

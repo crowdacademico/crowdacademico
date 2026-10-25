@@ -196,11 +196,22 @@ Conferir cada status de cada tabela (campanha, contribuição, repasse, denúnci
 
 ### Visual e marca
 
+- **Seção "Auditoria" nas outras fichas (25-10-2026, depois de ver o Consultar Campanha):** no Consultar Campanha, a antiga seção "Datas" (início, fim, criada, aprovada e encerrada) virou "Auditoria", no topo da coluna da direita. Se ficar bom ao vivo, decidir se vale também em: (1) **Revisar Campanha**, que tem a mesma seção "Datas"; (2) **Alterar Campanha**, que hoje não mostra criada, aprovada e encerrada (entraria no topo da coluna da direita, acima do Resumo); (3) **Alterar Usuário**, que chama o mesmo tipo de bloco de "Metadados" (um nome só no sistema).
 - **Branch `feat/novas-telas-teste` (02-10-2026):** tem o Dashboard em seções ("Precisa de você") e os links acadêmicos em cartões no celular, feitos antes das regras visuais novas. Decidir se entram no main, refeitos com as regras do `DESIGN_SYSTEM.md`, ou se a branch é descartada.
 
 - **Troca do logo e do ícone pelo painel** (aba Identidade Visual do Dashboard, hoje um espaço reservado). Desde 25-10-2026 a marca padrão está no projeto (`DOCUMENTACAO_FRONTEND.md`, seção 12); o envio pelo painel substitui a padrão, e o admin do futuro troca sem mexer no código nem no banco. A análise, os 4 problemas e as duas decisões em aberto estão no topo do `ACHADOS_PARA_DISCUTIR.md`. O envio passa pelo Storage pessoal do Lucas: nos testes, só ele envia.
 
 ### Estrutura e ferramentas
+
+#### 🟡 Para o futuro (25-10-2026): auditoria de classes do Tailwind que anulam o CSS
+
+**Em palavras simples:** no React, uma classe pronta do Tailwind escrita no componente (`justify-between`, `sm:grid-cols-2`...) sempre vence uma regra do nosso CSS (`4-componentes.css`) que mexa na mesma coisa, e vence em silêncio: a regra existe, mas não faz nada. Aconteceu duas vezes seguidas em 25-10-2026 no Consultar Campanha (o valor do Financeiro não centralizava e a Auditoria caía embaixo de Dados); a regra para não repetir está no DS-115 e no DS-116 do `DESIGN_SYSTEM.md`. A auditoria procuraria outros casos assim no sistema inteiro.
+
+- **Como poderia ser feita (a decidir quando chegar a hora):** (1) **com o Playwright**, tela por tela: para cada elemento que tem uma classe nossa do CSS, comparar o que a regra dela pede com o que o navegador aplicou; diferente = alguma classe do Tailwind está vencendo. (2) **Sem navegador**, mais barata: um script que lê o JSX e o CSS e lista os elementos em que a classe nossa e uma classe do Tailwind mexem na mesma propriedade (colunas, alinhamento, margem, cor), como a ferramenta `valores-escritos-react.mjs` já faz com valores escritos à mão. A (2) acha os candidatos; a (1) prova quais quebram de verdade.
+- **A versão sem navegador, desenhada em 25-10-2026 (talvez na semana seguinte):** um script no estilo do `valores-escritos-react.mjs`, em quatro passos: (1) lê o CSS nosso e anota que propriedades cada classe nossa muda, contando a classe que aparece no fim de um seletor composto (`.ficha-centralizada .campo-ficha__valor`, o caso de 25-10); (2) lê o JSX e, em cada elemento, separa as classes nossas das do Tailwind; (3) traduz as do Tailwind para a propriedade que mudam (`justify-between` = alinhamento, `sm:grid-cols-2` = colunas, `p-4` = espaço interno), cobrindo as famílias que o projeto usa (colunas, alinhamento, espaço, largura, altura, texto, cor, borda, exibição); (4) lista os elementos em que as duas mexem na mesma propriedade. Os dois bugs de 25-10 teriam aparecido.
+  - **Limites:** acha suspeitos, não prova erro (às vezes o utilitário está ali de propósito); cada suspeito é conferido lendo o código, e só os duvidosos vão para o navegador. Classe montada a partir de variável só é pega quando o texto está escrito no arquivo. Classe do Tailwind que o script não sabe traduzir sai numa lista à parte, "não sei traduzir", nunca escondida.
+  - **Custo:** médio. O script é rápido; o tempo vai na conferência dos suspeitos. Muitos suspeitos: trazer a lista organizada antes de mexer em qualquer coisa.
+- **Quando:** sem pressa. A versão sem navegador pode vir antes; a com Playwright, junto da auditoria WCAG ou dos testes com Playwright do fim do projeto (grupo 4).
 
 #### 🟡 Para o futuro (29-09-2026): super auditoria de padrões de mercado
 

@@ -1640,6 +1640,7 @@ Testado com o backend rodando de verdade contra o Postgres real (não só compil
 - **Seguir pesquisador (RF-028)** fica em `16-seguir` (agora `SeguirModule`): mesma regra do seguir campanha; o alvo precisa ter perfil de pesquisador (400), seguir duas vezes dá 409 e a si mesmo, 400 (as duas do banco). A contagem pública usa `contar_seguidores_pesquisador` (`[03-E]`), sem dizer quem segue.
 - **`GET /contribuicao/minhas`** (RF-009, RF-085): o histórico da conta logada, com a recompensa escolhida; registrado antes de `GET /contribuicao/:id` no módulo.
 - **Líquido estimado (RF-087):** `GET /campanha/:id` traz `valorLiquidoEstimado` e `taxaAplicada`, pela mesma conta do repasse (`liquido_repasse`, taxa mínima incluída).
+- **Quem aprovou:** `GET /campanha/:id` traz `nomeAprovador`, o nome de `campanha.id_admin` numa campanha aprovada (o `id_admin` só é carimbado na aprovação ou na rejeição, e a rejeição só acontece antes de aprovar). Só para quem tem `campanha_aprovar`; para os outros, `null`. **Por quê:** o dono e a página pública não precisam saber qual pessoa da equipe aprovou.
 
 ### 21.4 Como foi provado
 

@@ -32,8 +32,15 @@ function paraData(iso: string): Date {
   return soData ? new Date(Number(soData[1]), Number(soData[2]) - 1, Number(soData[3])) : new Date(iso);
 }
 
-export function formatarDataHora(iso: string | null | undefined): string {
-  return iso ? paraData(iso).toLocaleString('pt-BR') : 'Não definida';
+// `semSegundos`: "25/10/2026, 14:30" em vez de "25/10/2026, 14:30:45", para coluna estreita (a Auditoria do Consultar
+// Campanha, em meia coluna). Os segundos ficam onde a ordem exata importa (logs).
+export function formatarDataHora(iso: string | null | undefined, semSegundos = false): string {
+  if (!iso) {
+    return 'Não definida';
+  }
+  return semSegundos
+    ? paraData(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+    : paraData(iso).toLocaleString('pt-BR');
 }
 
 export function formatarData(iso: string | null | undefined): string {
