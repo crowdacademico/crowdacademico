@@ -18,7 +18,8 @@ const REQUISITOS_SENHA: RequisitoSenha[] = [
   {
     chave: 'tamanho',
     rotulo: `Pelo menos ${SENHA_MINIMO_CARACTERES} caracteres`,
-    rotuloCurto: `Pelo menos ${SENHA_MINIMO_CARACTERES} caracteres`,
+    // Em duas linhas na linha só (`\n`): ver .requisito-transborda.
+    rotuloCurto: `Pelo menos\n${SENHA_MINIMO_CARACTERES} caracteres`,
     testar: (s) => s.length >= SENHA_MINIMO_CARACTERES,
   },
   { chave: 'maiuscula', rotulo: 'Uma letra maiúscula', rotuloCurto: 'Letra maiúscula', testar: (s) => /[A-Z]/.test(s) },
@@ -33,7 +34,7 @@ const REQUISITOS_SENHA: RequisitoSenha[] = [
 
 interface MedidorSenhaProps {
   senha: string;
-  // Os requisitos numa linha só, alinhados à direita (terminam embaixo do botão ao lado da caixa), quebrando só se não
+  // Os requisitos numa linha só, a partir do começo da caixa, com o espaço normal entre eles, quebrando só se não
   // couber (onde há largura, como o Alterar Usuário). Sem isto, em
   // duas colunas (Cadastro, Minha Conta e Redefinir senha, que são estreitos).
   emLinha?: boolean;
@@ -77,13 +78,17 @@ export function MedidorSenha({
             botão, e abria um vão enorme antes da lista. */}
         {aoLadoDaBarra && <div className="h-0 overflow-hidden shrink-0">{aoLadoDaBarra}</div>}
       </div>
-      <ul className={(emLinha ? 'flex flex-wrap justify-end gap-x-3 gap-y-1 ' : 'grid grid-cols-2 gap-x-2 gap-y-1 ') + classeLista}>
+      <ul className={(emLinha ? 'flex flex-wrap gap-x-3 gap-y-1 ' : 'grid grid-cols-2 gap-x-2 gap-y-1 ') + classeLista}>
         {REQUISITOS_SENHA.map((r) => {
           const cumprido = r.testar(senha);
           return (
             <li
               key={r.chave}
-              className={'legenda flex items-center gap-1.5 texto-herdado ' + (cumprido ? 'texto-sucesso' : 'texto-fraco')}
+              className={
+                'legenda flex gap-1.5 texto-herdado ' +
+                (cumprido ? 'texto-sucesso' : 'texto-fraco') +
+                (emLinha && r.rotuloCurto.includes('\n') ? ' items-start whitespace-pre-line requisito-transborda' : ' items-center')
+              }
             >
               <i className={'fa-solid ' + (cumprido ? 'fa-circle-check' : 'fa-circle') + ' icone-pequeno'} aria-hidden="true"></i>
               {emLinha ? r.rotuloCurto : r.rotulo}

@@ -429,7 +429,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                         emLinha
                         reservarEspaco
                         classeBarra="ficha-bloco-com-foto__campo"
-                        classeLista="ficha-bloco-com-foto__inteiro"
+                        classeLista="ficha-bloco-com-foto__campo"
                         aoLadoDaBarra={larguraBotoesSenha}
                       />
                     </div>

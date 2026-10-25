@@ -429,7 +429,7 @@
 
   /* Item que ocupa a largura toda do bloco, embaixo da foto e dos campos (o medidor de força da senha): o bloco tem uma
      linha a mais que a foto atravessa (`--linhas-foto` menor que `--linhas-bloco`). Usa as colunas do bloco
-     (subgrid): o que vai embaixo de um campo fica na coluna dos campos (`__campo`), o que ocupa tudo, em `__inteiro`. */
+     (subgrid): o que vai embaixo de um campo fica na coluna dos campos (`__campo`), como a barra e a lista de requisitos. */
   .ficha-bloco-com-foto__largo {
     grid-column: 1 / -1;
     display: grid;
@@ -447,10 +447,6 @@
       grid-row: span var(--linhas-foto, var(--linhas-bloco));
     }
 
-    /* Dentro do item largo: o que ocupa a largura toda (a lista de requisitos da senha). */
-    .ficha-bloco-com-foto__inteiro {
-      grid-column: 1 / -1;
-    }
 
     .ficha-bloco-com-foto__campo {
       grid-column: 2;
@@ -462,6 +458,13 @@
       grid-row: span var(--linhas-bloco);
       grid-template-rows: subgrid;
     }
+  }
+
+  /* Requisito de senha em duas linhas, na lista em linha (MedidorSenha `emLinha`): a segunda linha transborda para o
+     vão de baixo em vez de aumentar a lista. A margem negativa de uma linha de texto (`1lh`, a altura da linha do
+     próprio texto) faz o item contar como uma linha só: o que vem embaixo não se mexe. */
+  .requisito-transborda {
+    margin-bottom: -1lh;
   }
 
   /* Duas versões de um trecho no mesmo lugar, uma em cima da outra (ex.: os botões de senha e a caixa "Nova senha" do
