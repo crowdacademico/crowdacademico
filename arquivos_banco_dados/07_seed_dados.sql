@@ -110,11 +110,11 @@ INSERT INTO permissao (nome) VALUES
 -- permissão é o gate real de quem, na camada NestJS, pode pedir esse dado (RLS só filtra linha, não protege
 -- coluna: o controle de "quem lê o CPF" é da aplicação).
 ('perfil_pesquisador_visualizar_sensivel'),
--- Gate de corrigir_cpf_pesquisador() (03, [03-Q]). cpf_criptografado/cpf_hash não estão no GRANT UPDATE direto
+-- Gate de corrigir_cpf_pesquisador() (03, [03-P-1]). cpf_criptografado/cpf_hash não estão no GRANT UPDATE direto
 -- de perfil_pesquisador (06): o próprio pesquisador não pode alterar o próprio CPF (RF-017, correção só via
 -- suporte); esta permissão decide quem pode chamar a função de correção.
 ('perfil_pesquisador_corrigir_cpf'),
--- Gate de alterar_perfil_pesquisador_de_outro() (03, [03-U]): o modal de Alterar Usuário salva
+-- Gate de alterar_perfil_pesquisador_de_outro() (03, [03-P-3]): o modal de Alterar Usuário salva
 -- vínculo/título acadêmico de QUEM está sendo editado (PATCH /perfil-pesquisador/:id); o self-service (sem id)
 -- só edita o próprio perfil.
 ('perfil_pesquisador_alterar_de_outro'),
@@ -535,7 +535,7 @@ Este termo pode ser atualizado periodicamente; a versão vigente no momento da s
 -- Com id escrito à mão, a sequência não anda sozinha: a próxima versão criada recebe o id 5.
 SELECT setval(pg_get_serial_sequence('termos_de_uso', 'id_termo'), (SELECT max(id_termo) FROM termos_de_uso));
 
--- [07-C-5] configuracoes: por que este bloco vem depois de usuario (ver DOCUMENTACAO_BD.md)
+-- [07-C-5] configuracoes: os parâmetros globais do sistema (o parâmetro pessoal do admin entra depois de usuario)
 -- Agrupado por domínio (A,D,E,F,H,I, mesma ordem de [07-B-2]): configuracoes.service.findall.ts ordena por
 -- id_config, então a ordem do INSERT é a ordem que a tela mostra. Puramente cosmético para cada chave: `chave` é
 -- UNIQUE e toda leitura (NestJS) busca por nome, nunca por posição/id_config.
@@ -703,7 +703,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'score_frequencia_esperada_mensal',  '1',  'decimal', 'Nº de atualizações de campanha esperadas por mês de duração, usado na dimensão Atualização da Campanha', TRUE, FALSE)
 ON CONFLICT (chave) DO NOTHING;
 
--- [07-I-3] configuracoes: retenção do log de auditoria (ver DOCUMENTACAO_BD.md [05-L])
+-- [07-L] configuracoes: retenção do log de auditoria (ver DOCUMENTACAO_BD.md [05-L])
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
 (NULL, 'log_auditoria_retencao_dias', '365', 'inteiro', 'Dias que o log de auditoria é guardado antes de ser apagado por job diário (0 = guardar para sempre)', TRUE, FALSE),
 -- Lida por limpar_ip_aceite_contribuicao() (05, [05-L]). 1825 dias = 5 anos, prazo do Código de Defesa do Consumidor
@@ -749,7 +749,7 @@ UPDATE configuracoes SET valor = 'false' WHERE chave = 'tarefa_envio_email_ligad
 
 -- Permissões das ferramentas de teste do painel. trg_permissao_auto_admin (05) dá cada uma ao admin assim que a
 -- linha nasce; um banco de produção não roda esta parte, então nasce sem elas.
---   perfil_pesquisador_criar_para_outro: criar_perfil_pesquisador_para_outro() (03, [03-R]), Bancada do Pesquisador.
+--   perfil_pesquisador_criar_para_outro: criar_perfil_pesquisador_para_outro() (03, [03-P-2]), Bancada do Pesquisador.
 --   campanha_criar_para_outro e campanha_excluir_forcado: criar campanha em nome de outro pesquisador e excluir
 --   campanha à força, ignorando status (limpeza de dado de teste; nunca oferecida no painel real).
 INSERT INTO permissao (nome) VALUES
@@ -1926,7 +1926,7 @@ FROM termos_de_uso WHERE tipo = 'upgrade_pesquisador' AND ativo;
 
 -- [07-I-3] Backfill de segurança: cada INSERT acima (perfil_pesquisador, link_academico, campanha,
 -- atualizacao_campanha, denuncia) já dispara sua própria trigger de recálculo (ver 05_regras_negocio.sql,
--- [05-I-4]), então quando o seed chega aqui os scores dos 11 pesquisadores já deveriam estar corretos. Esta
+-- [05-I-4]), então quando o seed chega aqui os scores dos pesquisadores já deveriam estar corretos. Esta
 -- chamada existe só como rede de segurança: reprocessa todo mundo do zero, caso alguma trigger seja
 -- desligada/alterada no futuro e alguém esqueça de rodar isso manualmente depois.
 SELECT public.recalcular_todos_os_scores();

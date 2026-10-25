@@ -11,6 +11,7 @@
 ## ⭐ Para discutir (anotado em 18-10-2026, no topo de propósito)
 
 - **Colunas das tabelas, passo seguinte (largura mínima por tipo e respiro maior).** Medido em 18-10-2026 (20 telas, 1400 e 1920 px): a dança entre páginas acabou (coluna id fixa e `textoExibido`, DS-104), mas **6 tabelas rolam de lado a 1400 px** (Campanhas, Parâmetros, Denúncias, Pedidos de Encerramento, T2 e T5) e o respiro entre colunas é de cerca de 27 px. Aumentar o respiro hoje faria mais tabelas rolarem. Opções: um token de largura mínima por tipo de coluna (`--largura-coluna-status`, `-dinheiro`, `-data`...), tirar colunas das listas mais largas (deixar no Consultar) ou aceitar a rolagem. Decidir antes de mexer.
+  - **Condições do Lucas (25-10-2026):** não tirar nenhuma coluna por enquanto. O caminho é **apertar** sem valor escrito à mão: por exemplo, o e-mail (`suporte@crowdacademico.com.br`) quebrar no "@" ou ganhar o "ler tudo", para a coluna não ficar tão larga. Fazer olhando as telas com o Playwright, tabela por tabela. Se alguma coluna for muito, muito menos útil e puder ficar só no Consultar, apontar e provar com a tela, sem tirar sozinho.
 - **Reorganizar o `DESIGN_SYSTEM.md` (Lucas, 18-10-2026, para o futuro, não agora):** as regras principais (core), como linha e coluna das tabelas (DS-100, DS-104, DS-105), passam para os números de destaque, para serem achadas primeiro. Junto da reorganização numérica de pastas e arquivos (seção de Pagamento).
 
 **Financeiro comparado com o mercado (19-10-2026).** Feitos no mesmo dia: a contestação de cartão vai para revisão manual, e o repasse espera a carência de `repasse_carencia_dias` (15). Fica para decidir:
@@ -64,6 +65,7 @@ A área pública não pode ser feita agora (primeiro termina a área restrita). 
 - **Painel "Projetos Criados" do pesquisador (RF-086, RF-087):** a lista com as métricas e o líquido estimado (o `GET /campanha/:id` já devolve `valorLiquidoEstimado`).
 - **Painel de quem apoia (RF-085):** o histórico já existe na Minha Conta, aba Contribuições; na área pública vira o painel do doador.
 - **Desistir do apoio (decidido em 24-10-2026: regra do Catarse, com o art. 49 do CDC como fundamento):** o botão na área de quem apoia. As condições, as fontes e o ponto a validar com o orientador (o CDC nos 7 dias depois de contribuir) estão no `DOCUMENTACAO_FINANCEIRO.md`. Antes do botão: o texto no Termo de Uso (Administrador) e o parâmetro do prazo.
+  - **Sem o orientador (25-10-2026):** o Lucas avisou que não dá para contar com o orientador nesta pergunta (CDC × Catarse), nem na cláusula de ressarcimento e na da chave Pix. A decisão sai do estudo feito aqui, bem documentado, com as fontes.
 
 ### E-mail: o que ainda é decisão (19-10-2026; o módulo está pronto e testado no modo de teste)
 
@@ -192,6 +194,7 @@ Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/todas 
 - **Branch `feat/novas-telas-teste` (02-10-2026):** tem o Dashboard em seções ("Precisa de você") e os links acadêmicos em cartões no celular, feitos antes das regras visuais novas. Decidir se entram no main, refeitos com as regras do `DESIGN_SYSTEM.md`, ou se a branch é descartada.
 
 - **Gestão de logo e favicon:** a aba Identidade Visual do Dashboard é só um espaço reservado.
+  - **Decidido (25-10-2026): envio pelo painel**, não arquivo fixo no projeto: mais profissional e o admin do futuro troca a logo sem mexer no código nem no banco. O envio passa pelo Storage pessoal do Lucas: nos testes, só ele envia.
 
 ### Estrutura e ferramentas
 

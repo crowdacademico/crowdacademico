@@ -52,7 +52,7 @@ ALTER TABLE papel_permissao      FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS pol_papel_select ON papel;
 CREATE POLICY pol_papel_select ON papel FOR SELECT USING (true);
--- [04-B-1b] papel: UPDATE liberado só para o rótulo (`nome`): GRANT UPDATE (nome), 06_grants.sql [06-B].
+-- [04-B-1b] papel: UPDATE liberado só para o rótulo e a descrição: GRANT UPDATE (nome, descricao), 06_grants.sql [06-B].
 -- `codigo`, a coluna estável que as triggers de RBAC leem (01_extensoes_enums_tabelas.sql [01-B]), não tem
 -- GRANT nenhum, então nem chega a ser possível tentar mudá-la por aqui: é isso que torna seguro abrir
 -- esta policy.

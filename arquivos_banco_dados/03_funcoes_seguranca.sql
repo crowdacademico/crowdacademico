@@ -639,7 +639,7 @@ BEGIN
 END;
 $$;
 
--- [03-Q] corrigir_cpf_pesquisador: GRANT UPDATE de coluna sozinho não bastava. pol_perfil_update (04) libera
+-- [03-P-1] corrigir_cpf_pesquisador: GRANT UPDATE de coluna sozinho não bastava. pol_perfil_update (04) libera
 -- UPDATE para o próprio dono, e cpf_criptografado estava no GRANT UPDATE: o próprio pesquisador trocaria o
 -- CPF por um PATCH comum, contrariando o RF-017 (correção de CPF é só via suporte). cpf_criptografado
 -- saiu do GRANT UPDATE (06); esta função é o único caminho, gateada por perfil_pesquisador_corrigir_cpf
@@ -673,7 +673,7 @@ BEGIN
 END;
 $$;
 
--- [03-R] criar_perfil_pesquisador_para_outro: POST /perfil-pesquisador (self-service,
+-- [03-P-2] criar_perfil_pesquisador_para_outro: POST /perfil-pesquisador (self-service,
 -- PerfilPesquisadorServiceCreate) SEMPRE usa id_usuario_atual() como dono, pois pol_perfil_insert (04) exige
 -- id_usuario = id_usuario_atual(); criar perfil para outra pessoa logado como Admin colidia com o PRÓPRIO
 -- perfil do Admin (already exists) e não criava nada para ninguém. Esta função é o caminho SEPARADO,
@@ -709,9 +709,9 @@ BEGIN
 END;
 $$;
 
--- [03-S] criar_campanha_para_outro: pol_campanha_insert (04) exige id_usuario = id_usuario_atual() E
+-- [03-E-1] criar_campanha_para_outro: pol_campanha_insert (04) exige id_usuario = id_usuario_atual() E
 -- pesquisador ativo, então não dá para criar em nome de um pesquisador escolhido sem personificação (mesma
--- classe de criar_perfil_pesquisador_para_outro, [03-R]). Esta função é o caminho separado, gateado por
+-- classe de criar_perfil_pesquisador_para_outro, [03-P-2]). Esta função é o caminho separado, gateado por
 -- campanha_criar_para_outro (ver 07); o self-service (POST /campanha) não a usa. Continua exigindo
 -- pesquisador ATIVO (mesma regra do self-service, checada aqui em vez de RLS): só troca QUEM pode disparar
 -- o INSERT em nome de outro. Validação de prazo/meta/limite de campanhas simultâneas NÃO é duplicada aqui:
@@ -1001,7 +1001,7 @@ AS $$
     ORDER BY d.criado_em DESC;
 $$;
 
--- [03-T] forcar_exclusao_campanha: o Admin precisa poder excluir forçadamente uma campanha (senão os
+-- [03-E-2] forcar_exclusao_campanha: o Admin precisa poder excluir forçadamente uma campanha (senão os
 -- cenários de teste ficam sujos). IGNORA o status de propósito: pol_campanha_delete (04) só libera 'rascunho',
 -- proteção correta para campanha REAL, com contribuição/repasse em andamento, que continua intacta para o
 -- DELETE normal. Gateada por campanha_excluir_forcado (ver 07), NUNCA reaproveitando campanha_editar: um
@@ -1254,11 +1254,11 @@ BEGIN
 END;
 $$;
 
--- [03-U] alterar_perfil_pesquisador_de_outro: o modal de Alterar Usuário (React) chama PATCH
+-- [03-P-3] alterar_perfil_pesquisador_de_outro: o modal de Alterar Usuário (React) chama PATCH
 -- /perfil-pesquisador/:id para salvar tipo de vínculo/vínculo institucional/título acadêmico de QUEM está
 -- sendo editado, mas pol_perfil_update (04) só libera UPDATE de perfil_pesquisador para o PRÓPRIO dono: um
 -- admin editando o perfil de OUTRA pessoa por UPDATE direto resultaria em 0 linhas silenciosas (mesma
--- classe de corrigir_cpf_pesquisador, [03-Q], e criar_perfil_pesquisador_para_outro, [03-R]). Mesma
+-- classe de corrigir_cpf_pesquisador, [03-P-1], e criar_perfil_pesquisador_para_outro, [03-P-2]). Mesma
 -- solução: função SECURITY DEFINER gateada por perfil_pesquisador_alterar_de_outro (ver 07), que ignora
 -- RLS de propósito; o self-service (PATCH /perfil-pesquisador, sem id, PerfilPesquisadorServiceUpdate) não
 -- a usa.

@@ -1,55 +1,63 @@
-
-**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **43 tabelas**, **118 policies**, **108 triggers** em `05` (104 comuns e 4 `CONSTRAINT TRIGGER`), **182 funções** (143 em `05`, 37 em `03`, 1 em `08`, 1 em `01`), **65 índices** em `02`, e **131 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
-
-**Comentários dos `.sql`.** Cabeçalho curto (`Função`, `Assinatura`, `Bloco` e uma `Regra` objetiva, sem datas nem história) e, dentro de função, trigger e policy, só o comentário que explica uma regra difícil. Não há ponteiro para arquivo fora do git: o porquê longo mora aqui, na seção `[NN-Y]` correspondente, e a história (o que mudou, quando, por quê) fica no arquivo de histórico local, que não é versionado. Os comentários do `07` explicam dado de teste; o `ATUALIZAR O SUPABASE.sql` é o registro datado de cada patch e por isso mantém a narrativa.
 # 📚 Documentação Técnica do Banco de Dados - CrowdAcadêmico
 
-> 📌 **Numeração de RF:** os requisitos têm 125 RFs (numeração de 24-10-2026, ver a conversão no topo da `MATRIZ-RASTREABILIDADE-RF.md`). Citações de RF por número neste documento foram escritas em datas diferentes e podem estar numa numeração anterior (a numeração mudou em 06-09, 21-09 e 29-09-2026). A `MATRIZ-RASTREABILIDADE-RF.md` está inteira na numeração vigente e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
+> 📌 **Numeração de RF:** citações de RF por número podem estar numa numeração anterior. A `MATRIZ-RASTREABILIDADE-RF.md` está inteira na numeração vigente e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
 
-Este documento centraliza as explicações de arquitetura, regras de negócio e decisões de modelagem do PostgreSQL. Seu objetivo é manter os scripts `.sql` enxutos, sem poluição de comentários extensos inline.
+**Em palavras simples:** este documento explica o banco de dados (PostgreSQL) do CrowdAcadêmico: as tabelas, quem pode ler e gravar cada uma, e as regras de negócio que o próprio banco garante. Ele descreve o banco **como ele é hoje**; a história de como cada regra chegou aqui fica fora do repositório. Como o Nest usa o banco está no `DOCUMENTACAO_BACKEND.md`; o caminho do dinheiro, no `DOCUMENTACAO_FINANCEIRO.md`; os códigos de erro, no `DOCUMENTACAO_ERRCODE.md`.
 
-Os marcadores usados nos comentários dos `.sql` seguem o formato `[NN-Y]` (arquivo-letra) ou `[NN-Y-N]` (arquivo-letra-item), onde `NN` é o número do arquivo (`01` a `08`) e `Y` é a letra do bloco. A letra é a mesma em qualquer arquivo onde aparecer - ver índice abaixo.
+**Comentários dos `.sql`.** Cabeçalho curto (`Função`, `Assinatura`, `Bloco` e uma `Regra` objetiva, sem datas nem história) e, dentro de função, trigger e policy, só o comentário que explica uma regra difícil. O porquê longo mora aqui, na seção `[NN-Y]` correspondente. Os comentários do `07` explicam dado de demonstração; o `ATUALIZAR O SUPABASE.sql` é o registro datado de cada patch e por isso mantém a narrativa.
 
-### Legenda dos símbolos usados neste documento
+**Marcadores.** Os comentários dos `.sql` usam `[NN-Y]` (arquivo-letra) ou `[NN-Y-N]` (arquivo-letra-item), onde `NN` é o número do arquivo (`01` a `08`) e `Y` é a letra do assunto. A letra é a mesma em qualquer arquivo onde aparecer (ver o Índice Global de Letras).
+
+### Legenda dos símbolos
 
 | Símbolo | Significado |
 |---|---|
-| 📌 | Nota explicativa - o porquê de uma decisão de modelagem |
-| ⚠️ | Ponto de atenção / débito técnico - funciona, mas vale revisar no futuro |
-| 🗑️ | Algo que foi removido |
-| 🗑️➡️✅ | Algo que foi removido *e* trocado por uma correção |
+| 📌 | Nota explicativa: o porquê de uma regra de modelagem |
+| ⚠️ | Ponto de atenção: funciona, mas vale revisar no futuro |
+
+## 📑 Índice
+
+1. [Índice Global de Letras](#-índice-global-de-letras)
+2. [01. Extensões, ENUMs e tabelas](#01-extensões-enums-e-tabelas-01_extensoes_enums_tabelassql)
+3. [02. Índices](#02-índices-02_indicessql)
+4. [03. Funções helper de segurança](#03-funções-helper-de-segurança-03_funcoes_segurancasql)
+5. [04. Row Level Security e políticas de acesso](#04-row-level-security-e-políticas-de-acesso-04_rls_policiessql)
+6. [05. Motor de score e regras de negócio](#05-motor-de-score--regras-de-negócio-05_regras_negociosql)
+7. [06. Grants](#06-grants-06_grantssql)
+8. [07. Seed de dados](#07-seed-de-dados-07_seed_dadossql)
+9. [08. Atribuição de papel padrão no cadastro](#08-atribuição-de-papel-padrão-no-signup-08_trigger_signup_usuariosql)
+10. [Anexos A a F](#anexo-a---por-que-a-autenticação-própria-funciona-do-jeito-que-funciona)
+11. [Como conferir este inventário](#como-conferir-este-inventário)
 
 ---
 
 ## 🔤 Índice Global de Letras
 
-Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procurando tudo que existe sobre um assunto (tabela, índice, policy, grant, regra de negócio), procure pela mesma letra em qualquer arquivo.
+Cada letra tem exatamente um significado, do `01` ao `08`. Para achar tudo sobre um assunto (tabela, índice, policy, grant, regra de negócio), procure pela mesma letra em qualquer arquivo.
 
-> ⚠️ Ao criar um bloco `[0X-LETRA]` novo, confira PRIMEIRO nesta tabela se a letra já tem dono - é fácil (já aconteceu) criar um bloco novo reaproveitando por engano uma letra que outro arquivo já usa com outro significado.
+> ⚠️ Ao criar um bloco `[0X-LETRA]` novo, confira PRIMEIRO nesta tabela se a letra já tem dono. Assunto novo dentro de um domínio que já existe vira sub-item (`[03-P-1]`), não letra nova.
 
 | Letra | Domínio | Onde aparece |
 |---|---|---|
-| **A** | Visão Geral & Configuração Inicial (o ROOT) | `01-A` (bootstrap/role/extensões/enums), `04-A` (RLS geral) |
-| **B** | RBAC (Papéis, Permissões e Vinculação) | `01-B`, `02` *(sem bloco - PK/UNIQUE já bastam)*, `03-B` (`tem_permissao()`), `04-B`, `06-B` *(sem grant adicional)*, `07-B` (seed de papel/permissao/papel_permissao) |
-| **C** | CONFIG (Configurações, Catálogos e Arquivo Base) | `01-C`, `02` *(sem bloco)*, `04-C`, `06-C`, `07-C` (seed de catálogos e configuracoes) |
-| **D** | USUÁRIO (Contas, Perfis, Autenticação, Termos e Sessões) | `01-D`, `02-D`, `03-D`/`03-D-1` (`usuario_visivel()`/`registrar_aceite_termo()`), `04-D`, `06-D`, `07-D` (seed de usuario/perfil/seguir_pesquisador), `08-D-1` (`atribuir_papel_padrao()`) |
-| **E** | CAMPANHA (Campanhas, Atualizações, Comentários, Denúncias, Recompensas) | `01-E`, `02-E`, `04-E`, `06-E`, `07-E` (seed de campanha e tabelas dependentes) |
-| **F** | LINK (Vinculação de URLs Externas) | `01-F`, `02-F`, `04-F`, `06-F`, `07-F` (seed de link_academico) |
-| **G** | ARQUIVO (Vinculação de Mídias) | `01-G`, `02-G`, `04-G`, `06-G`, `07-G` (seed de arquivo_atualizacao) |
-| **H** | CONTRIBUIÇÃO (Apoios, Auditoria e Termos Financeiros) | `01-H`, `02-H`, `04-H`, `06-H`, `07-H` (seed de contribuicao/auditoria_financeira) |
-| **I** | SCORE (Parâmetros, Rótulos, e todo o motor de cálculo/pontuação) | `01-I`, `02-I`, `04-I`, `05-I-1` a `05-I-4` (motor de score), `06-I`, `07-I` (seed de score_config/rotulo + constantes + backfill) |
+| **A** | Visão Geral & Configuração Inicial (o ROOT) | `01-A` (bootstrap/role/extensões/enums), `04-A` (RLS geral), `06-A` |
+| **B** | RBAC (Papéis, Permissões e Vinculação) | `01-B`, `01-B-1`, `03-B` (`tem_permissao()`), `04-B`, `06-B`, `07-B` (seed de papel/permissao/papel_permissao) |
+| **C** | CONFIG (Configurações, Catálogos e Arquivo Base) | `01-C`, `02-C`, `03-C` (`config_numero`), `04-C`, `06-C`, `07-C` |
+| **D** | USUÁRIO (Contas, Perfis, Autenticação, Termos e Sessões) | `01-D`, `02-D`, `03-D`/`03-D-1` (`usuario_visivel()`/`registrar_aceite_termo()`), `04-D`, `06-D`, `07-D`, `08-D-1` (`atribuir_papel_padrao()`) |
+| **E** | CAMPANHA (Campanhas, Atualizações, Comentários, Denúncias, Recompensas) | `01-E`, `02-E`, `03-E` (contagem de seguidores), `03-E-1` (`criar_campanha_para_outro`), `03-E-2` (`forcar_exclusao_campanha`), `04-E`, `06-E`, `07-E` |
+| **F** | LINK (Vinculação de URLs Externas) | `01-F`, `02-F`, `04-F`, `06-F`, `07-F` |
+| **G** | ARQUIVO (Vinculação de Mídias) | `01-G`, `02-G`, `04-G`, `05-G` (posse e órfãos), `06-G`, `07-G` |
+| **H** | CONTRIBUIÇÃO (Apoios, Auditoria e Termos Financeiros) | `01-H`, `02-H`, `04-H`, `06-H`, `07-H` |
+| **I** | SCORE (Parâmetros, Rótulos e o motor de cálculo) | `01-I`, `02-I`, `04-I`, `05-I-1` a `05-I-4`, `06-I`, `07-I` |
 | **J** | Segurança & Contexto de Sessão (`id_usuario_atual()`) | `03-J` |
-| **K** | Regras de Negócio Transversais (validações que cruzam mais de um domínio ao mesmo tempo) | `05-K-1` a `05-K-3` |
-| **L** | LOG DE AUDITORIA (quem alterou o quê e quando - `log_auditoria`) | `01-L`, `02` *(sem bloco - índice já documentado junto da tabela)*, `04-L`, `05-L`, `06-L` |
-| **M** | DASHBOARD ADMIN (métricas agregadas pra tela inicial do painel) | `03-M` (`contar_metricas_dashboard()`) |
-| **N** | MODERAÇÃO SOBRE CONTA (suspensão de usuário e de papel) | `01-D`/`01-B` (colunas), `03-N` (`suspender_usuario()`/`revogar_suspensao_usuario()`/`suspender_papel_usuario()`/`revogar_suspensao_papel_usuario()`) |
-| **O** | OPERAÇÕES DE AUTENTICAÇÃO (confirmação de e-mail, bloqueio por tentativas, exclusão de conta) | `03-O` (`confirmar_email_por_token()`/`registrar_falha_login()`/`liberar_bloqueio_login()`/`registrar_login_sucesso()`/`excluir_conta_usuario()`) |
-| **P** | MODERAÇÃO SOBRE PESQUISADOR - suspensão em cascata (RF-084) | `03-P` (`suspender_pesquisador()`/`reativar_pesquisador()`) |
-| **Q** | NOTIFICAÇÃO (a fila de e-mails, RF-121) | `01-D` (colunas `dados`, `assunto`, `proxima_tentativa_em`, `provedor`, `id_mensagem_provedor` de `notificacao`), `02-D` (`idx_notificacao_fila`), `05-Q` (enfileirar, worker, reenviar/cancelar e os gatilhos), `06-Q` (EXECUTE), `07-D-7` (seed) |
+| **K** | Regras de Negócio Transversais (validações que cruzam mais de um domínio) | `05-K-1` a `05-K-3` |
+| **L** | LOG DE AUDITORIA (quem alterou o quê e quando, `log_auditoria`) | `01-L`, `02-L`, `04-L`, `05-L`, `06-L`, `07-L` (retenção) |
+| **M** | DASHBOARD ADMIN (métricas agregadas da tela inicial do painel) | `03-M` (`contar_metricas_dashboard()`) |
+| **N** | MODERAÇÃO SOBRE CONTA (suspensão de usuário e de papel) | `01-D`/`01-B` (colunas), `03-N` |
+| **O** | OPERAÇÕES DE AUTENTICAÇÃO (confirmação de e-mail, bloqueio por tentativas, exclusão de conta) | `03-O` |
+| **P** | MODERAÇÃO E FERRAMENTAS SOBRE PESQUISADOR | `03-P` (suspensão em cascata, RF-084), `03-P-1` (`corrigir_cpf_pesquisador`), `03-P-2` (`criar_perfil_pesquisador_para_outro`), `03-P-3` (`alterar_perfil_pesquisador_de_outro`) |
+| **Q** | NOTIFICAÇÃO (a fila de e-mails, RF-121) | `01-D` (colunas de `notificacao`), `02-D` (`idx_notificacao_fila`), `05-Q`, `06-Q`, `07-D-7` (seed) |
 
-> 🗑️➡️✅ **Colisão de letra corrigida (achada e resolvida em 09-08-2026):** este bloco (`[03-O]`/`[03-P]`) reaproveitava as letras `F`/`G` com um significado DIFERENTE do que esta tabela atribui a elas (`F`=LINK, `G`=ARQUIVO) - mesma classe de bug já corrigida uma vez antes (`[03-K]`→`[03-M]`), só que mais antiga. Renomeado pra `O`/`P` (livres), comentário-only, sem mexer em schema/DDL - ver `PENDENCIAS e correcoes.md`, item 51.
-
-> 📌 Por que `J`, `K`, `M`, `N`, `O` e `P` existem: nem tudo no banco pertence a um domínio de dado único. `id_usuario_atual()` (`03`) não é sobre nenhuma tabela específica - é infraestrutura de sessão usada por tudo. E várias triggers de `05` (ex.: validar repasse financeiro de uma campanha, ou impedir denúncia excessiva) mexem em mais de uma tabela de domínios diferentes ao mesmo tempo - forçá-las dentro de uma letra só (`E` ou `H`, por exemplo) esconderia que elas são regras de fronteira entre domínios, não de um domínio só. Por isso ganham letras próprias em vez de reaproveitar `A`-`I` com um significado diferente do já estabelecido. `L` (log de auditoria, 03-08-2026) segue a mesma lógica: não pertence a nenhum domínio específico (a mesma trigger genérica se aplica a `usuario`, `perfil_pesquisador`, `configuracoes`, RBAC e vários catálogos ao mesmo tempo). `M` (dashboard admin, 08-08-2026, corrigido de `K` pra `M` em 09-08-2026 depois de uma auditoria encontrar que `K` já estava em uso por `05-K`) é a mesma ideia: `contar_metricas_dashboard()` agrega número de várias tabelas de domínios diferentes numa função só, não pertence a nenhuma sozinha. `N` (moderação de conta, 09-08-2026) é diferente das outras - não é "cross-domain" como J/K/M, é USUÁRIO de verdade (podia ter sido `D`), só ganhou letra própria pra não empilhar uma 3ª colisão em cima de `F`/`G` na época (ver item acima - já corrigido, mas trocar `N` de novo agora seria churn sem ganho). `O`/`P` (09-08-2026) são as letras corretas de OPERAÇÕES DE AUTENTICAÇÃO e MODERAÇÃO SOBRE PESQUISADOR, que antes viviam erradas em `F`/`G`.
+> 📌 **Por que `J`, `K`, `L`, `M`, `N`, `O` e `P` existem:** nem tudo no banco pertence a um domínio de dado único. `id_usuario_atual()` (`03`) é infraestrutura de sessão usada por tudo. Várias triggers de `05` mexem em tabelas de domínios diferentes ao mesmo tempo (ex.: validar o repasse de uma campanha); forçá-las numa letra só esconderia que são regras de fronteira. `L` (log de auditoria) vale para várias tabelas ao mesmo tempo, com a mesma trigger genérica. `M` agrega números de vários domínios numa função só. `N`, `O` e `P` são operações sobre conta e pesquisador que pedem permissão própria e ficam agrupadas por quem as usa (atendimento e moderação).
 
 ---
 
@@ -57,50 +65,57 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 
 ### [01-A] Bootstrap, Extensões e ENUMs
 
-* **Transição de Autenticação (Supabase $\rightarrow$ NestJS Próprio):** O projeto migrou do modelo de autenticação delegada (Supabase Auth/PostgREST) para uma arquitetura com backend próprio em NestJS.
-* **Role `app_nestjs`:** O sistema utiliza uma única role de aplicação para gerenciar a conexão da API com o PostgreSQL. A criação dessa role é executada via bloco `DO $$` no topo do script 01 para garantir sua existência antes da criação de qualquer política de RLS (arquivo 04).
-* 🗑️➡️✅ **Senha Placeholder - CORRIGIDO (28-07-2026):** a role nasce `NOLOGIN`, sem senha nenhuma - não mais com `LOGIN PASSWORD 'TROCAR_NO_AMBIENTE_REAL'`. A versão anterior falhava **aberta**: esquecer de trocar a senha em produção deixava o sistema funcionando normalmente com uma credencial conhecida publicada no próprio repositório Git, sem nenhum aviso. Com `NOLOGIN`, esquecer o passo de instalação falha **fechada**: o NestJS simplesmente não consegue conectar (`FATAL: role "app_nestjs" is not permitted to log in`), erro percebido em minutos. `GRANT` e `SET ROLE` continuam funcionando normalmente numa role `NOLOGIN` - só o login direto fica bloqueado até alguém rodar `ALTER ROLE app_nestjs LOGIN PASSWORD '...'`, passo obrigatório de instalação documentado em `.Tutorial-rodar-projeto.md`.
-* 🗑️➡️✅ **Guarda de `BYPASSRLS` - ADICIONADO (28-07-2026):** bloco `DO $$` logo após a criação da role, que verifica se `current_user` tem `rolsuper` ou `rolbypassrls` e aborta o bootstrap com uma mensagem única e explicativa se não tiver. Não resolvia sozinho a confirmação de que o papel do SQL Editor do Supabase tem `BYPASSRLS` - **confirmado desde então** (`PENDENCIAS e correcoes.md`, item "O seed só roda com superusuário ou papel com `BYPASSRLS`": `rolbypassrls = true` no papel `postgres`, 04-09-2026) - mas transforma uma falha silenciosa (dezenas de erros de RLS espalhados pelos arquivos `04`-`07`, já que 99 das 116 policies são `TO app_nestjs` e as 42 tabelas têm `FORCE ROW LEVEL SECURITY`) numa parada única e autoexplicativa logo no início. *(Números atualizados em 03-08-2026 - auditoria de IA encontrou o inventário desatualizado em vários pontos deste documento; ver seção "Como conferir este inventário", ao final, pra sempre recontar em vez de confiar em número fixo.)*
-* **Extensão `pgcrypto`:** Ativada no início do script para fornecer suporte a funções criptográficas, como a geração de UUIDs (`gen_random_uuid()`).
-* **Extensão `unaccent` e função `texto_normalizado` ([01-A-1], 27-09-2026):** base da comparação "é o mesmo nome?" dos catálogos: `texto_normalizado(valor)` tira acentos, passa para minúsculas, junta espaços repetidos e tira os das pontas ("  São   Paulo " vira "sao paulo"). É `IMMUTABLE` porque índice exige, com `search_path` fixo (`public, extensions`) para achar o dicionário `unaccent` onde quer que a extensão esteja: no Supabase as extensões moram no esquema `extensions`; no PGlite dos testes e num Postgres comum, no padrão. Por isso a extensão é criada num bloco `DO` que escolhe o esquema. É `SECURITY DEFINER`: quem grava o nome (e faz o índice rodar a função) é o `app_nestjs`, que não tem acesso ao esquema `extensions` do Supabase; sem isso, todo INSERT/UPDATE de nome de catálogo pela aplicação falhava. Assim só esta função enxerga a extensão. No Supabase: Grupo R. Usada pelos índices únicos de [02-C-1]. Ideia vinda da auditoria de outro sistema acadêmico (Atlas).
-* 🗑️➡️✅ **`TIMESTAMP` → `TIMESTAMPTZ` nas 48 colunas de data/hora do banco (07-08-2026):** todas as colunas de data/hora do schema (`criado_em`, `expira_em`, `bloqueado_ate`, `ultimo_login_em`, etc., espalhadas por praticamente todo domínio) passaram de `TIMESTAMP` para `TIMESTAMPTZ`. Migração aplicada via `ALTER COLUMN ... TYPE TIMESTAMPTZ` (ver `ATUALIZAR O SUPABASE.sql`), sem `USING` explícito de propósito - sem ele, o Postgres reaproveita a conversão padrão `timestamp`→`timestamptz`, que assume o fuso da própria sessão (UTC no Supabase, conferido antes de aplicar); os valores já gravados não mudam, só passam a valer oficialmente como UTC. Bancos criados do zero a partir de `01_extensoes_enums_tabelas.sql` já nascem com `TIMESTAMPTZ` nessas colunas, sem precisar da migração.
-* **Evolução dos ENUMs:**
-  * `status_campanha` e `status_contribuicao`: Incluem estados para tratar fluxos de moderação, rejeição, expiração e reembolsos manuais. `status_campanha` ganhou `rascunho` (primeiro valor, também o `DEFAULT`) em 20-09-2026, ver [05-K-2-B].
-  * `tipo_motivo_denuncia`: Categoriza denúncias entre alvos de campanha e perfis de pesquisadores.
-  * 🗑️➡️✅ **`tipo_vinculo` (ADICIONADO, 28-07-2026):** `'institucional'` / `'independente'` - ver `[01-D]` (`perfil_pesquisador`) para o raciocínio completo.
+* **Autenticação própria em NestJS:** o projeto não usa o Supabase Auth/PostgREST; o Supabase é só o host do Postgres (e do armazenamento de arquivos). A autenticação mora no Nest (Anexo A).
+* **Role `app_nestjs`:** uma única role de aplicação faz a conexão da API com o PostgreSQL. Ela é criada num bloco `DO $$` no topo do `01`, antes de qualquer policy de RLS (`04`).
+* **A role nasce `NOLOGIN`, sem senha:** esquecer o passo de instalação falha **fechado**: o NestJS não conecta (`FATAL: role "app_nestjs" is not permitted to log in`), erro percebido em minutos. `GRANT` e `SET ROLE` funcionam numa role `NOLOGIN`; só o login direto fica bloqueado até rodar `ALTER ROLE app_nestjs LOGIN PASSWORD '...'`, passo obrigatório de instalação em `.Tutorial-rodar-projeto.md`.
+  * **Por quê:** uma senha padrão escrita no repositório falharia **aberto**: esquecer de trocá-la deixaria o sistema funcionando com uma credencial conhecida, sem aviso.
+* **Guarda de `BYPASSRLS`:** um bloco `DO $$` logo depois da criação da role verifica se `current_user` tem `rolsuper` ou `rolbypassrls` e para a instalação com uma mensagem única se não tiver (no Supabase, o papel `postgres` do SQL Editor tem `rolbypassrls = true`).
+  * **Por quê:** quase todas as policies são `TO app_nestjs` e todas as tabelas têm `FORCE ROW LEVEL SECURITY`; sem a guarda, um papel sem `BYPASSRLS` produziria dezenas de erros de RLS espalhados pelos arquivos `04` a `07`, em vez de uma parada autoexplicativa no começo.
+* **Extensão `pgcrypto`:** funções criptográficas, como `gen_random_uuid()`.
+* **Extensão `unaccent` e função `texto_normalizado` ([01-A-1]):** base da comparação "é o mesmo nome?" dos catálogos: tira acentos, passa para minúsculas, junta espaços repetidos e tira os das pontas ("  São   Paulo " vira "sao paulo").
+  * É `IMMUTABLE` porque índice exige, com `search_path` fixo (`public, extensions`) para achar o dicionário `unaccent` onde quer que a extensão esteja: no Supabase as extensões moram no esquema `extensions`; no PGlite dos testes e num Postgres comum, no padrão. Por isso a extensão é criada num bloco `DO` que escolhe o esquema.
+  * É `SECURITY DEFINER`: quem grava o nome (e faz o índice rodar a função) é o `app_nestjs`, que não tem acesso ao esquema `extensions` do Supabase. Assim só esta função enxerga a extensão. Usada pelos índices únicos de [02-C-1].
+* **Coluna com `DEFAULT` não aceita vazio:** toda coluna com valor padrão (datas "quando aconteceu", `ativo`, `campanha.valor_bruto_arrecadado`...) é `NOT NULL`. O padrão só vale quando a coluna não é informada; um `null` mandado por engano ficaria gravado em silêncio (ex.: o arrecadado vazio sumiria das somas), e o Nest responde 400 "Falta preencher um campo obrigatório" com o campo marcado. A suíte 28 do PGlite falha se aparecer coluna nova com `DEFAULT` que aceite vazio. A exceção é `contribuicao.token_sessao`, que pode ficar vazio quando a contribuição tem conta. É o padrão de mercado (Django e Rails criam a coluna assim).
+* **Data e hora são sempre `TIMESTAMPTZ`** (`criado_em`, `expira_em`, `bloqueado_ate`, `ultimo_login_em` etc.): o valor vale como um instante (UTC por baixo), e a tela converte para o horário de Brasília.
+* **ENUMs:**
+  * `status_campanha` (com `rascunho` como primeiro valor e `DEFAULT`, ver [05-K-2-B]) e `status_contribuicao`: incluem os estados de moderação, rejeição, expiração e reembolso manual.
+  * `tipo_motivo_denuncia`: separa os motivos de denúncia de campanha dos de perfil de pesquisador.
+  * `tipo_vinculo`: `'institucional'` / `'independente'` (ver [01-D], `perfil_pesquisador`).
 
 ---
 
 ### [01-B] RBAC (Controle de Acesso Baseado em Papéis)
 
-* **Estrutura:** Composta pelas tabelas `papel`, `permissao` e a tabela de ligação `papel_permissao`.
-* **Desvinculação do Banco:** As permissões granulares são checadas dinamicamente na aplicação NestJS e na função `public.tem_permissao()`.
-* 🗑️➡️✅ **`papel.codigo` - coluna nova (03-08-2026, achado de revisão externa):** `papel` só tinha `nome` (o rótulo, editável) - e 3 pontos do banco reconheciam um papel especial pelo TEXTO desse rótulo, sem trava nenhuma: `trg_admin_recebe_toda_permissao()` (`05`, `WHERE p.nome = 'admin'`), `fn_atribuir_papel_pesquisador()` (`05`, `WHERE nome = 'pesquisador'`) e `atribuir_papel_padrao()` (`08`, `WHERE nome = 'usuario'` - roda em todo cadastro real). Renomear qualquer um dos três pelo painel (não existe essa tela ainda, mas está a caminho) pararia essas 3 automações em silêncio, sem erro nenhum - testado e confirmado antes de corrigir. Mesmo padrão já usado em `tipo_link.codigo` (`[01-C]`): `codigo VARCHAR(20) NOT NULL UNIQUE`, estável, nunca exposto pra edição - seedado (`07`, `[07-B-1]`) igual ao `nome` atual dos 7 papéis, então nada muda de comportamento hoje. As 3 funções passaram a ler `WHERE codigo = '...'`. **`papel.nome` (o rótulo) virou editável pelo Painel Admin na mesma rodada** (`PATCH /papel/:id` no Nest, DTO só com `nome` - nunca `codigo`, nem exposto): `pol_papel_update` (`04`) nova, exige `papel_gerenciar`; `GRANT UPDATE (nome) ON papel` (`06`) é por coluna específica, `codigo` sem nenhum `GRANT` - dupla proteção, a coluna que as 3 automações leem não é alcançável nem pela RLS nem pelo GRANT. 🗑️➡️✅ **`motivo_denuncia.codigo` REMOVIDO (18-08-2026):** tinha ganhado o mesmo `codigo` por analogia quando este bloco foi escrito, mas nenhuma trigger/função chegou a lê-lo (diferente de `papel`/`tipo_link`) - era só texto informativo. Removido a pedido do Lucas/Alexia; `descricao` (antes opcional) virou `NOT NULL` e passou a ser o único identificador do catálogo - ver `[01-C]`.
-
+* **Estrutura:** as tabelas `papel`, `permissao` e a tabela de ligação `papel_permissao`.
+* **Checagem:** as permissões são lidas pela função `public.tem_permissao()` ([03-B]), usada pelas policies e pelas funções do banco; o Nest pergunta à mesma função quando precisa (`DOCUMENTACAO_BACKEND.md`, seção 4).
+* **`papel.codigo`, o identificador fixo:** `VARCHAR(20) NOT NULL UNIQUE`, estável, nunca exposto para edição. As automações que reconhecem um papel especial leem o código, nunca o nome: `trg_admin_recebe_toda_permissao()` (`05`, `codigo = 'admin'`), `fn_atribuir_papel_pesquisador()` (`05`, `codigo = 'pesquisador'`) e `atribuir_papel_padrao()` (`08`, `codigo = 'usuario'`, roda em todo cadastro).
+  * **`papel.nome` é editável pelo painel** (`PATCH /papel/:id`, DTO só com `nome` e `descricao`): `pol_papel_update` (`04`) exige `papel_gerenciar`, e o `GRANT UPDATE (nome, descricao) ON papel` (`06`) é por coluna; `codigo` não tem `GRANT` nenhum. Dupla proteção: a coluna que as automações leem não é alcançável nem pela RLS nem pelo GRANT.
+  * **Por quê:** lendo o nome, renomear um papel pelo painel pararia essas automações em silêncio, sem erro nenhum. Mesmo padrão de `tipo_link.codigo` ([01-C]).
 * **`papel.ordem_exibicao`, a ordem de poder nas listas:** número que diz a posição de cada papel, do maior cargo (1, admin) para o menor (7, usuario). A coluna e o filtro "Papel" (Usuários, T1, Permissões) e a matriz Papel × Permissão ordenam por ele. É `NOT NULL`, `UNIQUE` e maior que zero, e o `app_nestjs` não o altera (o `GRANT UPDATE` de `papel` é só de `nome` e `descricao`).
   * **Por quê:** o nome é renomeável pelo painel e o `id_papel` só diz em que ordem o papel foi criado; um papel novo criado depois cairia abaixo de "usuário". Com a posição escrita, renomear não muda a ordem e um papel novo entra onde for posto.
   * **Caso-limite:** é só exibição. O que cada papel pode fazer é a matriz Papel × Permissão e a RLS, nunca este número. Não há tela para reordenar: os papéis nascem no seed. O nome de um papel não aceita vírgula (`PapelRequestUpdate`), porque as telas juntam os papéis de uma conta com vírgula. Provado no PGlite (suíte 57).
+* **`papel.descricao`:** para que serve o papel, em uma frase (lista de Papéis e atribuição de papel no Alterar Usuário). Editável pelo painel, como o nome.
 
-### [01-B-1] O que cada papel faz (10-10-2026)
+### [01-B-1] O que cada papel faz
 
 **Em palavras simples:** o administrador pode tudo. Os outros papéis de gestão dividem as tarefas do dia a dia, cada um com só o que precisa. Mudar permissões e papéis é só do administrador. A lista sai das permissões gravadas em `07_seed_dados.sql` ([07-B-3]).
 
 * **Curador:** faz a curadoria das campanhas e cuida dos catálogos que classificam o conteúdo.
   * Aprova e rejeita campanhas enviadas para aprovação.
   * Gerencia as áreas do conhecimento, os tipos de link acadêmico e os motivos de denúncia.
-  * Vê a pontuação dos pesquisadores.
 * **Moderador:** cuida do conteúdo publicado.
   * Julga denúncias e decide as contestações da pontuação das denúncias julgadas por outra pessoa.
   * Oculta comentários e atualizações de campanha.
   * Encerra campanha por moderação (RF-114).
-  * Vê a pontuação dos pesquisadores.
 * **Suporte:** atende problemas de acesso à conta.
-  * Desbloqueia login e reenvia o e-mail de verificação.
+  * Desbloqueia login e reenvia o e-mail de verificação; vê a lista de contas, a ficha e o histórico de login (`usuario_visualizar_atendimento`), sem dados sensíveis nem a fila de e-mails.
   * Não encerra sessões de outra pessoa nem cancela pedido de nova senha, e não precisa: a própria pessoa encerra as sessões em Minha Conta, trocar a senha pelo "Esqueci a senha" derruba todas, a suspensão também, e o pedido de nova senha vence sozinho (`recuperacao_senha_minutos_validade`). Conta invadida em que o dono perdeu o próprio e-mail: o admin suspende a conta, o que derruba as sessões.
 * **Revisor:** acompanha o funcionamento da plataforma, só lendo.
-  * Vê os relatórios do painel, a pontuação dos pesquisadores, a auditoria financeira e o log, sem dados pessoais.
+  * Vê os relatórios do painel, a auditoria financeira e o log, sem dados pessoais.
 * **Pesquisador:** cria e gerencia as próprias campanhas (o que faz é liberado por ser o dono).
 * **Usuário:** papel de toda conta; apoia campanhas e cuida da própria conta.
+
+A pontuação dos pesquisadores é pública: todo papel a vê, sem permissão própria.
 
 > Durante o desenvolvimento, toda conta logada vê todas as telas (só leitura), para testar ([07-B-4]); isso sai no deploy.
 
@@ -108,108 +123,113 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 
 ### [01-C] CONFIG (Configurações, Catálogos e Arquivo Base)
 
-* **`configuracoes`:** Permite armazenar parâmetros globais do sistema (`id_usuario IS NULL`) e preferências individuais de usuários (`id_usuario` preenchido). Possui constraint `UNIQUE` na coluna `chave` para suportar operações de *upsert*. 🗑️➡️✅ **Coluna `publica` nova (05-09-2026, ver `PENDENCIAS e correcoes.md`, seção "GET /configuracoes agora distingue pública de interna"):** `GET /configuracoes` devolvia toda linha global pra qualquer um, sem distinguir o que o navegador precisa pra montar uma tela (ex.: `valor_minimo_contribuicao`) do que é parâmetro interno de segurança/moderação (ex.: `limite_tentativas_login`). `BOOLEAN NOT NULL DEFAULT FALSE` - uma chave nova nasce interna, só fica pública por ato deliberado (o inverso, `DEFAULT TRUE`, faria esquecer de marcar ser igual a expor). Só tem efeito em linha global; quem já tem `configuracao_gerenciar` continua vendo tudo, pública ou não (ver `pol_config_select`, `[04-C]`). Das 38 chaves seedadas hoje (contado direto no `.sql`, não de memória - `avatar_padrao_chave` saiu do seed em 05-09-2026 e do banco de produção em 06-09-2026, via `DELETE` colado pelo Lucas no Supabase - produção e seed batem), 27 são públicas (limites/prazos/tetos que aparecem ou validam em alguma tela) e 11 continuam internas (tudo que envolve tentativa de login/bloqueio/validade de token/sessão, constantes de score, e o rate-limit de upload). **Escopo desta rodada: só backend** - o frontend trocou só a parte que já era config (`arquivo_tamanho_maximo_imagem_bytes`, ver `seletor-foto-perfil.jsx`); o resto (MIME, perfis de redução) continua duplicado à mão, ver `ACHADOS_PARA_DISCUTIR.md`, item 5.
-* **`tipo_link`:** Catálogo centralizador de redes e links externos. Os campos booleanos `permite_perfil`, `permite_atualizacao` e `permite_recompensa` definem o escopo de uso de cada tipo. 🗑️➡️✅ **Coluna `codigo` nova (28-07-2026):** `motivo_denuncia` e `area_conhecimento` já tinham chave natural estável (`codigo`/`codigo_cnpq`); `tipo_link` era a única tabela de catálogo sem uma. Virou necessário quando o seed (`07`) passou a referenciar catálogo por chave natural em vez de id posicional (ver `PENDENCIAS e correcoes.md`, item 36, sobre o bug que essa prática expôs). 🗑️➡️✅ **Reaberto (28-07-2026), depois REVERTIDO (15-08-2026) - valores ativos hoje: `LATTES`, `ORCID`, `RESEARCHGATE`, `LINKEDIN`, `GITHUB`.** Em 28-07-2026 a allowlist tinha fechado em 5 tipos com base numa checagem incompleta (só viu quais foram seedados, não o RF que na época listava 7, incluindo "Site Institucional" e "Outro") - os dois voltaram ao catálogo com `regex`/`dominio = NULL` de propósito. Em **15-08-2026**, os dois foram **removidos de novo, desta vez em definitivo**, por permitirem link sem verificação de domínio nenhuma (`regex`/`dominio = NULL` significa "aceita qualquer URL", o oposto do que os outros 5 tipos garantem). Os Requisitos Funcionais (RF-020) ainda citavam os dois removidos - corrigido em 05-09-2026 (achado cruzando o texto do requisito contra o banco de verdade). Ver `PENDENCIAS e correcoes.md`, item 2, e `DOCUMENTACAO_BD.md`, Anexo D, pra decisão consolidada sobre manter as 3 flags booleanas (não migrar pra tabela dinâmica). 🗑️➡️✅ **`link_atualizacao`/`link_recompensa` destravadas pro GitHub (28-07-2026, item 15 da Lista C - decisão da Alexia):** antes, os 3 campos de escopo caíam todos no `DEFAULT` (só `permite_perfil=TRUE`), deixando `link_atualizacao`/`link_recompensa` impossíveis de usar (a trigger `trg_valida_escopo_tipolink` rejeitava qualquer linha). `GITHUB` ganhou `permite_atualizacao`/`permite_recompensa=TRUE` - exemplo dela: repositório de código como prova de progresso, ou como acesso antecipado (`tipo_recompensa='acesso_antecipado'`) a um repo privado. Os outros 4 tipos continuam só `permite_perfil` (identidade profissional, menos natural numa atualização/recompensa).
-* 🗑️➡️✅ **`area_conhecimento` ganhou hierarquia de 2 níveis - CORRIGIDO (28-07-2026):** coluna `id_pai` nova, auto-referenciada (mesmo padrão de `score_config`, ver `[01-I]`) - antes só existiam as 9 grandes áreas do CNPq, que eram amplas demais pra um filtro de busca funcionar de verdade (ex.: "Ciências da Saúde" cobrindo de odontologia a saúde coletiva). Agora cada grande área (`id_pai IS NULL`) tem várias áreas de nível 2 como filhas (`id_pai` apontando pra ela) - ~81 áreas novas, seedadas em `07`. Decisão tomada junto: `campanha` passou a ser **obrigada** a informar uma área de nível 2 (coluna `NOT NULL`, nunca a grande área raiz) - ver a trigger em `[05-K-1]`. 🗑️➡️✅ **`codigo_cnpq` sem dígito verificador (28-07-2026):** a primeira versão guardava o código completo (ex.: `'1.03.00.00-7'`), mas os dígitos não vieram de fonte conferida - provado matematicamente (por outra sessão, com prova completa em `PENDENCIAS e correcoes.md`, item 38) que os dígitos semeados não podiam vir de nenhum algoritmo real de soma ponderada. Decisão: guardar só `'X.YY.00.00'`, sem o dígito - ele serve pra pegar erro de transcrição humana em papel, e aqui o código é só comparado por igualdade, nunca digitado à mão. Nomes e hierarquia continuam corretos e confiáveis (nomenclatura padrão CNPq).
-* **`motivo_denuncia`:** Catálogo de razões para denúncia com flag `ativo` para permitir desativação lógica sem apagar registros históricos. 🗑️➡️✅ **5 motivos novos (28-07-2026):** `CAMP-005` a `CAMP-008` (plágio, conflito de interesse não declarado, campanha sem viabilidade metodológica, spam) e `PERF-004` (vínculo institucional falso - ficou mais relevante depois que `perfil_pesquisador.vinculo_institucional` virou `NOT NULL`). 🗑️➡️✅ **Coluna `codigo` removida (18-08-2026, pedido do Lucas/Alexia):** não era lida por nenhuma trigger/função (diferente de `papel`/`tipo_link`), só texto informativo - ver `[01-B]`. `descricao` virou `NOT NULL` (era opcional) e é agora o único identificador legível do catálogo. Exclusão de verdade também passou a ser possível pelo painel (`pol_motivo_delete`, `[04-C]`) além da desativação lógica já existente.
-* **`arquivo`:** Tabela base de metadados para upload de mídias (chave do objeto, MIME type, tamanho e quem enviou).
-  * **`chave`, não URL:** guarda só o caminho do objeto dentro do armazenamento (ex.: `publico/<uuid>.webp`). A URL pública é montada na hora pelo Nest (`commons/storage`), juntando o endereço base do armazenamento com a chave. Trocar de domínio ou de provedor (os dois falam o protocolo S3) não exige atualizar nenhuma linha. `UNIQUE` porque o nome é sempre gerado pelo backend (`randomUUID`), nunca pelo cliente: colisão seria bug.
-  * **`id_usuario_upload`:** quem enviou. Sem isso não dava para responder "quem subiu este arquivo?", limitar a cota por conta, conferir a posse da foto de perfil (`[05-G]`) nem achar o que uma conta banida enviou. A FK é criada por `ALTER TABLE` depois de `usuario` existir, porque as duas tabelas se referenciam (`usuario.id_imagem_perfil` aponta para `arquivo`).
+* **`configuracoes`:** parâmetros globais do sistema (`id_usuario IS NULL`) e preferências individuais (`id_usuario` preenchido). `UNIQUE` em `chave`, para *upsert*.
+  * **Coluna `publica`** (`BOOLEAN NOT NULL DEFAULT FALSE`): separa o que o navegador precisa para montar uma tela (ex.: `valor_minimo_contribuicao`) do que é parâmetro interno de segurança ou moderação (ex.: `limite_tentativas_login`). `GET /configuracoes` sem login só devolve as públicas; quem tem `configuracao_gerenciar` vê todas (`pol_config_select`, [04-C]). Só tem efeito em linha global.
+  * **Por que nasce `FALSE`:** uma chave nova nasce interna e só fica pública por ato deliberado; com `DEFAULT TRUE`, esquecer de marcar seria o mesmo que expor.
+* **`tipo_link`:** catálogo de redes e links externos. As flags `permite_perfil`, `permite_atualizacao` e `permite_recompensa` definem onde cada tipo pode ser usado. Tem `codigo` estável (chave natural, usada pelo seed para referenciar o catálogo sem depender do id).
+  * **Tipos ativos:** `LATTES`, `ORCID`, `RESEARCHGATE`, `LINKEDIN` e `GITHUB`, todos com domínio e formato conferidos (`regex`, `dominio`). Não existe tipo "Outro" nem "Site Institucional": um tipo sem domínio aceitaria qualquer URL, o oposto do que os outros garantem.
+  * **Só o `GITHUB` serve a atualização e recompensa** (`permite_atualizacao`/`permite_recompensa = TRUE`): repositório como prova de progresso, ou como acesso antecipado (`tipo_recompensa = 'acesso_antecipado'`) a um repositório privado. Os outros quatro são só de perfil (identidade profissional). Manter as três flags booleanas, sem tabela dinâmica, está no Anexo C.
+* **`area_conhecimento`, em dois níveis:** `id_pai` auto-referenciado (mesmo padrão de `score_config`, [01-I]). Cada grande área do CNPq (`id_pai IS NULL`) tem as áreas de nível 2 como filhas. A campanha é **obrigada** a informar uma área de nível 2, nunca a grande área (trigger em [05-K-1]).
+  * **Por quê:** só as 9 grandes áreas seriam amplas demais para o filtro de busca (ex.: "Ciências da Saúde" cobrindo de odontologia a saúde coletiva).
+  * **`codigo_cnpq` sem dígito verificador** (`'X.YY.00.00'`): o código é comparado por igualdade e nunca digitado à mão, então o dígito não protegeria nada. Nomes e hierarquia seguem a nomenclatura padrão do CNPq.
+* **`motivo_denuncia`:** catálogo de razões de denúncia, com `ativo` para desativar sem apagar os registros históricos. `descricao` é `NOT NULL` e é o único identificador do catálogo (nenhuma regra do banco lê um código de motivo). A exclusão de verdade também é possível pelo painel (`pol_motivo_delete`, [04-C]). Motivos de campanha incluem plágio, conflito de interesse não declarado, campanha sem viabilidade metodológica e spam; os de perfil incluem vínculo institucional falso.
+* **`arquivo`:** metadados de cada mídia enviada (chave do objeto, MIME type, tamanho e quem enviou).
+  * **`chave`, não URL:** guarda só o caminho do objeto no armazenamento (ex.: `publico/<uuid>.webp`). A URL pública é montada na hora pelo Nest (`commons/storage`), juntando o endereço base do armazenamento com a chave. Trocar de domínio ou de provedor (os dois falam o protocolo S3) não exige atualizar nenhuma linha. `UNIQUE` porque o nome é sempre gerado pelo backend (`randomUUID`), nunca pelo cliente: colisão seria bug.
+  * **`id_usuario_upload`:** quem enviou. Sem isso não daria para responder "quem subiu este arquivo?", limitar a cota por conta, conferir a posse da foto de perfil ([05-G]) nem achar o que uma conta banida enviou. A FK é criada por `ALTER TABLE` depois de `usuario` existir, porque as duas tabelas se referenciam (`usuario.id_imagem_perfil` aponta para `arquivo`). `ON DELETE SET NULL`: apagar a conta que enviou não apaga o arquivo, que pode continuar em uso.
 
-> 📌 **Por que `tipo_link` e `arquivo` moram em CONFIG, e não em LINK/ARQUIVO:** a letra `C` não é só "Configurações" - o nome completo do domínio já é "Configurações, Catálogos e Arquivo Base" (ver título acima e o "Índice Global de Letras" no topo deste documento). A regra que organiza isso: o catálogo/recurso compartilhado mora em `C`, e quem *usa* esse catálogo para algo específico ganha sua própria letra.
+> 📌 **Por que `tipo_link` e `arquivo` moram em CONFIG, e não em LINK/ARQUIVO:** a letra `C` é "Configurações, Catálogos e Arquivo Base". O catálogo ou recurso compartilhado mora em `C`, e quem *usa* esse catálogo para algo específico ganha a própria letra:
 >
-> Esse padrão se repete 3 vezes no projeto, sempre com a mesma lógica:
 > | Catálogo / recurso base (mora em `C`) | Quem usa (mora na letra própria) |
 > |---|---|
-> | `tipo_link` - catálogo de tipos de link (Lattes, ORCID, LinkedIn...) | `link_academico`, `link_atualizacao`, `link_recompensa` → letra **F** (LINK) |
-> | `arquivo` - tabela base de metadados de mídia (chave, MIME, tamanho) | `arquivo_atualizacao`, `arquivo_recompensa` → letra **G** (ARQUIVO) |
-> | `motivo_denuncia` - catálogo de motivos de denúncia | `denuncia` (a denúncia em si) → letra **E** (CAMPANHA) |
+> | `tipo_link` - tipos de link (Lattes, ORCID, LinkedIn...) | `link_academico`, `link_atualizacao`, `link_recompensa` → **F** (LINK) |
+> | `arquivo` - metadados de mídia (chave, MIME, tamanho) | `arquivo_atualizacao`, `arquivo_recompensa` → **G** (ARQUIVO) |
+> | `motivo_denuncia` - motivos de denúncia | `denuncia` → **E** (CAMPANHA) |
 >
-> Ou seja, `arquivo` não está "esquecido" em `C` por engano: ele é a tabela-base genérica (qualquer mídia enviada ao sistema - incluindo a foto de perfil do usuário, `usuario.id_imagem_perfil`), e as tabelas que a *associam* a um contexto específico (atualização de campanha, recompensa) é que ganham letra própria em `G`. O mesmo raciocínio vale para `tipo_link`/`F` e `motivo_denuncia`/`E`.
+> `arquivo` é a tabela-base genérica (qualquer mídia, inclusive a foto de perfil, `usuario.id_imagem_perfil`); as tabelas que a associam a um contexto (atualização, recompensa) é que ganham a letra `G`.
 
 ---
 
 ### [01-D] USUÁRIO (Autenticação Própria, Segurança e Sessões)
 
-* **`usuario`:** Tabela central de contas.
-  * `senha_hash`: Campo obrigatório (`NOT NULL`) para armazenar o hash Bcrypt/Argon2.
-  * **Proteção Anti-Brute-Force:** As colunas `tentativas_login_falhas`, `bloqueado_ate`, `ultimo_login_em` e `ultimo_login_ip` controlam o bloqueio temporário de conta após falhas sucessivas de login.
-  * **Verificação de E-mail:** `email_verificado` é uma flag independente - indica se o usuário confirmou o e-mail, não tem relação com bloqueio por tentativas de login.
-  * 🗑️➡️✅ **`deletado_em TIMESTAMP` / `deletado_por INT REFERENCES usuario` - colunas novas (28-07-2026 - "excluir conta não deixa rastro"):** `excluir_conta_usuario()` (`03`, `[03-O]`) gravava só `deletado = TRUE`, sem quem fez nem quando - furo de conformidade com o Art. 37 da LGPD (registro das operações de tratamento; exclusão é a mais sensível). Preenchidas só pela própria função, nunca por `UPDATE` direto do app (fora do `GRANT UPDATE`, dentro do `GRANT SELECT` - `06`, `[06-D-2]`/`[06-D-9]`).
-* **`usuario_papel`:** Relacionamento N:N entre usuários e papéis. Localizada fisicamente neste bloco por depender de `usuario`, mas documentada conceitualmente sob o domínio de RBAC.
-* **`perfil_pesquisador`:** Dados acadêmicos do pesquisador. O campo `score_atual` é mantido como inteiro para otimizar leituras e atualizações do algoritmo de pontuação. 🗑️ **Coluna `suspenso BOOLEAN` removida (27-07-2026):** duplicava o mesmo estado que `status_pesquisador ENUM` já representa, e só o segundo era de fato lido em algum lugar do banco - removida de `01` (tabela), `06` (grant de coluna) e `07` (seed).
+* **`usuario`:** tabela central de contas.
+  * `senha_hash`: obrigatório (`NOT NULL`), hash bcrypt.
+  * **E-mail sempre em minúsculas:** `trg_usuario_normaliza_email` grava `lower(btrim(email))` (o Nest também normaliza, `DOCUMENTACAO_BACKEND.md`, seção 19). Sem isso, `UK_USUARIO_EMAIL` só barraria texto igual, e "Alice@" e "alice@" virariam duas contas.
+  * **Proteção contra força bruta:** `tentativas_login_falhas`, `bloqueado_ate`, `ultimo_login_em` e `ultimo_login_ip` controlam o bloqueio temporário depois de falhas seguidas de login.
+  * **`email_verificado`:** indica se o usuário confirmou o e-mail; não tem relação com o bloqueio por tentativas.
+  * **`deletado_em` e `deletado_por`:** quem excluiu a conta e quando. Preenchidas só por `excluir_conta_usuario()` ([03-O]), nunca por `UPDATE` direto do app (fora do `GRANT UPDATE`, dentro do `GRANT SELECT`, [06-D]). **Por quê:** a exclusão é a operação de tratamento mais sensível, e a LGPD (art. 37) pede o registro delas.
+* **`usuario_papel`:** N:N entre usuários e papéis. Fica fisicamente neste bloco por depender de `usuario`, mas é RBAC.
+* **`perfil_pesquisador`:** dados acadêmicos do pesquisador. `score_atual` é inteiro, para leituras rápidas do motor de pontuação. O estado do pesquisador é um só: `status_pesquisador` (ENUM), sem booleano repetindo a mesma informação.
+  * **`ativado_em`** (`TIMESTAMPTZ NOT NULL DEFAULT NOW()`): a data do upgrade. Nenhum caminho de upgrade (a própria conta pelo Nest, ou `criar_perfil_pesquisador_para_outro`) informa a data; o padrão grava na hora. **Caso-limite:** suspender e reativar o pesquisador não muda a data: é a do primeiro upgrade. Suíte PGlite 44.
+  * **`tipo_vinculo`:** `'institucional'` exige `vinculo_institucional` preenchido e não vazio; `'independente'` exige `NULL` (`CK_PERFIL_VINCULO`). Nenhum dos dois aceita ambiguidade: "sem instituição" é um fato declarado e filtrável, não um campo em branco. **Por quê:** obrigar a instituição excluiria o pesquisador independente, justamente um público que a plataforma quer alcançar. ⚠️ `calcular_score_perfil_academico` (`05`) dá pontos pela instituição preenchida, então o pesquisador independente não recebe esses pontos.
+  * **CPF cifrado (`cpf_criptografado`) e índice cego (`cpf_hash`):** ver o bloco abaixo.
+* **`termos_de_uso` e `usuario_termo`:** as versões de cada termo e o aceite de cada conta, com IP e data (LGPD). Versão já aceita não se apaga nem se altera ([05-K-3]).
+* **`notificacao`:** a fila e o histórico dos e-mails: snapshot do e-mail do destinatário, tentativas e o texto do último erro ([05-Q]).
+* **`verificacao_email` e `recuperacao_senha`:** tokens curtos e temporários de confirmação de conta e de nova senha. O índice parcial `ux_recuperacao_senha_ativo_por_usuario` garante um só token de recuperação ativo por pessoa.
+* **`sessao`:** refresh tokens guardados como hash. Permite sair com segurança, revogar sessões e controlar vários aparelhos numa arquitetura JWT.
+  * **`origem`** (`'login'` ou `'refresh'`, `CK_SESSAO_ORIGEM`, `DEFAULT 'refresh'`): toda renovação silenciosa do token (a cada ~15 minutos de uso) também cria uma linha; a coluna separa isso de um login de verdade na tela de histórico de login. O padrão é `'refresh'` de propósito: uma linha sem origem informada nunca aparece como login sem ser.
 
-📌 **`perfil_pesquisador.ativado_em` nasce com a data do upgrade (12-10-2026).**
-- **Decisão:** `ativado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()`. Nenhum caminho de upgrade (a própria conta pelo Nest, ou `criar_perfil_pesquisador_para_outro`) informa a data; o padrão grava na hora. Os perfis antigos sem data receberam a do primeiro aceite do Termo do Pesquisador (grupo AZ do ATUALIZAR).
-- **Motivo:** só o seed tinha a data, e toda ficha de upgrade real mostrava "Ativado em -" (também na exportação de dados da LGPD). Suíte PGlite 44.
-- **Caso-limite aceito:** suspender e reativar o pesquisador não muda a data: ela é a do primeiro upgrade, não a da última reativação.
-  * 🗑️➡️✅ **`tipo_vinculo` - ADICIONADO (28-07-2026), preservando a regra da Alexia sem excluir o pesquisador independente:** `vinculo_institucional NOT NULL` implementava corretamente "perfil não nasce incompleto", mas como efeito colateral impedia a existência de pesquisador sem instituição - justamente o público que a Etapa 1 diz que a plataforma quer alcançar. Solução: ENUM `tipo_vinculo` (`'institucional'` / `'independente'`, `DEFAULT 'institucional'`); `vinculo_institucional` voltou a ser nullable, mas amarrado pela `CONSTRAINT "CK_PERFIL_VINCULO"` - institucional exige o campo preenchido e não-vazio, independente exige o campo `NULL`. Nenhum dos dois estados aceita ambiguidade (continua proibido cadastrar sem declarar nada) - é mais rigoroso que a versão anterior, não menos: "sem instituição" vira um fato declarado e filtrável, em vez de um campo em branco de significado ambíguo. Os 11 perfis do seed continuam válidos sem nenhum ajuste (`tipo_vinculo = 'institucional'` via `DEFAULT`). ⚠️ **Efeito no score, não decidido ainda:** `calcular_score_perfil_academico` (`05`) dá pontos por `vinculo_institucional` preenchido - um pesquisador independente perde esses pontos automaticamente; está amarrado à decisão de escopo do score (Lista C, itens 12/13, em `PENDENCIAS e correcoes.md`).
-  * 🆕 **`cpf_criptografado` - esquema de cifra decidido (22-08-2026), antes de escrever o módulo `6-perfil-pesquisador`.** Decisão tomada por mim depois de avaliar sugestões de mais de uma ferramenta de IA. Registrado aqui com detalhe de propósito - é a primeira vez que o projeto lida com dado criptografado de verdade (não é hash de senha, que é irreversível por natureza; CPF **precisa** poder voltar ao valor original, porque a API de pagamento/KYC do RF-015 precisa lê-lo).
-    * **O problema de fundo, em uma frase:** cifra de verdade (a que permite decifrar depois) é de propósito **não-determinística** - cifrar o mesmo CPF duas vezes produz dois resultados diferentes (por causa de um valor aleatório novo gerado a cada operação). Isso é uma qualidade de segurança (impede comparar dois valores cifrados e perceber que escondem o mesmo dado), mas tem um efeito colateral real: não dá pra colocar `UNIQUE` na coluna cifrada, e não dá pra "procurar quem tem este CPF" comparando valores cifrados, porque a mesma busca nunca bate com o que já está salvo.
-    * **Onde cifrar - Postgres (`pgcrypto`) vs. Node (`node:crypto`), as duas opções que foram avaliadas:**
-      * *Opção A - `pgp_sym_encrypt()`/`pgp_sym_decrypt()` do Postgres.* A extensão `pgcrypto` já está habilitada (`01`, linha ~85), então não precisa instalar nada; a chave viaja como parâmetro da função SQL a cada leitura/escrita.
-      * *Opção B - cifra simétrica no processo do Nest, com o módulo nativo `node:crypto` (AES-256-GCM).* A chave nunca sai do processo da aplicação; o Postgres só recebe e devolve texto já cifrado, opaco, nunca vê a chave nem o CPF em claro.
-      * **Decisão: Opção B (Node).** Dois motivos, não um só. Primeiro, verificado por grep nos 5 arquivos de `.sql` inteiros: **nenhuma trigger, função ou policy do banco lê `cpf_criptografado` para decidir absolutamente nada** - a única aparição fora da definição da coluna e do `GRANT` é a exclusão explícita da coluna do log de auditoria (`to_jsonb(NEW) - 'cpf_criptografado'`, em `[05-L]`), ou seja, o oposto de precisar ler o valor. Não existe hoje nenhuma "consistência com lógica do banco" a preservar cifrando ali. Segundo, o modelo de ameaça: com a Opção A, a chave de cifra trafega para dentro do Supabase (gerenciado por terceiro) toda vez que alguém cadastra ou lê o próprio perfil; com a Opção B, a chave nunca deixa o processo do Nest - um comprometimento do lado do banco (não do app) nunca expõe a chave. Efeito colateral favorável, não decisivo sozinho: o resultado do AES-256-GCM em base64 é bem mais compacto (na faixa de ~52 caracteres) que o formato de mensagem OpenPGP que `pgp_sym_encrypt` produz (entre ~120 e ~200 caracteres para o mesmo dado de entrada).
-    * **Formato do texto salvo em `cpf_criptografado`: `v1:<iv>:<tag>:<ciphertext>` (cada parte em base64, unidas por `:`).** AES-256-GCM exige guardar, além do dado cifrado em si, duas outras peças pra conseguir decifrar depois: o **IV** (valor aleatório novo a cada cifrada - não é segredo, mas sem ele não dá pra reconstituir as condições da cifra original; nunca pode repetir com a mesma chave) e a **tag de autenticação** (um "selo" que o próprio GCM calcula - na hora de decifrar, se um byte do texto cifrado foi alterado/corrompido, a conferência da tag falha e a função recusa devolver qualquer coisa, em vez de devolver um CPF corrompido silenciosamente). O prefixo **`v1:`** não é dado criptográfico nenhum, é só uma etiqueta de **versão do formato/receita** usada pra produzir aquele valor. Utilidade concreta: se um dia o algoritmo mudar, ou a chave for rotacionada, ou for encontrado um defeito na receita da v1, a função de decifrar olha o prefixo primeiro e decide qual receita aplicar - linhas `v1:` antigas e linhas `v2:` novas convivem na mesma coluna ao mesmo tempo, e a migração pode ser feita aos poucos (relendo e regravando cada linha sob demanda), em vez de exigir uma troca de tudo, de uma vez, sem meio-termo.
-    * **`cpf_hash` - índice cego, coluna nova a ser criada junto com o módulo, `UNIQUE NOT NULL`.** Resolve exatamente o problema de fundo descrito acima: uma segunda coluna, calculada como `HMAC-SHA256(cpf_normalizado, CPF_INDEX_KEY)` - determinística (o mesmo CPF sempre produz o mesmo valor, por isso pode ter `UNIQUE` e pode ser comparada diretamente), mas não-reversível (do valor salvo não dá pra voltar ao CPF). É "cego" porque o banco compara igualdade sem nunca "enxergar" o CPF de verdade por trás do valor. Serve a três necessidades reais do produto, nenhuma delas atendida pela coluna cifrada: **(1)** impedir duas contas com o mesmo CPF (`UNIQUE` de verdade, o dado cifrado nunca poderia ter isso); **(2)** o suporte localizar a conta de alguém a partir do CPF informado (RF-017, correção de CPF via suporte); **(3)** a curadoria cruzar "este CPF já teve campanha rejeitada por fraude, em outra conta". **Por que HMAC e não um hash simples (ex.: `sha256(cpf)`):** um CPF tem só 10⁹ combinações válidas possíveis (11 dígitos, mas os 2 últimos são calculados a partir dos 9 primeiros) - um espaço pequeno o bastante pra alguém com acesso ao banco pré-calcular o hash de TODOS os CPFs válidos possíveis de antemão e depois só bater contra o valor salvo, revertendo o "hash" na prática (o mesmo motivo por trás de nunca guardar senha como hash simples, só que aqui o espaço de valores possíveis é ainda menor). O HMAC exige uma chave secreta como segundo ingrediente do cálculo - sem conhecer essa chave, não dá pra pré-calcular a tabela de todos os CPFs possíveis, porque a chave também precisaria ser adivinhada, e essa tem um espaço de possibilidades imensamente maior que o de um CPF.
-    * **Duas chaves no `.env`, nunca uma só: `CPF_ENCRYPTION_KEY` e `CPF_INDEX_KEY`.** Cifra e índice cego têm ciclos de vida diferentes. Rotacionar `CPF_ENCRYPTION_KEY` é possível com uma migração tranquila: decifra cada linha com a chave velha, cifra de novo com a nova, grava. Rotacionar `CPF_INDEX_KEY` é bem mais pesado: **todo** valor de `cpf_hash` já salvo fica obsoleto ao mesmo tempo (o cálculo novo nunca bate com o antigo), então exige recalcular a coluna inteira numa operação só - não dá pra fazer aos poucos como a cifra. Manter as chaves separadas evita que rotacionar uma force a rotacionar a outra junto. As duas seguem o mesmo padrão já usado por `JWT_SECRET` no `nest/.env`: valor de placeholder óbvio pra dev/TCC, comentário avisando pra trocar antes de qualquer coisa que se pareça com produção, e - este aviso é novo, o `JWT_SECRET` não precisa dele do mesmo jeito - **perder qualquer uma das duas chaves depois de ter dado real cadastrado é irreversível** (não tem "esqueci a senha" pra isso).
-    * **Decisão de produto, confirmada por Lucas (22-08-2026): um CPF corresponde a, no máximo, uma conta de pesquisador, sempre.** É a regra que `cpf_hash UNIQUE` aplica goela abaixo do banco - não é uma preferência de UX, é uma restrição de dado.
-    * 🗑️➡️✅ **`cpf_criptografado` virou `TEXT` (22-08-2026), era `VARCHAR(255)`.** Medido de verdade (não só estimado): o valor real no formato `v1:<iv>:<tag>:<ciphertext>` de um CPF (11 caracteres) cifrado fica em torno de 61 caracteres - bem longe do limite de 255, então não era uma questão de faltar espaço. O motivo é outro: `VARCHAR(255)` sugere um limite de formato pensado (como em `vinculo_institucional`, por exemplo, onde 255 é uma decisão de produto sobre tamanho de nome de instituição); aqui o tamanho real é ditado inteiramente pelo algoritmo de cifra escolhido, não por nada que faça sentido limitar de propósito - se a receita mudar um dia (`v2:`, ver acima), o tamanho pode mudar junto, e `TEXT` não exige revisitar essa constante depois. `TEXT` no Postgres não tem nenhuma penalidade de performance/armazenamento comparada a `VARCHAR(n)`, então a troca não custa nada. Aplicado em `01_extensoes_enums_tabelas.sql` (schema de instalação nova) e em `arquivos_banco_dados/ATUALIZAR O SUPABASE.sql` (bancos já existentes, ver seção 22-08-2026 lá).
-    * 🗑️➡️✅ **`cpf_hash TEXT NOT NULL UNIQUE` - coluna nova, o índice cego descrito acima.** Mesmos dois arquivos do item anterior.
-    * 🗑️➡️✅ **Resolvido (22-08-2026): as 11 linhas de seed (`07_seed_dados.sql`, ~linha 813) tinham CPF falso, mas nunca de fato cifrado.** O valor salvo hoje (`'enc_cpf_001'` e afins) é um texto qualquer digitado à mão que só **parece** um dado cifrado pelo nome da variável - nunca passou pela função `pgp_sym_encrypt`/AES-GCM de verdade, porque essa função ainda não existia quando o seed foi escrito. Consequência prática: no primeiro teste do módulo novo, tentar decifrar o CPF de qualquer um dos 11 pesquisadores semeados vai **falhar** (a string salva não tem o formato que uma cifra real produziria). **Decidido (22-08-2026): opção (b)** - o seed é regravado com os mesmos 11 CPFs falsos, agora cifrados de verdade (roda a função de cifra real uma vez por linha, cola o resultado cifrado + o `cpf_hash` correspondente no `INSERT`). Motivo: a opção alternativa (o service tolerar falha de decifra e devolver `null`) exigiria um código que engole silenciosamente qualquer falha real de decifrar - dificultaria perceber a diferença entre "é só o seed antigo" e "algo está genuinamente quebrado" (ex.: chave errada). A (b) testa o caminho real de ponta a ponta sem precisar desse código de tolerância a erro.
-    * ℹ️ **Nota do Lucas, pra constar (22-08-2026):** todos os CPFs usados durante o desenvolvimento (seed incluído) são falsos/inventados, nunca CPF de pessoa real. Não existe hoje nenhuma verificação de que um CPF submetido pelo usuário corresponde a uma pessoa de verdade (só o algoritmo de dígito verificador, que confirma formato, não existência). Ideia registrada para o futuro, **não pra agora**: quando o site estiver praticamente pronto, avaliar alguma API gratuita de verificação de CPF (existência real, situação na Receita) antes de aceitar cadastro de pesquisador - hoje fica fora de escopo. Controle de versionamento de termos (LGPD). Guarda a trilha de auditoria (IPv4/IPv6 e timestamp de aceite).
-* **`notificacao`:** Fila/Histórico de envios de e-mail. Armazena o snapshot do e-mail do destinatário, contagem de tentativas e o texto do último erro retornado para depuração.
-* **`verificacao_email` e `recuperacao_senha`:** Gerenciamento de tokens curtos e temporários para confirmação de conta e redefinição de senha.
-  * **Índice Parcial:** O índice `ux_recuperacao_senha_ativo_por_usuario` garante que exista apenas um token de recuperação ativo por usuário de cada vez.
-* **`sessao`:** Persistência de *Refresh Tokens* hashed. Necessária para permitir o logout seguro, revogação de sessões e controle de múltiplos dispositivos em arquiteturas JWT *stateless*.
-  * 🗑️➡️✅ **`origem VARCHAR(20)` - coluna nova (07-08-2026, achado do Lucas: "não fiz tantos logs de login assim"):** toda renovação silenciosa do token de acesso (a cada ~15min de uso) também sempre gerou uma linha em `sessao`, sem separar isso de um login de verdade - sem esta coluna não dava pra distinguir os dois na tela de histórico de login. `CK_SESSAO_ORIGEM` restringe a `'login'`/`'refresh'`; `DEFAULT 'refresh'` (não `'login'`) de propósito, pra que linhas antigas (de antes da coluna existir) fiquem invisíveis na tela de login em vez de aparecerem como login sem ser.
+#### CPF: cifra no Nest e índice cego
+
+É o único dado cifrado de verdade do projeto (diferente do hash de senha, que é irreversível). O CPF **precisa** poder voltar ao valor original: a verificação de identidade do pagamento lê o CPF.
+
+* **O problema de fundo:** cifra de verdade é de propósito **não determinística**: cifrar o mesmo CPF duas vezes produz dois resultados diferentes (por um valor aleatório novo a cada operação). Isso impede comparar valores cifrados e perceber que escondem o mesmo dado, mas também impede `UNIQUE` na coluna cifrada e impede "procurar quem tem este CPF".
+* **Onde cifrar: no Nest** (`node:crypto`, AES-256-GCM), não no Postgres (`pgcrypto`, `pgp_sym_encrypt`).
+  * **Por quê:** nenhuma trigger, função ou policy do banco lê `cpf_criptografado` para decidir nada (a única aparição fora da coluna e do `GRANT` é a exclusão dela do log de auditoria, [05-L]). E no Nest a chave nunca sai do processo da aplicação: o banco só recebe e devolve texto já cifrado; com `pgcrypto`, a chave viajaria para dentro do Supabase a cada leitura e gravação. Efeito colateral favorável: o AES-256-GCM em base64 é bem mais curto que o formato OpenPGP.
+* **Formato salvo: `v1:<iv>:<tag>:<ciphertext>`** (cada parte em base64, unidas por `:`). O **IV** é o valor aleatório de cada cifrada (não é segredo, nunca se repete com a mesma chave). A **tag de autenticação** é o "selo" do GCM: se um byte do texto cifrado for alterado, a conferência falha e a função se recusa a devolver um CPF corrompido. O **`v1:`** é a versão da receita: se o algoritmo mudar ou a chave for trocada, linhas `v1:` e `v2:` convivem na mesma coluna e a migração pode ser feita aos poucos.
+* **`cpf_criptografado` é `TEXT`:** o tamanho é ditado pelo algoritmo (cerca de 61 caracteres hoje), não por uma regra de produto; `TEXT` não exige revisitar um limite se a receita mudar, e não tem custo no Postgres.
+* **`cpf_hash TEXT NOT NULL UNIQUE`, o índice cego:** `HMAC-SHA256(cpf_normalizado, CPF_INDEX_KEY)`. É determinístico (o mesmo CPF dá sempre o mesmo valor, então aceita `UNIQUE` e comparação direta) e não reversível. Serve a três necessidades: **(1)** impedir duas contas com o mesmo CPF; **(2)** o suporte achar a conta pelo CPF informado (RF-017, correção de CPF); **(3)** a curadoria cruzar "este CPF já teve campanha rejeitada por fraude, em outra conta".
+  * **Por que HMAC e não um hash simples:** um CPF tem só cerca de 10⁹ combinações válidas; alguém com acesso ao banco poderia calcular o hash de todos de antemão e reverter na prática. O HMAC exige uma chave secreta, sem a qual não dá para montar essa tabela.
+* **Duas chaves no `.env`: `CPF_ENCRYPTION_KEY` e `CPF_INDEX_KEY`.** Têm ciclos de vida diferentes: trocar a de cifra é uma migração tranquila (decifra com a velha, cifra com a nova, linha a linha); trocar a do índice invalida todo `cpf_hash` de uma vez e exige recalcular a coluna inteira numa operação só. Separadas, trocar uma não força trocar a outra. ⚠️ **Perder qualquer uma das duas depois de ter dado real cadastrado é irreversível.**
+* **Regra de produto:** um CPF corresponde a, no máximo, uma conta de pesquisador (`cpf_hash UNIQUE`).
+* **Seed:** os CPFs do seed são falsos (dígito verificador válido), cifrados de verdade com as chaves do `.env` de desenvolvimento, para testar o caminho real de ponta a ponta. O sistema confere só o dígito verificador (formato), não se o CPF existe na Receita.
 
 ---
 
 ### [01-E] CAMPANHA (Campanhas, Moderação e Recompensas)
 
-* **`campanha`:** Tabela principal de projetos de financiamento.
-  * 🗑️➡️✅ **`CK_CAMPANHA_PRAZO` virou limite técnico largo (28-07-2026, item 16 da Lista C):** era `BETWEEN 15 dias AND 90 dias` - a regra de negócio real, misturada com o limite técnico na mesma constraint. Agora a constraint só barra erro grosseiro (1-365 dias); a regra de negócio mudou pra uma trigger (`fn_valida_prazo_campanha_negocio`/`trg_campanha_valida_prazo_negocio[_update]`, `05`, ver `[05-K-2]`) que lê `configuracoes.prazo_minimo_campanha_dias`/`prazo_maximo_campanha_dias` - mudar a política de prazo vira um `UPDATE` numa linha, não uma migração de constraint. **Decisão final (mesma data):** 15 a 60 dias (não 90) - qualquer duração nesse intervalo serve, `prazo_maximo_campanha_dias` foi de `90` pra `60`. As campanhas do seed com duração maior que 60 dias (histórico anterior à decisão) foram grandfathered - a trigger fica desligada só durante a carga do seed.
-  * 🗑️➡️✅ **Feature "Em breve" / rascunho agendado (28-07-2026):** o pesquisador pode lançar a campanha na hora ou agendar um início futuro (contador regressivo no front, mesma ideia do Catarse) - sem precisar de status novo nem de coluna nova. Campanha aprovada já fica pública normalmente (`pol_campanha_select` libera por status, sem olhar `data_inicio`); o que muda é que `fn_valida_contribuicao_campanha_ativa()` (`05`, `[05-K-2]`) passou a bloquear contribuição também quando `data_inicio` está no futuro - comparado em tempo real, sem job/cron pra "virar ativa" sozinha. E `fn_congela_regras_campanha()` mudou: `data_inicio`/`data_fim` só congelam quando a campanha **já começou de fato** (`data_inicio` no passado), não mais no momento da aprovação - o pesquisador pode reagendar o início livremente enquanto está "Em breve" (as outras regras - meta/modelo/taxa/título/descrição - continuam congelando desde a aprovação, como já era).
-  * 🗑️➡️✅ **`id_area_conhecimento` virou `NOT NULL` (28-07-2026):** a trigger de nível 2 (`[05-K-1]`) já bloqueava apontar pra grande área raiz, mas deixava `NULL` passar - uma campanha podia ficar sem nenhuma área, o que a escondia de qualquer filtro (pior do que aparecer só na grande área). Fecha a decisão de "nível 2 obrigatório" já tomada; as 10 campanhas do seed já cumpriam antes da mudança.
-  * 🗑️➡️✅ **`encerrado_em TIMESTAMP` - coluna nova (27-07-2026):** nullable, sem valor padrão, **não** é congelada por `fn_congela_regras_campanha()` (é justamente o campo que precisa poder ser preenchido no momento do encerramento). Registra a data real de encerramento (natural, antecipado via RF-042 ou por moderação) - algo que `data_fim` deixou de conseguir representar depois de virar uma promessa congelada (ver `[05-K-2]`). 🗑️➡️✅ **BUG CORRIGIDO (28-07-2026, achado pela IA usada pela Alexia):** a coluna nascia e ficava `NULL` pra sempre - nenhuma trigger, função ou `UPDATE` gravava nela. Trigger nova `fn_preenche_encerramento_campanha`/`trg_campanha_preenche_encerramento` (`05`, `[05-K-2]`) grava `NOW()` automaticamente quando o status entra em `'encerrado'`/`'encerrado_moderacao'`, sem depender do backend lembrar disso em toda rota que muda status.
-  * 🗑️➡️✅ **`taxa_plataforma` passou a ser carimbada na aprovação (28-07-2026, item 20 da Lista C - RF-036):** a coluna existia mas nada nunca a preenchia - testado direto (criar campanha, aprovar): nascia `NULL` e continuava `NULL`. Trigger nova `fn_carimba_taxa_plataforma_aprovacao`/`trg_campanha_carimba_taxa` (`05`, ver `[05-K-2]`) copia `configuracoes.taxa_plataforma_padrao` no momento exato em que `aprovado_em` deixa de ser `NULL`, só se ainda não houver um valor customizado. Dali em diante a trigger de congelamento (`[05-K-2]`) já protege o valor.
-  * 🗑️➡️✅ **`video_apresentacao_url VARCHAR(500)` - coluna nova (28-07-2026, item 19(c) da lista de pendências - RF-033):** vídeo de apresentação opcional em destaque na página da campanha. Só a URL (ex.: YouTube/Vimeo) - o arquivo de vídeo em si não é armazenado pela plataforma. Nullable, sem regra de congelamento própria (não está na lista de `fn_congela_regras_campanha`, então pode ser trocado a qualquer momento, diferente de título/descrição).
-  * 🗑️➡️✅ **`CK_CAMPANHA_DESCRICAO_TAMANHO` - constraint nova (28-07-2026, achado em auditoria de IA):** `descricao` era `TEXT` sem limite nenhum. Limite técnico largo aqui (20.000 caracteres, só pra barrar absurdo); o limite de negócio de verdade (5.000, configurável) mora em `configuracoes.limite_caracteres_descricao_campanha` + trigger (`05`, `[05-K-1]`).
-  * 🗑️➡️✅ **`CK_CAMPANHA_META_FINANCEIRA_POSITIVA` - constraint nova (28-07-2026, 5ª auditoria de IA, MÉDIO 3):** `meta_financeira = 0.00` era aceita (reproduzido) - numa `all-or-nothing`, meta zero é sucesso instantâneo. Mesmo padrão do prazo: limite técnico largo aqui (só `> 0`); o mínimo de negócio de verdade (500,00, configurável) mora em `configuracoes.meta_minima_campanha` + trigger (`05`, `[05-K-2]`).
-* **`atualizacao_campanha`:** Postagens de acompanhamento do projeto. O campo `ativo` permite o *soft delete* e a ocultação por moderação sem perda do histórico. 🗑️➡️✅ **`CK_ATUALIZACAO_CAMPANHA_CONTEUDO_TAMANHO` - constraint nova (28-07-2026, achado em auditoria de IA):** mesmo raciocínio de `CK_CAMPANHA_DESCRICAO_TAMANHO` - limite técnico largo aqui (20.000), limite de negócio configurável (5.000, `configuracoes.limite_caracteres_conteudo_atualizacao`) via trigger.
-* 🗑️➡️✅ **`orcamento_campanha` e `marco_cronograma` - tabelas novas (31-07-2026, Alexia; valores corrigidos 01-08-2026):** orçamento estruturado (itens com categoria + valor, pra virar gráfico de pizza) e cronograma estruturado (marcos com título/descrição/data prevista), inspirados no Experiment.com. Substituem a antiga prática de descrever isso só em texto livre dentro de `campanha.descricao`. Decisão de produto confirmada por Lucas: **ambos são obrigatórios** pra aprovar uma campanha, não opcionais.
-  * **Regras de negócio (todas em `05`, `[05-K-2]`):** orçamento congela na aprovação (mesma condição de `fn_congela_regras_campanha`, sem exceção nem pra admin); cronograma congela só quando a campanha começa de fato (`data_inicio <= NOW()`, mesma janela de carência do "Em breve"); data de um marco não pode ser anterior a `data_inicio` (mas pode ultrapassar `data_fim`); soma de `orcamento_campanha.valor` precisa bater **exatamente** com `campanha.meta_financeira` na aprovação.
-  * **Quantidade de itens - piso e teto, os dois configuráveis:** `configuracoes.orcamento_min_itens`/`cronograma_min_marcos` (checados na aprovação, `fn_valida_completude_campanha`) e `configuracoes.orcamento_max_itens`/`cronograma_max_marcos` (checados já no `INSERT`, feedback imediato pro pesquisador, `fn_valida_limite_max_orcamento_campanha`/`fn_valida_limite_max_marco_cronograma`).
-  * 🐛➡️✅ **Bug de calibração (31-07-2026 → 01-08-2026):** a primeira versão da Alexia guardava só uma chave por tabela (`orcamento_min_itens=10`, `cronograma_min_marcos=20`) usada como **mínimo obrigatório** - ela mesma percebeu a confusão depois: os números 10/20 eram pra ser o **teto**, não o piso (ela sugeriu 2 a 5 pro mínimo de verdade). Corrigido separando em 2 chaves por tabela (min/max); mínimo virou 3 pros dois (meio-termo da faixa sugerida, ajustável livremente depois). Achado e corrigido antes do commit - nunca chegou a rodar contra o banco real.
-  * 🔁 **`orcamento_min_itens` ajustado de novo (05-09-2026):** de 3 pra **1** - achado conferindo os Requisitos Funcionais (RF-039, "valores padrão de 1 (mínimo) e 10 (máximo)") contra o banco na `MATRIZ-RASTREABILIDADE-RF.md`. Decisão do Lucas: o banco segue o texto oficial do requisito. `cronograma_min_marcos` não mudou, continua 3 (RF-041 já cita 3 certo).
-  * `CK_ORCAMENTO_CAMPANHA_DESCRICAO_TAMANHO`/`CK_MARCO_CRONOGRAMA_DESCRICAO_TAMANHO`: mesmo padrão de todo campo `TEXT` livre no projeto - limite técnico largo aqui (20.000), limite de negócio configurável (2.000, `configuracoes.limite_caracteres_descricao_orcamento`/`limite_caracteres_descricao_marco`) via trigger reaproveitando `fn_valida_limite_texto_livre` (`[05-K-1]`) em vez de duplicar função.
-  * **RLS (`04`, `[04-E]`):** leitura segue a MESMA visibilidade de `pol_campanha_select` (por status, dono ou `relatorio_visualizar`) - decisão consciente de não copiar o `USING (TRUE)` de `pol_recompensa_select`, já que expor o orçamento de uma campanha ainda não aprovada não tem por quê. Escrita: dono da campanha ou `campanha_editar`.
-  * ⚠️ **Pendente (não é bug):** as 10 campanhas do seed não ganharam linhas de exemplo nestas 2 tabelas - carrega sem erro (a trigger de completude só roda em `UPDATE` pra `'ativo'`, não no `INSERT` do seed), mas qualquer demonstração das telas novas usando o banco de teste vai aparecer vazia pra campanhas antigas.
-* **`comentario`:** Interações da comunidade.
-  * Unicidade: `UNIQUE (id_campanha, id_pesquisador)` restringe a **um comentário por pesquisador por campanha, para sempre** - a constraint não é condicionada por `ativo`. Ou seja, se o comentário for ocultado por moderação (`ativo = FALSE`), o pesquisador não consegue enviar um comentário novo para aquela campanha; ele só pode reeditar o registro já existente.
-  * `CK_COMENTARIO_ENDOSSO`: Constraint garante coerência matemática entre o booleano `endossado` e a sua ordem de exibição (`ordem_endosso`).
-  * A policy `pol_comentario_update` (`04_rls_policies.sql`) libera `UPDATE` para o próprio autor sem restringir quais colunas podem mudar - isso já permitiu, no passado, que o autor revertesse sozinho uma moderação (`ativo = FALSE → TRUE`). Já corrigido por trigger; ver `[04-E-4]` mais abaixo para o histórico completo.
-* **`denuncia`:** Registro de incidentes apontados por usuários, vinculados a um motivo do catálogo.
-  * 🗑️➡️✅ **`relato TEXT` - coluna nova (28-07-2026, item 19(b) da Lista C - RF-019/RF-072):** campo opcional pro denunciante detalhar o caso além do motivo pré-definido do catálogo. Nome escolhido de propósito pra não colidir com `motivo_denuncia.descricao` (o rótulo do motivo, não o relato de quem denuncia). 🗑️➡️✅ **`CK_DENUNCIA_RELATO_TAMANHO` - constraint nova (28-07-2026):** a Alexia avisou no WhatsApp, antes mesmo da coluna existir, que `relato` sem limite "pode dar problema" - uma auditoria de IA confirmou (campo de formulário público, sem limite, vira vetor de abuso). Limite técnico largo aqui (5.000); limite de negócio configurável (1.000, `configuracoes.limite_caracteres_relato_denuncia`) via trigger.
-  * 🗑️➡️✅ **`CK_DENUNCIA_ALVO_XOR` - constraint nova (27-07-2026):** antes, nada impedia os dois alvos (`id_campanha_alvo`/`id_pesquisador_alvo`) preenchidos ao mesmo tempo, ou os dois nulos. A constraint exige exatamente um dos dois preenchido. Trabalha em conjunto com a trigger `trg_denuncia_valida_tipo_motivo` (`05`, ver `[05-K-1]`), que garante que o motivo escolhido bate com o alvo.
-  * 🗑️➡️✅ **`FK_DENUNCIA_CAMPANHA_ALVO` / `FK_DENUNCIA_PESQUISADOR_ALVO`: `ON DELETE SET NULL` → `ON DELETE RESTRICT` (27-07-2026):** um registro de moderação virar órfão sozinho (o alvo apagado e a denúncia continuando sem saber apontar pra nada) não é o comportamento correto pra um dado de auditoria; `RESTRICT` impede a exclusão do alvo enquanto a denúncia existir. Não muda nada na prática hoje, já que nem `campanha` nem `usuario` têm policy de `DELETE`.
-* **`solicitacao_encerramento`:** Registra pedidos de encerramento antecipado de campanha (RF-042). 🗑️➡️✅ **`justificativa_admin TEXT` - coluna nova (28-07-2026, item 19(d) da Lista C - RF-041, a mais urgente das 5 colunas faltantes):** o RF-041 torna obrigatória a justificativa do Administrador ao rejeitar um pedido - antes não existia onde gravar isso, e negar sem registrar o motivo é indefensável se o pesquisador contestar depois. A tabela já tinha `justificativa_pesquisador` (o motivo de quem pede); a nova é o espelho, do lado de quem decide. 🗑️➡️✅ **`CK_SOLICITACAO_JUSTIFICATIVA_PESQ_TAMANHO`/`CK_SOLICITACAO_JUSTIFICATIVA_ADMIN_TAMANHO` - constraints novas (28-07-2026, achado em auditoria de IA):** as duas colunas eram `TEXT` sem limite. Limite técnico largo aqui (10.000 cada); limite de negócio configurável (2.000, `configuracoes.limite_caracteres_justificativa_encerramento`, compartilhada pelas duas) via trigger.
-* **`historico_rejeicao` (reescrita em 21-09-2026):** uma linha por rejeição de campanha (`id_campanha`, `id_usuario_dono`, `titulo_campanha`, `id_admin`, `justificativa`, `rejeitado_em`). Dono e título são gravados no instante da rejeição e **não há FK para `campanha`**: o histórico precisa sobreviver à exclusão da campanha (que é excluída sozinha quando o prazo de reenvio vence). `id_campanha` fica só como referência, indexada. Imutável (sem policy nem GRANT de UPDATE). Ver [05-K-2-B].
-* **`recompensa`:** Recompensas oferecidas pelos pesquisadores. Possui validações para garantir `valor_minimo > 0` e quantidade disponível não negativa. 🗑️➡️✅ **`CK_RECOMPENSA_DESCRICAO_TAMANHO` - constraint nova (28-07-2026, achado em auditoria de IA):** mesmo raciocínio das outras - limite técnico largo aqui (10.000), limite de negócio configurável (2.000, `configuracoes.limite_caracteres_descricao_recompensa`) via trigger. 🗑️➡️✅ **ENUM `tipo_recompensa` restringido a recompensa simbólica - CORRIGIDO (28-07-2026):** os valores `fisica` e `outro` foram removidos, sobrando só `digital`, `reconhecimento` e `acesso_antecipado`. Recompensa física cria obrigação de entrega/logística que uma plataforma tocada por 2 pessoas não tem como fiscalizar (motivo original da dúvida sobre manter o domínio inteiro, ver Lista C, item 14, em `PENDENCIAS e correcoes.md`); os 3 valores que sobraram não têm frete, prazo de envio nem disputa de "não recebi" - `reconhecimento` é o pedido da parceira de TCC (nome do doador exibido no projeto), `acesso_antecipado` é o modelo do próprio Experiment.com (referência declarada do projeto). A coluna `tipo` também perdeu o `DEFAULT 'outro'` - nenhum dos 3 valores restantes é um "genérico" natural, a aplicação passa a escolher explicitamente. Feito com a tabela `recompensa` vazia no seed (nenhum dado existente pra migrar) - o Postgres não tem `ALTER TYPE ... DROP VALUE`, então mudar o ENUM contra um banco já populado exigiria recriar o tipo e converter a coluna; vazio, é só editar a definição.
+* **`campanha`:** a tabela principal de projetos de financiamento.
+  * **Limite técnico na constraint, regra de negócio na trigger.** Este é o padrão de todo número que é regra de produto:
+    * `CK_CAMPANHA_PRAZO` só barra erro grosseiro (1 a 365 dias); a duração permitida (15 a 60 dias) vem de `configuracoes.prazo_minimo_campanha_dias`/`prazo_maximo_campanha_dias`, conferida por `fn_valida_prazo_campanha_negocio` ([05-K-2]). Mudar a política de prazo é um `UPDATE` numa linha, não uma migração de constraint.
+    * `CK_CAMPANHA_META_FINANCEIRA_POSITIVA` só exige `> 0`; o mínimo de negócio (R$ 500,00) vem de `configuracoes.meta_minima_campanha` ([05-K-2]). Meta zero, num tudo-ou-nada, seria sucesso instantâneo.
+    * `CK_CAMPANHA_DESCRICAO_TAMANHO` barra o absurdo (20.000 caracteres); o limite de negócio (5.000) vem de `configuracoes.limite_caracteres_descricao_campanha` ([05-K-1]).
+  * **"Em breve":** o pesquisador pode lançar a campanha na hora ou agendar um início futuro (contador regressivo, como no Catarse), sem status novo. Campanha aprovada já é pública (`pol_campanha_select` libera por status); `fn_valida_contribuicao_campanha_ativa()` ([05-K-2]) recusa contribuição enquanto `data_inicio` está no futuro, comparando em tempo real, sem tarefa agendada. `data_inicio` e `data_fim` só congelam quando a campanha **começa de fato**; meta, modelo, taxa, título e descrição congelam na aprovação.
+  * **`id_area_conhecimento NOT NULL`:** junto da trigger de nível 2 ([05-K-1]), toda campanha tem uma área de nível 2; sem área, ela sumiria de qualquer filtro.
+  * **`encerrado_em`:** a data real de encerramento (natural, antecipado ou por moderação), gravada sozinha por `trg_campanha_preenche_encerramento` ([05-K-2]) quando o status entra em `'encerrado'`/`'encerrado_moderacao'`, sem depender do backend lembrar disso. Não é congelada. **Por quê:** `data_fim` é uma promessa congelada e não consegue representar um encerramento antes do prazo.
+  * **`taxa_plataforma` carimbada na aprovação** (RF-036): `trg_campanha_carimba_taxa` ([05-K-2]) copia `configuracoes.taxa_plataforma_padrao` no instante em que `aprovado_em` deixa de ser `NULL`, se ainda não houver uma taxa própria; a trigger de congelamento protege o valor dali em diante.
+  * **Sugestão de 30 dias** (RF-069): `configuracoes.prazo_sugerido_campanha_dias` (30, pública), lida só pela tela para preencher a data de fim. É sugestão, não regra: a regra continua sendo o mínimo e o máximo. Não entra no par mínimo/máximo; uma sugestão fora do intervalo aparece em vermelho no aviso de prazo, e o banco recusa no envio.
+  * **`video_apresentacao_url`** (`VARCHAR(500)`, opcional): vídeo de apresentação em destaque (YouTube, Vimeo). Só a URL; o vídeo não é armazenado. Congela na aprovação, como o título.
+* **`atualizacao_campanha`:** postagens de acompanhamento do projeto. `ativo` permite ocultar por moderação sem perder o histórico. Limite técnico de 20.000 caracteres (`CK_ATUALIZACAO_CAMPANHA_CONTEUDO_TAMANHO`) e de negócio de 5.000 (`configuracoes.limite_caracteres_conteudo_atualizacao`).
+* **`orcamento_campanha` e `marco_cronograma`:** orçamento estruturado (itens com categoria e valor, que viram gráfico) e cronograma estruturado (marcos com título, descrição e data prevista), inspirados no Experiment.com. **Os dois são obrigatórios** para aprovar uma campanha.
+  * **Regras (em [05-K-2]):** o orçamento congela na aprovação (sem exceção nem para o admin); o cronograma congela quando a campanha começa de fato; a data de um marco não pode ser anterior a `data_inicio` (pode passar de `data_fim`); a soma de `orcamento_campanha.valor` precisa bater **exatamente** com `campanha.meta_financeira` na aprovação.
+  * **Quantidade de itens, piso e teto configuráveis:** `orcamento_min_itens` (1) e `cronograma_min_marcos` (3), conferidos na aprovação (`fn_valida_completude_campanha`), seguindo os RF-039 e RF-041; `orcamento_max_itens` e `cronograma_max_marcos`, conferidos já no `INSERT` (aviso imediato ao pesquisador).
+  * **Descrição:** limite técnico de 20.000 e de negócio de 2.000 (`limite_caracteres_descricao_orcamento`/`limite_caracteres_descricao_marco`), reaproveitando `fn_valida_limite_texto_livre` ([05-K-1]).
+  * **RLS ([04-E]):** a leitura segue a mesma visibilidade da campanha (por status, dono ou `relatorio_visualizar`); expor o orçamento de uma campanha ainda não aprovada não tem por quê. Escrita: dono da campanha ou `campanha_editar`.
+* **`comentario`:** a comunidade conversando com o pesquisador.
+  * `UNIQUE (id_campanha, id_pesquisador)`: **um comentário por pesquisador por campanha, para sempre**, mesmo ocultado (`ativo = FALSE`): o pesquisador pode reeditar o registro, não abrir outro.
+  * `CK_COMENTARIO_ENDOSSO`: coerência entre `endossado` e a posição de exibição (`ordem_endosso`). `CK_COMENTARIO_CONTEUDO_NAO_VAZIO`: texto só com espaços é recusado (gastaria a única vaga do pesquisador naquela campanha).
+  * **Comentário não é rede social:** só o autor, o dono da campanha e a moderação veem o comentário; o público vê só os endossados. O dono pode **Excluir** um comentário recebido (`DELETE`, `pol_comentario_delete`: só o dono, só comentário ativo; o autor pode comentar de novo) ou **Excluir e bloquear** (para ofensa, ameaça ou spam: `UPDATE ativo = FALSE`; a linha guardada ocupa a vaga do `UNIQUE` e o autor não comenta mais naquela campanha, nem reativa o próprio comentário). Ninguém é avisado (RF-093). **Caso-limite:** o comentário bloqueado não pode ser apagado depois (desfaria o bloqueio), e não existe "desbloquear" pela tela. Suíte 29 do PGlite.
+  * `pol_comentario_update` libera `UPDATE` ao autor sem restringir colunas; as triggers impedem o autor de reverter uma moderação e de endossar o próprio comentário ([04-E], [05-K-3]).
+* **`denuncia`:** incidentes apontados por usuários, ligados a um motivo do catálogo.
+  * **`relato`** (opcional): o denunciante detalha o caso além do motivo. Limite técnico de 5.000 e de negócio de 1.000 (`limite_caracteres_relato_denuncia`): campo de formulário sem limite vira vetor de abuso.
+  * **`CK_DENUNCIA_ALVO_XOR`:** exatamente um alvo preenchido (`id_campanha_alvo` ou `id_pesquisador_alvo`). Trabalha junto com `trg_denuncia_valida_tipo_motivo` ([05-K-1]), que confere se o motivo bate com o alvo.
+  * **FKs dos alvos com `ON DELETE RESTRICT`:** uma denúncia é registro de moderação; o alvo sumir e a denúncia ficar apontando para nada destruiria o rastro.
+* **`solicitacao_encerramento`:** pedidos de encerramento antes do prazo. Tem a justificativa de quem pede (`justificativa_pesquisador`) e a de quem decide (`justificativa_admin`, obrigatória para rejeitar: negar sem registrar o motivo seria indefensável numa contestação). Limite técnico de 10.000 em cada e de negócio de 2.000 (`limite_caracteres_justificativa_encerramento`, compartilhado). Ver [05-K-2-H].
+* **`historico_rejeicao`:** uma linha por rejeição de campanha (`id_campanha`, `id_usuario_dono`, `titulo_campanha`, `id_admin`, `justificativa`, `rejeitado_em`). Dono e título são gravados no instante da rejeição e **não há FK para `campanha`**: o histórico sobrevive à exclusão da campanha (que é excluída sozinha quando o prazo de reenvio vence). `id_campanha` fica só como referência, indexada. Imutável (sem policy nem GRANT de UPDATE). Ver [05-K-2-B].
+* **`recompensa`:** recompensas **simbólicas** oferecidas pelos pesquisadores: `tipo_recompensa` só tem `digital`, `reconhecimento` e `acesso_antecipado`, sem `DEFAULT` (a aplicação escolhe). `valor_minimo > 0`; `quantidade_disponivel` existe e aceita `NULL` (ilimitada), mas o sistema não controla estoque. Limite técnico de 10.000 na descrição e de negócio de 2.000 (`limite_caracteres_descricao_recompensa`).
+  * **Por que só simbólica:** recompensa física cria obrigação de entrega e logística que uma plataforma tocada por duas pessoas não tem como fiscalizar; os três tipos não têm frete, prazo de envio nem disputa de "não recebi". `reconhecimento` é o nome de quem apoiou exibido no projeto; `acesso_antecipado` é o modelo do Experiment.com.
 
 ---
 
 ### [01-F] LINK (Tabelas de Associação de Links)
 
-* **`link_academico`, `link_atualizacao` e `link_recompensa`:** Reutilizam o catálogo `tipo_link` para associar URLs externas a perfis de pesquisadores, atualizações de campanha e recompensas digitais.
-  * 🗑️➡️✅ **`link_academico.rotulo VARCHAR(100)` - coluna nova (28-07-2026, item 19(a) da lista de pendências - RF-014/016/018):** rótulo personalizável por link (ex.: "meu repositório do projeto X" em vez do nome genérico do tipo). Opcional - sem rótulo, o front cai pro nome do `tipo_link`. Vem acompanhada de um limite de 5 links por pesquisador, configurável (ver `trg_link_academico_valida_limite`, `[05-K-1]`) - antes não existia trava nenhuma.
+* **`link_academico`, `link_atualizacao` e `link_recompensa`:** usam o catálogo `tipo_link` para ligar URLs externas a perfis de pesquisador, atualizações de campanha e recompensas digitais.
+  * **`link_academico.rotulo`** (`VARCHAR(100)`, opcional): rótulo próprio do link (ex.: "meu repositório do projeto X"); sem rótulo, a tela mostra o nome do tipo. Cada pesquisador tem até 5 links, configurável (`trg_link_academico_valida_limite`, [05-K-1]).
 
 ---
 
 ### [01-G] ARQUIVO (Tabelas de Associação de Mídias)
 
-* **`arquivo_atualizacao` e `arquivo_recompensa`:** Estabelecem o vinculo N:N entre a tabela base `arquivo` e as entidades de atualização/recompensa.
+* **`arquivo_atualizacao` e `arquivo_recompensa`:** o vínculo N:N entre a tabela base `arquivo` e as atualizações e recompensas. A posse e a limpeza de órfãos estão em [05-G].
 
 ---
 
@@ -217,29 +237,24 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 
 > 📌 **Visão de ponta a ponta do dinheiro** (tarifa, destino no fim da campanha, repasse, devolução, validação de saque, parâmetros): `DOCUMENTACAO_FINANCEIRO.md`. Aqui ficam as regras do banco, bloco a bloco.
 
-* **`contribuicao`:** Registra os apoios financeiros.
-  * Valor Mínimo: `CK_CONTRIBUICAO_VALOR_MINIMO` é só limite técnico largo (`valor > 0`) desde 30-07-2026 - o mínimo de negócio de verdade (R$ 5,00, configurável pelo Painel Admin) mora em `configuracoes.valor_minimo_contribuicao` + trigger (`05`, `[05-K-2]`), mesmo padrão do prazo/meta financeira (item 16 da Lista C). Antes disso era `CHECK (valor >= 5.00)` hardcoded - ver `PENDENCIAS e correcoes.md`, item RF-056.
-  * `token_sessao`: UUID gerado automaticamente (`gen_random_uuid()`) para proteger e rastrear doações anônimas contra enumeração sequencial por terceiros.
-
-📌 **O dono pode contribuir na própria campanha (03-10-2026).**
-- **Em palavras simples:** o pesquisador pode apoiar a própria campanha, como qualquer outra pessoa.
-- **Decisão:** nenhuma trava contra `contribuicao.id_usuario` igual ao dono da campanha. A contribuição segue todas as regras de qualquer outra (valor mínimo, campanha ativa, só Pix no Tudo ou Nada), e a taxa da plataforma vale igual.
-- **Motivo:** dinheiro é dinheiro; é comum o próprio autor completar o que falta. Decisão do Lucas.
-- **Caso-limite aceito:** no Tudo ou Nada, o próprio pesquisador pode completar a meta. A taxa é cobrada sobre esse valor também.
-* **`auditoria_financeira`:** Registra o snapshot dos valores, meios de pagamento e transições de status a cada evento financeiro para fins de rastreabilidade contábil e histórico.
-  * *Nota de Arquitetura:* O padrão imutável/append-only (somente inserção) é de responsabilidade da camada de serviço do NestJS. No RLS do PostgreSQL (`04_rls_policies.sql`), o `UPDATE` encontra-se atualmente sem restrições (`USING(true)`), ficando mapeado como pendência de arquitetura decidir se o banco deve restringir a alteração desta tabela a uma permissão administrativa específica.
-* **`contribuicao_recompensa`:** Vincula um apoio às recompensas escolhidas pelo apoiador.
-* **`aceite_termo_contribuicao`:** Registra o aceite do termo de doação específico da transação.
+* **`contribuicao`:** os apoios financeiros.
+  * **Valor mínimo:** `CK_CONTRIBUICAO_VALOR_MINIMO` é só limite técnico (`valor > 0`); o mínimo de negócio (R$ 5,00, configurável) vem de `configuracoes.valor_minimo_contribuicao` ([05-K-2]), o mesmo padrão do prazo e da meta.
+  * **`token_sessao`:** UUID gerado sozinho (`gen_random_uuid()`), para rastrear a contribuição sem conta sem expor um número sequencial adivinhável.
+  * **Sem `UPDATE` direto:** não há policy nem `GRANT` de `UPDATE`; a situação só muda por `atualizar_status_contribuicao()` ([05-K-2]), que valida a transição e grava a auditoria.
+  * **O dono pode contribuir na própria campanha:** nenhuma trava contra `contribuicao.id_usuario` igual ao dono; a contribuição segue todas as regras de qualquer outra, e a taxa da plataforma vale igual. **Por quê:** é comum o próprio autor completar o que falta. **Caso-limite:** no tudo-ou-nada, o próprio pesquisador pode completar a meta.
+* **`auditoria_financeira`:** o retrato de cada mudança de dinheiro (situação anterior e nova, valor, evento, quem fez), de contribuição ou de repasse. **Só aceita inclusão:** não há policy nem `GRANT` de escrita para o `app_nestjs`; quem grava são só as funções `SECURITY DEFINER` de `05` ([04-H-1], [06-H]). O histórico do dinheiro não se apaga nem se edita.
+* **`contribuicao_recompensa`:** liga um apoio à recompensa escolhida.
+* **`aceite_termo_contribuicao`:** o aceite do termo na hora de contribuir, com o IP (apagado depois do prazo de retenção, [05-L]).
 
 ---
 
 ### [01-I] SCORE (Configuração e Cálculo de Pontuação)
 
-* **`score_config`, `score_rotulo` e `score_pesquisador`:** Estrutura para gamificação e aferição de reputação dos pesquisadores na plataforma.
-* **Integridade de Score:** A tabela `score_pesquisador` possui a constraint `UK_SCORE_PESQUISADOR_USUARIO_SCORE_CONFIG` para impedir duplicidade de pontuação para o mesmo parâmetro e usuário.
-* **`score_rotulo` não deixa 2 faixas ATIVAS se sobreporem (23-09-2026).** `EX_SCORE_ROTULO_SEM_SOBREPOSICAO`, `EXCLUDE USING gist (int4range(score_minimo, score_maximo, '[]') WITH &&) WHERE (ativo = TRUE)`. Sem isso, `recalcular_score_pesquisador` (`[05-I-2]`) faz `SELECT ... LIMIT 1` sem `ORDER BY` sobre `score_rotulo`, e com 2 faixas ativas sobrepostas o mesmo score podia cair num rótulo diferente em execuções diferentes. `int4range`/GiST tem suporte nativo pro operador `&&`, não precisa da extensão `btree_gist` (essa só seria necessária pra incluir uma coluna escalar na exclusão, tipo `ativo WITH =` - o `WHERE` já resolve isso sem precisar da coluna dentro do índice). **`DEFERRABLE INITIALLY DEFERRED`**: a checagem só roda no `COMMIT` da transação, não a cada `UPDATE` - editar 2 faixas adjacentes na mesma transação (encolher uma e alargar a vizinha) passa por um estado intermediário sobreposto sem ser recusado no meio do caminho. `ativo = FALSE` fica fora da checagem, permitindo desativar uma faixa antiga e criar outra no lugar sem conflito temporário.
-* **Soma dos pesos raiz de `score_config` precisa ser exatamente 100, e faixas ativas de `score_rotulo` precisam cobrir 0-100 sem buraco (23-09-2026).** Duas `CONSTRAINT TRIGGER ... DEFERRABLE INITIALLY DEFERRED` novas, detalhadas em `[05-I-4]` (`trg_score_config_soma_pesos`/`trg_score_rotulo_cobertura`). O EXCLUDE do bullet acima só impede SOBREPOSIÇÃO entre faixas; não impedia um buraco (faixa terminando em 49, próxima começando em 51 - score 50 sem rótulo nenhum). E nada garantia que os 4 pesos raiz de `score_config` somassem 100, premissa que `score_rotulo` (faixas até 100) sempre assumiu silenciosamente.
-* **Bloco `DO $$`:** Mantido ao final da tabela como verificação defensiva de legado para validar a existência da constraint de unicidade.
+* **`score_config`, `score_rotulo` e `score_pesquisador`:** a pontuação de reputação dos pesquisadores. `UK_SCORE_PESQUISADOR_USUARIO_SCORE_CONFIG` impede duas pontuações para o mesmo parâmetro e a mesma pessoa.
+* **`score_rotulo`: duas faixas ATIVAS nunca se sobrepõem.** `EX_SCORE_ROTULO_SEM_SOBREPOSICAO`, `EXCLUDE USING gist (int4range(score_minimo, score_maximo, '[]') WITH &&) WHERE (ativo = TRUE)`.
+  * **Por quê:** `recalcular_score_pesquisador` ([05-I-2]) escolhe o rótulo com `LIMIT 1` sem `ORDER BY`; com faixas sobrepostas, o mesmo score poderia cair em rótulos diferentes em execuções diferentes.
+  * `int4range` com GiST tem suporte nativo ao `&&`, sem a extensão `btree_gist`. É `DEFERRABLE INITIALLY DEFERRED`: a checagem roda no `COMMIT`, então editar duas faixas vizinhas na mesma transação passa por um estado intermediário sem ser recusado. Faixa inativa fica fora da checagem.
+* **A soma dos pesos raiz de `score_config` é exatamente 100, e as faixas ativas cobrem 0 a 100 sem buraco:** duas `CONSTRAINT TRIGGER ... DEFERRABLE INITIALLY DEFERRED` (`trg_score_config_soma_pesos`, `trg_score_rotulo_cobertura`, [05-I-4]). O `EXCLUDE` só impede sobreposição; estas fecham o buraco (uma faixa até 49 e a próxima começando em 51 deixaria o score 50 sem rótulo).
 
 ---
 
@@ -247,65 +262,74 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 
 ### Visão Geral de Performance
 
-O script de índices organiza a aceleração de buscas no PostgreSQL e acompanha rigorosamente a ordem dos blocos conceituais do arquivo `01_extensoes_enums_tabelas.sql`. 
+O script de índices segue a ordem dos blocos de `01_extensoes_enums_tabelas.sql`. Os índices explícitos atendem três cenários:
+1. **Chaves estrangeiras:** o Postgres não cria índice automático em coluna de FK; sem ele, um `JOIN` com a tabela filha faz leitura completa (*sequential scan*).
+2. **Caminhos quentes:** verificação de token, renovação de sessão e filas das tarefas automáticas.
+3. **Regras de negócio por índice parcial (`UNIQUE ... WHERE`):** unicidade condicional garantida no próprio banco.
 
-> 📌 **Nota de Arquitetura (RBAC e CONFIG):** As tabelas dos blocos `[02-B] RBAC` e `[02-C] CONFIG` não possuem instruções `CREATE INDEX` explícitas neste arquivo porque suas consultas principais já são atendidas pelos índices automáticos criados nativamente pelo PostgreSQL para as chaves primárias (`PRIMARY KEY`) e de unicidade (`UNIQUE`), como `chave` em `configuracoes` e `codigo_cnpq` em `area_conhecimento`. 🗑️➡️✅ **Exceção nova (28-07-2026):** `area_conhecimento.id_pai` - não é PK/UNIQUE, é FK pra montar hierarquia - ver `[02-C]` abaixo.
-
-Os índices explícitos criados neste script foram projetados para três cenários estratégicos:
-1. **Chaves Estrangeiras (FKs):** Aceleração de `JOINs` em tabelas filhas para evitar leituras lentas (*sequential scans*).
-2. **Caminhos Quentes (*Hot Paths*):** Otimização de fluxos críticos da aplicação, como verificação de tokens, renovação de sessões e filas de background.
-3. **Regras de Negócio via Índices Parciais (`UNIQUE ... WHERE`):** Aplicação de restrições de unicidade condicional diretamente no banco de dados.
+> 📌 **RBAC e CONFIG quase não têm `CREATE INDEX`:** as consultas principais já usam os índices automáticos das `PRIMARY KEY` e `UNIQUE` (ex.: `chave` em `configuracoes`, `codigo_cnpq` em `area_conhecimento`). As exceções estão em [02-C].
 
 ---
 
 ### [02-C] CONFIG
 
-* 🗑️➡️✅ **`idx_area_conhecimento_pai` - novo (28-07-2026, auditoria de IA - "Problema 3", varredura das 56 FKs contra os índices existentes; 16 estavam sem):** Postgres não cria índice automático em coluna de FK. Sem este, montar a árvore do seletor de área (grande área → nível 2) faz busca completa - 90 linhas é pouco hoje, mesmo padrão já usado em `idx_score_config_pai` (`[02-I]`) pra uma hierarquia idêntica.
-
-* **[02-C-1] Nome único ignorando acentos, maiúsculas e espaços (27-09-2026):** antes, só o **código** era único em Tipo de Link (`UK_TIPO_LINK_CODIGO`) e Área do Conhecimento (`UK_AREA_CONHECIMENTO_CODIGO_CNPQ`), e Motivo de Denúncia não tinha nenhuma regra: "Matemática" e "matematica " podiam coexistir. Três índices únicos funcionais sobre `texto_normalizado` ([01-A-1]): `uq_tipo_link_nome_normalizado` (único no sistema), `uq_area_conhecimento_nome_normalizado` (único dentro da mesma área-mãe; as grandes áreas, sem mãe, formam um grupo só via `COALESCE(id_pai, 0)`; o mesmo nome sob mães diferentes é legítimo na árvore do CNPq) e `uq_motivo_denuncia_descricao_normalizada` (único dentro do mesmo `tipo`: o mesmo motivo pode valer para campanha e para perfil). O índice garante a regra mesmo com dois cadastros ao mesmo tempo. O Nest traduz a violação para 409 com mensagem por índice (`nest/src/commons/database/mensagens-duplicidade.constants.ts`, lido pelo filtro global). Seed e Supabase conferidos antes: nenhum nome colidia. Suíte 19 do PGlite. No Supabase: Grupo Q do `ATUALIZAR O SUPABASE.sql`.
+* **`idx_area_conhecimento_pai`:** a FK `id_pai` monta a árvore do seletor de área (grande área → nível 2); mesmo padrão de `idx_score_config_pai` ([02-I]).
+* **[02-C-1] Nome único ignorando acentos, maiúsculas e espaços:** três índices únicos funcionais sobre `texto_normalizado` ([01-A-1]), para "Matemática" e "matematica " nunca coexistirem:
+  * `uq_tipo_link_nome_normalizado`: único no sistema;
+  * `uq_area_conhecimento_nome_normalizado`: único dentro da mesma área-mãe (as grandes áreas, sem mãe, formam um grupo só via `COALESCE(id_pai, 0)`; o mesmo nome sob mães diferentes é legítimo na árvore do CNPq);
+  * `uq_motivo_denuncia_descricao_normalizada`: único dentro do mesmo `tipo` (o mesmo motivo pode valer para campanha e para perfil).
+  * O índice garante a regra mesmo com dois cadastros ao mesmo tempo. O Nest traduz a violação para 409 com mensagem por índice (`nest/src/commons/database/mensagens-duplicidade.constants.ts`). Suíte 19 do PGlite.
 
 ---
 
 ### [02-D] USUÁRIO
 
-* **Rede de Pesquisadores:** `idx_seguir_pesquisador_alvo` acelera a consulta de quem segue um pesquisador (a ponta `id_usuario` já é coberta pelo índice automático do `UK_SEGUIR_PESQUISADOR_USUARIO_PESQUISADOR`, ver `[02-I]` mais abaixo para o mesmo raciocínio aplicado a `score_pesquisador`). 🗑️➡️✅ **Deixou de ser índice morto (28-07-2026, item 18 da Lista C):** até então, `pol_seg_pesq_select` bloqueava qualquer consulta por `id_pesquisador` (só o próprio seguidor via a própria linha), então esse índice nunca era de fato exercitado por ninguém. `contar_seguidores_pesquisador()` (`03`, ver `[03-E]`) passou a ser exatamente a consulta que usa este índice.
-* **Termo Vigente Único (`uq_termos_uso_ativo`):** Índice parcial `UNIQUE` que assegura no banco a existência de no máximo uma versão ativa de termos de uso por vez (`WHERE ativo = TRUE`).
-* **Fila de Notificações (`idx_notificacao_status`):** Acelera a consulta do *worker* de background ao buscar mensagens com status `pendente`.
-* **Autenticação e Sessão (*Hot Paths*):**
-  * `verificacao_email`, `recuperacao_senha` e `sessao`: Índices sobre `token_hash`, `refresh_token_hash` e `id_usuario` previnem chamadas lentas a cada validação de link recebido por e-mail ou *refresh* de token JWT.
+* **`idx_seguir_pesquisador_alvo`:** quem segue um pesquisador; é o índice de `contar_seguidores_pesquisador()` ([03-E]). A outra ponta (`id_usuario`) já é coberta pelo índice automático de `UK_SEGUIR_PESQUISADOR_USUARIO_PESQUISADOR`.
+* **`uq_termos_uso_ativo`:** índice parcial `UNIQUE` que garante no máximo uma versão ativa de cada termo por vez (`WHERE ativo = TRUE`).
+* **Notificações:** `idx_notificacao_fila` (índice parcial `WHERE status = 'pendente'`, pela próxima tentativa) é a fila do envio de e-mails ([05-Q]); `idx_notificacao_status` serve à contagem por situação na aba Notificações; `idx_notificacao_usuario`, à FK.
+* **Autenticação e sessão:** índices sobre `token_hash`, `refresh_token_hash` e `id_usuario` em `verificacao_email`, `recuperacao_senha` e `sessao`, consultados a cada link de e-mail e a cada renovação de token.
 
 ---
 
 ### [02-E] CAMPANHA
 
-* **Listagens e Filtros de Plataforma:** o índice composto `idx_campanha_status_data_fim` (não existe `idx_campanha_status` sozinho: seria prefixo dele) otimiza as buscas públicas de campanhas ativas e prestes a encerrar. 🗑️➡️✅ **`idx_campanha_area_conhecimento` - novo (28-07-2026, auditoria de IA - "Problema 3"):** o de maior impacto dos 16 achados. A busca pública principal do site (filtrar campanha por área - RF que justificou investir nas 81 áreas de nível 2, ver `[01-C]`) fazia varredura completa da tabela sem este índice.
-* **Índices de apoio.** `idx_campanha_usuario` é `(id_usuario, status)` (regra de simultâneas, score e "minhas campanhas"; continua servindo à FK); `idx_comentario_pesquisador` é `(id_pesquisador, criado_em)` (a consulta do limite de frequência de comentário); `idx_historico_rejeicao_dono` cobre `historico_rejeicao(id_usuario_dono)` (FK que o score consulta); `idx_log_auditoria_ocorrido` é BRIN (ver `[05-L]`). O `idx_campanha_status` sozinho não existe: seria prefixo de `idx_campanha_status_data_fim`. No volume do TCC nenhum muda a velocidade perceptível; cada um existe por um motivo que dá para explicar.
-* **Relacionamentos e Moderação:** Índices focados nas FKs de `id_campanha` para tabelas dependentes (`seguir_campanha`, `atualizacao_campanha`, `repasse`, `solicitacao_encerramento`, `historico_rejeicao`, `comentario`, `recompensa` e `denuncia`). 🗑️➡️✅ **`idx_comentario_pesquisador`/`idx_denuncia_motivo` - novos (28-07-2026, auditoria de IA - "Problema 3"):** aceleram, respectivamente, "meus endossos"/painel de moderação por autor do comentário, e o painel de moderação filtrando denúncias por motivo.
+* **`idx_campanha_status_data_fim`:** as buscas públicas de campanhas ativas e prestes a terminar, e a tarefa que encerra as vencidas. Não existe `idx_campanha_status` sozinho: seria prefixo deste.
+* **`idx_campanha_area_conhecimento`:** a busca pública principal (filtrar campanha por área).
+* **Índices de apoio:** `idx_campanha_usuario` é `(id_usuario, status)` (regra de campanhas simultâneas, score e "minhas campanhas"; serve também à FK); `idx_comentario_pesquisador` é `(id_pesquisador, criado_em)` (limite de frequência de comentário e moderação por autor); `idx_historico_rejeicao_dono` cobre `historico_rejeicao(id_usuario_dono)` (consultado pelo score); `idx_denuncia_motivo` (moderação filtrando por motivo).
+* **FKs de `id_campanha`** nas tabelas dependentes (`seguir_campanha`, `atualizacao_campanha`, `repasse`, `solicitacao_encerramento`, `historico_rejeicao`, `comentario`, `recompensa` e `denuncia`).
+* No volume do TCC nenhum muda a velocidade de forma perceptível; cada um existe por um motivo que dá para explicar.
 
 ---
 
 ### [02-F] LINK
 
-* **Busca de Mídias/Redes Externas:** Índices de apoio às tabelas de associação (`link_academico`, `link_atualizacao` e `link_recompensa`) indexados pelas entidades pai e pelo catálogo `id_tipolink`.
+* Índices das tabelas de associação (`link_academico`, `link_atualizacao`, `link_recompensa`) pelas entidades pai e pelo catálogo `id_tipolink`.
 
 ---
 
 ### [02-G] ARQUIVO
 
-* **Vínculos de Mídia:** Índices de junção em `arquivo_atualizacao` e `arquivo_recompensa`.
-* **Imagem Principal da Recompensa (`uq_arquivo_recompensa_principal`):** Índice parcial `UNIQUE` que assegura que cada recompensa possua no máximo uma mídia marcada como principal (`WHERE principal = TRUE`).
+* Índices de junção em `arquivo_atualizacao` e `arquivo_recompensa`.
+* **`uq_arquivo_recompensa_principal`:** índice parcial `UNIQUE`: cada recompensa tem no máximo uma mídia principal (`WHERE principal = TRUE`).
 
 ---
 
 ### [02-H] CONTRIBUIÇÃO
 
-* **Apoios e Painéis Financeiros:** Índices nas tabelas `contribuicao` (por campanha e usuário), `contribuicao_recompensa` e `aceite_termo_contribuicao` para agilizar a montagem do histórico de doações. 🗑️➡️✅ **`idx_auditoria_financeira_contribuicao` - novo (28-07-2026, auditoria de IA - "Problema 3"):** RNF-007 (auditoria financeira) - consultar o histórico de eventos de uma contribuição específica fazia varredura completa de `auditoria_financeira` sem este índice.
+* Índices em `contribuicao` (por campanha e por usuário), `contribuicao_recompensa` e `aceite_termo_contribuicao`, para o histórico de contribuições.
+* **`idx_auditoria_financeira_contribuicao`:** o histórico de uma contribuição na auditoria financeira (RNF-007).
 
 ---
 
 ### [02-I] SCORE
 
-* **Hierarquia:** `idx_score_config_pai` otimiza a montagem das árvores de critérios de pontuação. `score_pesquisador` não tem índice próprio por `id_usuario` porque a `UK_SCORE_PESQUISADOR_USUARIO_SCORE_CONFIG` (`01`) já cria um índice automático cobrindo essa busca (mesma lógica do `idx_seguir_pesquisador_usuario` removido em `[02-D]`).
+* **`idx_score_config_pai`:** a montagem da árvore de critérios. `score_pesquisador` não tem índice próprio por `id_usuario`: `UK_SCORE_PESQUISADOR_USUARIO_SCORE_CONFIG` (`01`) já cria um índice automático que cobre essa busca.
+
+---
+
+### [02-L] LOG DE AUDITORIA
+
+* **`idx_log_auditoria_ocorrido`** é BRIN: o log só cresce em ordem de tempo, e o BRIN resume blocos inteiros de linhas por faixa de data, muito menor que um B-tree para a limpeza por retenção ([05-L]).
 
 ---
 
@@ -313,270 +337,238 @@ Os índices explícitos criados neste script foram projetados para três cenári
 
 ### Visão Geral de Arquitetura
 
-As funções helper atuam como a ponte de contexto de segurança entre o backend NestJS e o mecanismo de RLS do PostgreSQL. Elas eliminam a dependência de frameworks externos (como Supabase Auth / `auth.uid()`) e viabilizam um modelo de autorização stateless nativo no banco de dados.
+As funções deste arquivo são a ponte entre a sessão do NestJS e a RLS do PostgreSQL: dizem ao banco quem está pedindo e o que essa pessoa pode, sem depender do Supabase Auth (`auth.uid()`).
 
-As três funções utilizam os modificadores de segurança essenciais:
-* **`STABLE`:** Informa ao otimizador do PostgreSQL que a função não altera o banco e retorna o mesmo resultado dentro da mesma transação SQL.
-* **`SECURITY DEFINER` + `SET search_path = public`:** Executa a função com privilégios do criador da função, blindando-a contra ataques de sequestro de caminho de busca (*search path hijacking*).
+* **`STABLE`** (nas de leitura): a função não altera o banco e devolve o mesmo resultado dentro da mesma transação.
+* **`SECURITY DEFINER` + `SET search_path = public`:** roda com os privilégios de quem criou a função, protegida contra sequestro do caminho de busca (*search path hijacking*).
+* **Regra das funções `SECURITY DEFINER` que escrevem:** como elas desligam a RLS, **a própria função é a única guardiã**. Toda função que age sobre a conta de outra pessoa confere a permissão dentro dela (`tem_permissao()`), e as que não têm como conferir (as que rodam antes de existir sessão, como o login) recebem só valores decididos pelo backend, nunca vindos do cliente. Todas saem do `EXECUTE` padrão de `PUBLIC` (`REVOKE` antes do `GRANT` só para `app_nestjs`, [06-D]).
 
 ---
 
-### [03-C] CONFIG - HELPER DE LEITURA (`config_numero`)
+### [03-C] CONFIG - helper de leitura (`config_numero`)
 
-* 🗑️➡️✅ **MOVIDO (28-07-2026, auditoria de IA - "três pontas menores"):** morava em `05_regras_negocio.sql`, mas este arquivo (`03`, que roda ANTES do `05`) já tinha uma função nova chamando `config_numero` (`registrar_falha_login`, `[03-O]`) - o bootstrap completo funcionava só porque nada CHAMA a função antes da hora; rodar `01`→`03` isolado e invocar `registrar_falha_login` já dava `function public.config_numero(unknown, integer) does not exist`. Movida pra cá - helper de leitura de configuração encaixa melhor junto das outras funções de segurança/contexto do que junto das regras de negócio de score.
-* **O que faz:** `config_numero(p_chave TEXT, p_padrao DECIMAL) RETURNS DECIMAL` - lê uma constante numérica de `configuracoes` com fallback seguro, nunca retorna `NULL`/erro mesmo que a chave ainda não exista. Usada por praticamente todo `05` (score, limites de negócio) e pelas funções de autenticação de `[03-O]`, neste mesmo arquivo.
+* `config_numero(p_chave TEXT, p_padrao DECIMAL) RETURNS DECIMAL`: lê uma constante numérica de `configuracoes` com valor de reserva; nunca devolve `NULL` nem erro, mesmo que a chave não exista. Usada por quase todo o `05` (score, limites de negócio) e pelas funções de autenticação ([03-O]).
+* Mora no `03` (e não no `05`) porque as funções do `03` já a chamam, e o `03` roda antes.
 
 ---
 
 ### [03-J] SEGURANÇA & CONTEXTO DE SESSÃO (`id_usuario_atual`)
 
-* **Mecanismo de Transação:** O NestJS, ao autenticar o JWT e abrir uma transação com o PostgreSQL, executa o comando `SET LOCAL app.id_usuario_atual = '<id>'`.
-* **Leitura Segura:** A função lê a variável customizada da sessão do PostgreSQL via `current_setting('app.id_usuario_atual', true)`.
-* 🗑️➡️✅ **Tratamento de Nulos - CORRIGIDO (bug crítico, 27-07-2026):** o segundo argumento `true` de `current_setting()` só cobre o caso "variável nunca foi definida" (sessão anônima), retornando `NULL` nesse caso. Ele **não** cobre o caso "variável definida como string vazia `''`" - e `''::INT` lança uma exceção fatal (`invalid input syntax for type integer`), em vez de retornar `NULL`. Como `tem_permissao()` chama esta função por baixo e aparece em 65 das 116 policies de `04_rls_policies.sql`, uma única sessão anônima onde o NestJS interpola algo como `` `${usuario?.id ?? ''}` `` (em vez de simplesmente nunca setar a variável) derrubava **qualquer** consulta a qualquer tabela protegida - inclusive a listagem pública de campanhas, que nem exige login. A correção: `SELECT NULLIF(current_setting('app.id_usuario_atual', true), '')::INT;` - o `NULLIF` trata "não definida" e "definida vazia" como a mesma coisa (`NULL`) antes mesmo de tentar o `::INT`, então os dois casos agora se comportam de forma idêntica e segura.
+* **Como a sessão chega ao banco:** o NestJS, ao abrir a transação da requisição, faz `set_config('app.id_usuario_atual', '<id>', true)` (local à transação; `DOCUMENTACAO_BACKEND.md`, seção 2).
+* **Leitura:** `SELECT NULLIF(current_setting('app.id_usuario_atual', true), '')::INT`.
+  * **Por que o `NULLIF`:** o segundo argumento `true` de `current_setting()` cobre a variável "nunca definida" (devolve `NULL`), mas não a "definida como texto vazio": `''::INT` daria erro fatal. Com o `NULLIF`, os dois casos viram `NULL` (anônimo) antes do `::INT`. Sem isso, uma sessão anônima com a variável vazia derrubaria qualquer consulta a tabela protegida, inclusive a lista pública de campanhas, porque `tem_permissao()` chama esta função e aparece em boa parte das policies.
 
 ---
 
 ### [03-D] VISIBILIDADE DE CONTA (`usuario_visivel`)
 
-* **Por que existe:** `pol_usuario_select` (`04`) já escondia `usuario.deletado = TRUE` do resultado, mas `pol_perfil_select` e `pol_link_select` eram `USING (TRUE)` sem checar esse flag em nenhum momento - o perfil acadêmico e os links de uma conta "excluída" continuavam 100% públicos, mesmo com a conta marcada como deletada.
-* **O que faz:** `usuario_visivel(p_id INT) RETURNS BOOLEAN` - nega a visibilidade se a conta estiver `deletado = TRUE`; se o `id_usuario` não existir (não deveria acontecer, a FK garante), o padrão é considerar invisível (`COALESCE(..., TRUE)` antes do `NOT`).
-* **Onde é usada:** `pol_perfil_select` e `pol_link_select` (`04_rls_policies.sql`, `[04-D]`/`[04-F]`), no lugar do antigo `USING (TRUE)`. `pol_campanha_select` fica de fora de propósito, por decisão ainda em aberto - ver `PENDENCIAS e correcoes.md`, item 17 (a campanha continua pública por status; só o autor fica anonimizado). `pol_score_select` passou a usar esta mesma função a partir de 30-07-2026, quando o score voltou a ser público de propósito - ver `[04-I]`.
-* **Mesmo padrão de `tem_permissao()`:** função pura, `STABLE`, `SECURITY DEFINER`, centralizando a checagem num único lugar - evita que a próxima policy pública nasça com o mesmo furo.
+* `usuario_visivel(p_id INT) RETURNS BOOLEAN`: nega a visibilidade se a conta estiver `deletado = TRUE`; se o id não existir, também considera invisível (`COALESCE(..., TRUE)` antes do `NOT`).
+* **Onde é usada:** `pol_perfil_select`, `pol_link_select` e `pol_score_select` (`04`). **Por quê:** sem ela, o perfil acadêmico, os links e a pontuação de uma conta excluída continuariam públicos. A campanha continua pública por status (`pol_campanha_select`); só o autor fica anonimizado.
+* Mesmo padrão de `tem_permissao()`: função pura, `STABLE`, `SECURITY DEFINER`, com a checagem num lugar só, para a próxima policy pública não nascer com o mesmo furo.
 
-### [03-D-1] ACEITE DE TERMOS NO CADASTRO (`registrar_aceite_termo`, 09-08-2026)
+### [03-D-1] ACEITE DE TERMOS NO CADASTRO (`registrar_aceite_termo`)
 
-* **Por que existe:** `pol_usuario_termo_insert` (`04`) exige `id_usuario = id_usuario_atual()` - verdade pra alguém já logado aceitando uma versão nova de termo, mas nunca verdade durante o próprio CADASTRO: a conta acaba de ser criada na mesma requisição, e `id_usuario_atual()` continua `NULL` até o fim dela (a variável de sessão só é setada uma vez, no início, a partir do JWT que ainda não existe nesse momento - ver `GlobalDbInterceptor`). Mesmo problema que `atribuir_papel_padrao()` (`08`, `[08-D-1]`) já resolvia pro papel padrão; esta função resolve o equivalente pro aceite de termo.
-* **O que faz:** `registrar_aceite_termo(p_id_usuario, p_id_termo, p_ip) RETURNS VOID` - insere em `usuario_termo`, `ON CONFLICT (id_usuario, id_termo) DO NOTHING` (idempotente).
-* **Sem checagem de autorização própria** (diferente de `excluir_conta_usuario`): `p_id_usuario` é sempre o id do usuário RECÉM-CRIADO na mesma transação, decidido pelo código do backend (`3-auth`), nunca um valor vindo direto do corpo da requisição - não existe caminho pelo qual um cliente forje aceite em nome de outra conta.
-* **Onde é usada:** `POST /auth/cadastro` (`3-auth`), logo depois de criar a linha em `usuario` e atribuir o papel padrão, sempre com o `id_termo` da versão ATIVA resolvida pelo próprio servidor (nunca aceito do cliente).
+* `registrar_aceite_termo(p_id_usuario, p_id_termo, p_ip) RETURNS VOID`: grava em `usuario_termo` (`ON CONFLICT (id_usuario, id_termo) DO NOTHING`).
+* **Por que existe:** `pol_usuario_termo_insert` (`04`) exige `id_usuario = id_usuario_atual()`, que é verdade para quem já está logado, mas nunca durante o próprio cadastro: a conta é criada na mesma requisição e `id_usuario_atual()` continua `NULL` até o fim dela. O mesmo problema que `atribuir_papel_padrao()` ([08-D-1]) resolve para o papel padrão.
+* **Sem checagem de autorização própria:** `p_id_usuario` é sempre a conta recém-criada na mesma transação, decidida pelo backend (`POST /auth/cadastro`), e o `id_termo` é o da versão ativa, resolvido pelo servidor; nenhum cliente consegue forjar aceite em nome de outra conta.
 
 ---
 
-### [03-E] CONTAGEM AGREGADA DE SEGUIDORES (`contar_seguidores_pesquisador`/`contar_seguidores_campanha`)
-
-* 🗑️➡️✅ **ADICIONADO (28-07-2026, item 18 da Lista C):** `pol_seg_pesq_select`/`pol_seg_campanha_select` (`04`) só liberam `SELECT` das próprias linhas de "quem eu sigo" - ninguém conseguia contar quantos seguidores um pesquisador/campanha tem, nem o próprio dono. Não dá pra resolver com policy: RLS filtra **linha**, então `SELECT count(*)` sempre soma só o que a sessão já enxerga - liberar a policy pra "contar" também exporia as linhas (e as identidades de quem segue) junto.
-* **O que fazem:** `contar_seguidores_pesquisador(p_id INT)`/`contar_seguidores_campanha(p_id INT) RETURNS INT` - mesmo padrão de `usuario_visivel`/`tem_permissao` (função pura, `STABLE`, `SECURITY DEFINER`), devolvendo só o número agregado.
-* **Testado:** com 4 pessoas seguindo o pesquisador 2, `SELECT count(*) FROM seguir_pesquisador WHERE id_pesquisador=2` (via RLS, como um dos 4) devolve 1 (só a própria linha); `contar_seguidores_pesquisador(2)` devolve 4 (o número real). Contagem pública, identidade privada - mesmo padrão de Catarse/Experiment com contagem de apoiador.
-* **Efeito colateral:** `idx_seguir_pesquisador_alvo` (`02`, ver `[02-D]`), que era índice sem nenhuma consulta possível (a policy bloqueava a busca que ele aceleraria), passa a ser exatamente o índice que estas duas funções usam.
-* **`GRANT EXECUTE`:** concedido explicitamente pro `app_nestjs` em `06` (`[06-I-1]`), mesmo sendo tecnicamente redundante com o padrão default do Postgres (função nova já tem `EXECUTE` liberado pra `PUBLIC`) - mantido explícito por serem funções chamadas como RPC direto pela aplicação, não só usadas dentro de policy.
+* **`fn_termo_uso_pendente(id)`** (RF-015): devolve a versão vigente que a conta ainda não aceitou, primeiro a do termo da conta e, para quem tem perfil de pesquisador, a do termo de pesquisador; `NULL` sem nada pendente. O Nest pergunta no login e em cada renovação de sessão (`DOCUMENTACAO_BACKEND.md`, seção 19).
 
 ---
 
-### [03-O] OPERAÇÕES DE AUTENTICAÇÃO (28-07-2026 - furo de segurança achado em auditoria de IA)
+### [03-E] CONTAGEM DE SEGUIDORES (`contar_seguidores_pesquisador`/`contar_seguidores_campanha`)
 
-* 🗑️➡️✅ **Por que existem:** o `GRANT UPDATE` de `usuario` era de **tabela inteira** (o `SELECT` já era por coluna, mas o `UPDATE` não). Testado numa auditoria de IA, simulando um usuário comum autenticado: forjar o próprio `score_atual`, auto-marcar `email_verificado = TRUE` (bypass permanente da verificação de e-mail), limpar o próprio `bloqueado_ate`/`tentativas_login_falhas`, e "ressuscitar" a própria conta excluída (`deletado = FALSE`) - todos funcionavam via `UPDATE` direto. Restringir por coluna sozinho não resolve: `email_verificado`, `tentativas_login_falhas`, `bloqueado_ate`, `ultimo_login_em`, `ultimo_login_ip` e `deletado` são todos escritos legitimamente pelo MESMO `app_nestjs` que atende o endpoint genérico de "editar meu perfil" - nenhuma lista de colunas separa os dois papéis.
-* **Solução:** essas 6 colunas saíram do `GRANT UPDATE` de `usuario` por completo (`06`, `[06-D-2]`) - o `GRANT` direto ficou só com `nome`, `id_imagem_perfil`, `senha_hash`. As 6 colunas só mudam via função `SECURITY DEFINER` dedicada - mesmo padrão de `atribuir_papel_padrao`/`recalcular_score_pesquisador`: ponto único, nomeado e auditável, em vez de `UPDATE` aberto.
-* **As 5 funções:**
-  | Função | Colunas que muda | Regra |
+* `contar_seguidores_pesquisador(p_id INT)` / `contar_seguidores_campanha(p_id INT) RETURNS INT`: só o número agregado.
+* **Por que função, e não policy:** `pol_seg_pesq_select`/`pol_seg_campanha_select` (`04`) só liberam as linhas de "quem eu sigo". A RLS filtra **linha**: liberar a contagem pela policy exporia também quem segue. A função conta tudo e devolve só o total (contagem pública, identidade privada, como Catarse e Experiment fazem com apoiadores).
+* **`contar_aceites_termo(id)`**, o mesmo padrão: soma os aceites do cadastro (`usuario_termo`) e das contribuições (`aceite_termo_contribuicao`) e devolve só o número, para a tela de Termos saber se uma versão ainda pode ser editada. Pela RLS, o aceite de contribuição só apareceria para quem vê dado sensível de contribuição.
+* `GRANT EXECUTE` explícito para o `app_nestjs` (`06`): são chamadas direto pela aplicação.
+
+### [03-E-1] CRIAR CAMPANHA PARA OUTRO (`criar_campanha_para_outro`) e [03-E-2] FORÇAR EXCLUSÃO (`forcar_exclusao_campanha`)
+
+Duas ferramentas do Campo de Testes (`nest/src/30-campo-testes`, só fora de produção):
+* **`criar_campanha_para_outro`:** `pol_campanha_insert` exige `id_usuario = id_usuario_atual()` e pesquisador ativo; esta função cria em nome de um pesquisador escolhido, exigindo `campanha_criar_para_outro`. Continua exigindo pesquisador ATIVO (conferido aqui, em vez da RLS). Prazo, meta e limite de campanhas simultâneas não são repetidos: as triggers do `05` rodam igual por baixo.
+* **`forcar_exclusao_campanha`:** exclui uma campanha em qualquer status, exigindo `campanha_excluir_forcado` (nunca `campanha_editar`: um papel com permissão de editar não ganha este poder destrutivo de brinde). O `DELETE` normal (`pol_campanha_delete`) continua liberando só `rascunho`, a proteção certa para campanha real.
+* No banco de produção, o bloco "modo produção" tira essas permissões do admin ([07-B]).
+
+---
+
+### [03-O] OPERAÇÕES DE AUTENTICAÇÃO
+
+* **Por que existem:** colunas como `email_verificado`, `tentativas_login_falhas`, `bloqueado_ate`, `ultimo_login_em`, `ultimo_login_ip` e `deletado` são escritas legitimamente pelo mesmo `app_nestjs` que atende "editar meu perfil", e nenhuma lista de colunas separa os dois casos. Com `UPDATE` direto, um usuário comum poderia forjar a própria verificação de e-mail, limpar o próprio bloqueio ou "ressuscitar" a própria conta excluída.
+* **Solução:** essas colunas ficam fora do `GRANT UPDATE` de `usuario` (`06`, [06-D]), que tem só `nome`, `id_imagem_perfil` e `senha_hash`. Elas só mudam por estas funções `SECURITY DEFINER`, cada uma um ponto único, nomeado e auditável:
+
+  | Função | O que muda | Regra |
   |---|---|---|
-  | `confirmar_email_por_token(p_token_hash)` | `email_verificado = TRUE` | Resolve o dono do token sozinha (busca em `verificacao_email`, confere `expira_em`/`confirmado_em`) - o token É a autorização. Retorna `BOOLEAN`. |
-  | `registrar_falha_login(p_id_usuario)` | `tentativas_login_falhas++`, `bloqueado_ate` condicional | Bloqueia ao atingir `configuracoes.limite_tentativas_login` (5), por `configuracoes.bloqueio_login_minutos` (15) - nenhum número fixo, os dois configuráveis pelo Painel Admin. **Sem autorização de propósito** (ver nota abaixo). |
-  | `liberar_bloqueio_login(p_id_usuario)` | `tentativas_login_falhas = 0`, `bloqueado_ate = NULL` | Exige `usuario_desbloquear` - sempre ação de suporte/admin sobre a conta de outra pessoa, nunca do próprio usuário. |
-  | `registrar_login_sucesso(p_id_usuario, p_ip)` | `ultimo_login_em`, `ultimo_login_ip`, e zera o estado de falha | Um login bem sucedido sempre limpa o histórico de tentativas anteriores - `p_ip` é `TEXT` na assinatura (não `VARCHAR(45)`, o tipo da coluna) só pra evitar ambiguidade de modificador de tipo no `GRANT EXECUTE`. **Sem autorização de propósito** (ver nota abaixo). |
-  | `excluir_conta_usuario(p_id_usuario)` | `deletado = TRUE`, `deletado_em = NOW()`, `deletado_por = id_usuario_atual()` | RNF-003 (LGPD) + Art. 37 (trilha de quem/quando). Permite o próprio usuário (`p_id_usuario = id_usuario_atual()`) OU quem tiver `usuario_excluir` - só o `admin` tem essa permissão (ver nota abaixo). Via de mão única, de propósito - não existe função equivalente pra reverter, coerente com o desenho de anonimização já existente (`usuario_visivel()`, `[03-D]`). |
-* **`perfil_pesquisador` recebeu o mesmo tratamento** (`06`, `[06-D-2]`): `GRANT UPDATE` virou por coluna, mesma lista do `SELECT` **menos** `score_atual`/`score_atualizado_em` - essas 2 continuam só mudando via `recalcular_score_pesquisador()`.
+  | `confirmar_email_por_token(p_token_hash)` | `email_verificado = TRUE` | Acha o dono pelo token (`verificacao_email`, confere validade e uso): o token **é** a autorização. Devolve `BOOLEAN`. |
+  | `registrar_falha_login(p_id_usuario)` | `tentativas_login_falhas++`, `bloqueado_ate` | Bloqueia ao chegar em `limite_tentativas_login` (5) por `bloqueio_login_minutos` (15), os dois configuráveis. **Sem autorização de propósito** (ver abaixo). |
+  | `liberar_bloqueio_login(p_id_usuario)` | zera o bloqueio | Exige `usuario_desbloquear` (suporte e admin). |
+  | `registrar_login_sucesso(p_id_usuario, p_ip)` | `ultimo_login_em`, `ultimo_login_ip`, zera as falhas | **Sem autorização de propósito.** `p_ip` é `TEXT` na assinatura só para evitar ambiguidade de tipo no `GRANT EXECUTE`. |
+  | `excluir_conta_usuario(p_id_usuario)` | `deletado = TRUE`, `deletado_em`, `deletado_por` | A própria pessoa (`p_id_usuario = id_usuario_atual()`) ou quem tem `usuario_excluir` (só o admin: exclusão é auto-serviço do titular; o suporte abre chamado, não executa). Mão única: não há função para desfazer. Recusa conta com campanha ativa (91031) e o último administrador (91030). |
+  | `registrar_exportacao_dados(p_id_usuario)` | uma linha `EXPORT` em `log_auditoria` | Rastro da exportação de dados (RF-016, LGPD art. 18). O `app_nestjs` não tem `INSERT` no log; a função abre só esta linha. `p_id_usuario` é sempre a conta logada (a rota não aceita id). |
+  | `redefinir_senha_por_token(...)` | `senha_hash`, zera o bloqueio, encerra as sessões | O token de "Esqueci a senha" (`recuperacao_senha`) é a autorização, usado uma vez. |
 
-> 🗑️➡️✅ **2ª auditoria de IA (28-07-2026) - "SECURITY DEFINER troca um furo por outro se a função não checar quem está chamando":** a 1ª versão das 5 funções aceitava qualquer `p_id_usuario` sem checagem nenhuma. `SECURITY DEFINER` desliga a RLS, então a função vira a ÚNICA guardiã - testado, um usuário comum (id 9) conseguia chamar `excluir_conta_usuario(2)`/`liberar_bloqueio_login(2)`/`confirmar_email_usuario(2)` e todas executavam contra a conta de outra pessoa. Pior que o `GRANT UPDATE` aberto que essas funções vieram substituir (lá pelo menos `pol_usuario_update` restringia a `id_usuario_atual() = id_usuario`). Três correções diferentes: (1) `excluir_conta_usuario`/`liberar_bloqueio_login` ganharam checagem própria via `tem_permissao()` - permissões novas `usuario_excluir`/`usuario_desbloquear` (`07`), auto-atribuídas ao `admin` pela trigger `trg_admin_recebe_toda_permissao` e seedadas também pro papel `suporte`. (2) `confirmar_email_usuario(p_id)` virou `confirmar_email_por_token(p_token_hash)` - em vez de confiar num id vindo de fora, a função recebe o segredo (o token) e resolve o dono sozinha, eliminando a superfície de ataque em vez de só restringi-la. (3) `registrar_falha_login`/`registrar_login_sucesso` **não têm como se autorizar**: rodam durante o próprio login, antes de existir sessão (`id_usuario_atual()` é `NULL` ali por definição) - documentado no `.sql` como de confiança do backend, com aviso explícito de que `registrar_falha_login` com um id arbitrário é vetor de negação de serviço (bloqueia a conta de qualquer pessoa chamando 5x); o endpoint de login precisa derivar o id do e-mail informado, nunca aceitá-lo do cliente. **Higiene adicional:** as 5 saíram do `EXECUTE`-para-`PUBLIC` padrão do Postgres (`REVOKE` explícito antes do `GRANT` só pra `app_nestjs`, `06`, `[06-D-2b]`) - hoje não é explorável (só `app_nestjs` conecta ao banco), mas é grátis fechar pra função que apaga conta.
-
-> 🗑️➡️✅ **3ª auditoria de IA (28-07-2026) - "excluir conta não deixa rastro" + "três funções privilegiadas ainda em PUBLIC":** dois achados menores nesta rodada. (1) `excluir_conta_usuario` gravava `deletado = TRUE` e nada mais - sem quem fez nem quando, o Art. 37 da LGPD (registro das operações de tratamento, exclusão sendo a mais sensível) ficava sem trilha; piorado pelo fato de `usuario_excluir` estar concedida ao papel `suporte` (um atendente podia excluir a conta de qualquer um, sem registro). Corrigido em duas partes: `usuario` ganhou `deletado_em`/`deletado_por` (`[01-D]`), preenchidas só pela própria função; e `usuario_excluir` saiu do papel `suporte` (decisão de produto - Catarse/Experiment tratam exclusão como auto-serviço do titular, suporte abre chamado mas não executa), ficando só com o `admin`. `suporte` mantém `usuario_desbloquear`, a ação de atendimento de verdade. (2) `atribuir_papel_padrao` (`08`), `recalcular_score_pesquisador` e `recalcular_todos_os_scores` (`05`) - as 3 escrevem no banco e ainda estavam com `EXECUTE` liberado pra `PUBLIC`; `recalcular_todos_os_scores()` em especial é negação de serviço barata (percorre todos os pesquisadores, sem custo pra quem chama). `REVOKE ... FROM PUBLIC` + `GRANT` só pra `app_nestjs` nas 3, mesmo padrão das 5 de cima - hoje não explorável, mas consistente com o que já foi feito.
-
-> 🗑️➡️✅ **`registrar_exportacao_dados(p_id_usuario)` - ADICIONADA (05-09-2026, RF-016, exportação de dados (LGPD Art. 18), LGPD Art. 18 - portabilidade/acesso):** `GET /usuario/eu/exportar-dados` (novo, `nest/src/1-usuario`) devolve num pacote só tudo que existe sobre a conta autenticada, e precisa deixar rastro em `log_auditoria` a cada chamada. `app_nestjs` só tem `GRANT SELECT` em `log_auditoria` (`06`) - de propósito, quem grava normalmente é só a trigger `fn_log_auditoria()` (`05`), pra ninguém conseguir forjar/inflar o histórico escrevendo direto na tabela. Mesma categoria de pré-autorização das outras 4 funções deste bloco: `SECURITY DEFINER` contorna essa restrição só pra este propósito específico (um `INSERT` de uma linha com `operacao = 'EXPORT'`), sem abrir `INSERT` geral em `log_auditoria`. **`p_id_usuario` é sempre o próprio usuário autenticado** - a rota não aceita `:id` (decisão deliberada, ver `usuario.controller.export-data.ts`: aceitar um identificador na URL abriria a porta pro erro clássico de trocar o número e baixar dado de outra conta), então não precisou de checagem de permissão própria como `excluir_conta_usuario`. **`operacao`** ganhou o valor `'EXPORT'` no `CK_LOG_AUDITORIA_OPERACAO` (`01`, seção `log_auditoria` abaixo) - antes só aceitava `INSERT`/`UPDATE`/`DELETE`. **CPF nunca sai em texto puro:** o serviço decifra (`decifrarCpf()`, reversível) só pra mascarar em seguida (3 primeiros + 2 últimos dígitos) - incluir em texto puro exigiria reautenticação por senha antes de gerar a exportação, mecanismo que não existe em nenhum outro lugar do sistema (exclusão de conta usa confirmação por e-mail digitado, não senha); construir isso do zero só pra este caso não se pagava (decisão tomada em conversa com apoio de IA). **Duas proteções adicionais, fora do banco:** rate limit de 1x/hora por CONTA (não por IP - guard próprio, `UsuarioGuardExportDataThrottler`) e `Cache-Control: no-store` na resposta.
+* **`excluir_conta_usuario` em detalhe:**
+  * **Campanhas:** recusa com campanha `ativo` (91031). Na exclusão, o rascunho e a campanha aguardando aprovação sem nunca ter sido avaliada são apagados; a que aguarda por reenvio de uma rejeitada volta a `rejeitado` (com uma linha em `historico_rejeicao`, "Reenvio cancelado: o pesquisador excluiu a própria conta.", sem admin) e segue o caminho normal da rejeição (ramo 9 da transição, [05-K-2]). As outras ficam como estão. **Por quê:** uma campanha ativa continuaria arrecadando com a dona excluída.
+  * **Sessões:** encerra todas as sessões abertas da conta (`sessao.revogado_em`), como a suspensão ([03-N]).
+  * **Sem login, recusa:** a comparação é `COALESCE(p_id_usuario = id_usuario_atual(), FALSE)`. Sem ninguém logado, `id_usuario_atual()` é `NULL`, e `IF NOT (NULL OR FALSE)` também seria `NULL`: a recusa não dispararia. O Nest já exige login, mas o banco é a última barreira. Suíte 27 do PGlite.
+* **As que rodam sem sessão** (`registrar_falha_login`, `registrar_login_sucesso`) não têm como se autorizar: o login acontece antes de existir sessão. O id vem sempre do e-mail já consultado pelo backend, nunca do cliente. ⚠️ `registrar_falha_login` com um id qualquer seria negação de serviço (bloquearia a conta de alguém em 5 chamadas); por isso a função só é chamada pelo endpoint de login.
+* **`perfil_pesquisador` tem o mesmo cuidado** (`06`, [06-D]): o `GRANT UPDATE` é por coluna, sem `score_atual`/`score_atualizado_em` (só mudam por `recalcular_score_pesquisador()`), sem `status_pesquisador` e sem as colunas de suspensão ([03-P]).
+* **Exportação de dados:** o CPF sai mascarado (3 primeiros e 2 últimos dígitos), nunca em texto puro; mais o limite de 1 por hora por conta e `Cache-Control: no-store` (no Nest, `DOCUMENTACAO_BACKEND.md`, seção 7.4).
 
 ---
 
-### [03-P] MODERAÇÃO SOBRE PESQUISADOR - SUSPENSÃO EM CASCATA (RF-084, 30-07-2026, construído do zero)
+### [03-P] MODERAÇÃO SOBRE PESQUISADOR: SUSPENSÃO EM CASCATA (RF-084)
 
-* **Por que existe:** RF-084 sempre descreveu suspensão de pesquisador encerrando em cascata as campanhas ativas e rejeitando as pendentes - mas até 30-07-2026 não existia NENHUM caminho no banco pra suspender alguém. `pol_perfil_update` (`04`) só libera `UPDATE` em `perfil_pesquisador` pro próprio dono (`id_usuario = id_usuario_atual()`); `status_pesquisador` só podia mudar por auto-serviço, nunca por ação de moderação.
-* **O que faz:** `suspender_pesquisador(p_id_usuario INT) RETURNS BOOLEAN` (`SECURITY DEFINER`) - exige `tem_permissao('usuario_suspender')`, marca `perfil_pesquisador.status_pesquisador = 'suspenso'` e, na mesma transação, aplica a cascata: campanhas `'ativo'` do pesquisador viram `'encerrado_moderacao'`, campanhas `'aguardando_aprovacao'` viram `'rejeitado'`. Retorna `FALSE` sem fazer nada se o pesquisador já estava suspenso (idempotente).
-* **ATUALIZADA (07-09-2026, pedido do Lucas):** assinatura virou `suspender_pesquisador(p_id_usuario INT, p_ate TIMESTAMPTZ, p_motivo TEXT) RETURNS BOOLEAN` - ganhou prazo e motivo obrigatório (`RAISE EXCEPTION` se vazio), mesmo padrão de `suspender_usuario` (`[03-N]`). Três colunas novas em `perfil_pesquisador` (`01`): `suspenso_ate`/`motivo_suspensao`/`suspenso_por`, com `CK_PERFIL_PESQUISADOR_SUSPENSAO` garantindo que andam sempre juntas (mesmo desenho de `CK_USUARIO_SUSPENSAO`). Diferente de `usuario.suspenso_ate` (que bloqueia LOGIN, checado em `3-auth`): isto suspende só a AUTORIDADE de pesquisador - a conta continua logando normalmente. Nova função `reativar_pesquisadores_vencidos() RETURNS INT` (`05`, mesmo padrão de `encerrar_campanhas_vencidas`) reativa sozinha quem passou do prazo, chamada por `@Cron` a cada 15 min no NestJS. As 3 colunas novas ficaram de fora do `GRANT UPDATE` de `perfil_pesquisador` (`06`, `[06-D-2]`) - só mudam via `suspender_pesquisador()`/`reativar_pesquisador()`, mesma proteção de `status_pesquisador` - mas PRECISAM estar no `GRANT SELECT` por coluna (achado 08-09-2026, ver `ACHADOS_PARA_DISCUTIR.md` item 17: esquecido na 1ª rodada, a leitura direta - `GET .../suspensao` - batia em "permission denied" mesmo a escrita funcionando via `SECURITY DEFINER`).
-* **`usuario_suspender` era uma alavanca fantasma:** a permissão já existia seedada (só pro `admin`) e já era citada dentro de `pol_usuario_update` (`04`), mas nada nunca lia ela pra decidir uma escrita de verdade - mesma classe de achado do item 13/quinto ponto em `PENDENCIAS e correcoes.md` (peso configurado, ninguém lendo). Passou a ter uso real aqui, sem precisar criar permissão nova.
-* **`status_pesquisador` saiu do `GRANT UPDATE` genérico** de `perfil_pesquisador` (`06`, `[06-D-2]`) - sem isso, o próprio pesquisador conseguiria se auto-reativar (ou se auto-suspender por engano) por fora da função, driblando a cascata inteira.
-* ⚠️ **Detalhe que precisou de correção junto, não depois (mesmo raciocínio do item 58 - encerramento automático de campanha, parte 10 em `PENDENCIAS e correcoes.md`):** `SECURITY DEFINER` bypassa RLS, mas não bypassa trigger. `trg_campanha_valida_transicao` (`05`, `[05-K-2]`) continua rodando por baixo da função e bloquearia as duas transições da cascata, porque nem toda sessão que pode suspender um pesquisador tem `campanha_editar`/`campanha_aprovar`/`campanha_rejeitar`. A trigger ganhou um **5º ramo autoverificável**: libera exatamente `ativo → encerrado_moderacao` e `aguardando_aprovacao → rejeitado` sem checar permissão de campanha de quem está executando - só o fato de `perfil_pesquisador.status_pesquisador` do dono já estar `'suspenso'`, valor que só existe via `suspender_pesquisador()`.
-* 🗑️➡️✅ **`reativar_pesquisador(p_id_usuario) RETURNS BOOLEAN` - ADICIONADA (30-07-2026, item 60, recomendação de uma auditoria de IA):** mesmo padrão de `suspender_pesquisador()` (`SECURITY DEFINER`, exige `usuario_suspender`), mas só devolve `status_pesquisador = 'ativo'` - **não toca em nenhuma campanha**. Desde 07-09-2026 também limpa `suspenso_ate`/`motivo_suspensao`/`suspenso_por` (`CK_PERFIL_PESQUISADOR_SUSPENSAO` exige os 3 juntos ou nenhum). Motivo é financeiro, não estético: quando a suspensão rodou, o dinheiro das campanhas fechadas já começou a se mexer (devolução ao doador no all-or-nothing, ou repasse já liberado no flexível) - esse movimento acontece no NestJS/gateway, fora do banco. Reabrir a campanha depois seria prometer algo que a plataforma não consegue cumprir. Campanha fechada por `encerrado_moderacao` continua fechada para sempre, mesmo após reativação - só campanha NOVA, criada depois, é afetada.
+* **`suspender_pesquisador(p_id_usuario, p_ate TIMESTAMPTZ, p_motivo TEXT) RETURNS BOOLEAN`** (`SECURITY DEFINER`, exige `usuario_suspender`): marca `status_pesquisador = 'suspenso'`, grava `suspenso_ate`, `motivo_suspensao` (obrigatório) e `suspenso_por`, e na mesma transação aplica a cascata: campanhas `'ativo'` do pesquisador viram `'encerrado_moderacao'`, e as `'aguardando_aprovacao'` viram `'rejeitado'`. Devolve `FALSE` sem fazer nada se já estava suspenso.
+  * Suspende só a **autoridade de pesquisador**: a conta continua entrando normalmente (diferente da suspensão de conta, [03-N]).
+  * `CK_PERFIL_PESQUISADOR_SUSPENSAO`: as três colunas andam juntas (todas preenchidas ou todas `NULL`).
+  * As colunas de suspensão e `status_pesquisador` ficam fora do `GRANT UPDATE` (sem isso, o próprio pesquisador se reativaria por fora da função), mas **dentro** do `GRANT SELECT` por coluna, para a leitura direta da suspensão (`GET .../suspensao`) funcionar.
+* **`reativar_pesquisadores_vencidos() RETURNS INT`** (`05`, chamada por tarefa agendada a cada 15 minutos): reativa sozinho quem passou do prazo.
+* **`reativar_pesquisador(p_id_usuario) RETURNS BOOLEAN`** (exige `usuario_suspender`): devolve `status_pesquisador = 'ativo'` e limpa as colunas de suspensão. **Não reabre nenhuma campanha:** quando a suspensão rodou, o dinheiro das campanhas encerradas já começou a andar (devolução no tudo-ou-nada, repasse no flexível); reabrir seria prometer o que a plataforma não cumpre. Só campanha nova é afetada.
+* **Triggers continuam rodando:** `SECURITY DEFINER` desliga a RLS, não as triggers. `trg_campanha_valida_transicao` ([05-K-2]) tem um ramo próprio que libera exatamente `ativo → encerrado_moderacao` e `aguardando_aprovacao → rejeitado` quando o dono já está `'suspenso'` (valor que só existe via `suspender_pesquisador()`), porque quem suspende não precisa ter as permissões de campanha.
+* **O dinheiro:** a cascata só muda o status. O destino do dinheiro sai de `destino_dinheiro_campanha()` e das tarefas automáticas do pagamento: campanha `encerrado_moderacao` devolve (`DOCUMENTACAO_FINANCEIRO.md`, seção 5).
 
-> ⚠️ **Fronteira banco/backend (confirmada em auditoria de IA, 30-07-2026):** `suspender_pesquisador()` só muda o `status` da campanha para `'encerrado_moderacao'`. A devolução de dinheiro de verdade (marcar contribuição como `a_devolver`, chamar a API do gateway de pagamento) **não está automatizada no banco** - não dá pra automatizar só em SQL, porque exige chamar uma API externa. É trabalho do NestJS: reagir à mudança de status pra `encerrado_moderacao` e disparar o mesmo fluxo de devolução/repasse que já reage ao encerramento normal (`RF-038`). Não é bug nem pendência - é fronteira certa entre banco e backend - só não presumir que já está pronto.
+### [03-P-1] CORRIGIR CPF (`corrigir_cpf_pesquisador`), [03-P-2] CRIAR PERFIL PARA OUTRO (`criar_perfil_pesquisador_para_outro`) e [03-P-3] ALTERAR PERFIL DE OUTRO (`alterar_perfil_pesquisador_de_outro`)
+
+Três funções `SECURITY DEFINER` para agir sobre o perfil de **outra** pessoa, que a RLS não permite (`pol_perfil_insert` e `pol_perfil_update` só liberam o próprio dono). Cada uma com permissão própria (`07`):
+* **[03-P-1] `corrigir_cpf_pesquisador`** (`perfil_pesquisador_corrigir_cpf`): o único caminho para mudar o CPF (RF-017, correção feita pelo suporte ou pelo admin, nunca pelo próprio pesquisador). `cpf_criptografado` fica fora do `GRANT UPDATE`.
+* **[03-P-2] `criar_perfil_pesquisador_para_outro`** (`perfil_pesquisador_criar_para_outro`): o upgrade em nome de outra conta (T1 do Campo de Testes). O upgrade da própria conta não a usa.
+* **[03-P-3] `alterar_perfil_pesquisador_de_outro`** (`perfil_pesquisador_alterar_de_outro`): vínculo, instituição e título de quem está sendo editado no Alterar Usuário. Sem ela, o `UPDATE` direto afetaria 0 linhas, em silêncio.
+* As duas que recebem CPF o recebem **já cifrado e com o `cpf_hash`** (calculados no Nest, [01-D]): o banco não sabe cifrar nem calcular o HMAC, só grava o que o backend preparou, depois de conferir a permissão.
 
 ---
 
 ### [03-B] CONTROLE DE ACESSO GRANULAR (`tem_permissao`)
 
-* **Autorização por Capacidade (*Capability-Based*):** Em vez de verificar nomes de papéis (como "admin" ou "pesquisador"), a função valida a existência de uma permissão específica (ex: `'campanha_aprovar'`).
-* **Descolamento Múltiplo:** Permite alterar, renomear, dividir ou criar novos papéis na tabela `papel` sem a necessidade de alterar nenhuma política de RLS (`04_rls_policies.sql`) ou recriar funções no banco de dados.
-* **Comportamento para Desconectados:** Caso `public.id_usuario_atual()` retorne `NULL` (usuário anônimo ou sessão sem token), o *subselect* falha na condição de igualdade e a função retorna `FALSE` de forma determinística.
-* **`listar_papeis_usuario(p_id_usuario)` (09-08-2026):** `SECURITY DEFINER`, devolve os CÓDIGOS (`papel.codigo`, não `papel.nome`) dos papéis de um usuário (`SETOF TEXT`). Existe porque login/refresh (`3-auth`) precisam saber se o usuário é admin pra decidir se o dropdown do cabeçalho mostra "Painel Admin" - e chamam isso na MESMA requisição que está criando a sessão, quando `id_usuario_atual()` ainda é `NULL` (a policy normal de `usuario_papel`, que exige `id_usuario_atual() = idUsuario OU tem_permissao('papel_gerenciar')`, bloquearia mesmo o dono da própria conta nesse instante). `codigo`, não `nome`: o rótulo exibido é editável pelo painel (`AlterarPapel`) - checar por `nome` quebraria silenciosamente se alguém renomear o papel "admin".
+* **Autorização por capacidade:** em vez de conferir nomes de papel ("admin", "pesquisador"), a função confere uma permissão específica (ex.: `'campanha_aprovar'`). Papéis podem ser renomeados, divididos ou criados sem mexer em nenhuma policy (`04`) nem função. Ver Anexo B.
+* **Papel suspenso não conta:** um vínculo `usuario_papel` com `suspenso_ate` no futuro não concede nenhuma permissão dele ([03-N]).
+* **Anônimo:** com `id_usuario_atual()` em `NULL`, a função devolve `FALSE`.
+* **`listar_papeis_usuario(p_id_usuario)`** (`SECURITY DEFINER`, `SETOF TEXT`): os **códigos** (`papel.codigo`) dos papéis de uma conta. O login e a renovação precisam deles na mesma requisição que cria a sessão, quando `id_usuario_atual()` ainda é `NULL` e a policy de `usuario_papel` barraria até o dono. Código, e não nome, porque o nome é renomeável.
 
 ---
 
-### [03-M] DASHBOARD ADMIN - MÉTRICAS AGREGADAS (`contar_metricas_dashboard`, 08-08-2026)
+### [03-M] DASHBOARD ADMIN: MÉTRICAS AGREGADAS (`contar_metricas_dashboard`)
 
-* **Campanhas na fila com pesquisador de score baixo:** a coluna `campanhas_para_revisao_score` (a 5ª parte do RF-084) conta campanha `aguardando_aprovacao` cujo pesquisador está abaixo de `score_minimo_campanha` (`fn_precisa_revisao_score`, `[05-I-1]`). É só um SINAL para o admin revisar com mais cuidado, nunca bloqueia nada. A função é **plpgsql** (não `sql`) porque `fn_precisa_revisao_score` mora em `05`, que roda depois de `03`, e só o plpgsql adia a checagem do corpo para a 1ª chamada. Mudar o tipo de retorno de uma função exige `DROP FUNCTION` antes.
-
-* **Motivo:** `GET /dashboard/resumo` (`nest/src/29-dashboard`) precisa de totais confiáveis (usuário, pesquisador, papel, permissão, configuração, sessão ativa) pros cards da tela inicial do painel admin. RLS filtra LINHA e não é uniforme entre as tabelas envolvidas - `usuario` só libera não-deletado (ou quem tem `usuario_visualizar_sensivel`), `configuracoes` só libera a linha global ou a da própria sessão - um `COUNT` direto de `app_nestjs` devolveria um número diferente dependendo de quem está logado, errado pra um card de "total do sistema".
-* **`SECURITY DEFINER`, `STABLE`:** mesmo raciocínio de `contar_seguidores_pesquisador`/`contar_seguidores_campanha` (`[03-E]`) - bypassa a RLS restritiva de propósito, devolvendo só os números agregados (nunca linhas individuais).
-* **Permissão (25-09-2026):** a função começa com `IF NOT public.tem_permissao('relatorio_visualizar') THEN RAISE ... ERRCODE '92011'`. Por ser `SECURITY DEFINER` ela bypassa a RLS de propósito, então a checagem tem de estar dentro dela; sem isso qualquer usuário logado (ou a própria API chamada sem tela) lia sessões ativas e denúncias pendentes. O Nest devolve o 92011 como 403.
-* **"Contas ativas" = pessoas com atividade recente (28-09-2026):** `sessoes_ativas` conta **pessoas distintas** (`count(DISTINCT id_usuario)`), não sessões: a mesma pessoa em dois aparelhos conta uma vez (sugestão de uma revisão externa; o card chama "contas ativas agora"). O nome da coluna ficou `sessoes_ativas` porque trocar mudaria o tipo de retorno e o campo que o React lê. Conta sessão não revogada com `criado_em` dentro de `configuracoes.dashboard_sessao_ativa_minutos` (padrão 30). Login e cada renovação do token de acesso criam uma linha nova em `sessao`, então isso aproxima "quem está usando agora". Antes contava toda sessão válida de 30 dias, inflada pelos logins de teste que nunca saíam.
-* **Uma função só devolvendo `TABLE`** (não 6 funções separadas): o NestJS sempre pede os 6 números juntos numa chamada - não faz sentido virar 6 idas ao Postgres.
-* **Letra `M`, não `K`:** achado numa auditoria de documentação (09-08-2026) - o bloco nasceu como `[03-K]` por engano, reaproveitando uma letra que `[05-K]` (Regras de Negócio Transversais) já usava com outro significado. Corrigido pra `M` (ver Índice Global de Letras, no topo deste documento) em `03_funcoes_seguranca.sql`, `06_grants.sql` e `ATUALIZAR O SUPABASE.sql`.
+* **Por que existe:** os cards da tela inicial do painel precisam de totais do sistema (usuários, pesquisadores, papéis, permissões, configurações, contas ativas, campanhas na fila). A RLS filtra linha e não é igual entre essas tabelas: um `COUNT` direto daria um número diferente para cada pessoa logada.
+* **`SECURITY DEFINER`, `STABLE`**, como as contagens de [03-E]: devolve só números, nunca linhas.
+* **Permissão dentro da função:** começa com `IF NOT public.tem_permissao('relatorio_visualizar') THEN RAISE ... ERRCODE '92011'` (o Nest devolve 403). Como ela desliga a RLS, sem isso qualquer conta logada leria as métricas.
+* **Contas ativas = pessoas, não sessões:** `sessoes_ativas` conta pessoas distintas (`count(DISTINCT id_usuario)`) com login ou renovação dentro de `configuracoes.dashboard_sessao_ativa_minutos` (30): a mesma pessoa em dois aparelhos conta uma vez. O nome da coluna ficou `sessoes_ativas` para não mudar o campo que o React lê.
+* **Campanhas na fila com pesquisador de score baixo** (`campanhas_para_revisao_score`, parte do RF-084): campanha `aguardando_aprovacao` cujo pesquisador está abaixo de `score_minimo_campanha` (`fn_precisa_revisao_score`, [05-I-1]). Só um sinal para o admin revisar com mais cuidado; nunca bloqueia. A função é **plpgsql** porque `fn_precisa_revisao_score` mora no `05`, que roda depois, e o plpgsql só confere o corpo na primeira chamada.
+* **Uma função devolvendo `TABLE`:** o Nest pede todos os números juntos, numa ida só ao banco. Mudar o tipo de retorno exige `DROP FUNCTION` antes.
 
 ---
 
-### [03-N] MODERAÇÃO SOBRE CONTA - SUSPENSÃO DE USUÁRIO E DE PAPEL (09-08-2026)
+### [03-N] MODERAÇÃO SOBRE CONTA: SUSPENSÃO DE USUÁRIO E DE PAPEL
 
-* **Motivo:** Bloco G de uma rodada de revisão por IA sobre cabeçalho/moderação - o painel admin não tinha NENHUM jeito de suspender uma conta (só excluir, de mão única, via `excluir_conta_usuario()` `[03-O]`) nem de tirar temporariamente um papel específico de alguém (só remover o vínculo por completo, via `usuario-papel.service.remove.ts`).
-* **Duas colunas novas em `usuario` (`01-D`), 3 no total contando `suspenso_por`:** `suspenso_ate`/`motivo_suspensao`/`suspenso_por`, com `CK_USUARIO_SUSPENSAO` garantindo que os 3 sempre andam juntos (todos `NULL` ou todos preenchidos). **Conceito diferente de `bloqueado_ate`** (bloqueio AUTOMÁTICO por senha errada repetida, `[03-O]`): reaproveitar a mesma coluna faria `liberar_bloqueio_login()` apagar sem querer uma suspensão de moderação, e um login bem-sucedido (que zera `bloqueado_ate`) reverteria a suspensão sozinho.
-* **Uma coluna nova em `usuario_papel` (`01-B`):** `suspenso_ate` - `NULL` = papel valendo normalmente. Preferível a `DELETE` (que já existia) porque preserva quando o papel foi atribuído e volta sozinho no prazo, sem reatribuição manual.
-* **`tem_permissao()` (`[03-B]`) ampliada:** passou a ignorar vínculo `usuario_papel` com `suspenso_ate` no futuro - um papel suspenso não concede mais nenhuma permissão dele enquanto durar. Estritamente aditivo (`AND` novo na condição, nada removido) - só pode restringir acesso que já existia, nunca conceder mais.
-* **Escopo deliberadamente limitado:** `tem_permissao()` só passou a checar suspensão de PAPEL, não suspensão de CONTA (`usuario.suspenso_ate`) - essa é barrada no LOGIN (`3-auth`, `AuthServiceLogin`, mesmo ponto que já checa `bloqueado_ate`), não na RLS. Consequência aceita conscientemente: um *access token* emitido pouco antes de uma suspensão de conta continua válido até expirar (15min, `JWT_ACCESS_EXPIRES_IN`) - mesmo risco residual que o resto do desenho de sessão deste projeto já aceita em outros pontos, não um furo novo.
-* **4 funções novas, todas `SECURITY DEFINER`:** `suspender_usuario(p_id_usuario, p_ate, p_motivo)`/`revogar_suspensao_usuario(p_id_usuario)` exigem `usuario_suspender` (mesma permissão de `suspender_pesquisador`, `[03-P]`); `suspender_papel_usuario(p_id_usuario, p_id_papel, p_ate)`/`revogar_suspensao_papel_usuario(p_id_usuario, p_id_papel)` exigem `papel_gerenciar` (é decisão de RBAC, não de moderação de conta). "Reduzir a pena" não tem função própria - é chamar `suspender_usuario`/`suspender_papel_usuario` de novo com uma data mais próxima, a função já sobrescreve.
-* **Prazos configuráveis, não fixos no código:** `configuracoes.suspensao_usuario_opcoes_dias` (seed: `'1,3,7,30'`) alimenta o seletor de dias no painel - mais um campo livre pra qualquer outro número.
-* **Letra `N`, não `F`/`G`:** na época este bloco escolheu `N` pra não empilhar mais uma colisão em cima da que existia então (`[03-O]`/`[03-P]` ainda se chamavam `[03-F]`/`[03-G]`) - ver Índice Global de Letras (topo deste documento). A colisão já foi corrigida (09-08-2026), mas `N` continua sendo a letra deste bloco.
+* **Suspensão de conta:** `usuario.suspenso_ate`, `motivo_suspensao` e `suspenso_por`, que andam juntas (`CK_USUARIO_SUSPENSAO`). É barrada no **login** e na **renovação** da sessão (`3-auth`), não na RLS.
+  * **Conceito diferente de `bloqueado_ate`** (bloqueio automático por senha errada, [03-O]): na mesma coluna, `liberar_bloqueio_login()` apagaria uma suspensão sem querer, e um login bem-sucedido a reverteria.
+  * **Caso-limite:** um token de acesso emitido pouco antes da suspensão vale até expirar (15 minutos); a renovação já é recusada.
+* **Suspensão de papel:** `usuario_papel.suspenso_ate` (`NULL` = valendo). Melhor que apagar o vínculo: guarda quando o papel foi dado e volta sozinho no prazo. `tem_permissao()` ignora o papel suspenso.
+* **Funções (`SECURITY DEFINER`):**
+  * `suspender_usuario(p_id_usuario, p_ate, p_motivo)` / `revogar_suspensao_usuario(p_id_usuario)`: exigem `usuario_suspender`; ninguém suspende a própria conta (92027) nem o último administrador (91030).
+  * `suspender_papel_usuario(p_id_usuario, p_id_papel, p_ate, p_motivo)` / `revogar_suspensao_papel_usuario(p_id_usuario, p_id_papel)`: exigem `papel_gerenciar` (decisão de RBAC, não de moderação de conta). O motivo é obrigatório (RF-118).
+  * A data final precisa estar no futuro (90023). "Reduzir a pena" é chamar a suspensão de novo com uma data mais próxima: a função sobrescreve.
+* **O sistema nunca fica sem admin:** `fn_eh_ultimo_admin_ativo()` diz se a conta é a única com o papel admin valendo agora; com ela, `suspender_usuario()`, `suspender_papel_usuario()` (no papel admin), `excluir_conta_usuario()` e a trigger `trg_usuario_papel_protege_ultimo_admin` (no `DELETE` de `usuario_papel`) recusam com 91030. **Caso-limite:** "valendo agora" ignora papel suspenso e conta suspensa ou excluída; com dois admins em que um está suspenso, o outro conta como o último.
+* **Suspender a conta encerra as sessões dela** (`sessao.revogado_em`); sem isso, a sessão aberta continuaria renovando sozinha por até 30 dias. A suspensão de um **papel** não encerra sessão: a conta continua entrando, só perde o que aquele papel dava.
+* **Prazos configuráveis:** `configuracoes.suspensao_usuario_opcoes_dias` (`'1,3,7,30'`) alimenta o seletor de dias no painel.
 
 ---
 
 ## 04. ROW LEVEL SECURITY E POLÍTICAS DE ACESSO (`04_rls_policies.sql`)
 
-> **Convenção de performance: dentro de policy, `(SELECT public.tem_permissao('x'))` e `(SELECT public.id_usuario_atual())`, nunca a chamada solta.** Sem o `SELECT`, o Postgres avalia a função **uma vez por linha** em cada consulta com RLS; com ele, o `SELECT` sem dependência da linha vira um *InitPlan* e roda **uma vez por comando** (o truque que o Supabase recomenda para `auth.uid()`). Medido no PGlite com funções que contam chamadas: `SELECT * FROM log_auditoria` com 304 linhas chama cada função 1 vez (sem o truque, 304); somando 8 listagens do admin, `tem_permissao` fica em 6 chamadas (eram 385) e `id_usuario_atual` em 13 (eram 463). A regra é a mesma: comparar quem vê o quê em 42 tabelas com 10 usuários (incluindo anônimo) e 31 escritas com 6 usuários dá resultados idênticos com e sem o `SELECT`. No volume do TCC a diferença não é perceptível a olho; a convenção existe para policy nova nascer certa.
+> **Convenção de performance: dentro de policy, `(SELECT public.tem_permissao('x'))` e `(SELECT public.id_usuario_atual())`, nunca a chamada solta.** Sem o `SELECT`, o Postgres avalia a função **uma vez por linha**; com ele, o `SELECT` sem dependência da linha vira um *InitPlan* e roda **uma vez por comando** (o truque que o Supabase recomenda para `auth.uid()`). Medido no PGlite com funções que contam chamadas: `SELECT * FROM log_auditoria` com 304 linhas chama cada função 1 vez (sem o truque, 304); somando 8 listagens do admin, `tem_permissao` cai de 385 chamadas para 6. Quem vê o quê é idêntico com e sem o `SELECT`. No volume do TCC a diferença não se percebe; a convenção existe para policy nova nascer certa.
 
 ### Visão Geral de Arquitetura
 
-O arquivo `04_rls_policies.sql` estabelece a camada de defesa em nível de linha (*Row Level Security* - RLS) para o banco de dados. Todas as 42 tabelas do schema têm RLS ativada e 41 a têm forçada. A exceção é `log_auditoria`, só ativada de propósito: quem grava nela são funções `SECURITY DEFINER` (donas: `postgres`) e não existe policy de INSERT, então forçar a RLS bloquearia o próprio log.
+O `04_rls_policies.sql` é a defesa em nível de linha (*Row Level Security*, RLS). Todas as tabelas têm RLS ativada e todas, menos uma, a têm **forçada**. A exceção é `log_auditoria`, só ativada de propósito: quem grava nela são funções `SECURITY DEFINER` e não existe policy de `INSERT`, então forçar a RLS bloquearia o próprio log ([04-L]).
 
-#### Princípios Fundamentais de Segurança
-1. **[04-A] Ativação Universal (`ENABLE` + `FORCE ROW LEVEL SECURITY`):**
-   * O uso do `FORCE ROW LEVEL SECURITY` garante que até mesmo o dono das tabelas (*table owner*) fique sujeito às regras de RLS, eliminando brechas em ambientes de execução local ou microsserviços.
-2. **Modelo Non-Bypass (`app_nestjs`):**
-   * A aplicação conecta via papel sem privilégio de `BYPASSRLS`. Toda e qualquer instrução SQL (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) é filtrada dinamicamente pela sessão do usuário (`public.id_usuario_atual()`).
+#### Princípios
+1. **[04-A] `ENABLE` + `FORCE ROW LEVEL SECURITY`:** o `FORCE` faz até o dono da tabela ficar sujeito às regras.
+2. **`app_nestjs` sem `BYPASSRLS`:** a aplicação conecta por um papel sem esse atributo, então toda instrução (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) é filtrada pela sessão do usuário (`public.id_usuario_atual()`).
 
-   > 📌 **O que é `BYPASSRLS`, e por que ele é o ponto central de toda essa arquitetura de segurança.** RLS (*Row Level Security*) é um recurso nativo do Postgres: quando ativado numa tabela, toda instrução SQL passa a ser filtrada por policies (`CREATE POLICY`), automaticamente, não importa quem mandou a instrução. `BYPASSRLS` é um **atributo de papel** (`ROLE`) que faz o Postgres ignorar esse filtro por completo pra quem tem esse atributo - é uma chave mestra que abre qualquer porta, independente do que as policies dizem.
+   > 📌 **O que é `BYPASSRLS`.** RLS é um recurso nativo do Postgres: numa tabela com RLS, toda instrução é filtrada pelas policies (`CREATE POLICY`), não importa quem mandou. `BYPASSRLS` é um **atributo de papel** que faz o Postgres ignorar esse filtro por completo: uma chave mestra.
    >
-   > **`BYPASSRLS` não é a mesma coisa que ser superusuário (`rolsuper`)**, embora todo superusuário também bypasse RLS automaticamente. São dois atributos separados: dá pra um papel comum, sem privilégio nenhum de administrar o servidor inteiro, ganhar `BYPASSRLS` sozinho (`ALTER ROLE x BYPASSRLS`), sem virar superusuário. É exatamente o caso do papel `postgres` que o SQL Editor do Supabase usa - confirmado rodando `SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user;` no próprio SQL Editor (04-09-2026): `rolsuper = false`, `rolbypassrls = true`. O Supabase, sendo um serviço gerenciado, nunca entrega o superusuário de verdade do cluster Postgres (isso fica só com a equipe de infraestrutura deles) - mas entrega ao dono do projeto um papel com privilégio suficiente pra administrar o PRÓPRIO banco por completo, `BYPASSRLS` incluso.
+   > **Não é o mesmo que superusuário** (`rolsuper`), embora todo superusuário também passe por cima da RLS. O papel `postgres` do SQL Editor do Supabase tem `rolsuper = false` e `rolbypassrls = true`: o Supabase não entrega o superusuário do servidor, mas entrega ao dono do projeto um papel que administra o próprio banco.
    >
-   > **Por que `app_nestjs` (a conexão que o backend usa em produção) precisa continuar SEM esse atributo, sempre:** é isso que torna a RLS o ponto de autorização REAL do sistema, não decorativo. Se a conexão do próprio app pudesse ignorar as policies, todo o desenho de "quem pode ler/escrever o quê" documentado neste arquivo inteiro (seção 04) deixaria de valer na prática - o app conseguiria ler/escrever qualquer linha de qualquer tabela, não importa quem estivesse logado. Confirmado direto em `pg_roles`: `app_nestjs` tem `rolbypassrls = false`, `rolsuper = false` - sem exceção, mesmo pra funções `SECURITY DEFINER` (ver `[03-O]`: o que faz uma função bypassar RLS é o DONO dela, não só a cláusula `SECURITY DEFINER` - por isso toda função nova precisa ser criada pelo SQL Editor, nunca pela conexão de `app_nestjs`, senão ela nasce com dono errado e não bypassa nada).
+   > **Por que o `app_nestjs` nunca pode ter esse atributo:** é isso que torna a RLS o ponto de autorização **real** do sistema. Com ele, o app leria e gravaria qualquer linha de qualquer tabela, não importa quem estivesse logado. Também por isso **toda função `SECURITY DEFINER` é criada pelo SQL Editor**, nunca pela conexão do `app_nestjs`: quem faz a função passar por cima da RLS é o **dono** dela; criada pelo app, ela nasceria com o dono errado e não passaria por cima de nada.
    >
-   > **Por que o `07_seed_dados.sql` (e qualquer script/migração colado no SQL Editor) PRECISA rodar com `BYPASSRLS`:** o seed insere dado histórico simulado em massa - campanhas de pesquisadores diferentes, contribuições de doadores diferentes, sessões, denúncias - sem que exista nenhum "usuário logado" real durante a carga. A imensa maioria das 105+ policies do projeto é `TO app_nestjs` (não `TO public`), então um papel comum, sem `BYPASSRLS`, tentando rodar o seed recebe dezenas de erros de `new row violates row-level security policy` - o bloco `DO $$` no início do `01_extensoes_enums_tabelas.sql` (item 40 de `PENDENCIAS e correcoes.md`) detecta exatamente essa situação e aborta com uma mensagem única, em vez de deixar os erros silenciosos se espalharem.
+   > **Por que o seed e qualquer script colado no SQL Editor rodam com `BYPASSRLS`:** o seed grava dados de demonstração em massa (campanhas de pesquisadores diferentes, contribuições, sessões, denúncias) sem nenhum usuário logado. Como quase todas as policies são `TO app_nestjs`, um papel sem `BYPASSRLS` receberia dezenas de erros de RLS; o bloco `DO $$` do começo do `01` detecta isso e para com uma mensagem única ([01-A]).
    >
-   > **Resumindo a regra prática:** qualquer coisa colada no SQL Editor do Supabase roda com `BYPASSRLS` (seguro pra seed/migração/criação de função `SECURITY DEFINER`); qualquer coisa que o NestJS faz em produção, pela conexão `app_nestjs`, nunca bypassa RLS - essa é a fronteira de segurança de verdade que sustenta todo o resto deste documento.
-3. **Isolamento de Tabelas de Infraestrutura/Autenticação:**
-   * Tabelas como `verificacao_email`, `recuperacao_senha` e `sessao` são acessadas antes do estabelecimento da sessão do usuário. Elas possuem RLS restrita especificamente ao papel da aplicação (`TO app_nestjs USING (true)`), deixando a validação de hashes sob responsabilidade do backend NestJS.
+   > **Regra prática:** o que é colado no SQL Editor passa por cima da RLS (seguro para seed, migração e criação de função); o que o Nest faz, pela conexão `app_nestjs`, nunca passa. Essa é a fronteira de segurança que sustenta todo o resto deste documento.
+3. **Tabelas de autenticação** (`verificacao_email`, `recuperacao_senha`, `sessao`): são usadas antes de existir sessão (confirmar e-mail, "esqueci a senha", login, renovação), então não dá para filtrar por `id_usuario_atual()`. A policy é `FOR ALL TO app_nestjs USING (true)`: só garante que nenhum outro papel toque nelas; quem confere a posse do token (comparando o hash) é o Nest.
 
 ---
 
 ### Estrutura por Domínio de Dados
 
-O arquivo é organizado em 8 blocos conceituais que espelham literalmente os títulos e a ordem dos arquivos de criação (`01`) e dados (`02`):
+O arquivo segue os blocos do `01`.
 
 #### [04-B] RBAC
 * **Tabelas:** `papel`, `permissao`, `papel_permissao`.
-* **Regra:** Tabelas de catálogo de controle de acesso possuem leitura pública (`FOR SELECT USING (true)`), permitindo que a função `public.tem_permissao()` resolva as checagens de autorização sem bloqueios recursivos.
+* **Leitura pública** (`FOR SELECT USING (true)`), para `tem_permissao()` resolver as checagens sem bloqueio recursivo. Escrita: **[04-B-1]** `papel_permissao` (a matriz Papel × Permissão) exige `papel_gerenciar`; **[04-B-1b]** em `papel`, só o `UPDATE` de nome e descrição (`pol_papel_update`, [01-B]); `permissao` e a criação de papel novo não têm escrita pela aplicação (mexem no catálogo, decisão maior que conceder uma combinação).
 
 #### [04-C] CONFIG
 * **Tabelas:** `configuracoes`, `area_conhecimento`, `tipo_link`, `motivo_denuncia`, `arquivo`.
-* **Regra:** Leitura pública para catálogos e arquivos básicos. Operações de escrita e alteração de parâmetros de sistema (`id_usuario IS NULL`) exigem permissão explícita (ex: `'configuracao_gerenciar'`).
-
-**Detalhamento por policy:**
-* **Leitura de `configuracoes` e `historico_rejeicao` (26-09-2026):** `pol_config_select` (parâmetro global não público) e `pol_historicorej_select` passaram a aceitar também `relatorio_visualizar`. Antes, ler exigia `configuracao_gerenciar` ou `campanha_rejeitar`, permissões de ALTERAR. Ficam para quando os módulos existirem as outras leituras presas a permissão de alterar: `atualizacao_campanha`/`comentario` ocultos (moderar), `denuncia` (responder), `solicitacao_encerramento` (decidir), `repasse` (aprovar), `link_recompensa`/`arquivo_recompensa` (editar).
-* **[04-C-1] `configuracoes`:** originalmente só existia policy de `SELECT` - nenhuma escrita era possível via RLS (nem para configuração de sistema, nem para preferência de usuário), e a permissão `configuracao_gerenciar` (já seedada) não era usada em lugar nenhum. As policies de `INSERT`/`UPDATE`/`DELETE` seguem o mesmo critério do `SELECT`: linha de sistema (`id_usuario IS NULL`) só quem tem `configuracao_gerenciar` mexe; linha de preferência do próprio usuário (`id_usuario` = dono) ele mesmo mexe. 🗑️➡️✅ **`pol_config_select` ATUALIZADA (05-09-2026, ver `PENDENCIAS e correcoes.md`, seção "GET /configuracoes agora distingue pública de interna"):** era `id_usuario IS NULL OR id_usuario = id_usuario_atual()` - qualquer linha de sistema, pública ou não, visível pra qualquer um. Virou `(id_usuario IS NULL AND (publica = TRUE OR tem_permissao('configuracao_gerenciar'))) OR id_usuario = id_usuario_atual()` - linha de sistema só é visível sem a permissão se `publica = TRUE`; quem tem `configuracao_gerenciar` continua vendo tudo (inclusive interna, pra poder editar pelo painel). Linha pessoal não muda.
-* **[04-C-2] `area_conhecimento`:** as policies de escrita (`INSERT`/`UPDATE`) foram adicionadas para que a gestão de catálogos funcione corretamente junto com o `GRANT` de tabela já concedido em `06_grants.sql`. 🗑️➡️✅ **`pol_area_delete` nova (18-08-2026):** mesma permissão do `UPDATE` (`area_conhecimento_gerenciar`) - `FK_CAMPANHA_AREA_CONHECIMENTO` continua sem `CASCADE`, então a policy libera a operação mas o banco ainda rejeita (`23503`) se a área estiver em uso; `area-conhecimento.service.remove.ts` traduz isso numa mensagem própria.
-* **[04-C-3] `motivo_denuncia`:** as policies de escrita foram adicionadas para completar a correção iniciada no `GRANT` de tabela e garantir que o fluxo de curadoria funcione com o RBAC esperado. 🗑️➡️✅ **`pol_motivo_delete` nova (18-08-2026):** mesmo raciocínio de `pol_area_delete`, gated por `motivo_denuncia_gerenciar`.
-* 🗑️➡️✅ **[04-C-4] `tipo_link` - `pol_tipolink_delete` nova (18-08-2026):** mesmo raciocínio de `pol_area_delete`, gated por `tipolink_gerenciar`.
+* **Leitura pública** dos catálogos e dos arquivos. Escrita exige a permissão do catálogo (`area_conhecimento_gerenciar`, `tipolink_gerenciar`, `motivo_denuncia_gerenciar`, `configuracao_gerenciar`).
+* **[04-C-1] `configuracoes`:** linha do sistema (`id_usuario IS NULL`) só quem tem `configuracao_gerenciar` grava; linha de preferência, o próprio dono. `pol_config_select`: `(id_usuario IS NULL AND (publica = TRUE OR tem_permissao('configuracao_gerenciar') OR tem_permissao('relatorio_visualizar'))) OR id_usuario = id_usuario_atual()`: parâmetro interno só aparece para quem administra ou acompanha o sistema.
+* **[04-C-2] `area_conhecimento`, [04-C-3] `motivo_denuncia` e `tipo_link`:** `INSERT`, `UPDATE` e `DELETE` com a permissão do catálogo. As FKs que apontam para eles não têm `CASCADE`: a policy libera a exclusão, mas o banco recusa (`23503`) se o item estiver em uso, e o Nest responde 409 dizendo onde e quantas vezes ele é usado (`DOCUMENTACAO_BACKEND.md`, seção 5.1).
 
 #### [04-D] USUÁRIO
 * **Tabelas:** `usuario`, `perfil_pesquisador`, `usuario_papel`, `termos_de_uso`, `usuario_termo`, `notificacao`, `verificacao_email`, `recuperacao_senha`, `sessao`, `seguir_pesquisador`.
-* **Regra:** Usuários enxergam apenas os próprios dados sensíveis ou perfis não deletados. A atribuição de papéis (`usuario_papel`) exige a permissão `'papel_atribuir'`.
-
-**Detalhamento por policy:**
-* **[04-D-1] `verificacao_email` / `recuperacao_senha` / `sessao`:** a versão anterior deixava RLS ligada e sem nenhuma policy, presumindo que só um role com `BYPASSRLS` (ex.: `service_role` do Supabase) acessaria estas tabelas. Esse role não existe mais no projeto - o NestJS conecta como `app_nestjs` (role normal, sem bypass), então RLS sem policy bloquearia 100% do acesso e quebraria verificação de e-mail, recuperação de senha e sessão inteiras. Além disso, boa parte desses fluxos acontece antes do usuário estar autenticado (confirmar e-mail, "esqueci minha senha") - não dá para restringir por `id_usuario_atual()`, porque ainda não existe sessão. Quem valida a posse do token (comparando o hash) é o próprio NestJS na aplicação; a policy `FOR ALL TO app_nestjs USING (true)` aqui só garante que nenhum outro role além de `app_nestjs` consegue tocar nessas tabelas.
-* **[04-D-2] `usuario` (INSERT):** faltava a policy de `INSERT` em `usuario`. O fluxo de signup (`08_trigger_signup_usuario.sql`) já prevê o NestJS inserindo direto em `usuario` dentro da própria transação, antes de existir qualquer sessão - não há `id_usuario_atual()` para checar nesse momento, então `WITH CHECK (true)` é a única condição logicamente possível aqui. E-mail duplicado já é barrado pelo `UNIQUE` em `usuario.email` (`01`), e validação de formato/força de senha é responsabilidade do NestJS antes do `INSERT`.
-* **[04-D-3] `perfil_pesquisador` (INSERT):** a policy de `INSERT` permite o fluxo de upgrade de usuário cadastrado para pesquisador. Sem ela, a RLS bloqueia a operação mesmo com o `GRANT` de tabela em `06_grants.sql`.
-* **[04-D-4] `usuario_papel` (DELETE):** a policy de `DELETE` permite que o painel administrativo revogue papéis já atribuídos, sem depender de um bypass de RLS.
-* **[04-D-4b] `usuario_papel` (SELECT):** `id_usuario = public.id_usuario_atual() OR public.tem_permissao('papel_gerenciar') OR public.tem_permissao('relatorio_visualizar')`. **Ler não exige permissão de alterar (26-09-2026):** a leitura administrativa (`relatorio_visualizar`) também vê os papéis de todos; antes só `papel_gerenciar`, que é a permissão de ALTERAR papéis. Cada pessoa vê os próprios vínculos de papel (é o que o login e "Minha Conta" precisam); quem tem `papel_gerenciar` (o admin) vê os de todos, para a coluna "papel" da listagem de Usuários. Sem a permissão, `GET /usuario-papel` devolve só os vínculos do próprio usuário. Antes de 25-09-2026 a policy era `USING (true)`, provisória, e qualquer pesquisadora lia o papel de todo mundo; o teste com Playwright apontou e a regra voltou ao desenho original. A suíte `11-permissao-usuarios-e-dashboard.mjs` cobre admin, pesquisador, moderador e anônimo.
-* 🗑️➡️✅ **[04-D-6] `perfil_pesquisador` (SELECT) - CORRIGIDO (27-07-2026):** `pol_perfil_select` era `USING (TRUE)`, sem checar `usuario.deletado` - o perfil acadêmico de uma conta excluída continuava 100% público. Passou a usar `public.usuario_visivel(id_usuario)` (`03`, ver `[03-D]`). `pol_campanha_select` fica de fora de propósito por enquanto - ver `PENDENCIAS e correcoes.md`, item 17.
-* **[04-D-5] `notificacao`:** 🗑️➡️✅ **CORRIGIDO (27-07-2026) - a primeira versão das policies de `INSERT`/`UPDATE` exigia `id_usuario = id_usuario_atual()`, inclusive pra criar.** Isso bloqueava toda notificação real do sistema, porque quem cria uma notificação nunca é o próprio destinatário (admin aprova campanha → avisa o pesquisador; sistema avisa quem doou) - e o *worker* de envio de e-mail, que roda sem usuário logado, também não conseguia ler a fila de pendentes. Ficou assim: `pol_notificacao_insert` é `WITH CHECK (true)`, `pol_notificacao_update` é `USING (true) WITH CHECK (true)` - mesmo padrão já usado em `verificacao_email`/`recuperacao_senha`/`sessao` (escrita liberada pro `app_nestjs`, controle de quem pode gravar o quê fica na aplicação). O `SELECT` continua restrito: dono da notificação, **ou** `usuario_visualizar_sensivel`, **ou** a permissão nova `notificacao_processar` (ver nota abaixo).
-* 🗑️➡️✅ **`pol_notificacao_select` ganhou uma terceira condição - permissão `notificacao_processar` (27-07-2026):** antes, o *worker* de e-mail (que precisa ler a fila de notificações pendentes pra enviar) só tinha `usuario_visualizar_sensivel` como caminho de acesso - uma permissão cujo nome não tem nenhuma relação semântica com "processar fila de notificação", criando um acoplamento estranho e confuso de manter. Permissão nova `notificacao_processar` (seedada em `07`, atribuída ao papel `admin`) virou mais uma opção no `OR` da policy, ao lado das duas condições que já existiam - nada que já funcionava foi removido.
+* **[04-D-1] `verificacao_email`, `recuperacao_senha`, `sessao`:** `FOR ALL TO app_nestjs USING (true)` (ver o princípio 3, acima). ⚠️ Em `sessao`, quem decide de quem é a sessão é o Nest (confere o segredo do token e o dono); uma regra por dono, com exceção para login e renovação, fica para o deploy, junto do cookie e do CORS.
+* **[04-D-2] `usuario` (INSERT) com `WITH CHECK (true)`:** o cadastro grava a conta antes de existir sessão. E-mail duplicado é barrado pelo `UNIQUE`; formato e força de senha, pelo Nest.
+* **`usuario` (SELECT):** `pol_usuario_select` libera `deletado = FALSE` para qualquer sessão (o login precisa achar a conta antes de existir alguém logado); quem decide a listagem de usuários é a permissão no Nest (`usuario_visualizar_sensivel` ou `usuario_visualizar_atendimento`).
+* **[04-D-3] `perfil_pesquisador` (INSERT):** o upgrade da própria conta. O upgrade em nome de outra pessoa é por função ([03-P-2]).
+* **[04-D-4] `usuario_papel` (DELETE):** o painel revoga um papel atribuído.
+* **[04-D-4b] `usuario_papel` (SELECT):** `id_usuario = id_usuario_atual() OR tem_permissao('papel_gerenciar') OR tem_permissao('relatorio_visualizar')`. Cada pessoa vê os próprios vínculos (o login e a Minha Conta precisam); a administração vê os de todos (coluna "papel" da lista de Usuários). Ler não exige a permissão de alterar. Suíte 11 do PGlite (admin, pesquisador, moderador e anônimo).
+* **[04-D-5] `notificacao`:** `INSERT` e `UPDATE` abertos ao `app_nestjs` (quem cria uma notificação quase nunca é o destinatário, e o envio roda sem usuário logado). O `SELECT` é restrito: o dono da notificação, `usuario_visualizar_sensivel` ou `notificacao_processar` (a permissão de quem lê a fila de envio).
+* **[04-D-6] `perfil_pesquisador` (SELECT):** `usuario_visivel(id_usuario)` ([03-D]): público, mas some com a conta excluída.
 
 #### [04-E] CAMPANHA
 * **Tabelas:** `campanha`, `atualizacao_campanha`, `comentario`, `denuncia`, `recompensa`, `seguir_campanha`, `solicitacao_encerramento`, `historico_rejeicao`, `repasse`.
-* **Regra:** Campanhas visíveis publicamente apenas em status liberados (`ativo`, `sucesso`, `nao_atingido`, `encerrado`). Moderações e edições dependem de ser dono do recurso ou possuir permissões específicas (`'campanha_editar'`, `'campanha_aprovar'`, `'campanha_rejeitar'`, `'comentario_moderar'`).
-
-> ⚠️ **Notas de Arquitetura & Débitos Técnicos ([04-E]):**
-> * **Tabela `repasse`:** sem policy de INSERT nem de UPDATE (removidas em 18-10-2026, ver abaixo). Toda escrita passa pelas funções `SECURITY DEFINER` de `05`.
-
-> 🗑️ **Permissão `campanha_encerrar` removida (era órfã).**
-> - **Como era:** a permissão `campanha_encerrar` existia na seed (`07_seed_dados.sql`, era atribuída ao papel `admin`), mas nenhuma policy de RLS neste arquivo (`04`) a usava para liberar nada. Ela não fazia absolutamente nada na prática - não existia nenhum caminho de código que checasse essa permissão.
-> - **Por que existia:** o encerramento de campanha antes do prazo já é resolvido por um fluxo próprio e mais completo - `solicitacao_encerramento` (pesquisador solicita, admin decide, com justificativa registrada em `historico_rejeicao`/`solicitacao_encerramento`, permissão `solicitacao_encerramento_decidir`). `campanha_encerrar` parece ter sido pensada como um atalho: um `UPDATE campanha SET status = 'encerrado'` direto, sem passar pela solicitação formal, mas esse atalho nunca chegou a ser implementado em nenhuma policy.
-> - **Por que foi removida, e não implementada:** plataformas de crowdfunding de referência (Catarse, Experiment) não oferecem um "encerramento forçado sem justificativa" para administradores - encerrar uma campanha antes do prazo sempre passa por um motivo registrado, porque envolve dinheiro de apoiadores e precisa ser auditável. Criar o atalho enfraqueceria exatamente o rastro de auditoria que o fluxo `solicitacao_encerramento` já garante. Como a permissão nunca foi usada em nenhuma policy, removê-la não muda nenhum comportamento do sistema - só limpa uma permissão morta que não levava a lugar nenhum.
-> - **O que muda daqui pra frente:** o único caminho para encerrar uma campanha antes do prazo natural é o fluxo formal via `solicitacao_encerramento` + `solicitacao_encerramento_decidir`. Não existe mais (e nunca existiu de fato) um encerramento direto por admin.
-> - **Onde foi removida:** `07_seed_dados.sql`, bloco `[07-B-2]` (linha da `INSERT INTO permissao`) e bloco `[07-B-3]` (linha `('admin', 'campanha_encerrar')` da `INSERT INTO papel_permissao`). Ver também `[07-B-2]` mais abaixo neste documento.
-
-**Detalhamento por policy:**
-* **[04-E-1] `campanha` (UPDATE):** `campanha_aprovar` e `campanha_rejeitar` estavam seedadas mas não eram usadas em nenhuma policy - só `campanha_editar` liberava `UPDATE` em `campanha`, então um papel com só "aprovar" ou só "rejeitar" (sem o "editar" genérico) não conseguia de fato aprovar/rejeitar nada. A RLS de linha não distingue qual coluna está sendo alterada (isso exigiria um trigger comparando `OLD`/`NEW`), então na prática qualquer uma das três permissões libera o `UPDATE` - a aplicação decide, por regra de negócio, quais campos cada fluxo (aprovar/rejeitar/editar) de fato manda alterar.
-* **[04-E-2] `atualizacao_campanha` (UPDATE):** o dono da campanha continua podendo editar o conteúdo da própria atualização; ocultar (moderar) uma atualização de terceiro passa a exigir a permissão específica `atualizacao_moderar`, em vez do antigo `eh_admin()` genérico (`eh_admin()` foi removido de vez de todas as policies - ver `03_funcoes_seguranca.sql`).
-* **[04-E-3] `comentario` (SELECT):** comentários não endossados deixaram de ser públicos - só o autor, o dono da campanha ou quem tem `comentario_moderar` podem ver o que não está endossado; comentários endossados continuam públicos. Comentário inativo (removido por moderação) só continua visível para o próprio autor, o dono da campanha ou moderação.
-
-📌 **Comentário endossado some junto com a campanha que o público não enxerga (12-10-2026, RF-098).**
-- **Decisão:** o primeiro ramo de `pol_comentario_select` passou a exigir `EXISTS (SELECT 1 FROM campanha WHERE id_campanha = comentario.id_campanha)`. A regra de leitura de `campanha` vale dentro do `EXISTS`, então o endossado só aparece para quem vê a campanha.
-- **Motivo:** a campanha encerrada pela moderação some da página pública, mas os comentários endossados dela ainda saíam pela API. Conferido no banco do deploy (suíte PGlite 43): antes, quem não estava logado via o comentário endossado da campanha 12; agora vê 0, e o dono e a moderação continuam vendo.
-- **Caso-limite aceito:** a regra não precisa saber o que é "oculta": vale qualquer status que a leitura de campanha esconda do público (hoje, rascunho, aguardando, rejeitada e encerrada pela moderação). Mudou a leitura de campanha, muda junto. Grupo AY do ATUALIZAR (mexe em regra de acesso: parar o Nest antes de colar).
-* **[04-E-4] `comentario` (UPDATE) - histórico do bug de endosso:** o soft delete de comentário permite que o autor desative o próprio comentário, e que moderação/admin desativem qualquer um. Só que "endossar comentário" (setar `endossado`/`ordem_endosso`) nunca teve policy de `UPDATE` que cobrisse essa ação - não existia nenhuma policy de `UPDATE` em `comentario` antes disso, e a primeira versão do `UPDATE` (criada junto com o soft delete) só liberava o próprio autor ou moderação, nunca o dono da campanha. Como só quem endossa é o dono da campanha, sobre um comentário de outra pessoa, sem essa condição o endosso continuava impossível na prática. A restrição de que o dono da campanha só deve mexer em `endossado`/`ordem_endosso` (e não no conteúdo do comentário) fica a cargo do endpoint específico de endosso no NestJS, não da RLS.
-
-> 🗑️➡️✅ **[04-E-4] Correção adicional - autor conseguia reverter a própria moderação (Achado 4).**
-> - **Como era:** `pol_comentario_update` libera `UPDATE` para o próprio autor (`id_pesquisador = id_usuario_atual()`) na linha inteira, sem restringir qual coluna pode mudar - isso é uma limitação da RLS em si (RLS de linha nunca sabe distinguir *qual coluna* está sendo alterada, só *quem* está alterando; o mesmo já acontecia em `[04-E-1]` para `campanha_aprovar`/`campanha_rejeitar`). Na prática, isso significava que um comentário ocultado por moderação (`ativo = FALSE`) podia ser reativado pelo próprio autor com um simples `UPDATE comentario SET ativo = TRUE WHERE id_comentario = ...` - a moderação virava decorativa, porque quem foi moderado conseguia desfazer a moderação sozinho.
-> - **Por que a RLS sozinha não resolve:** dar à RLS o poder de saber "essa coluna específica só pode mudar por certas mãos" exigiria reescrever a policy pra checar coluna por coluna dentro do `USING`/`WITH CHECK`, o que o Postgres não faz de forma nativa - o jeito correto é uma trigger, que compara `OLD` com `NEW` antes de aceitar o `UPDATE`.
-> - **Como ficou:** nova função `fn_bloqueia_reversao_moderacao_comentario()` + trigger `trg_comentario_bloqueia_reversao_moderacao` (`BEFORE UPDATE`, `05_regras_negocio.sql`, bloco `[05-K-3]` - ver detalhamento na seção 05 deste documento). A regra é cirúrgica: só bloqueia a transição específica `ativo: FALSE → TRUE` quando quem está alterando não tem a permissão `comentario_moderar`. Todo o resto continua exatamente igual a antes:
->   - O autor continua podendo editar o texto do próprio comentário livremente.
->   - O autor continua podendo ocultar (`ativo: TRUE → FALSE`) o próprio comentário - isso nunca foi o problema, e continua liberado.
->   - Quem tem `comentario_moderar` (moderador/admin) continua podendo reverter (`FALSE → TRUE`) normalmente - a trigger só barra quem **não** tem essa permissão.
-> - **Por que essa opção e não um fluxo de "recurso":** plataformas de referência (Catarse, Experiment) não dão ao autor um botão de "desfazer moderação" - qualquer contestação acontece fora do sistema (suporte/e-mail), não como feature codificada. Manter o escopo pequeno aqui é a escolha certa para o estágio atual do projeto; um fluxo de recurso formal (autor pede revisão, moderador decide) pode virar uma feature nova no futuro, se um dia for necessário - mas isso é adição de funcionalidade, não correção de bug.
-* **[04-E-5] `seguir_campanha` (DELETE):** faltava a policy de `DELETE` - sem ela, "deixar de seguir campanha" (RF-009) ficava bloqueado pela RLS, mesmo já existindo o equivalente para `seguir_pesquisador` (`pol_seg_pesq_delete`).
-* **[04-E-6] `historico_rejeicao`, INSERT (28-09-2026):**
-  - **Em palavras simples:** antes, qualquer pessoa logada conseguia gravar uma "rejeição" falsa na campanha de outra, gastando os reenvios dela. Agora só quem pode rejeitar grava, e só assinando com o próprio nome.
-  - **Decisão:** `pol_historicorej_insert` passou de `WITH CHECK (true)` para `tem_permissao('campanha_rejeitar') AND id_admin = id_usuario_atual()`.
-  - **Motivo:** o número de rejeições de uma campanha decide quantos reenvios ainda restam, então uma rejeição forjada prejudicava o pesquisador. Achado de uma revisão externa.
-  - **Caso-limite aceito:** a cascata de `suspender_pesquisador()` (03) grava por função `SECURITY DEFINER` e não passa por esta policy; a suíte de teste do banco de histórico de rejeição confere que ela continua gravando.
-* **[04-E-6] `historico_rejeicao` (ATUALIZADO 21-09-2026, ver [05-K-2-B]):** `pol_historicorej_select` passou a reconhecer o dono por `id_usuario_dono` (gravado na linha) e a policy de UPDATE foi removida, o histórico é imutável. Texto histórico abaixo: as policies de escrita foram adicionadas para permitir o registro de rejeições de campanha pelo fluxo de moderação. 🗑️➡️✅ **`pol_historicorej_select` - CORRIGIDO (27-07-2026):** só liberava quem tem `campanha_rejeitar`, diferente das duas tabelas irmãs (`solicitacao_encerramento`, `repasse`), que corretamente liberam também o dono da campanha via `EXISTS (... id_usuario = id_usuario_atual())`. Sem isso, o dono de uma campanha rejeitada não conseguia ver o motivo pela própria plataforma (RF-070 prevê editar e reenviar) - dependia só do e-mail (RF-071). Acrescentado o mesmo `OR EXISTS (...)` que as tabelas irmãs já usavam.
-* **[04-E-7] `repasse`:** as policies de escrita foram adicionadas porque esse fluxo é gerado pelo backend a partir da consolidação financeira da campanha - sem elas, a RLS bloqueia a criação e atualização do registro mesmo com o `GRANT` de tabela correto (ver nota de débito técnico acima).
-  * 🗑️➡️✅ **Escrita direta fechada (18-10-2026):** `pol_repasse_insert`, `pol_repasse_update` e o `GRANT INSERT` do `app_nestjs` saíram. O backend nunca gravou direto em `repasse`: toda escrita é das funções `SECURITY DEFINER` de `05` (`criar_repasse_campanha`, `atualizar_status_repasse`, etc.), que não dependem de policy nem de `GRANT` do `app_nestjs`.
-* 🗑️➡️✅ **[04-E-8] `campanha` / `atualizacao_campanha` (INSERT) - pesquisador suspenso passa a ser barrado - CORRIGIDO (27-07-2026):** `pol_comentario_insert` já checava `status_pesquisador = 'ativo'` antes de liberar `INSERT`, mas `pol_campanha_insert` e `pol_atualizacao_insert` não tinham essa mesma checagem - um pesquisador suspenso ainda conseguia criar campanha nova ou publicar atualização. As duas policies passaram a exigir `EXISTS (SELECT 1 FROM perfil_pesquisador WHERE id_usuario = public.id_usuario_atual() AND status_pesquisador = 'ativo')`, replicando o padrão que já existia só em `comentario`. Como o seed roda como superusuário (*bypassa* RLS) e todos os 7 pesquisadores seedados já são `'ativo'`, nada mudou na carga do `07`.
+* **Campanha visível ao público só nos status publicados** (`ativo`, `sucesso`, `nao_atingido`, `encerrado`); o dono vê as próprias em qualquer status, e quem tem `relatorio_visualizar` vê todas.
+* **[04-E-1] `campanha` (UPDATE):** o dono, `campanha_editar`, `campanha_aprovar` ou `campanha_rejeitar`. A RLS não distingue colunas nem transições; quem decide qual transição de status cada permissão abre é a trigger `trg_campanha_valida_transicao` ([05-K-2-C], 92001), e quais campos ficam travados, a de congelamento ([05-K-2-D]).
+* **[04-E-8] `campanha` e `atualizacao_campanha` (INSERT):** exigem pesquisador **ativo** (`EXISTS (... perfil_pesquisador ... status_pesquisador = 'ativo')`), a mesma regra do comentário: pesquisador suspenso não cria campanha nem publica atualização.
+* **Encerrar uma campanha antes do prazo** tem três caminhos, todos com motivo registrado e nenhuma permissão de "encerrar direto": o pedido do dono decidido pelo admin (`solicitacao_encerramento_decidir`, [05-K-2-H]), o "Cancelar o projeto" do dono quando não há dinheiro em jogo, e o encerramento por moderação a partir de uma denúncia ([05-K-2-G]). **Por quê:** encerrar mexe com dinheiro de quem apoiou e precisa ser auditável, como no Catarse e no Experiment.
+* **[04-E-2] `atualizacao_campanha` (UPDATE):** o dono edita a própria atualização; ocultar a de outra pessoa exige `atualizacao_moderar`.
+* **[04-E-3] `comentario` (SELECT):** o comentário **endossado** é público, desde que a campanha seja visível para quem lê (`EXISTS (SELECT 1 FROM campanha WHERE id_campanha = comentario.id_campanha)`, avaliado com a regra de leitura de `campanha`); o não endossado e o ocultado só para o autor, o dono da campanha e a moderação (RF-098).
+  * **Por que o `EXISTS`:** sem ele, os comentários endossados de uma campanha encerrada pela moderação continuariam saindo pela API, embora a campanha suma da página pública. **Caso-limite:** vale qualquer status que a leitura de campanha esconda; mudou a leitura de campanha, muda junto. Suíte 43 do PGlite.
+* **[04-E-4] `comentario` (UPDATE):** liberado ao autor, ao dono da campanha e a quem tem `comentario_moderar`. Como a RLS não distingue colunas, três triggers ([05-K-3]) dizem quem muda o quê: só o autor edita o texto (92007); só o dono da campanha ou a moderação mexe no endosso (92008); e só quem tem `comentario_moderar` reverte um comentário ocultado (`ativo: FALSE → TRUE`, 92005). O autor continua podendo ocultar o próprio comentário. Contestar uma moderação acontece fora do sistema (suporte), como no Catarse e no Experiment.
+* **[04-E-5] `seguir_campanha` (DELETE):** deixar de seguir.
+* **[04-E-6] `historico_rejeicao`:**
+  * **INSERT:** `tem_permissao('campanha_rejeitar') AND id_admin = id_usuario_atual()`: só quem pode rejeitar grava, assinando com o próprio nome. **Por quê:** o número de rejeições decide quantos reenvios restam; uma rejeição forjada prejudicaria o pesquisador. **Caso-limite:** a cascata de `suspender_pesquisador()` grava por função `SECURITY DEFINER`, sem passar pela policy.
+  * **SELECT:** quem tem `campanha_rejeitar`, `relatorio_visualizar` ou o dono (`id_usuario_dono`, gravado na linha), para o pesquisador ver o motivo pela própria plataforma (RF-070).
+  * **Imutável:** sem policy de `UPDATE` ([05-K-2-B]).
+* **[04-E-7] `repasse`:** sem policy de `INSERT` nem de `UPDATE`. Toda escrita é das funções `SECURITY DEFINER` de `05` (`criar_repasse_campanha`, `atualizar_status_repasse` etc.), que não dependem de policy nem de `GRANT`.
 
 #### [04-F] LINK
 * **Tabelas:** `link_academico`, `link_atualizacao`, `link_recompensa`.
-* **Regra:** Links de perfil e campanhas podem ser criados, editados ou removidos pelo próprio autor/pesquisador ou por usuários com papéis moderadores.
-
-**Detalhamento por policy:**
-* 🗑️➡️✅ **[04-F-2] `link_academico` (SELECT) - CORRIGIDO (27-07-2026):** mesmo problema e mesma correção do `[04-D-6]` - `pol_link_select` era `USING (TRUE)`, sem checar `usuario.deletado`. Passou a usar `public.usuario_visivel(id_usuario)` (`03`, ver `[03-D]`).
-* **[04-F-1] `link_recompensa` (UPDATE) - assimetria proposital:** edição e remoção de link de recompensa são restritas ao dono da campanha ou a quem tem `campanha_editar` - de propósito sem o comprador aqui, diferente do `SELECT` (onde o comprador pode ler). O link é fornecido pelo pesquisador para entrega da recompensa, então só quem fornece pode alterá-lo ou removê-lo; o comprador só pode ler.
+* **[04-F-2] `link_academico` (SELECT):** `usuario_visivel(id_usuario)` ([03-D]). Escrita: o próprio pesquisador.
+* **[04-F-1] `link_recompensa`:** quem **ganhou** a recompensa lê o link; editar e remover é só do dono da campanha ou de `campanha_editar`, porque o link é fornecido por quem oferece a recompensa.
 
 #### [04-G] ARQUIVO
 * **Tabelas:** `arquivo_atualizacao`, `arquivo_recompensa`.
-* **Regra:** O vínculo de arquivos de mídia a atualizações e recompensas é restrito aos proprietários da campanha vinculada ou administradores.
-
-**Detalhamento por policy:**
-* **[04-G-1] `arquivo_recompensa` (UPDATE):** a policy de `UPDATE` permite trocar a imagem principal da recompensa quando a campanha for editada.
+* **Vínculo de mídia** restrito ao dono da campanha ou à administração. **[04-G-1] `arquivo_recompensa` (UPDATE):** trocar a imagem principal da recompensa. A posse do arquivo é conferida por trigger ([05-G]).
 
 #### [04-H] CONTRIBUIÇÃO
 * **Tabelas:** `contribuicao`, `auditoria_financeira`, `contribuicao_recompensa`, `aceite_termo_contribuicao`.
-* **Regra:** Suporte a doações anônimas via validação do `app.token_sessao_atual`. Usuários autenticados visualizam apenas o seu próprio histórico financeiro ou via permissão `'contribuicao_visualizar_sensivel'`.
-
-> ⚠️ **Nota de Arquitetura & Débito Técnico ([04-H]):**
-> * **Tabela `auditoria_financeira`:** As políticas `pol_auditoria_insert` e `pol_auditoria_update` estão abertas para o papel `app_nestjs` (`USING (true) WITH CHECK (true)`), deixando a integridade da escrita sob responsabilidade do serviço de backend.
-
-**Detalhamento por policy:**
-* **[04-H-0] `contribuicao`, `pol_contribuicao_update` removida (24-10-2026).**
-  * **Decisão:** a policy de `UPDATE` de `contribuicao` (`USING (true)`) saiu, como as de escrita de `repasse` e `auditoria_financeira` em 18-10-2026.
-  * **Motivo:** não tinha efeito: o `app_nestjs` não tem `UPDATE` na tabela (06, [06-H]) e toda mudança passa por `atualizar_status_contribuicao()` e pelas outras funções `SECURITY DEFINER` de `05`, que não dependem de policy. Uma policy aberta "mantida só por documentação" convidava a voltar o `GRANT` e reabrir a fraude de 28-07-2026 (confirmar a própria contribuição por `UPDATE` direto).
-  * **Caso-limite aceito:** nenhum. Se um dia o Nest precisar alterar uma coluna de `contribuicao` direto, vem um `GRANT` por coluna e uma policy com regra de verdade, não `USING (true)`.
-* **[04-H-1] `auditoria_financeira`:** as policies de escrita foram adicionadas para permitir o registro de eventos financeiros e auditoria do fluxo de contribuição (ver nota de débito técnico acima).
-  * 🗑️➡️✅ **Escrita direta fechada (18-10-2026):** `pol_auditoria_insert` e o `GRANT INSERT` do `app_nestjs` saíram. Toda linha de auditoria é gravada pelas funções `SECURITY DEFINER` de `05`; o backend só lê.
-* 🗑️➡️✅ **[04-H-2] `aceite_termo_contribuicao` (SELECT) - CORRIGIDO (28-07-2026):** a policy de `INSERT` já aceitava `c.id_usuario IS NULL` (doador anônimo registrando o aceite dos termos), mas a de `SELECT` só liberava `c.id_usuario = id_usuario_atual()` - um doador anônimo conseguia criar o próprio registro de aceite e nunca mais conseguia relê-lo, mesmo já enxergando a própria contribuição via `pol_contribuicao_anon_select`. Corrigido replicando o mesmo ramo de `token_sessao` que essa policy irmã já usa.
+* **Leitura:** quem contribuiu vê as próprias (com conta, por `id_usuario`; sem conta, pelo `token_sessao` da contribuição, lido de `app.token_sessao_atual`); `contribuicao_visualizar_sensivel` vê todas; o dono da campanha vê o resumo pela função `resumo_contribuicoes_campanha` (92038).
+* **[04-H-0] `contribuicao` sem policy de `UPDATE`:** o `app_nestjs` não tem `UPDATE` na tabela ([06-H]) e toda mudança passa por `atualizar_status_contribuicao()` e pelas outras funções `SECURITY DEFINER` de `05`. **Por quê:** uma policy aberta "só como documentação" convidaria a devolver o `GRANT` e reabrir a fraude de confirmar a própria contribuição por `UPDATE` direto. **Caso-limite:** se um dia o Nest precisar alterar uma coluna de `contribuicao` direto, vem um `GRANT` por coluna e uma policy com regra de verdade.
+* **[04-H-1] `auditoria_financeira`:** só leitura (`pol_auditoria_select`): quem contribuiu vê as linhas da própria contribuição, e `auditoria_financeira_visualizar` vê todas. Sem policy nem `GRANT` de escrita: toda linha é gravada pelas funções `SECURITY DEFINER` de `05`.
+* **[04-H-2] `aceite_termo_contribuicao` (SELECT):** quem contribuiu sem conta relê o próprio aceite pelo mesmo `token_sessao` com que o gravou.
 
 #### [04-I] SCORE
 * **Tabelas:** `score_config`, `score_rotulo`, `score_pesquisador`.
-* **Regra (30-07-2026):** as três tabelas são de leitura pública - `score_pesquisador` inclusive, exceto de perfis com conta deletada (`usuario_visivel()`). Alterações em matrizes, rótulos e no score calculado de cada pesquisador continuam restritas à permissão `'score_editar'`.
+* **Leitura pública**, com `score_pesquisador` passando por `usuario_visivel()` (some com a conta excluída). Escrita de pesos e faixas exige `score_editar` (só o admin; o revisor só lê).
+* **[04-I-1] e [04-I-2] `score_config`, `score_rotulo` (INSERT):** criar dimensões e rótulos pelo painel, com `score_editar`.
+* **[04-I-3] `score_pesquisador` (SELECT) é público de propósito.** A pontuação pública é a base de uma consulta pública de reputação de pesquisadores: sinal de confiança para quem apoia e incentivo para o pesquisador manter a pontuação em dia.
+  * **Por quê, e o cuidado com a LGPD:** é um juízo automatizado sobre pessoa identificada. O pesquisador pode contestar a pontuação que vem de uma denúncia ([05-K-2-J]), e o Termo do Pesquisador diz que ele pode pedir a revisão de uma pontuação pelo suporte (LGPD, art. 20).
+  * `perfil_pesquisador.score_atual`/`score_atualizado_em` estão no `GRANT SELECT` (a página pública de perfil não precisa de `JOIN`), já que a tabela de origem é pública.
 
-**Detalhamento por policy:**
-* **[04-I-1] `score_config` (INSERT):** a policy de `INSERT` permite que o painel administrativo crie novas dimensões de score sem depender de uma regra de bypass da RLS.
-* **[04-I-2] `score_rotulo` (INSERT):** a policy de `INSERT` permite a criação de novos rótulos de score pelo fluxo administrativo, com a permissão certa.
-* 🔓 **[04-I-3] `score_pesquisador` (SELECT) - PÚBLICO DE PROPÓSITO (30-07-2026), revertendo a correção de 28-07-2026:** em 28-07-2026 (item 12/31 da Lista C) o score tinha sido fechado ao público - `pol_score_select` passou a exigir `id_usuario = id_usuario_atual() OR tem_permissao('score_visualizar')` - porque expor publicamente um juízo automatizado sobre pessoa identificada, sem previsão de contestação, é um risco de LGPD (Art. 9). Essa correção foi **revertida por decisão de produto**: o score público é a base de um segundo aplicativo do projeto, apelidado de "Serasa do Pesquisador" - consulta pública de reputação de pesquisadores cadastrados, pensada para funcionar tanto como sinal de confiança pro doador quanto como pressão social pro pesquisador manter a pontuação em dia. `pol_score_select` agora usa `public.usuario_visivel(id_usuario)` (a mesma função de `[03-D]`, reaproveitada em vez de reintroduzir um `USING (TRUE)` cru) - público pra qualquer sessão, mas some se a conta do pesquisador estiver deletada. **O risco de LGPD apontado em 28-07-2026 não foi mitigado, só conscientemente aceito** - não há hoje nenhum mecanismo de contestação/explicação do score pro pesquisador nem base legal documentada para o tratamento automatizado de dados exposto publicamente; fica registrado como pendência em aberto em `PENDENCIAS e correcoes.md`. A porta dos fundos de `perfil_pesquisador.score_atual`/`score_atualizado_em` (fechada em 28-07 via `[06-D-2]`) deixou de fazer sentido como restrição - as 2 colunas voltaram ao `GRANT SELECT` por conveniência (evita join pra montar a página pública de perfil), já que a tabela-fonte (`score_pesquisador`) é pública de qualquer forma agora.
+#### [04-L] LOG DE AUDITORIA
+* **`log_auditoria`:** só tem policy de `SELECT` (`pol_log_auditoria_select`): quem tem `log_visualizar` vê tudo; sem ela, cada pessoa vê só as linhas de que é autora. Sem policy de escrita: o `app_nestjs` só tem `GRANT SELECT` ([06-L]), e quem grava é a trigger `fn_log_auditoria()` ([05-L]).
 
 ---
 
@@ -584,546 +576,357 @@ O arquivo é organizado em 8 blocos conceituais que espelham literalmente os tí
 
 ### Visão Geral
 
-Este é o arquivo mais denso do banco (dezenas de funções e de triggers; a contagem exata mora em "Como conferir este inventário", no fim), organizados em 7 blocos que usam duas letras do índice global - `I` (SCORE, blocos `[05-I-1]` a `[05-I-4]`) e `K` (Regras de Negócio Transversais, blocos `[05-K-1]` a `[05-K-3]`), ver "Índice Global de Letras" no topo deste documento. Ele concentra toda regra que um `CHECK` simples não alcança - porque depende de consultar outra tabela (ex.: será que essa campanha está ativa?) ou de recalcular algo automaticamente quando um dado relacionado muda.
+O arquivo mais denso do banco (a contagem exata de funções e triggers está em "Como conferir este inventário"). Concentra toda regra que um `CHECK` simples não alcança, porque depende de consultar outra tabela (ex.: esta campanha está ativa?) ou de recalcular algo sozinho quando um dado relacionado muda. Usa as letras `I` (score, [05-I-1] a [05-I-4]), `K` (regras transversais, [05-K-1] a [05-K-3]), `G` (arquivo), `Q` (notificação) e `L` (log).
 
-> 📌 **Por que o motor de score existe:** antes deste arquivo, `perfil_pesquisador.score_atual` e `score_pesquisador.pontos_obtidos` eram só valores fixos digitados no seed - nada calculava o score de verdade a partir de campanhas, denúncias, links acadêmicos ou do perfil. A tela de detalhes de pontuação no front lia campos que nem existiam no tipo real de dimensões de score, e a conta virava `NaN`. A solução foi mover o cálculo inteiro para dentro do banco, com o resultado guardado em cache (`perfil_pesquisador.score_atual` e `score_pesquisador`) e atualizado sozinho via trigger sempre que um dado relevante muda - funciona para qualquer registro novo, sem que o backend precise lembrar de chamar nada. Todos os pesos vêm de `score_config.peso` (nenhum número fixo no código): editar o peso no Painel Admin já recalcula o score de todo mundo.
+> 📌 **O motor de score mora no banco.** A pontuação de cada pesquisador é calculada a partir dos dados reais (campanhas, denúncias, links, perfil) e guardada em cache (`perfil_pesquisador.score_atual` e `score_pesquisador`), atualizada por trigger sempre que um dado relevante muda: vale para qualquer registro novo, sem o backend precisar lembrar de chamar nada. Todos os pesos vêm de `score_config.peso`; editar um peso no painel recalcula o score de todo mundo.
+
+**Regras gerais deste arquivo:**
+* **Limite técnico na constraint (`01`), regra de negócio na trigger, lendo `configuracoes`:** mudar uma política (prazo, meta mínima, limites de texto, de links, de campanhas simultâneas, de endossos, de denúncias) é um `UPDATE` numa linha, não uma migração.
+* **`SECURITY DEFINER` desliga a RLS, não as triggers:** uma função privilegiada continua passando por todas as validações por baixo.
+* **Conferência agregada enxerga o banco inteiro:** funções que contam ou somam (completude do orçamento e do cronograma, total arrecadado, seguidores) são `SECURITY DEFINER`. Sem isso, o resultado dependeria do que a sessão de quem chama consegue ver linha a linha, e uma permissão sem `relatorio_visualizar` veria 0 itens e não aprovaria nada, sem erro nenhum.
+* **Idempotência:** toda trigger tem `DROP TRIGGER IF EXISTS` logo antes do `CREATE TRIGGER`.
+* **Ordem das triggers:** quando várias rodam no mesmo momento, o Postgres as executa em ordem alfabética do nome. Onde a ordem importa, o nome foi escolhido para isso (ex.: o endosso calcula a ordem antes de a trigger de limite conferir).
 
 ---
 
-### [05-I-1] Score - Helpers e Utilitários
+### [05-I-1] Score - Helpers
 
-* 🗑️➡️✅ **`config_numero` MUDOU DE ARQUIVO (28-07-2026):** morava aqui, agora mora em `03_funcoes_seguranca.sql`, `[03-C]` - ver lá o motivo (dependência invertida achada em auditoria de IA: `03` roda antes do `05`, mas já tinha uma função chamando `config_numero`).
-* 🗑️➡️✅ **`fn_precisa_revisao_score(p_id_usuario)` - nova (28-07-2026, resolve o item 3 da lista de pendências):** retorna `BOOLEAN` - `TRUE` se `perfil_pesquisador.score_atual` do usuário estiver abaixo de `configuracoes.score_minimo_campanha`. Decisão tomada seguindo a sugestão de uma IA: nem Catarse nem Experiment bloqueiam criação de campanha por score acumulado - quem filtra confiança de verdade é a aprovação manual do Admin (`status='aguardando_aprovacao'`). Por isso **não existe trigger de bloqueio** - esta função é só o sinal que o futuro Painel Admin usa pra destacar, na fila de aprovação, campanhas de pesquisador abaixo do mínimo pra receberem revisão mais cuidadosa. `SECURITY DEFINER` porque expõe só o booleano, nunca o valor real do score (`pol_score_select` restringe isso ao próprio dono).
+* **`fn_precisa_revisao_score(p_id_usuario)`** devolve `TRUE` se o `score_atual` do pesquisador estiver abaixo de `configuracoes.score_minimo_campanha`. **Não existe trigger de bloqueio:** é só o sinal que a fila de aprovação usa para destacar a campanha que merece revisão mais cuidadosa. **Por quê:** nem o Catarse nem o Experiment bloqueiam criar campanha por pontuação; quem filtra a confiança é a aprovação feita por uma pessoa.
+* **`fn_fator_subitem(p_id_pai, p_nome)`:** peso do item / soma dos itens ligados da mesma dimensão (0 se desligado, nunca `NULL`); ver [05-I-2].
 
 ---
 
 ### [05-I-2] Score - Cálculo das Dimensões
 
-Quatro funções puras (`STABLE`, sem efeito colateral), uma por dimensão do score. Todas recebem `p_id_usuario INT` e devolvem um `INTEGER` já limitado entre `0` e o peso-raiz da dimensão (`LEAST/GREATEST`).
+**Em palavras simples:** a pontuação de 0 a 100 soma quatro dimensões. O peso de cada dimensão é o máximo de pontos dela; cada item de dentro vale a sua **parte** desse máximo (`fn_fator_subitem`). Mudar o peso de uma dimensão não exige mexer nos itens, e desligar um item passa a parte dele para os outros. O administrador muda pesos e faixas em Configurações > Pontuação (Score).
 
-| Função | Dimensão | Fórmula |
+Quatro funções puras (`STABLE`), uma por dimensão, cada uma recebendo `p_id_usuario` e devolvendo um inteiro entre 0 e o peso da dimensão:
+
+| Função | Dimensão | Como calcula |
 |---|---|---|
-| `calcular_score_perfil_academico` | Perfil Acadêmico Declarado | **Desde 03-10-2026 cada item vale a sua parte da dimensão (`fn_fator_subitem`, ver [05-K-2-I]).** Soma as partes (de `score_config`, filhos de `'perfil_academico'`) de: link Lattes, link ORCID, outro link acadêmico, vínculo institucional preenchido e título acadêmico informado. 🗑️➡️✅ **CORRIGIDO (28-07-2026, item 13(d) da Lista C - "GitHub não pontua"):** o reconhecimento de link era por `ILIKE` no **nome de exibição** do `tipo_link` (`'%linkedin%'`, `'%researchgate%'`, `'%academia%'`, `'%scholar%'`, `'%site%'`) - hardcoded, frágil, e nunca incluía GitHub mesmo o tipo já existindo no catálogo. Passou a comparar por `tipo_link.codigo` (chave estável, ver `[01-C]`); "outro link acadêmico" virou "qualquer `tipo_link` que não seja Lattes/ORCID" - reconhece GitHub automaticamente, e qualquer tipo novo que entrar no catálogo no futuro, sem editar esta função de novo. |
-| `calcular_score_historico` | Histórico na Plataforma | **Desde 03-10-2026 sem descontos fixos; ver [05-K-2-I].** `conclusao = sucesso / (sucesso + não concluídas) × fator_conclusao`, onde não concluída é `nao_atingido` ou `encerrado` com aprovação do administrador; `aprovacao = (aprovadas pela moderação / (aprovadas + rejeitadas definitivas)) × peso_aprovacao`, onde **rejeitada definitiva** é a campanha que está no `historico_rejeicao` e já não existe mais (excluída sem nunca ter sido aprovada; rascunho, aguardando aprovação, rejeitada ainda no prazo e rejeições de campanha depois aprovada ficam fora, ver [05-K-2-B]); até 03-10-2026 descontava `penalidade_abandono` e `penalidade_sem_justificativa` (removidas, ver [05-K-2-I]). 🗑️➡️✅ **`rejeitado` saiu do denominador de `total encerradas` (28-07-2026, item 13(b) da Lista C):** antes, uma campanha `rejeitado` derrubava a taxa de aprovação (correto) **e** entrava de novo no denominador da taxa de conclusão sem nunca poder entrar no numerador (punição duplicada pelo mesmo fato - erro aritmético, não escolha de negócio). 🗑️➡️✅ **`encerrado` virou neutro (28-07-2026, item 13(c) da Lista C - decisão da Alexia, "pode ser"):** antes contava como sucesso pleno (numerador **e** denominador); agora sai dos dois - encerramento antecipado (RF-040, com justificativa) não é premiado nem punido. |
-| `calcular_score_atualizacao` | Atualização da Campanha | `regularidade = SUM(realizadas)/SUM(esperadas) × fator_regularidade`; `tempestividade = (% de campanhas em dia) × fator_tempestividade`; a soma vezes o peso da dimensão (uma consulta só, sem laço). Só conta campanhas já iniciadas (`ativo`/`sucesso`/`nao_atingido`/`encerrado`); esperadas = duração em meses × `score_frequencia_esperada_mensal`. |
-| `calcular_score_reputacao` | Reputação da Comunidade | **Desde 03-10-2026: duas partes, perfil (10) e campanhas (15), cada uma zerando em `score_denuncias_para_zerar` procedentes (desde 12-10-2026, a parte "campanhas" conta campanhas com denúncia procedente, não denúncias); ver [05-K-2-I].** Antes: `peso_raiz − (total de denúncias × custo) − (denúncias procedentes × custo_procedente)`. 🗑️➡️✅ **CORRIGIDO (28-07-2026, item 13(a) da Lista C - conformidade com RF-077):** antes, "total de denúncias" contava **qualquer** status (inclusive `pendente`, `em_analise` e `improcedente`), penalizando uma acusação ainda sob análise ou já descartada - o RF-077 define `improcedente` como "descartada após análise", então contar isso como culpa contradizia o próprio requisito. Agora só denúncias `resolvida` contam, tanto no custo base quanto no extra de procedência. 🗑️➡️✅ **`custo`/`custo_procedente` migraram de `configuracoes` pra `score_config` (mesma data, item 13-quinto-ponto):** antes liam `configuracoes.score_custo_denuncia`/`score_custo_denuncia_procedente` (valores 1/3); os pesos `volume_denuncias`/`gravidade_denuncias` já existiam em `score_config` (a tabela que o Painel Admin edita, com trigger de recálculo), mas com valores (10/15) que nenhuma função lia - o painel editando essas 2 linhas não movia nada. Migrado: a função passou a ler de `score_config` (valores ajustados pra 1/3, os mesmos de sempre - só mudou a fonte); as 2 chaves em `configuracoes` saíram do seed. Testado contra o seed inteiro: nenhum dos 4 pesquisadores do teste de faixas determinístico muda de faixa. |
+| `calcular_score_perfil_academico` | Perfil Acadêmico Declarado | Soma as partes de: link Lattes, link ORCID, "outro link" (qualquer `tipo_link` que não seja Lattes nem ORCID, reconhecido por `tipo_link.codigo`: GitHub e qualquer tipo novo contam sozinhos; conta uma vez, com um ou com vários), instituição preenchida e título informado. Instituição e título vêm de campos do perfil, não de link. |
+| `calcular_score_historico` | Histórico na Plataforma | **Conclusão** = sucesso / (sucesso + não concluídas) × parte da conclusão. **Não concluída:** `nao_atingido`, ou `encerrado` com pedido aprovado **pelo administrador** (havia dinheiro em jogo). **Fora da conta:** o "Cancelar o projeto" (sem dinheiro em jogo), o `encerrado_moderacao` (já pesa na reputação; contar nos dois lugares seria punição dupla) e o que ainda não terminou. **Aprovação** = aprovadas / (aprovadas + rejeitadas definitivas) × parte da aprovação; rejeitada definitiva é a que está no `historico_rejeicao` e já não existe (excluída sem nunca ter sido aprovada, [05-K-2-B]). |
+| `calcular_score_atualizacao` | Atualização da Campanha | **Regularidade** = atualizações realizadas / esperadas; **tempestividade** = % de campanhas em dia; a soma vezes o peso da dimensão. Só campanhas já iniciadas (`ativo`, `sucesso`, `nao_atingido`, `encerrado`) e só atualizações ativas (`ativo = TRUE`: a ocultada pela moderação não conta). Esperadas = duração em meses × `score_frequencia_esperada_mensal`. |
+| `calcular_score_reputacao` | Reputação da Comunidade | Duas partes, **perfil** e **campanhas**, cada uma caindo em linha reta até zerar em `configuracoes.score_denuncias_para_zerar` denúncias procedentes. Só denúncia `resolvida` (procedente) conta. A parte "perfil" conta denúncias; a parte "campanhas" conta **campanhas** com denúncia procedente (`count(DISTINCT id_campanha_alvo)`). |
 
-> ⚠️ **Não existe status "abandonada" no enum `status_campanha`.** `calcular_score_historico` deduz isso na consulta: campanha `nao_atingido` sem nenhuma `solicitacao_encerramento` conta como abandonada; campanha `nao_atingido` com solicitação mas sem `justificativa_pesquisador` preenchida conta como "sem justificativa". Essa dedução está comentada diretamente no corpo da função, junto às consultas que ela afeta. **Resolvido em 03-10-2026:** a ideia de "abandonada" saiu junto com os dois descontos; ver [05-K-2-I].
-
-> ⚠️ **`calcular_score_atualizacao` filtra por `atualizacao_campanha.ativo = TRUE`.** Sem esse filtro, uma atualização ocultada por moderação (soft delete) continuaria contando a favor da regularidade do pesquisador - foi uma correção aplicada depois da criação da coluna `ativo` em `01`.
-
----
-
-### [05-I-3] Score - Orquestração e Cálculo Geral
-
-* **`recalcular_score_pesquisador(p_id_usuario)`:** chama as 4 funções de `[05-I-2]`, soma o total, resolve o `id_rotulo` correspondente em `score_rotulo`, grava em `score_pesquisador` (via `UPSERT` - `ON CONFLICT (id_usuario, id_score_config) DO UPDATE`) e atualiza o cache em `perfil_pesquisador.score_atual`. É `SECURITY DEFINER` de propósito: precisa poder escrever no perfil de qualquer pesquisador (ex.: quando um admin resolve uma denúncia contra outra pessoa), não só de quem disparou a ação.
-* **`recalcular_todos_os_scores()`:** roda `recalcular_score_pesquisador` para todo mundo. Usada pelo botão "Recalcular" do Painel Admin e disparada automaticamente quando um peso de `score_config` muda (ver `[05-I-4]`).
+* **Sem desconto fixo por "abandono":** não bater a meta já baixa a taxa de conclusão na proporção certa, enquanto um desconto fixo pesaria igual para quem tem 1 ou 20 campanhas. Kickstarter e Catarse não punem quem não bate a meta nem quem cancela; mostram o histórico e deixam o apoiador julgar.
+* **A reputação pune a falta, não o número de quem a viu:** várias denúncias procedentes contra a mesma campanha tiram pontos uma vez só (padrão de moderação: a penalidade é por infração confirmada). Fraude de campanha pesa mais que a do perfil porque atinge quem apoia.
+* **Casos-limite aceitos** (pontos para um debate futuro): quem encerra antes do prazo com contribuição, por motivo legítimo, perde igual a quem não bateu a meta; o "Cancelar o projeto" pode ser usado para fugir de um "não atingido" que se aproxima, desde que ninguém tenha pago (sem contribuição ninguém foi lesado); quem não bate a meta várias vezes só vê a taxa cair. Pesquisador sem campanha fica com a parte "campanhas" inteira. Gravidade por motivo de denúncia não existe (a campanha grave já é encerrada na hora pela moderação). Suítes 38 e 45 do PGlite.
 
 ---
 
-### [05-I-4] Score - Triggers e Funções de Automação
+### [05-I-3] Score - Orquestração
 
-Cada trigger observa uma tabela que alimenta alguma dimensão do score e recalcula automaticamente quem foi afetado - ninguém no backend precisa lembrar de chamar `recalcular_score_pesquisador` manualmente.
+* **`recalcular_score_pesquisador(p_id_usuario)`:** chama as quatro funções, soma, escolhe o rótulo em `score_rotulo` (`ORDER BY score_minimo`, para faixas vizinhas darem sempre o mesmo resultado), grava em `score_pesquisador` (`ON CONFLICT ... DO UPDATE`) e atualiza o cache em `perfil_pesquisador.score_atual`. `SECURITY DEFINER`: precisa escrever no perfil de qualquer pesquisador (ex.: quando a moderação resolve uma denúncia contra outra pessoa).
+* **`recalcular_todos_os_scores()`:** recalcula todo mundo. Disparada quando um peso ou uma faixa muda.
 
-| Tabela observada | Função de apoio | Trigger | Quem é recalculado |
+---
+
+### [05-I-4] Score - Triggers de recálculo e de validação
+
+Cada trigger observa uma tabela que alimenta alguma dimensão e recalcula só quem foi afetado:
+
+| Tabela observada | Trigger | Quem é recalculado | Quando |
 |---|---|---|---|
-| `campanha` (INSERT e DELETE, só se não for rascunho) + `campanha` (UPDATE, com `WHEN`) | `trg_recalcular_por_campanha()` | `trg_campanha_recalcula_score` (INSERT) + `trg_campanha_recalcula_score_delete` + `trg_campanha_recalcula_score_update` | o dono da campanha (`id_usuario`) |
-| `denuncia` | `trg_recalcular_por_denuncia()` | `trg_denuncia_recalcula_score` | o pesquisador denunciado (`id_pesquisador_alvo`, se preenchido) |
-| `atualizacao_campanha` | `trg_recalcular_por_atualizacao()` | `trg_atualizacao_recalcula_score` | o dono da campanha da atualização (busca via `id_campanha`) |
-| `link_academico` | `trg_recalcular_por_link()` | `trg_link_recalcula_score` | o dono do link (`id_usuario`) |
-| `perfil_pesquisador` (INSERT) | `trg_recalcular_por_perfil()` | `trg_perfil_recalcula_score` | o próprio perfil recém-criado |
-| `perfil_pesquisador` (UPDATE) | `trg_recalcular_por_perfil()` | `trg_perfil_update_recalcula_score` | o próprio perfil, só quando `vinculo_institucional` ou `titulo_academico` mudam |
-| `score_config` (UPDATE de `peso`) | `trg_recalcular_por_score_config()` | `trg_score_config_recalcula_todos` | **todos** os pesquisadores |
+| `campanha` | `trg_campanha_recalcula_score` (INSERT), `_delete`, `_update` | o dono | INSERT e DELETE só se não for rascunho; UPDATE só quando muda `status`, `data_fim`, `aprovado_em` ou `id_usuario` |
+| `denuncia` | `trg_denuncia_recalcula_score` | o pesquisador denunciado ou o dono da campanha denunciada | só quando a denúncia entra em `resolvida` ou sai dela |
+| `atualizacao_campanha` | `trg_atualizacao_recalcula_score` | o dono da campanha | só quando muda `ativo` ou `id_campanha` (editar o texto não recalcula) |
+| `link_academico` | `trg_link_recalcula_score` | o dono do link | só quando muda o tipo ou o dono (trocar a URL ou o rótulo não recalcula) |
+| `perfil_pesquisador` | `trg_perfil_recalcula_score` (INSERT), `trg_perfil_update_recalcula_score` | o próprio perfil | UPDATE só quando muda `vinculo_institucional` ou `titulo_academico` |
+| `score_config` | `trg_score_config_recalcula_todos` (`FOR EACH STATEMENT`) | todos | INSERT, DELETE, mudança de peso ou de `ativo` |
+| `score_rotulo` | `trg_score_rotulo_recalcula_todos` | todos (o rótulo) | qualquer mudança de faixa |
 
-> 🗑️➡️✅ **2 `CONSTRAINT TRIGGER` novas de validação, não de recálculo (23-09-2026):** diferente das triggers da tabela acima (que recalculam score), estas duas só bloqueiam o `COMMIT` quando o estado final fica inconsistente - não tocam em `score_pesquisador`. `trg_score_config_soma_pesos` (`AFTER INSERT OR UPDATE OF peso ON score_config`, `WHEN (NEW.id_pai IS NULL)`) exige que a soma dos pesos raiz (`id_pai IS NULL`, `ativo = TRUE`) seja exatamente 100 (ERRCODE `90017`). `trg_score_rotulo_cobertura` (`AFTER INSERT OR UPDATE OR DELETE ON score_rotulo`) exige que as faixas ativas cubram exatamente 0 a 100 sem buraco, via `LEAD() OVER (ORDER BY score_minimo)` comparando cada faixa com a próxima (ERRCODE `90018`). As duas são `DEFERRABLE INITIALLY DEFERRED` pelo mesmo motivo do EXCLUDE de `score_rotulo` (`[01-I]`): editar várias linhas em sequência dentro da mesma transação passa por estados intermediários inválidos sem ser recusado no meio do caminho, só no `COMMIT` final. Postgres só aceita `CONSTRAINT TRIGGER` como `FOR EACH ROW` (nunca `FOR EACH STATEMENT`) - as funções ignoram `NEW`/`OLD` de propósito e sempre reconferem o agregado da tabela inteira. Testado com PGlite (a suíte `5-config-score-dashboard-e-jobs.mjs` de `informacoes/testes-banco/`): transação com estado inválido no meio mas válido no fim passa; terminar errado falha com o ERRCODE certo.
-
-> 📌 **Por que `trg_perfil_update_recalcula_score` tem uma condição `WHEN`:** sem ela, o próprio `UPDATE` que o recálculo faz em `perfil_pesquisador.score_atual` disparia a trigger de novo - um loop infinito. A condição `WHEN (OLD.vinculo_institucional IS DISTINCT FROM NEW.vinculo_institucional OR OLD.titulo_academico IS DISTINCT FROM NEW.titulo_academico)` garante que só um UPDATE nos dados acadêmicos declarados (não no cache do score) dispare o recálculo.
-
-> 🗑️➡️✅ **`trg_campanha_recalcula_score` split em duas - CORRIGIDO (28-07-2026, auditoria de IA - "Problema 2" da 2ª rodada, item #10 da 1ª análise dele, nunca corrigido até esta rodada):** a trigger original era `AFTER INSERT OR UPDATE OR DELETE` numa trigger só, sem `WHEN` - todo `UPDATE` em `campanha` recalculava as 4 dimensões inteiras, mesmo quando nada relevante ao score mudou. A cadeia `contribuicao` → `trg_sincroniza_arrecadado_campanha` → `UPDATE campanha` (só `valor_bruto_arrecadado`) → esta trigger disparava um recálculo completo **por doação confirmada** - medido: 5 doações = 20 gravações em `score_pesquisador` (4 por doação), todas produzindo o mesmo número, porque `valor_bruto_arrecadado` não entra em nenhuma das 4 dimensões. Numa campanha com 500 doações seriam 500 recálculos completos, cada um segurando o `FOR UPDATE` da linha da campanha (`[05-K-2]`) - risco direto pro RNF-006 (confirmação de pagamento refletida em até 30s). Postgres não aceita `TG_OP` dentro de `WHEN`, então a correção precisou de 2 triggers (mesmo padrão de `trg_perfil_update_recalcula_score`, acima): `trg_campanha_recalcula_score` ficou só `AFTER INSERT OR DELETE` (sempre recalcula); `trg_campanha_recalcula_score_update` é `AFTER UPDATE` com `WHEN (OLD.status IS DISTINCT FROM NEW.status OR OLD.data_fim IS DISTINCT FROM NEW.data_fim OR OLD.aprovado_em IS DISTINCT FROM NEW.aprovado_em OR OLD.id_usuario IS DISTINCT FROM NEW.id_usuario)` - só as colunas que de fato alimentam alguma dimensão. Medido depois: 0 gravações de score por doação (era 4); recálculo ao aprovar/encerrar/rejeitar campanha continua disparando normalmente.
+* **Por que tantos `WHEN`:** o próprio recálculo grava em `perfil_pesquisador.score_atual`; sem o `WHEN`, essa gravação dispararia a trigger de novo (laço infinito). E toda contribuição confirmada faz `UPDATE campanha` (o total arrecadado): sem o `WHEN`, cada doação recalcularia as quatro dimensões à toa, segurando a linha da campanha. O Postgres não aceita `TG_OP` dentro de `WHEN`, por isso INSERT, DELETE e UPDATE são triggers separadas.
+* **`FOR EACH STATEMENT` em `score_config`:** a tela salva todos os pesos num comando só, e o recálculo roda uma vez (com `FOR EACH ROW`, editar os quatro pesos raiz recalcularia a plataforma quatro vezes).
+* **Validações no `COMMIT` (`CONSTRAINT TRIGGER ... DEFERRABLE INITIALLY DEFERRED`):** `trg_score_config_soma_pesos` (os pesos raiz ativos somam exatamente 100, ao inserir, alterar ou apagar; 90017) e `trg_score_rotulo_cobertura` (as faixas ativas cobrem 0 a 100 sem buraco, comparando cada faixa com a próxima por `LEAD()`; 90018). Peso negativo é recusado (90030), e dimensão ligada sem nenhum item ligado com peso maior que zero também (90031), porque nunca pontuaria. Diferidas porque editar várias linhas na mesma transação passa por estados intermediários inválidos. O Postgres só aceita `CONSTRAINT TRIGGER` por linha; as funções ignoram `NEW`/`OLD` e reconferem a tabela inteira.
+* **A tela do score edita só peso, ligado e faixas:** `GRANT UPDATE (peso, ativo)` em `score_config` e `GRANT UPDATE (rotulo, descricao, score_minimo, score_maximo)` em `score_rotulo` (`06`). `nome` e `id_pai` ficam fora: são a estrutura que as funções procuram pelo nome; renomear um item faria a parte dele sumir sem erro. **Caso-limite:** salvar recalcula todos os pesquisadores dentro da requisição; com milhares de pesquisadores pode levar alguns segundos. A tela não cria nem apaga item nem faixa.
+* **Pesos e faixas entram no log de auditoria** (`trg_log_auditoria_score_config`, `trg_log_auditoria_score_rotulo`): mudar um peso altera o score público de todos.
 
 ---
 
 ### [05-K-1] Regras Transversais - Integridade e Escopo
 
-| Tabela | Função | Trigger | Regra |
-|---|---|---|---|
-| `contribuicao_recompensa` | `trg_valida_contribuicao_recompensa()` | `trg_contrib_recompensa_valida` | A recompensa escolhida precisa pertencer à **mesma campanha** da contribuição (a FK sozinha não garante isso - só garante que o `id_recompensa` existe em algum lugar), e a soma reservada não pode ultrapassar `quantidade_disponivel`. |
-| `link_academico` | `trg_valida_escopo_tipolink()` | `trg_link_academico_valida_tipo` | Só aceita `id_tipolink` com `permite_perfil = TRUE`. |
-| `link_academico` | `fn_valida_limite_link_academico()` | `trg_link_academico_valida_limite` (`BEFORE INSERT`) | 🗑️➡️✅ **Nova (28-07-2026, resolve o item 19(a) da lista de pendências).** Bloqueia o `(limite+1)`-ésimo link acadêmico de um mesmo pesquisador - limite lido de `configuracoes.limite_links_academicos_perfil` (RF-014/016/018 falam em até 5), mesmo padrão dos outros limites (campanhas simultâneas, endossos, denúncias/24h). Só em `INSERT`: editar a URL/rótulo de um link já existente nunca aumenta a contagem. |
-| `campanha`, `atualizacao_campanha`, `denuncia`, `solicitacao_encerramento` (×2), `recompensa` | `fn_valida_limite_texto_livre()` | `trg_*_valida_limite_texto` (`BEFORE INSERT OR UPDATE`, 6 instâncias) | 🗑️➡️✅ **Nova (28-07-2026, achado "Problema 2" em auditoria de IA).** `descricao`/`conteudo`/`relato`/`justificativa_*` eram `TEXT` sem limite nenhum - vetor de abuso num campo de formulário público (a Alexia já tinha avisado disso no WhatsApp sobre o `relato`, antes mesmo da coluna existir). Uma função genérica só, os 6 triggers passam qual coluna e qual chave de `configuracoes` checar via `TG_ARGV` (a coluna é lida via `to_jsonb(NEW) ->> coluna`, já que plpgsql não permite acesso dinâmico a campo de `RECORD` por nome). O limite técnico largo (maior, fixo) mora na `CHECK` de cada coluna (`01`); esta trigger é só o limite de negócio, menor e configurável. |
-| `link_atualizacao` | `trg_valida_escopo_tipolink()` | `trg_link_atualizacao_valida_tipo` | Só aceita `id_tipolink` com `permite_atualizacao = TRUE`. |
-| `link_recompensa` | `trg_valida_escopo_tipolink()` | `trg_link_recompensa_valida_tipo` | Só aceita `id_tipolink` com `permite_recompensa = TRUE`. |
-| `campanha` | `fn_valida_area_conhecimento_nivel2()` | `trg_campanha_valida_area_nivel2` (`BEFORE INSERT`) + `trg_campanha_valida_area_nivel2_update` (`BEFORE UPDATE`, só quando `id_area_conhecimento` muda) | 🗑️➡️✅ **Nova (28-07-2026).** `area_conhecimento` ganhou hierarquia de 2 níveis (`id_pai`, ver `[01-C]`) - esta trigger bloqueia `campanha.id_area_conhecimento` de apontar pra uma grande área raiz (`id_pai IS NULL`); `NULL` continua permitido (a coluna é nullable), a trigger só entra em ação quando uma área é de fato informada. |
-| `denuncia` | `trg_valida_tipo_motivo_denuncia()` | `trg_denuncia_valida_tipo_motivo` | 🗑️➡️✅ **Nova (27-07-2026).** `BEFORE INSERT OR UPDATE`: cruza `motivo_denuncia.tipo` com qual coluna de alvo foi preenchida (`id_campanha_alvo` ou `id_pesquisador_alvo`) - motivo de tipo "campanha" não pode ser usado numa denúncia contra pesquisador, e vice-versa. Trabalha em conjunto com a constraint `CK_DENUNCIA_ALVO_XOR` (`01`, ver `[01-E]`), que garante que exatamente um dos dois alvos está preenchido; esta trigger garante que o motivo escolhido bate com esse alvo. |
+> 📌 **Mensagens sem palavra técnica:** as mensagens das faixas 90 a 93 chegam à tela como estão, então não citam nome de tabela, de coluna nem de chave de `configuracoes`; dinheiro aparece como "R$ 500,00" e datas no formato brasileiro.
 
-> 📌 **Uma função, três triggers:** `tipo_link` é compartilhado pelas 3 tabelas de link (`01-F`), então uma única função genérica (`trg_valida_escopo_tipolink`) resolve, via `TG_TABLE_NAME`, qual coluna booleana de `tipo_link` checar em cada caso - evita, por exemplo, associar "Currículo Lattes" (que só tem `permite_perfil = TRUE`) a uma recompensa.
+| Tabela | Trigger (função) | Regra |
+|---|---|---|
+| `contribuicao_recompensa` | `trg_contrib_recompensa_valida` (`trg_valida_contribuicao_recompensa`) | A recompensa precisa ser da **mesma campanha** da contribuição (a FK só garante que ela existe em algum lugar). |
+| `link_academico`, `link_atualizacao`, `link_recompensa` | `trg_link_*_valida_tipo` (`trg_valida_escopo_tipolink`) | O tipo de link precisa estar liberado para aquela tabela (`permite_perfil`, `permite_atualizacao`, `permite_recompensa`), e o endereço precisa ser do domínio e do formato do tipo (90002, 90024, 90025). Só pesquisador tem link acadêmico (92026). Uma função só, que escolhe a coluna por `TG_TABLE_NAME`. |
+| `link_academico` | `trg_link_academico_valida_limite` (`fn_valida_limite_link_academico`, `BEFORE INSERT`) | No máximo `configuracoes.limite_links_academicos_perfil` (5) links por pesquisador. Só no `INSERT`: editar um link não aumenta a contagem. |
+| `campanha`, `atualizacao_campanha`, `denuncia`, `solicitacao_encerramento` (×2), `recompensa`, `orcamento_campanha`, `marco_cronograma` | `trg_*_valida_limite_texto` (`fn_valida_limite_texto_livre`) | O limite de negócio de cada texto livre, lido de `configuracoes`. Uma função genérica: cada trigger passa a coluna e a chave por `TG_ARGV` (a coluna é lida por `to_jsonb(NEW) ->> coluna`). **Só vale quando o texto muda (90003):** rodando em todo `UPDATE`, baixar o limite pelo painel faria toda doação falhar (a soma do arrecadado faz `UPDATE campanha`) e pararia o encerramento das vencidas. |
+| `campanha` | `trg_campanha_valida_area_nivel2` (+ `_update`) | A área precisa ser de nível 2, nunca uma grande área (90004). |
+| `denuncia` | `trg_denuncia_valida_tipo_motivo` | O motivo precisa ser do tipo do alvo (motivo de campanha não serve a denúncia de perfil, e o contrário; 90005, 90006). Junto com `CK_DENUNCIA_ALVO_XOR` ([01-E]). |
 
 ---
 
 ### [05-K-2] Regras Transversais - Campanhas e Financeiro
 
-> 📌 **Visão de ponta a ponta do dinheiro** (tarifa, destino no fim da campanha, repasse, devolução, validação de saque, parâmetros): `DOCUMENTACAO_FINANCEIRO.md`. Aqui ficam as regras do banco, bloco a bloco.
+> 📌 **Visão de ponta a ponta do dinheiro** (tarifa, destino no fim da campanha, repasse, devolução, validação de saque, parâmetros): `DOCUMENTACAO_FINANCEIRO.md`. Aqui ficam as regras do banco.
 
-| Tabela | Função | Trigger | Regra |
-|---|---|---|---|
-| `repasse` | `fn_valida_repasse_all_or_nothing()` | `trg_valida_repasse` | `BEFORE INSERT OR UPDATE`. Bloqueia repasse com `valor_liquido > 0` em campanha `all-or-nothing` que não atingiu a meta. Repasse "zerado" (RF-038, `valor_liquido = 0`, registrando que nada foi repassado) continua permitido. 🗑️➡️✅ **CORRIGIDO (27-07-2026):** a versão anterior comparava sempre contra `0`, então um `UPDATE` que só corrigia status/data de um repasse já concluído (ex.: reverter pra `'devolvido'` depois que a meta caiu por um reembolso) era bloqueado do mesmo jeito que um repasse novo indevido - mesmo sem estar liberando nenhum valor novo. Agora usa `TG_OP = 'UPDATE'` para só acessar `OLD.valor_liquido` quando faz sentido (no `INSERT`, `OLD` não existe) e compara `NEW.valor_liquido > COALESCE(v_valor_liquido_anterior, 0)` - só bloqueia quem tenta liberar **mais** dinheiro do que já tinha sido liberado antes. |
-| `contribuicao` | `validar_contribuicao_all_or_nothing()` | `trg_contribuicao_all_or_nothing_pix` (`BEFORE INSERT`) + `trg_contribuicao_all_or_nothing_pix_update` (`BEFORE UPDATE`, nova em 27-07-2026) | Campanhas `all-or-nothing` só aceitam contribuição via PIX. 🗑️➡️✅ **A trigger de `UPDATE` é nova e tem uma cláusula `WHEN`:** a primeira tentativa de fechar essa regra também no `UPDATE` (ver `A3` no histórico de `PENDENCIAS e correcoes.md`) revalidava `meio_pagamento` em todo `UPDATE`, mesmo quando só o `status` mudava - travando pra sempre as contribuições não-PIX que já existiam em campanhas `all-or-nothing` (dado histórico do seed) e bloqueando o próprio webhook de confirmação de pagamento. A trigger nova só revalida quando `meio_pagamento` ou `id_campanha` de fato mudam (`WHEN (NEW.meio_pagamento IS DISTINCT FROM OLD.meio_pagamento OR NEW.id_campanha IS DISTINCT FROM OLD.id_campanha)`). |
-| `campanha` | `fn_congela_regras_campanha()` | `trg_congela_regras_campanha` | A partir do status `ativo` em diante (inclusive `encerrado`/`encerrado_moderacao`), bloqueia `UPDATE` que altere `meta_financeira`, `modelo`, `taxa_plataforma`, `titulo` ou `descricao` - proteção contra alterar as regras do jogo (ou reescrever o projeto) depois que a campanha já está no ar. `data_fim`/`data_inicio` têm regra própria (ver linha abaixo). 🗑️➡️✅ **`titulo`/`descricao` foram adicionados em 27-07-2026** (trocar a descrição de um projeto já financiado era o vetor de fraude mais óbvio que ainda não estava coberto). Ver também a coluna `campanha.encerrado_em` (`[01-E]`), que registra a data real de encerramento - algo que `data_fim` (a promessa) deixou de conseguir fazer depois de congelada. 🗑️➡️✅ **`data_fim`/`data_inicio` - ATUALIZADO (28-07-2026, feature "Em breve"):** só congelam quando a campanha **já começou de fato** (`OLD.data_inicio <= NOW()`), não mais no momento da aprovação - enquanto a campanha está "Em breve" (aprovada, pública, mas com `data_inicio` no futuro), o pesquisador pode reagendar o início livremente. |
-| `contribuicao` | `fn_valida_contribuicao_campanha_ativa()` | `trg_valida_status_contribuicao` | Bloqueia nova contribuição se a campanha não estiver com status `ativo`, se ainda estiver "Em breve" (`data_inicio` no futuro), ou se o prazo (`data_fim`) já tiver passado. 🗑️➡️✅ **Checagem de `data_inicio` - ADICIONADA (28-07-2026, feature "Em breve"/rascunho agendado):** o pesquisador pode agendar um início futuro pra campanha em vez de lançar na hora (contador regressivo no front, mesma ideia do Catarse) - a campanha já fica pública (`pol_campanha_select` libera por status), mas não podia receber nenhuma doação antes de `data_inicio` chegar; essa checagem fechava um buraco real (antes, nada impedia contribuir numa campanha "ativa" com início ainda no futuro). |
-| `contribuicao` | `fn_sincroniza_arrecadado_campanha()` | `trg_sincroniza_arrecadado_campanha` | Recalcula `campanha.valor_bruto_arrecadado` somando as contribuições `confirmado`/`repassado`, a cada INSERT/UPDATE/DELETE em `contribuicao`. |
-| `campanha` | `validar_limite_campanhas_pesquisador()` | `trg_campanha_limite_simultaneo` | Um pesquisador não pode ter mais campanhas simultâneas (`aguardando_aprovacao`/`ativo`) do que `configuracoes.limite_campanhas_simultaneas` (RF-029). 🗑️➡️✅ **CORRIGIDO (28-07-2026, item 16 da Lista C):** limite (2) estava hardcoded no corpo da função; passou a ler `configuracoes`, mesmo valor de hoje como `DEFAULT`. |
-| `atualizacao_campanha` | `validar_atualizacao_campanha()` | `trg_atualizacao_campanha_status` | Só permite publicar atualização em campanha `ativo`, `sucesso` ou `nao_atingido`. |
-| `solicitacao_encerramento` | `fn_valida_transicao_solicitacao()` | `trg_valida_transicao_solicitacao` | 🗑️➡️✅ **Nova (27-07-2026).** `BEFORE UPDATE`: quem não tem `solicitacao_encerramento_decidir` só pode fazer a transição `pendente → cancelado`, sem tocar em `id_admin`/`justificativa_pesquisador` - companheira da liberação de `pol_solicitacao_update` (`04`) pro dono da campanha cancelar a própria solicitação (antes, só o admin conseguia mexer nessa tabela via `UPDATE`; ver `[04-E]`). |
-| `campanha` | `fn_valida_prazo_campanha_negocio()` | `trg_campanha_valida_prazo_negocio` (`BEFORE INSERT`) + `_update` (`BEFORE UPDATE`, só quando `data_inicio`/`data_fim` mudam) | 🗑️➡️✅ **Nova (28-07-2026, item 16 da Lista C).** A regra de negócio de prazo saiu de `CK_CAMPANHA_PRAZO` (que virou só um limite técnico largo, ver `[01-E]`) e passou pra cá, lendo `configuracoes.prazo_minimo_campanha_dias`/`prazo_maximo_campanha_dias` - mudar a política de prazo vira um `UPDATE`, não uma migração de constraint. **Valores decididos na mesma data: 15 a 60 dias** (não 90). |
-| `campanha` | `fn_carimba_taxa_plataforma_aprovacao()` | `trg_campanha_carimba_taxa` | 🗑️➡️✅ **Nova (28-07-2026, item 20 da Lista C - RF-036).** `BEFORE UPDATE`, só quando `aprovado_em` muda de `NULL` pra um valor: copia `configuracoes.taxa_plataforma_padrao` pra `campanha.taxa_plataforma`, se ainda não houver valor customizado. Sem esta trigger, `taxa_plataforma` nunca era preenchida - testado (criar e aprovar campanha real): nascia e continuava `NULL`. |
-| `campanha` | `fn_preenche_encerramento_campanha()` | `trg_campanha_preenche_encerramento` | 🗑️➡️✅ **Nova (28-07-2026) - bug achado pela IA usada pela Alexia.** `BEFORE UPDATE`, só quando `status` muda: grava `campanha.encerrado_em = NOW()` automaticamente ao entrar em `'sucesso'`/`'nao_atingido'`/`'encerrado'`/`'encerrado_moderacao'`, se ainda não tiver valor. A coluna (`[01-E]`) nascia e ficava `NULL` pra sempre - nenhum mecanismo gravava nela antes desta trigger. 🗑️➡️✅ **Condição ampliada (28-07-2026, 6ª auditoria de IA):** cobria só `'encerrado'`/`'encerrado_moderacao'`, mas o próprio comentário original da coluna já dizia "encerramento **natural**, antecipado ou por moderação" - faltava o natural de verdade (`'sucesso'`/`'nao_atingido'`). Só apareceu ao dar um caminho de verdade ao encerramento automático (`encerrar_campanhas_vencidas()`, abaixo) - antes disso nada no `.sql` fazia essa transição via `UPDATE`. |
-| `campanha` | `fn_carimba_envio_aprovacao()` | `trg_campanha_carimba_envio_aprovacao` / `trg_campanha_carimba_envio_aprovacao_update` | Nova (02-10-2026). `BEFORE INSERT` e `BEFORE UPDATE` (só quando `status` muda): grava `campanha.enviado_aprovacao_em = NOW()` a cada entrada na fila de aprovação (envio ou reenvio); no INSERT ignora o valor enviado. Alimenta o "esperando há X dias" da tela Aprovar Campanhas (ver a seção própria no fim deste documento). |
-| `campanha` | `encerrar_campanhas_vencidas()` | *(não é trigger - chamada direta, RPC/agendamento)* | 🗑️➡️✅ **Nova (28-07-2026, 6ª auditoria de IA).** `SECURITY DEFINER`. `pol_campanha_update` (`04`) exige ser dono ou ter `campanha_editar`/`campanha_aprovar`/`campanha_rejeitar` - um job de fundo (cron do RF-037) não é nenhum dos dois, então a RLS não deixava nenhuma linha visível: o `UPDATE` do job devolvia `0` linhas afetadas, **sem erro**, e campanhas vencidas ficavam `'ativo'` pra sempre. Percorre `campanha` com `status='ativo' AND data_fim <= NOW()`, marca `'sucesso'`/`'nao_atingido'` conforme a meta, retorna a contagem de linhas (`GET DIAGNOSTICS`) pro job logar de verdade. Bypassa a RLS, não a trigger - `trg_campanha_valida_transicao` (acima) continua validando cada transição pelo ramo autoverificável. Chamada por agendamento (`@Cron` no NestJS), sem sessão de usuário - mesma categoria pré-autorização de `[03-O]`. 🗑️➡️✅ **Chamador construído (05-09-2026, RF-057):** até então esta função existia e funcionava, mas nada a chamava de verdade - achado numa revisão de sistema completa. `CampanhaServiceCloseExpired` (`nest/src/12-campanha/service/campanha.service.close-expired.ts`) fecha isso: `@Cron('*/15 * * * *')` chamando `SELECT public.encerrar_campanhas_vencidas()` a cada 15 minutos, via `PG_POOL` direto (não `DatabaseService.getDb()` - um job agendado não tem requisição HTTP por trás, então não existe transação do `GlobalDbInterceptor` pra pegar; ver `DOCUMENTACAO_BACKEND.md`, seção 7.4, pro detalhamento completo). 🐛➡️✅ **Bug diferente, achado e corrigido em 07-09-2026:** mesmo com o `@Cron` ligado, a função quebrava sozinha com `error: column "status" is of type status_campanha but expression is of type text` (`42804`) toda vez que rodava - o `CASE WHEN ... THEN 'sucesso' ELSE 'nao_atingido' END` resolvia pro tipo `text`, sem cast pro enum. Nenhuma campanha vencida foi encerrada de verdade entre 05-09 e 07-09-2026, apesar do `@Cron` estar corretamente ligado. Corrigido com `::status_campanha` no resultado do `CASE` (ver `PENDENCIAS e correcoes.md`); pendente aplicar no Supabase de produção. |
-| `campanha` | `fn_valida_transicao_campanha()` | `trg_campanha_valida_transicao` | 🗑️➡️✅ **Nova (28-07-2026, CRÍTICO 1 - 5ª auditoria de IA, achado simulando jornada de usuário mal-intencionado).** `BEFORE UPDATE`. `pol_campanha_update` (`04`) libera `UPDATE` pro dono, e `fn_congela_regras_campanha` só protege a partir de `OLD.status` já congelado - `'aguardando_aprovacao'` não estava nessa lista. Reproduzido: dono comum fazia `UPDATE campanha SET status='ativo', aprovado_em=NOW(), id_admin=<próprio>` e funcionava, com `trg_campanha_carimba_taxa` carimbando a taxa sozinha - campanha fraudulenta indistinguível de uma aprovada. Libera, em ordem: nenhum dos 3 campos sensíveis (`status`/`aprovado_em`/`id_admin`) mudou; quem tem `campanha_aprovar`/`campanha_rejeitar`/`solicitacao_encerramento_decidir`; encerramento por prazo vencido **autoverificável** (confere `valor_bruto_arrecadado` vs `meta_financeira` contra o próprio dado - impossível de mentir, sem depender de permissão ou "usuário de sistema"); dono reenviando campanha rejeitada (RF-098); **5º ramo, ADICIONADO 30-07-2026 (RF-084 - cascata de suspensão, ver `[03-P]` em `03_funcoes_seguranca.sql`):** `ativo → encerrado_moderacao` ou `aguardando_aprovacao → rejeitado`, também **autoverificável** - libera sem checar permissão de quem executa, só o fato de `perfil_pesquisador.status_pesquisador` do dono da campanha já estar `'suspenso'` (valor que só `suspender_pesquisador()` escreve). Necessário porque `SECURITY DEFINER` bypassa RLS mas não bypassa esta trigger - sem o ramo novo, a cascata de suspensão ficaria bloqueada sempre que quem suspende não tivesse também permissão de campanha. **6º ramo, ADICIONADO 04-09-2026 (RF-108 - moderador encerra campanha por moderação):** libera especificamente `ativo → encerrado_moderacao` pra quem tem a permissão nova `campanha_encerrar_moderacao` (concedida a `admin` e `moderador`). Existia um furo de autoridade real, não só teórico: o `moderador` tem `denuncia_responder` (julga a denúncia procedente) mas nenhuma das três permissões do 2º ramo, então não conseguia agir sobre o próprio julgamento - precisava pedir pro admin executar fora do sistema. Escopo deliberadamente estreito (só essa transição específica, ao contrário do 2º ramo que libera qualquer uma) - ganhar essa permissão não torna o moderador um aprovador/rejeitador de campanha nova. Qualquer outra transição: bloqueada. |
-| `campanha` | `fn_valida_meta_campanha_negocio()` | `trg_campanha_valida_meta_negocio` (`BEFORE INSERT`) + `_update` (`BEFORE UPDATE`, só quando `meta_financeira` muda) | 🗑️➡️✅ **Nova (28-07-2026, MÉDIO 3 - 5ª auditoria).** Campanha com `meta_financeira = 0.00` era aceita (numa `all-or-nothing`, meta zero é sucesso instantâneo). Mesmo padrão do prazo (`fn_valida_prazo_campanha_negocio`, acima): limite técnico largo na `CHECK` (`01`, só `> 0`); mínimo de negócio de verdade lido de `configuracoes.meta_minima_campanha` (500,00). |
-| `orcamento_campanha` | `fn_congela_orcamento_campanha()` | `trg_orcamento_campanha_congela` | 🗑️➡️✅ **Nova (31-07-2026, Alexia).** `SECURITY DEFINER` (ver nota ⚠️ abaixo). `BEFORE INSERT OR UPDATE OR DELETE`. Bloqueia qualquer alteração no orçamento assim que `campanha.status` entra em `'ativo'` em diante (mesma condição de `fn_congela_regras_campanha`, sem exceção nem pra admin) - a soma precisa continuar batendo com uma `meta_financeira` que já está congelada. |
-| `orcamento_campanha` | `fn_valida_limite_max_orcamento_campanha()` | `trg_orcamento_campanha_valida_limite_max` | 🗑️➡️✅ **Nova (01-08-2026).** `SECURITY DEFINER` (ver nota ⚠️ abaixo). `BEFORE INSERT`. Bloqueia o item nº 11 (padrão) em diante, lendo `configuracoes.orcamento_max_itens` - feedback imediato pro pesquisador, em vez de só descobrir o excesso na aprovação. |
-| `marco_cronograma` | `fn_congela_marco_cronograma()` | `trg_marco_cronograma_congela` | 🗑️➡️✅ **Nova (31-07-2026, Alexia).** `SECURITY DEFINER` (ver nota ⚠️ abaixo). `BEFORE INSERT OR UPDATE OR DELETE`. Diferente do orçamento: só trava quando a campanha **já está aprovada** (`status IN ('ativo','sucesso','nao_atingido','encerrado','encerrado_moderacao')`) **e** já começou de fato (`data_inicio <= NOW()`) - mesma janela de carência do "Em breve": entre aprovar e começar, o pesquisador pode reorganizar o plano. 🗑️➡️✅ **CORRIGIDO (01-08-2026, achado em auditoria de IA):** a versão original checava só `data_inicio <= NOW()`, sem o `status` - uma campanha ainda `aguardando_aprovacao` com `data_inicio` no passado (comum: pesquisador cria a campanha já querendo lançar imediato, sem usar "Em breve") tinha o cronograma congelado antes mesmo de ser aprovada, e sem os 3 marcos mínimos `fn_valida_completude_campanha` nunca deixava aprovar - trava circular. Adicionada a mesma condição de `status` de `fn_congela_orcamento_campanha`/`fn_congela_regras_campanha`. |
-| `marco_cronograma` | `fn_valida_data_marco_cronograma()` | `trg_marco_cronograma_valida_data` | 🗑️➡️✅ **Nova (31-07-2026, Alexia).** `SECURITY DEFINER` (ver nota ⚠️ abaixo). `BEFORE INSERT OR UPDATE`. Impede `data_prevista` anterior a `campanha.data_inicio` - pode ultrapassar `data_fim` sem problema (ex.: marco de divulgação de resultado, comum acontecer depois do prazo de arrecadação). |
-| `marco_cronograma` | `fn_valida_limite_max_marco_cronograma()` | `trg_marco_cronograma_valida_limite_max` | 🗑️➡️✅ **Nova (01-08-2026).** `SECURITY DEFINER` (ver nota ⚠️ abaixo). `BEFORE INSERT`. Mesmo raciocínio do orçamento (acima): lê `configuracoes.cronograma_max_marcos`, feedback imediato. |
-| `campanha` | `fn_valida_completude_campanha()` | `trg_campanha_valida_completude` | 🗑️➡️✅ **Nova (31-07-2026, Alexia; valores corrigidos 01-08-2026 e 05-09-2026).** `SECURITY DEFINER` (ver nota ⚠️ abaixo). `BEFORE UPDATE`, só quando `status` entra em `'ativo'`. Bloqueia aprovação se faltar orçamento/cronograma completos (mínimo de `configuracoes.orcamento_min_itens`/`cronograma_min_marcos`) ou se `SUM(orcamento_campanha.valor)` não bater EXATAMENTE com `meta_financeira`. 🐛➡️✅ **Bug de calibração, achado e corrigido antes do commit:** a 1ª versão usava as mesmas chaves `orcamento_min_itens`/`cronograma_min_marcos` com os valores 10/20 - que eram pra ser o TETO, não o piso. Separado em chaves min/max distintas; mínimo virou 3 (meio-termo da faixa 2-5 sugerida por quem escreveu a trigger), teto ficou com os valores originais (10/20), agora aplicado por `fn_valida_limite_max_orcamento_campanha`/`fn_valida_limite_max_marco_cronograma` (acima). 🔁 **`orcamento_min_itens` ajustado de novo (05-09-2026):** de 3 pra 1, pra bater com os Requisitos Funcionais (RF-039) - `cronograma_min_marcos` não mudou. |
-| `contribuicao` | `atualizar_status_contribuicao()` | *(não é trigger - chamada direta, RPC)* | 🗑️➡️✅ **Nova (28-07-2026, CRÍTICO 2 - 5ª auditoria, cadeia de fraude parte 2/2).** `SECURITY DEFINER`. `pol_contribuicao_update` (`04`) é `USING(true)` com `GRANT UPDATE` de tabela inteira - qualquer usuário confirmava a própria contribuição direto por `UPDATE` (reproduzido: doar pra própria campanha, se auto-confirmar, ver o valor arrecadado público subir sem pagamento real). `status`/`id_transacao_api` saíram do `GRANT UPDATE` (`06`, `[06-H]`); só mudam por esta função - pré-autorização (webhook do gateway, sem sessão), mesma categoria de `registrar_falha_login`/`registrar_login_sucesso` (`[03-O]`). |
-| `repasse` | `atualizar_status_repasse()` | *(não é trigger - chamada direta, RPC)* | 🗑️➡️✅ **Nova (28-07-2026, extensão do CRÍTICO 2 - "também é dinheiro saindo").** Mesmo padrão de `atualizar_status_contribuicao`, pra `pol_repasse_update` (também `USING(true)`). `trg_valida_repasse` continua rodando por baixo normalmente (RLS é bypassada, trigger não). |
-| `contribuicao` | `fn_valida_contribuicao_valor_minimo()` | `trg_contribuicao_valida_valor_minimo` | 🗑️➡️✅ **Nova (30-07-2026, RF-056 - sugestão de uma auditoria de IA).** `BEFORE INSERT`. Mesmo padrão de `fn_valida_meta_campanha_negocio`/`fn_valida_prazo_campanha_negocio`: `CK_CONTRIBUICAO_VALOR_MINIMO` (`01`) virou só limite técnico largo (`valor > 0`); esta trigger aplica o mínimo de negócio de verdade, lendo `configuracoes.valor_minimo_contribuicao` (5,00). Só `INSERT` - valor de contribuição não muda depois de criada. |
+#### Transição de status da campanha (`fn_valida_transicao_campanha`, `trg_campanha_valida_transicao`)
 
-> ⚠️ **`trg_sincroniza_arrecadado_campanha` usa `SELECT ... FOR UPDATE` antes de somar.** Isso trava a linha da campanha durante o recálculo - sem essa trava, duas contribuições confirmadas ao mesmo tempo poderiam cada uma somar sem enxergar a outra ainda commitada, e a que "vence a corrida" por último sobrescreveria o total (uma contribuição confirmada "sumiria" do valor arrecadado). Esse comentário está preservado no corpo da função, por ser justamente o tipo de detalhe que importa entender antes de mexer nessa trigger.
+Protege **quem** muda `status`, `aprovado_em` e `id_admin`. `pol_campanha_update` libera `UPDATE` ao dono, e o congelamento só protege a campanha depois de aprovada: sem esta trigger, o dono de uma campanha aguardando aprovação faria `status = 'ativo', aprovado_em = NOW(), id_admin = <ele mesmo>` e a campanha iria ao ar como se aprovada. Transições liberadas (a primeira que bater libera; qualquer outra levanta **92001**, com `origem -> destino` na mensagem):
 
-> 🐛➡️✅ **As 6 funções novas de orçamento/cronograma (linhas acima) ganharam `SECURITY DEFINER` numa revisão em 01-08-2026, antes do commit - achado sem ser pedido, revendo o próprio trabalho.** Sem isso, os `SELECT`/`COUNT`/`SUM` que essas funções fazem contra `campanha`/`orcamento_campanha`/`marco_cronograma` ficariam sujeitos à RLS de quem está executando. `pol_campanha_select` (`04`) não inclui `'campanha_editar'` entre suas condições de visibilidade (só status/dono/`'relatorio_visualizar'`); `pol_orcamento_campanha_select`/`pol_marco_cronograma_select` têm a mesma lacuna. Pro dono da campanha - o caso de longe mais comum - isso nunca foi problema, porque `id_usuario = id_usuario_atual()` já satisfaz a policy diretamente. O risco é silencioso e específico: **hoje, só o papel `admin` tem `campanha_aprovar`/`campanha_rejeitar`/`campanha_editar`, e `admin` também tem `relatorio_visualizar`** - o que mascarou o bug por acidente (nunca teria aparecido em teste manual com o usuário admin). Mas o item 57 (pendência em aberto, ver `PENDENCIAS e correcoes.md`) cogita justamente dar a um papel como `moderador` permissão de aprovar/editar campanha sem necessariamente dar `relatorio_visualizar` junto - no dia em que isso acontecer sem este `SECURITY DEFINER`, a contagem de itens de orçamento/cronograma passaria a enxergar sempre `0` linhas pra esse papel, bloqueando toda aprovação mesmo com o orçamento completo, sem erro nenhum, sem log, sem pista do motivo. Mesmo raciocínio já usado em `contar_seguidores_pesquisador()` (`03`) e `encerrar_campanhas_vencidas()` (`05`, item 58 em `PENDENCIAS e correcoes.md`): uma verificação agregada precisa enxergar o total real do banco, não só o que a sessão de quem chama consegue ver linha a linha.
+1. Nenhum dos três campos sensíveis mudou.
+2. `aguardando_aprovacao → ativo` por quem tem `campanha_aprovar`.
+3. `aguardando_aprovacao → rejeitado` por quem tem `campanha_rejeitar`.
+4. `ativo → encerrado` por quem tem `solicitacao_encerramento_decidir`.
+5. Encerramento por prazo vencido, **autoverificável**: só com `data_fim <= NOW()` e o status novo batendo com arrecadado × meta (sucesso só se bateu, `nao_atingido` só se não). Impossível mentir o resultado, e não depende de permissão nem de "usuário de sistema".
+6. Envio para aprovação (`rascunho` ou `rejeitado` → `aguardando_aprovacao`) por quem tem `campanha_editar` ou pelo próprio dono, se for pesquisador ativo (92009) e, no reenvio, dentro do prazo (91026). Reenvio esgotado barra qualquer perfil, inclusive o admin (91025).
+7. Cascata da suspensão do pesquisador (RF-084), **autoverificável**: só se o dono está `'suspenso'` hoje, e só `ativo → encerrado_moderacao` ou `aguardando_aprovacao → rejeitado` ([03-P]).
+8. Encerramento por moderação de denúncia (RF-108): `campanha_encerrar_moderacao` faz **só** `ativo → encerrado_moderacao` (escopo estreito: um moderador não vira aprovador por isso).
+9. Conta do dono excluída (RF-016), **autoverificável**: só `aguardando_aprovacao → rejeitado`, com o dono já marcado como excluído (`excluir_conta_usuario()`, [03-O]).
+10. "Cancelar o projeto" pelo dono (RF-064), **autoverificável**: `ativo → encerrado` só com o pedido aprovado sem admin que `encerrar_campanha_sem_contribuicao()` grava ([05-K-2-H]).
+
+**Cada permissão abre só a sua transição:** ter uma delas nunca libera outra (ex.: `nao_atingido → sucesso` sem bater a meta).
+
+#### Regras de campanha e de contribuição
+
+| Tabela | Trigger (função) | Regra |
+|---|---|---|
+| `campanha` | `trg_congela_regras_campanha` (`fn_congela_regras_campanha`) | Depois da aprovação, recusa mudar meta, modelo, taxa, título, descrição, vídeo e área; `data_inicio` e `data_fim` só congelam quando a campanha começa de fato. A lista vem de `fn_campanha_campos_bloqueados` ([05-K-2-D]). |
+| `campanha` | `trg_campanha_valida_prazo_negocio` (+ `_update`) | Duração entre `prazo_minimo_campanha_dias` e `prazo_maximo_campanha_dias` (15 a 60; 90012), contada em **dias de calendário** (`FLOOR`): a tela manda 00:00 do dia de início e 23:59:59 do dia de fim, no fuso de quem usa, e sem o `FLOOR` 60 dias de calendário contariam 60,99 e seriam recusados. |
+| `campanha` | `trg_campanha_valida_meta_negocio` (+ `_update`) | Meta a partir de `meta_minima_campanha` (R$ 500,00; 90013). |
+| `campanha` | `trg_campanha_limite_simultaneo` (`validar_limite_campanhas_pesquisador`) | No máximo `limite_campanhas_simultaneas` campanhas em andamento (aguardando aprovação ou ativas) por pesquisador (RF-029; 91018). Conta só quando a campanha **entra** nesses status (rascunho não conta, então o limite é cobrado no envio), com `pg_advisory_xact_lock` por pesquisador: sem o lock, dois envios ao mesmo tempo contariam 1 e passariam os dois. |
+| `campanha` | `trg_campanha_valida_completude` (`fn_valida_completude_campanha`) | No envio, no reenvio e na aprovação: mínimo de itens de orçamento e de marcos, soma do orçamento **igual** à meta e `data_fim` no futuro (90009, 90010, 90011, 90015). O erro chega no envio, a quem pode consertar. `data_inicio` no passado é legítimo. O `WHEN` lista `rascunho` e `rejeitado` por nome, para não pegar a cascata de suspensão. |
+| `campanha` | `trg_campanha_carimba_taxa` | Na aprovação, copia `taxa_plataforma_padrao` para `campanha.taxa_plataforma`, se não houver taxa própria (RF-036). |
+| `campanha` | `trg_campanha_preenche_encerramento` | Grava `encerrado_em = NOW()` ao entrar num status terminal (`fn_status_terminal`). |
+| `campanha` | `trg_campanha_carimba_envio_aprovacao` (+ `_update`) | Grava `enviado_aprovacao_em = NOW()` a cada entrada na fila de aprovação (envio ou reenvio); no `INSERT` ignora o valor enviado. É o "esperando há X dias" da fila ([05-K-2-K]). |
+| `campanha` | `trg_campanha_valida_data_inicio_contra_marcos` | Um `PATCH` de `data_inicio` não pode passar da data de um marco já cadastrado (90008). |
+| `campanha` | `trg_campanha_exige_historico_rejeicao` (`CONSTRAINT TRIGGER`, no `COMMIT`) | Toda rejeição, venha de onde vier, grava `historico_rejeicao` na mesma transação (91028). Sem isso, a campanha ficaria em reenvio infinito e nunca expiraria. |
+| `orcamento_campanha` | `trg_orcamento_campanha_congela`, `trg_orcamento_campanha_valida_limite_max` | Congela na aprovação, sem exceção nem para o admin (91011); no máximo `orcamento_max_itens` itens (91012). |
+| `marco_cronograma` | `trg_marco_cronograma_congela`, `trg_marco_cronograma_valida_data`, `trg_marco_cronograma_valida_limite_max` | Congela quando a campanha, já aprovada, começa de fato (91013); a data não pode ser anterior a `data_inicio` (pode passar de `data_fim`, ex.: divulgação do resultado; 90008); no máximo `cronograma_max_marcos` marcos (91014). |
+| `atualizacao_campanha` | `trg_atualizacao_campanha_status` | Só se publica atualização em campanha `ativo`, `sucesso` ou `nao_atingido` (91019). Fase e formato são `NOT NULL` (RF-052). |
+| `solicitacao_encerramento` | `trg_valida_transicao_solicitacao` | Sem `solicitacao_encerramento_decidir`, só a transição `pendente → cancelado` pelo dono (92002, 92003); aprovar ou rejeitar só pela função de decidir (92033, [05-K-2-H]). |
+| `seguir_campanha` | `trg_seguir_campanha_valida_publicada` | Só se segue campanha publicada (`ativo`, `sucesso`, `nao_atingido`, `encerrado`; 91034). Quem já segue continua seguindo se o status mudar depois. |
+| `repasse` | `trg_valida_repasse` (`fn_valida_repasse_all_or_nothing`) | Recusa repasse com valor em tudo-ou-nada que não bateu a meta (91003). Repasse "zerado" é permitido; num `UPDATE`, só recusa quando o valor liberado **aumenta** (corrigir status ou data de um repasse já feito nunca trava). |
+| `contribuicao` | `trg_contribuicao_all_or_nothing_pix` (+ `_update`) | Tudo-ou-nada só aceita Pix, e quem contribui sem conta só usa Pix (90007). O `UPDATE` só revalida quando muda o meio ou a campanha, para não travar a confirmação do pagamento. |
+| `contribuicao` | `trg_valida_status_contribuicao` (`fn_valida_contribuicao_campanha_ativa`) | Só contribui em campanha `ativo`, já começada ("Em breve" recusa) e dentro do prazo (91015, 91016, 91017). |
+| `contribuicao` | `trg_contribuicao_valida_valor_minimo` | Valor mínimo de negócio (`valor_minimo_contribuicao`; 90014); no cartão, a faixa `valor_minimo_contribuicao_cartao`/`valor_maximo_contribuicao_cartao` (90037, 90038); cartão e boleto desligáveis (91052, 91053). Só no `INSERT`: o valor não muda depois. |
+| `contribuicao` | `trg_sincroniza_arrecadado_campanha` | Recalcula `campanha.valor_bruto_arrecadado` (contribuições `confirmado` e `repassado`) a cada mudança. `SECURITY DEFINER`: como quem doou, o `UPDATE` na campanha seria filtrado pela RLS e o total ficaria errado em silêncio. ⚠️ Faz `SELECT ... FOR UPDATE` na campanha antes de somar: sem a trava, duas confirmações ao mesmo tempo poderiam somar sem enxergar uma à outra, e uma "sumiria" do total. |
+| `contribuicao` | `trg_valida_transicao_status_contribuicao` | A situação só segue a máquina de estados (`DOCUMENTACAO_FINANCEIRO.md`, seção 4; 91050). |
+
+**Mudanças de dinheiro só por função `SECURITY DEFINER`** (o `app_nestjs` não tem `UPDATE` em `contribuicao` nem escrita em `repasse` e `auditoria_financeira`):
+* **`atualizar_status_contribuicao(...)`:** a única porta para mudar a situação de uma contribuição; valida a transição e grava uma linha em `auditoria_financeira` a cada chamada. **Por quê:** com `UPDATE` direto, qualquer pessoa confirmaria a própria contribuição sem pagar, e o arrecadado público subiria. Sem autorização própria de propósito: é chamada pelo webhook, sem sessão, depois de o Nest validar a assinatura do aviso.
+* **`atualizar_status_repasse(...)`:** o mesmo para o repasse (dinheiro saindo).
+* As demais (aplicar o aviso do provedor, criar e concluir repasse, estorno, revisão manual) estão descritas no `DOCUMENTACAO_FINANCEIRO.md`; cada uma confere a sua permissão ou é chamada só pelas tarefas automáticas e pelo webhook.
+
+#### Tarefas agendadas (funções chamadas pelo Nest, sem sessão)
+
+* **`encerrar_campanhas_vencidas()`:** encerra a campanha `ativo` com prazo vencido como `sucesso` ou `nao_atingido`, e já aciona o destino do dinheiro (`DOCUMENTACAO_FINANCEIRO.md`, seção 5). `SECURITY DEFINER`, porque a RLS não deixaria uma tarefa sem sessão ver linha nenhuma (o `UPDATE` daria 0 linhas, sem erro, e as campanhas ficariam `ativo` para sempre). Passa pela trigger de transição (ramo 5). O `CASE` que escolhe o status tem `::status_campanha`: sem o cast, resolve para texto e falha (42804).
+* **`expirar_contribuicoes_pendentes()`:** o Pix pendente que passou de `pix_validade_horas` vira `expirado` ([05-K-2-F]).
+* **`expirar_campanhas_rascunho()`:** apaga o rascunho mais velho que `campanha_rascunho_ttl_horas` (336, 14 dias), contado da **criação**.
+* **`expirar_campanhas_rejeitadas()`:** apaga a rejeitada cujo prazo de reenvio venceu ([05-K-2-B]).
+* **`reativar_pesquisadores_vencidos()`:** reativa quem passou do prazo da suspensão ([03-P]).
+* **Uma linha por vez ([05-K-2-E]).**
+
+> ⚠️ **`UPDATE` manual em `campanha` sem sessão devolve `UPDATE 0`, sem erro.** Mexer numa campanha direto no SQL Editor sem dizer quem está mexendo não muda nada: `pol_campanha_update` exige o dono ou uma permissão, e a RLS esconde as linhas antes da trigger rodar. É o comportamento certo (aprovar, rejeitar e encerrar precisam ser atribuíveis a alguém), só que silencioso. Antes do `UPDATE` manual: `SET app.id_usuario_atual = '<id de um usuário com a permissão certa>';`.
 
 ---
 
-> ⚠️ **UPDATE manual em `campanha` sem sessão devolve `UPDATE 0`, sem erro.**
-> - **Em palavras simples:** mexer numa campanha direto no banco (no SQL Editor do Supabase, por exemplo) sem dizer "quem" está mexendo não dá erro, mas também não muda nada. É fácil achar que funcionou.
-> - **Por quê:** `pol_campanha_update` (04) exige ser o dono ou ter permissão, e sem `app.id_usuario_atual` definido ninguém é nenhum dos dois. A RLS esconde todas as linhas antes mesmo de `trg_campanha_valida_transicao` rodar. É o comportamento certo (aprovar, rejeitar e encerrar precisam ser atribuíveis a alguém), só que silencioso.
-> - **Como fazer:** antes do UPDATE manual, rode `SET app.id_usuario_atual = '<id de um usuário com a permissão certa>';`. Os jobs (encerrar vencidas, expirar rascunho etc.) não precisam disso, porque usam funções `SECURITY DEFINER` que já passam pela trigger de transição.
+### [05-K-2-B] Campanha: rascunho, rejeição e reenvio
 
-### [05-K-2-B] Campanha: rascunho, rejeição e reenvio (20 e 21-09-2026)
-
-Regras novas de ciclo de vida da campanha, todas no banco (o Nest só expõe os endpoints). Decisão de produto do Lucas com a Alexia.
-
-**Máquina de estados (`status_campanha`).** A campanha nasce em **`rascunho`** (antes nascia `aguardando_aprovacao`, nome que mentia: sem orçamento e cronograma ninguém pode aprová-la). O valor `rascunho` foi acrescentado ao enum com `ALTER TYPE ... ADD VALUE`, e `campanha.status` tem `DEFAULT 'rascunho'`.
+**A campanha nasce em `rascunho`** (`DEFAULT` de `campanha.status`) e só vai para a fila por um botão explícito, nunca sozinha (uma trigger que a enviasse não teria um sujeito, e a transição é construída em torno de quem a faz).
 
 | De | Para | Quem | Condições (ERRCODE) |
 |---|---|---|---|
 | `rascunho` | `aguardando_aprovacao` | dono | pesquisador ativo (92009), completude e prazo (90009, 90010, 90011, 90015), limite de simultâneas (91018) |
-| `aguardando_aprovacao` | `ativo` | admin | mesma completude e prazo, de novo (a campanha ainda é editável até ficar `ativo`) |
-| `aguardando_aprovacao` | `rejeitado` | admin | grava em `historico_rejeicao` |
-| `rejeitado` | `aguardando_aprovacao` | dono (reenvios esgotados, 91025, também barra o admin com `campanha_editar`) | pesquisador ativo (92009), reenvios disponíveis (91025), dentro do prazo (91026), completude e prazo, limite de simultâneas |
-| `rejeitado` | (excluída) | job | prazo de reenvio vencido, ver `expirar_campanhas_rejeitadas()` |
-| `rascunho` | (excluída) | job ou dono | prazo do rascunho vencido, ver `expirar_campanhas_rascunho()`; o dono também pode excluir (`pol_campanha_delete`) |
-
-Não existe transição `aguardando_aprovacao -> rascunho` ("recolher") nem estado intermediário tipo `em_correcao`: a rejeitada volta direto para `aguardando_aprovacao`. A transição `rascunho -> aguardando_aprovacao` é **sempre por botão explícito**, nunca automática: um trigger que a disparasse não teria SUJEITO, e `fn_valida_transicao_campanha` é construída inteira em torno de quem faz a transição.
-
-**Completude no envio E na aprovação.** `fn_valida_completude_campanha()` (renomeada de `..._aprovacao`, porque roda em 3 transições) exige mínimo de itens de orçamento, mínimo de marcos, soma do orçamento igual à meta e `data_fim` no futuro. O erro chega no envio, a quem pode consertar, e não só na tela do administrador. Sem regra de banco comparando datas com `NOW()`, uma campanha com prazo vencido era aprovada e o job a encerrava como `nao_atingido` em até 15 minutos, o que penaliza o score do pesquisador.
-
-**Rejeição e reenvio.** Primeiro envio mais `campanha_rejeitada_max_reenvios` (3) reenvios = até 4 rejeições, e a 4ª esgota. **`fn_campanha_situacao_reenvio(id)` é a única conta** (devolve `rejeicoes`, `reenvios_restantes`, `somente_leitura` e `prazo_reenvio_ate`), `SECURITY DEFINER` porque quem escreve pode ser um admin sem `campanha_rejeitar`, que não enxergaria o histórico pela RLS. Ela é usada pela transição (91025 e 91026), pelo job de expiração e por `GET /campanha/:id`, então a tela mostra exatamente o que o banco vai decidir. `fn_campanha_reenvios_esgotados(id)` é um embrulho fino (`SELECT somente_leitura ...`). Esgotada, a campanha é **somente leitura** para qualquer perfil, inclusive o admin (91027 nas 3 funções de congelamento; 91025 se alguém tentar reenviar). Cada rejeição dá `campanha_rejeitada_prazo_dias` (30) contados da **última** rejeição; o prazo não corre enquanto a campanha está `aguardando_aprovacao`.
-
-**Dois jobs de expiração** (`@Cron` de hora em hora no Nest, ambos com `try/catch`):
-- `expirar_campanhas_rascunho()`: apaga `status = 'rascunho'` com `criado_em` mais velho que `campanha_rascunho_ttl_horas` (336, 14 dias), contado da **criação**, não da última edição. Apaga **linha a linha** e ignora só `foreign_key_violation`: um rascunho com filho que impede o `DELETE` (o rascunho 6 do seed tem uma solicitação de encerramento, que só dado de teste cria) não derruba o lote, e os outros vencidos expiram. Não recalcula completude: existia uma cópia da regra de completude aqui dentro que já divergira uma vez.
-- `expirar_campanhas_rejeitadas()`: apaga `status = 'rejeitado'` cuja última rejeição passou do prazo. Não apaga rejeitada sem nenhuma linha de histórico (sem data não há como saber) nem com denúncia contra ela (`FK_DENUNCIA_CAMPANHA_ALVO` é `ON DELETE RESTRICT` e um único DELETE que a atinja abortaria a limpeza de todas).
-
-**`historico_rejeicao` independente da campanha.** O histórico precisa sobreviver à exclusão da campanha, então a FK para `campanha` foi removida (`id_campanha` é só referência, ainda indexada) e a tabela ganhou `id_usuario_dono` e `titulo_campanha`, gravados no instante da rejeição. `pol_historicorej_select` reconhece o dono por `id_usuario_dono`. O histórico é **imutável**: a policy de UPDATE e o `GRANT UPDATE` foram removidos. A rejeição em cascata por suspensão do pesquisador (`suspender_pesquisador()`, 03) também grava uma linha por campanha.
-
-**Reagendar datas mantendo a duração.** `deslizar_datas_campanha(id, nova_data_inicio)` move `data_inicio`, `data_fim` e os marcos pelo mesmo intervalo, em uma instrução só. É função do banco porque `fn_valida_data_marco_cronograma` só dispara por escrita em marco, nunca por escrita em campanha; a ordem depende do sinal do deslocamento (pra frente: marcos primeiro; pra trás: campanha primeiro). Só rascunho ou rejeitada, e só o dono ou quem tem `campanha_editar`.
-
-**`PATCH` comum de `data_inicio` também revalida os marcos (23-09-2026).** `fn_valida_data_inicio_contra_marcos()`/`trg_campanha_valida_data_inicio_contra_marcos` (`BEFORE UPDATE ON campanha`, só quando `data_inicio` muda) bloqueia reagendar pra depois da data de um marco já cadastrado, mesmo ERRCODE 90008 da trigger irmã do marco. Fecha o buraco que só `deslizar_datas_campanha` cobria antes (ela move os marcos manualmente; um `PATCH` direto não passava por nenhuma revalidação).
-
-**Score (taxa de aprovação).** `calcular_score_historico` conta como rejeitada **apenas a campanha excluída sem nunca ter sido aprovada**: denominador = aprovadas + campanhas que estão no histórico de rejeições e não existem mais. Rascunho, aguardando e rejeitada ainda no prazo ficam fora, e rejeições de uma campanha depois aprovada também.
-
-**Limite de campanhas simultâneas.** `rascunho` não conta, então o limite é cobrado no envio. Não há limite próprio para rascunhos.
-
-**Porquês de desenho (mantidos aqui para os comentários do `.sql` ficarem curtos).**
-- **Suspenso não envia (92009).** `pol_campanha_update` (04) não checa suspensão, diferente de `pol_campanha_insert` e `pol_atualizacao_insert`. Sem essa regra, um pesquisador suspenso não criava campanha nem publicava atualização, mas empurrava uma campanha para a fila do administrador, inclusive as que a própria suspensão acabara de rejeitar em cascata.
-- **Prazo de reenvio (91026) também é checado na transição, não só pelo job.** Existe uma janela de até 1h entre o prazo vencer e o job de expiração rodar; sem a checagem, uma campanha que já deveria ter sumido poderia ser reenviada. Uma rejeitada **sem nenhuma linha de histórico** (rejeitada por fora do fluxo normal) não tem data para comparar: o reenvio passa e o job também não a apaga.
-- **`fn_campanha_reenvios_esgotados` é `SECURITY DEFINER`.** Quem escreve pode ser o dono ou um administrador com `campanha_editar` sem `campanha_rejeitar`, e a RLS do histórico só o deixa ver com essa segunda permissão: sem o `DEFINER` a contagem daria 0 e a campanha nunca pareceria esgotada. Devolve só um booleano.
-
-- **Status com nome, em vez de lista repetida.** `fn_status_pos_aprovacao(status)` (`ativo`, `sucesso`, `nao_atingido`, `encerrado`, `encerrado_moderacao`) é usada pelas 3 funções de congelamento (`fn_congela_regras_campanha`, `fn_congela_orcamento_campanha`, `fn_congela_marco_cronograma`), e `fn_status_terminal(status)` (`sucesso`, `nao_atingido`, `encerrado`, `encerrado_moderacao`) por `fn_preenche_encerramento_campanha`. Um status novo no enum é lembrado em um lugar só. As duas são `IMMUTABLE` e sem privilégio especial (função pura). **As outras listas parecidas são outra coisa e ficam como estão:** a regra pública de `pol_campanha_select` (não inclui `encerrado_moderacao`), as 4 dimensões do score (`ativo`, `sucesso`, `nao_atingido`, `encerrado`) e a lista de `deslizar_datas_campanha`.
-- **Exclusão em cascata não é bloqueada pelo só leitura.** Ao apagar a campanha (`expirar_campanhas_rejeitadas`), os triggers de congelamento de orçamento e cronograma disparam nas linhas filhas, mas a linha-pai já não existe e `v_status` vem `NULL`, então o bloqueio não se aplica. É isso que deixa a expiração apagar uma campanha esgotada.
-- **Completude só bloqueia por `data_fim`.** `data_inicio` no passado é legítimo (campanha que começou hoje de manhã e é aprovada à tarde). O `WHEN` do trigger lista `rascunho` e `rejeitado` por nome, e não "qualquer coisa para `aguardando_aprovacao`", para não pegar de carona a cascata de suspensão, que também pousa nesse status.
-- **Reagendar datas (`deslizar_datas_campanha`) aceita o dono ou quem tem `campanha_editar`**, o mesmo critério de `pol_campanha_update`: reagendar é editar a campanha.
-- **Rejeitada que expira mantém o histórico, então o score muda na hora.** `trg_campanha_recalcula_score_delete` é `AFTER DELETE` (só para campanha que não é rascunho): a exclusão pelo job recalcula o dono, e é nesse instante que a campanha passa a contar como rejeitada definitiva.
-- **Recálculo de score só quando o que o score usa muda.** Criar ou apagar **rascunho** não recalcula (rascunho não entra em nenhuma das 4 dimensões; por isso a trigger de INSERT e a de DELETE de campanha têm `WHEN (... status <> 'rascunho')`, separadas porque `WHEN` não aceita `TG_OP`). Editar o **texto** de uma atualização de campanha não recalcula (só `ativo` e `id_campanha` contam), e trocar a **URL ou o rótulo** de um link acadêmico também não (só o tipo e o dono contam); nesses dois o corte é dentro da função (`trg_recalcular_por_atualizacao`, `trg_recalcular_por_link`). Denúncia pendente recalcular à toa e denúncia contra campanha não recalcular o dono ficam para a revisão do motor do score.
-- **Recalculo de score por comando.** `trg_score_config_recalcula_todos` passou de `FOR EACH ROW` para `FOR EACH STATEMENT` (21-09-2026): editar os 4 pesos raiz num `UPDATE` só disparava 4 recálculos completos da plataforma inteira dentro da mesma requisição. Perda aceita: some o filtro "só se o peso mudou de valor" (o PostgreSQL não permite tabela de transição junto com `UPDATE OF <coluna>`). `recalcular_score_pesquisador` ganhou `ORDER BY score_minimo` no rótulo, para faixas sobrepostas darem sempre o mesmo resultado.
-- **Rascunho e histórico na suspensão.** `suspender_pesquisador()` rejeita as campanhas `aguardando_aprovacao` e grava uma linha no histórico para cada uma (`id_admin` = quem suspendeu). Rascunhos não são tocados: seguem o prazo normal e o envio deles é que fica bloqueado enquanto durar a suspensão.
-
-### [05-K-2-D] Campanha: campos bloqueados numa função só (26-09-2026)
-
-- **`fn_campanha_campos_bloqueados(p campanha) RETURNS TEXT[]`** devolve os campos que o congelamento trava naquele momento: campanha aprovada em diante (`fn_status_pos_aprovacao`) trava `meta_financeira`, `modelo`, `taxa_plataforma`, `titulo`, `descricao`, `video_apresentacao_url` e `id_area_conhecimento`, mais `data_fim` e `data_inicio` depois que a campanha começa de verdade; rejeitada que esgotou os reenvios trava todos os campos de conteúdo (as 8 colunas, sem `taxa_plataforma`); nos demais estados devolve lista vazia. A ordem da lista é a ordem em que a trigger confere, e por isso decide qual mensagem aparece quando alguém muda dois campos de uma vez.
-- **`fn_campanha_erro_congelamento(campo, rejeitada) RETURNS TABLE(errcode, mensagem)`** guarda o código e a mensagem de cada campo, **os mesmos de antes** (91004 a 91010, 91023, 91024, e 91027 para a rejeitada esgotada). Nenhum código nem mensagem mudou, então nada muda para o Nest e o React.
-- **`fn_congela_regras_campanha()`** deixou de ter um `IF` por campo: percorre a lista e compara `to_jsonb(NEW) -> campo` com `to_jsonb(OLD) -> campo` (`IS DISTINCT FROM`, que trata `NULL` como antes, importante em `taxa_plataforma` e `data_inicio`). Campo novo em `campanha` só fica editável depois da aprovação se alguém o tirar da lista; esquecer de pôr um `IF` deixou de ser possível.
-- **`GET /campanha/:id`** devolve `camposBloqueados` (com os nomes do DTO: `metaFinanceira`, `videoApresentacaoUrl`...) chamando a mesma função, então a tela trava exatamente o que o banco vai recusar, sem lista própria no Nest nem no React.
-- **Prova de equivalência:** as suítes de caracterização `8-campanha-caracterizacao.mjs` (630 casos) e `9-comentario-caracterizacao.mjs` passaram idênticas depois da troca; `14-campos-bloqueados-campanha.mjs` cobre a lista e as mensagens. Grants: `EXECUTE` só para `app_nestjs` (`06`). Grupo L do `ATUALIZAR O SUPABASE.sql`.
-
-### [05-K-2-E] Tarefas agendadas: uma linha por vez (26-09-2026)
-
-- **Problema:** `encerrar_campanhas_vencidas`, `expirar_campanhas_rejeitadas` e `reativar_pesquisadores_vencidos` faziam um comando só sobre todas as linhas. Se uma trigger recusasse UMA linha, o comando inteiro falhava e nada era processado, em todo ciclo (15 minutos ou 1 hora), até alguém achar o problema. Foi assim que o job de rascunhos falhava toda hora (violação de chave estrangeira, achado ao vivo) e por isso ele foi o primeiro a virar linha a linha.
-- **Agora:** as três percorrem os ids elegíveis e tratam cada um num bloco `BEGIN ... EXCEPTION WHEN OTHERS`. A linha recusada vira `WARNING` no log do Postgres (com o SQLSTATE e a mensagem) e é tentada de novo no ciclo seguinte; as outras seguem. Mesma assinatura (`RETURNS INT`) e mesmo resultado (quantas linhas foram tratadas), então o Nest não mudou.
-- **Diferença de `expirar_campanhas_rascunho`:** ela só engole violação de chave estrangeira (causa conhecida, o resto continua aparecendo). As três acima engolem qualquer erro, porque a causa de uma recusa de trigger não se conhece de antemão; o custo é que uma linha que sempre falha repete o `WARNING` a cada ciclo, então convém olhar o log do Postgres de vez em quando. `limpar_log_auditoria` ficou como estava (um `DELETE` por data, sem chave estrangeira que possa recusar linha).
-- **Custo:** um bloco de exceção por linha é uma subtransação; com o volume do sistema é irrelevante. Suíte `16-tarefas-agendadas-linha-a-linha.mjs`, que recusa uma linha de propósito com uma trigger e confere que a outra é processada. Grupo M do `ATUALIZAR O SUPABASE.sql`.
-
-### [05-K-2-F] O pagamento que chega depois do fim da campanha (03-10-2026)
-
-📌 **O Pix pendente vence, e a campanha vencida espera os pendentes ainda válidos.**
-- **Em palavras simples:** o apoio por Pix nasce "pendente" e só conta na meta quando o pagamento é confirmado. Antes, a campanha era encerrada na hora, contando só o confirmado: um Pix pago no último minuto, com o aviso chegando depois, fazia uma campanha que bateu a meta ser dada como não atingida. Agora a campanha espera esses Pix (no máximo o tempo de validade deles) antes de sair o resultado, como o "Aguardando" do Catarse.
-- **Decisão:**
-  - parâmetro `pix_validade_horas` (24, público), que o gateway também recebe ao gerar o código;
-  - `expirar_contribuicoes_pendentes()` marca como `expirado` o Pix pendente mais velho que isso (chamada pelo mesmo agendamento de 15 minutos que encerra as campanhas, antes dele);
-  - `encerrar_campanhas_vencidas()` pula a campanha vencida que ainda tem Pix pendente dentro da validade.
-  - Nenhum status novo: o "aguardando confirmação" é calculado (campanha `ativo`, prazo vencido, com Pix pendente válido), como o "Em breve".
-- **Motivo:** é justo com quem pagou dentro do prazo e com o pesquisador, e tem fim garantido. Nenhum Pix novo nasce depois do fim (91017), então a espera nunca passa de `pix_validade_horas`. Decisão do Lucas.
-- **Caso-limite aceito:**
-  - só o Pix segura o encerramento. Cartão confirma na hora, e boleto (que só o Flexível aceita) fica para quando o gateway for escolhido;
-  - a confirmação que chegar depois de a campanha ser encerrada ainda é aceita pelo banco. Recusá-la (e devolver o valor) entra na ordem de status da contribuição, no módulo de contribuição.
-- **Teste:** suíte PGlite 34.
-
-📌 **Só se segue campanha publicada.**
-- **Decisão:** `trg_seguir_campanha_valida_publicada` recusa seguir campanha fora de `ativo`, `sucesso`, `nao_atingido` e `encerrado` (91034), o mesmo conjunto que `pol_campanha_select` mostra a qualquer pessoa.
-- **Motivo:** segurança. A tela nunca mostra rascunho nem campanha aguardando aprovação de outra pessoa, mas a API aceitava o "seguir" direto. Não precisa de RF: é a mesma regra de visibilidade que já existe.
-- **Caso-limite aceito:** vale só na hora de seguir. Quem já segue continua seguindo se a campanha mudar de status depois (por exemplo, encerrada por moderação).
-
-📌 **Atualização sempre com fase e formato.**
-- **Decisão:** `atualizacao_campanha.fase` e `tipo` são `NOT NULL` (RF-052), e o DTO do Nest exige os dois.
-- **Motivo:** o RF diz "deve registrar"; regra que o requisito chama de obrigatória fica no banco, e a página pública e o score podem contar com ela.
-- **Caso-limite aceito:** nenhum. As 10 atualizações do seed já tinham as duas.
-
-📌 **Auditoria financeira imutável e automática: decidido para o módulo de contribuição.**
-- **Em palavras simples:** `auditoria_financeira` é o histórico de cada contribuição (quando nasceu, quando foi paga, devolvida...). Hoje o banco deixa alterar um registro dela, e nada a preenche sozinho: depende do Nest lembrar.
-- **Decisão:** quando o módulo de contribuição for construído, a tabela perde o `UPDATE` (permissão e regra de acesso), e uma trigger em `contribuicao` grava um registro a cada mudança de status. Correção vira um registro novo, nunca edição.
-- **Motivo:** trilha de auditoria que pode ser editada não prova nada. Padrão de mercado: PCI DSS, requisito 10, e todo sistema contábil. Fica para o módulo porque a trigger depende da ordem de status da contribuição, que nasce junto.
-- **Caso-limite aceito:** até lá, o seed grava a auditoria à mão, e ninguém escreve nela (não existe tela nem rota).
-
-### [05-K-2-G] Denúncia: alvo, julgamento e encerramento por moderação (03-10-2026)
-
-📌 **O alvo da denúncia tem de fazer sentido.**
-- **Em palavras simples:** só se denuncia uma campanha ativa ou o perfil de um pesquisador, e ninguém denuncia a própria campanha nem a si mesmo.
-- **Decisão:** `trg_denuncia_valida_alvo` (`BEFORE INSERT`, `SECURITY DEFINER`): campanha fora de `ativo` (91035; "Em breve" é ativa), perfil que não é de pesquisador (90026), a própria campanha ou o próprio perfil (92029).
-- **Motivo:** RF-106 e RF-029; o mesmo conflito de interesse que já valia para comentar e para julgar.
-- **Caso-limite aceito:** só na criação. A campanha pode ser encerrada depois, e a denúncia segue para julgamento. O seed desliga a regra durante a carga, porque as denúncias dele são históricas.
-
-📌 **Quem julga muda só a situação e a justificativa.**
-- **Decisão:** coluna nova `denuncia.justificativa_moderacao` (limite em `limite_caracteres_justificativa_denuncia`, 1000) e `UPDATE` por coluna (`status`, `justificativa_moderacao`): motivo, alvo, relato e autor ficam como o denunciante registrou.
-- **Motivo:** o RF-115 pede o motivo da ação no log; a justificativa entra na linha, e o log de auditoria guarda quem decidiu e quando.
-
-📌 **Encerrar a campanha sai de uma denúncia procedente.**
-- **Decisão:** `encerrar_campanha_por_denuncia(p_id_denuncia, p_justificativa)` (03, `SECURITY DEFINER`): confere `denuncia_responder` e `campanha_encerrar_moderacao` (92030), exige justificativa (90027), só denúncia de campanha (91036) e só campanha ativa (91037); a denúncia vira `resolvida` e a campanha `encerrado_moderacao`, juntas.
-- **Motivo:** `pol_campanha_update` não abre a campanha ao moderador; a função deixa o moderador encerrar só por esse caminho, sempre com uma denúncia procedente e uma justificativa por trás (RF-114).
-- **Caso-limite aceito:** as outras denúncias pendentes da mesma campanha continuam pendentes. A devolução do dinheiro entra com o módulo de contribuição.
-- **Teste:** suíte PGlite 36.
-
-📌 **Seed: comentários, endossos e denúncias nas campanhas que já existiam.**
-- **Decisão:** 21 comentários (campanhas 1 a 5 e 7 a 10), 12 endossos e 16 denúncias, com as contas "humanas". O endosso é feito como o dono de cada campanha (um bloco que entra como ele), porque a criação do comentário zera o endosso (`trg_comentario_ignora_endosso_criacao`): o seed antigo escrevia comentários "endossados" que, no banco, nasciam sem endosso. Toda denúncia decidida tem justificativa. O dono da campanha 4 deixou de denunciar a própria campanha (a denunciante passou a ser a Ana), e uma das denúncias contra o Eduardo (21) é procedente, o que o mantém em "Em Construção" (46), como a tabela de resumo do seed promete.
-- **Motivo:** conferir comentário, endosso e denúncia no Consultar de Campanhas sem preparar nada antes.
-
-### [05-K-2-H] Encerramento antecipado: pedir, decidir e encerrar direto (03-10-2026)
-
-📌 **Sem contribuição confirmada, o dono encerra sozinho; com contribuição, pede ao administrador.**
-- **Em palavras simples:** se ninguém pagou ainda, não há dinheiro de ninguém em jogo, e o pesquisador pode encerrar a campanha na hora. Se alguém já pagou, o administrador decide, porque o dinheiro precisa voltar (Tudo ou Nada) ou ser repassado (Flexível).
-- **Decisão:** `encerrar_campanha_sem_contribuicao(p_id_campanha, p_justificativa)` (03, `SECURITY DEFINER`): só o dono (92031), com justificativa (90028), campanha ativa (91038), nenhuma contribuição confirmada ou repassada (91040) e nenhum Pix pendente ainda válido (91043). Grava o encerramento como um pedido `aprovado` sem `id_admin` e encerra a campanha. Novo item 10 de `fn_valida_transicao_campanha`: o dono passa de `ativo` para `encerrado` só com esse pedido gravado e sem contribuição confirmada.
-- **Motivo:** RF-064. Um pedido aprovado sem administrador deixa o encerramento direto registrado no mesmo lugar dos outros (quem pediu, quando e por quê), sem tabela nova.
-- **Caso-limite aceito:** um pedido pendente da mesma campanha é cancelado na mesma operação. O Pix pendente ainda válido bloqueia, porque pode ser pago a qualquer momento.
-
-📌 **Aprovar e rejeitar só pela função de decidir.**
-- **Decisão:** `decidir_solicitacao_encerramento(p_id_solicitacao, p_aprovar, p_justificativa)` (03, `SECURITY DEFINER`): permissão `solicitacao_encerramento_decidir` (92032), só pedido pendente (91041), rejeitar com justificativa (90029), aprovar só com a campanha ainda ativa (91042). Grava quem decidiu e quando; aprovar encerra a campanha na mesma operação. Mudança direta de status para aprovado ou rejeitado sem `avaliado_em` é recusada (92033). O app só insere campanha e justificativa e só muda `status` (GRANT por coluna, para cancelar).
-- **Motivo:** pedido aprovado e campanha encerrada são uma coisa só; em dois passos, um podia acontecer sem o outro.
-- **Caso-limite aceito:** um pendente por vez em cada campanha (`uq_solicitacao_encerramento_pendente`); pedido decidido ou cancelado não muda mais (91041). A devolução ou o repasse do dinheiro entra com o módulo de contribuição; os e-mails, com o `4-mail`.
-- **Teste:** suíte PGlite 37.
-
-📌 **Seed: um pedido de cada situação.**
-- **Decisão:** aprovado na campanha 7 (que fica encerrada na data da decisão), rejeitado na 4 com a justificativa do administrador, cancelado na 2 e pendente na 10. Saíram os pedidos feitos depois do fim natural das campanhas e o da campanha em rascunho, que as regras novas não aceitam.
-- **Motivo:** ver as quatro situações na tela Encerramentos sem preparar nada.
-
-📌 **A tarefa de rascunhos antigos pula também o rascunho com denúncia.**
-- **Decisão:** `expirar_campanhas_rascunho` pega `foreign_key_violation` e também `restrict_violation` (23001).
-- **Motivo:** a denúncia segura a campanha com `ON DELETE RESTRICT`, que dá outro código; sem isso, a tarefa inteira parava num rascunho denunciado.
-
-### [05-K-2-I] Motor do score fechado (03-10-2026)
-
-**Em palavras simples:** a pontuação de 0 a 100 de cada pesquisador soma quatro dimensões. O peso de cada dimensão é o máximo de pontos dela; cada item de dentro vale a sua parte desse máximo. A reputação perde pontos com denúncias procedentes contra o perfil e contra as campanhas. Não existe mais desconto fixo por "abandono". O administrador muda pesos e faixas numa tela própria (Configurações > Pontuação (Score)).
-
-📌 **Cada item vale a sua parte da dimensão.**
-- **Decisão:** `fn_fator_subitem(p_id_pai, p_nome)` (05) devolve peso do item / soma dos itens ligados da mesma dimensão (0 se desligado); cada função de dimensão soma as partes conquistadas e multiplica pelo peso da dimensão. Substitui a função antiga, que devolvia o peso cru.
-- **Motivo:** antes, `peso` queria dizer "parte da dimensão" em três dimensões e "custo por denúncia" na reputação, e mudar o peso de uma dimensão obrigava a mexer em todos os itens dela para a conta fechar. Agora mudar a dimensão não mexe nos itens, e desligar um item passa a parte dele para os outros.
-- **Caso-limite aceito:** com o seed (itens somando o peso da dimensão) perfil, histórico e atualização dão exatamente os mesmos números de antes. Dimensão ligada com itens, mas nenhum ligado com peso maior que zero, é recusada (90031), porque nunca pontuaria; peso negativo também (90030); a soma 100 das dimensões continua (90017, com mensagem nova).
-
-📌 **Reputação em duas partes: perfil e campanhas.**
-- **Decisão:** itens `denuncias_perfil` (10) e `denuncias_campanha` (15) da dimensão "Reputação da Comunidade" (25). Cada parte cai em linha reta até zerar em `configuracoes.score_denuncias_para_zerar` (3) denúncias procedentes: 1 procedente contra o perfil deixa 6,67 dos 10. Só `resolvida` conta. `trg_recalcular_por_denuncia` recalcula o pesquisador denunciado ou o dono da campanha denunciada, e só quando a denúncia entra em `resolvida` ou sai dela. Saíram `volume_denuncias` e `gravidade_denuncias`.
-- **Motivo:** `volume_denuncias` e `gravidade_denuncias` multiplicavam a mesma contagem (eram uma alavanca só), e denúncia procedente contra campanha não pesava nada, embora o requisito diga "denúncias julgadas procedentes" sem restringir ao perfil. Fraude de campanha pesa mais porque atinge quem apoia.
-- **Caso-limite aceito:** cada denúncia procedente conta, mesmo quando várias pessoas denunciam o mesmo fato na mesma campanha (o "acúmulo"; resolvido em 12-10-2026, ver a decisão logo abaixo). Pesquisador sem nenhuma campanha fica com a parte "campanhas" inteira: o mínimo dele é 25 (10 do perfil, obrigatório, mais 15), na faixa "Em Construção", por mais denúncias contra o perfil que tenha. Gravidade por motivo de denúncia: adiada (`PENDENCIAS`).
-
-📌 **Acúmulo: a parte "campanhas" conta campanhas, não denúncias (12-10-2026).**
-- **Decisão:** `calcular_score_reputacao` conta `count(DISTINCT id_campanha_alvo)` das denúncias procedentes: várias denúncias procedentes contra a mesma campanha tiram pontos uma vez só. A parte "perfil" continua contando denúncias.
-- **Motivo:** punir a falta, não o número de pessoas que a viram (padrão de mercado em moderação: a penalidade é por infração confirmada). Antes, 10 pessoas denunciando a mesma fraude valiam 10 penalidades.
-- **Caso-limite aceito:** no perfil não há um "fato" para agrupar, então cada denúncia procedente continua contando. No seed, o Vinícius (3 procedentes na campanha 12) sobe de 20 para 30 e sai da faixa "Atenção" para "Em Construção"; a demonstração fica sem pesquisador na faixa "Atenção". Gravidade por motivo continua adiada (`PENDENCIAS`).
-
-📌 **Denúncia sem "em análise" (12-10-2026).**
-- **Decisão:** a denúncia vai direto de pendente para resolvida ou improcedente. `CK_DENUNCIA_SEM_EM_ANALISE` (01) recusa `'em_analise'`; o valor continua no tipo `status_denuncia`, fora de uso. As denúncias em análise voltaram a pendente (seed e Grupo BB do ATUALIZAR). Testado na suíte 45.
-- **Motivo:** "em análise" não guardava quem estava analisando, então não dizia nada além de "pendente": era mais código para a mesma coisa. Nos sistemas de moderação, esse estado só tem valor quando diz quem pegou o caso.
-- **Caso-limite aceito:** tirar um valor de um tipo no Postgres obrigaria a recriar as triggers e as políticas que usam a coluna `status`; a regra na tabela faz o mesmo efeito sem esse risco. O texto do RF-111 ainda lista "em análise" e precisa ser ajustado nos requisitos.
-
-📌 **Data do julgamento e quem decidiu a contestação (12-10-2026).**
-- **Decisão:** a denúncia ganhou `julgado_em` (gravado por `trg_denuncia_registra_julgador` junto com `id_julgador`) e `id_julgador_contestacao` (gravado por `decidir_contestacao`, 03; conta excluída vira vazio). A ficha da denúncia mostra quem julgou, quando, e quem decidiu a contestação. Grupo BC do ATUALIZAR; suíte 46.
-- **Motivo:** a ficha mostrava a decisão sem dizer quem nem quando, e a contestação decidida não guardava quem decidiu.
-- **Caso-limite aceito:** no Supabase, as denúncias julgadas antes do Grupo BC ficam sem data, e as contestações já decididas sem quem decidiu (a ficha mostra "-"); não há como saber esses dados. No seed, o Diego (8) julgou todas e o Admin (1) decidiu a contestação recusada.
-
-📌 **Seed: toda campanha aprovada tem orçamento e cronograma (12-10-2026).**
-- **Decisão:** as campanhas 1 a 12 e 19 a 21 ganharam itens de orçamento (soma igual à meta) e 3 marcos dentro do prazo ([07-E-1e]), como `fn_valida_completude_campanha` exige para aprovar.
-- **Motivo:** o seed grava as campanhas já aprovadas, sem passar pela aprovação; elas apareciam sem nada no orçamento e no cronograma, o que o sistema nunca deixaria acontecer.
-- **Caso-limite aceito:** a campanha 17 continua na fila com 2 marcos, de propósito, para a lista de verificação mostrar o que falta.
-
-📌 **Descrição do papel no banco (13-10-2026).**
-- **Decisão:** `papel.descricao` (VARCHAR(500), opcional), editável pelo Alterar Papel junto com o nome (`GRANT UPDATE (nome, descricao)`); o seed preenche os 7 papéis. Grupo BE do ATUALIZAR.
-- **Motivo:** o texto "para que serve" ficava num dicionário fixo no React, por código do papel, e o admin não conseguia mudá-lo.
-- **Caso-limite aceito:** a descrição é a intenção do papel; o que ele pode de verdade continua sendo a matriz Papel × Permissão, que pode ser mudada sem a descrição acompanhar.
-
-📌 **Perfil Acadêmico: "outro link" vale mais (13-10-2026).**
-- **Decisão:** o subitem `linkedin` passa a se chamar "Link (ResearchGate, LinkedIn, GitHub...)" e vale 6; `instituicao` e `titulo` valem 4 cada (antes 4, 5 e 5; Lattes e ORCID seguem 8; a dimensão segue 30). Na tela Pontuação, instituição e título ganham uma dica dizendo que vêm de um campo do perfil, não de link. Grupo BD do ATUALIZAR.
-- **Motivo:** o nome "LinkedIn ou site acadêmico" escondia que qualquer link fora Lattes/ORCID conta, e dava a impressão de que os três últimos itens eram links.
-- **Caso-limite aceito:** quem tem instituição e título, mas nenhum outro link, perde 2 pontos (no seed, quase todos); ninguém muda de faixa. O "outro link" conta uma vez só, com um ou com vários.
-
-📌 **Seed: três versões de cada Termo (13-10-2026).**
-- **Decisão:** 6 versões em ordem de id: 1 e 2 são as antigas (v1, de 2024; conta e pesquisador), 3 e 4 as vigentes (v2, de 03-10-2026) e 5 e 6 os rascunhos da próxima versão (v3, sem aceite, feitos a partir da vigente com uma seção nova). As vigentes ficam na parte de referência com id 3 e 4 escritos à mão, e a sequência é acertada logo depois; num banco de produção elas começam no id 3. Os textos "[PLACEHOLDER]" saíram: a v1 da conta é o texto da antiga v4 (sem o item do IP) e a v1 do pesquisador é o da antiga v2 (sem o cálculo da pontuação).
-- **Motivo:** eram 8 versões, 4 delas da conta, várias com texto de preenchimento; a tela de Termos de Uso fica mais fácil de ler com antiga, vigente e rascunho de cada tipo.
-- **Caso-limite aceito:** a contagem de aceites de uma versão soma os aceites das contas e os de cada contribuição (RF-054/RF-055), por isso a v1 da conta mostra mais aceites (28 contas e 52 contribuições) do que o número de usuários.
-
-📌 **Seed: mais dados que o sistema não deixaria existir (13-10-2026).**
-- **Decisão:** (1) as campanhas que terminaram no prazo (1, 2, 3, 4, 5, 8 e 9) ganharam a data de encerramento, igual ao fim do prazo; (2) a contribuição TXN-PIX-0008 passou para depois do início da campanha 3; (3) a campanha 6 é rascunho, nunca foi enviada: saiu a rejeição dela, e a denúncia improcedente que apontava para ela foi para a campanha 9, na época em que a 9 estava no ar; (4) a Marina (24) volta a ser conta comum zerada (a contribuição na campanha 21 passou para o Marcos, 17); (5) Gabriel (25) e Camila (26), que viraram pesquisadores, confirmaram o e-mail como os outros: só as contas 24, 27 e 28 seguem sem verificar (substitui o "24 a 28" do Seed coerente, 27-09-2026).
-- **Motivo:** uma conferência por regras, nos testes do banco, achou rascunho com rejeição e denúncia, campanha encerrada sem data de encerramento e contribuição antes do início.
-- **Caso-limite aceito:** ficaram de fora, para o módulo de pagamentos, os achados de dinheiro: a campanha 4 (não atingida) tem contribuições "confirmado" misturadas com "a devolver" e um repasse de valor líquido zero; as campanhas 8 e 9 terminaram com sucesso em 2024 e nunca tiveram repasse.
-
-📌 **Sem desconto fixo por "abandono" no histórico.**
-- **Como era:** `calcular_score_historico` chamava de "abandonada" a campanha `nao_atingido` sem nenhum pedido de encerramento e descontava 3 pontos por campanha (`score_penalidade_abandono`); descontava mais 2 por campanha `nao_atingido` cujo pedido de encerramento não tinha justificativa (`score_penalidade_sem_justificativa`). A campanha `encerrado` (encerrada antes do prazo) não entrava na taxa de conclusão.
-- **Por que deixou de fazer sentido (módulo 20):** (1) o pedido de encerramento só existe para campanha **ativa** e termina em `encerrado`, nunca em `nao_atingido`; logo nenhuma campanha `nao_atingido` tem pedido, e **toda** campanha que vencia sem bater a meta perdia 3 pontos como "abandonada", inclusive a de quem atualizou tudo e fez tudo certo; (2) a justificativa do pedido ficou obrigatória, então o desconto de 2 nunca mais acontecia; (3) quem encerrava antes do prazo com dinheiro na mesa (o caso que mais lembra "abandono") não perdia nada.
-- **Decisão:** saem os dois descontos e as duas chaves. Taxa de conclusão = sucesso / (sucesso + não concluídas). **Não concluída:** campanha `nao_atingido`, ou `encerrado` com pedido aprovado **pelo administrador** (`id_admin` preenchido: havia contribuição confirmada). **Fora da conta:** o encerramento direto (sem contribuição confirmada; pedido aprovado sem `id_admin`), o encerramento por moderação (`encerrado_moderacao`, que já pesa na reputação pela denúncia procedente contra a campanha: contar nos dois lugares seria dupla penalização, a mesma regra da Lista C, item 13) e as campanhas que ainda não terminaram (rascunho, aguardando, rejeitada, ativa).
-- **Motivo:** padrão de mercado: Kickstarter e Catarse não punem quem não bate a meta nem quem cancela; mostram o histórico e deixam o apoiador julgar. Não bater a meta já baixa a taxa de conclusão de forma proporcional, enquanto o desconto fixo pesava igual para quem tem 1 ou 20 campanhas.
-- **Exemplos (suíte 38, pesquisadora com 1 campanha de sucesso, 25 pontos no histórico):** a campanha vence sem a meta: 10 (taxa de conclusão 0, aprovação cheia); antes seriam 7. Ela abre uma segunda campanha e a encerra antes do prazo sem nenhuma contribuição: continua 25. A segunda tinha contribuição e o administrador aprovou o encerramento: 18 (conclusão 1 de 2).
-- **Caso-limite aceito (pontos para um debate futuro):** (a) quem encerra antes do prazo com contribuição, por motivo legítimo (equipe doente, verba de outro edital), perde igual a quem não bateu a meta; alternativas: não contar, ou contar meia campanha. (b) O encerramento direto pode ser usado para fugir de um "não atingido" que se aproxima, desde que ninguém tenha pago; aceito, porque sem contribuição ninguém foi lesado. (c) Quem não bate a meta várias vezes seguidas só vê a taxa cair; alternativa: um desconto proporcional ao número de campanhas. (d) Campanha `encerrado` sem nenhum pedido (não existe no fluxo atual) fica fora da conta.
-- **Teste:** suíte PGlite 38.
-
-📌 **A tela do score edita só peso, ligado e faixas.**
-- **Decisão:** `GRANT UPDATE (peso, ativo)` em `score_config` e `GRANT UPDATE (rotulo, descricao, score_minimo, score_maximo)` em `score_rotulo` (06). `nome` e `id_pai` ficam fora: são a estrutura que as funções procuram pelo nome. A tela salva todos os pesos (ou todas as faixas) num comando só, então o recálculo roda uma vez. Mudar uma faixa recalcula o rótulo de todos (`trg_score_rotulo_recalcula_todos`, nova).
-- **Motivo:** renomear um item faria a função não achá-lo, e a parte dele sumiria sem erro nenhum.
-- **Caso-limite aceito:** salvar recalcula todos os pesquisadores dentro da requisição do administrador; com milhares de pesquisadores pode demorar alguns segundos. A tela não cria nem apaga item nem faixa.
-
-📌 **Seed reorganizado para a demonstração (12-10-2026).**
-- **Decisão:** sem registro novo de usuário: (1) ninguém nasce com foto de perfil (as 7 fotos apontavam para imagens que não existem no armazenamento, e o Consultar dizia "Foto cadastrada"); os anexos das atualizações são achados pela chave do arquivo, não pelo id; (2) a fila de aprovação tem 5 campanhas (ids 13 a 17) e há uma rejeitada com reenvio (18), cada uma mostrando uma situação ([07-E-1b]); (3) Gabriel (25) e Camila (26) viraram pesquisadores com perfil mínimo e denúncias procedentes contra o perfil, e estão na faixa "Atenção" (20 e 23): é o que faz a coluna "atenção" da fila mostrar "Score baixo"; (4) o que está aberto (fila, denúncias pendentes e em análise) tem data relativa ao dia em que o banco é montado, espalhada entre verde, laranja e vermelho na coluna "esperando"; (5) mais três campanhas aprovadas ([07-E-1d]): a 19 "Em breve" (começa daqui a 7 dias) e as 20 e 21 ativas, com contribuições e pedido de encerramento pendente há 40 e 15 dias, que somados ao da campanha 10 (1 dia) dão as três cores na coluna "esperando" de Pedidos de Encerramento; (6) a denúncia pendente que apontava para a campanha 6 (rascunho, que não pode ser denunciada) agora aponta para a 20.
-- **Motivo:** a fila nascia vazia, a coluna "atenção" nunca aparecia (ninguém abaixo do score mínimo) e toda espera nascia vermelha (datas fixas de 2024).
-- **Caso-limite aceito:** a campanha 17 está na fila com 2 marcos, abaixo do mínimo, para o checklist mostrar o que falta; no uso real o envio já barra isso, então ela é um dado de demonstração. As campanhas 1 a 10 continuam as mesmas (a demonstração do Campo de Testes conta com elas). Os 7 anexos das atualizações (6 imagens e 1 PDF) também saíram do seed, pelo mesmo motivo das fotos: não havia arquivo no armazenamento e o anexo não abriria; nenhuma atualização nasce com anexo.
-
-📌 **Seed: o Vinícius ganhou uma campanha encerrada por moderação.**
-- **Decisão:** campanha 12 (do Vinícius, 22), aprovada e encerrada por moderação, com 3 denúncias procedentes de 3 pessoas.
-- **Motivo:** no modelo novo, as 4 denúncias contra o perfil dele zeram só a parte "perfil"; sem campanha denunciada, ele ficaria com 25 ("Em Construção") e a faixa "Atenção" sumiria do seed. Com a campanha: 10 + 10 + 0 + 0 = 20. **Desde o acúmulo (12-10-2026), as 3 procedentes da campanha 12 contam como 1 e ele fica com 30 ("Em Construção"); a faixa "Atenção" voltou a ficar sem ninguém no seed.**
-
-📌 **Termo de pesquisador v3.**
-- **Decisão:** a seção 4 do termo de quem vira pesquisador explica o cálculo: as quatro dimensões, que só denúncia procedente conta (contra o perfil e contra as campanhas), que o encerramento direto não entra, que os pesos podem mudar, que o score nunca impede criar campanha, e o pedido de revisão pelo suporte (LGPD, art. 20). Versão nova; a v2 fica no histórico.
-- **Caso-limite aceito:** a v3 só passa a valer de verdade para quem já era pesquisador com o re-aceite abaixo.
-
-📌 **Re-aceite também do termo de pesquisador (RF-015).**
-- **Em palavras simples:** quando sai versão nova do termo de pesquisador, quem já é pesquisador cai na mesma tela de aceite do termo da conta no próximo login: só lê, aceita ou sai.
-- **Decisão:** `fn_termo_uso_pendente` (03) devolve também a versão vigente do termo de pesquisador para quem tem `perfil_pesquisador` e não a aceitou; o termo da conta vem primeiro, um por vez. O seed deixa o Vinícius (22) pendente para demonstrar a tela, como a Marina (24) no termo da conta.
-- **Motivo:** decisão do Lucas (opção B): a v3 explica uma regra do score que já vale para os pesquisadores atuais, e a LGPD (art. 20) pede que a pessoa saiba como a decisão automatizada é tomada.
-- **Caso-limite aceito:** a tela bloqueia o painel inteiro, inclusive o que não é de pesquisador (como apoiar), até o aceite. Toda versão nova pede aceite de novo, inclusive uma correção pequena.
-- **Teste:** suíte PGlite 39.
-
-### [05-K-2-J] Contestação do score na própria denúncia (03-10-2026)
-
-**Em palavras simples:** o pesquisador que acha injusta uma denúncia julgada procedente contra ele (contra o perfil ou contra uma campanha dele) pede revisão na Minha Conta. A moderação analisa na tela de Denúncias: se ele tiver razão, a denúncia vira improcedente e a pontuação se recalcula sozinha; se não, a denúncia continua valendo. Sempre com justificativa (RF-033).
-
-📌 **Contesta-se uma denúncia, não a nota.**
-- **Decisão:** a contestação aponta para uma denúncia procedente. As outras penalidades não se contestam: o perfil acadêmico o próprio pesquisador corrige, e o histórico e as atualizações são fatos (campanha concluída ou não, atualização publicada ou não). A única penalidade que nasce de uma decisão humana, e pode estar errada, é a denúncia procedente.
-- **Motivo:** padrão de mercado: no Mercado Livre o vendedor contesta uma avaliação negativa específica, que sai da reputação se a contestação procede; na Uber o motorista pede revisão de uma avaliação ou de uma desativação. Nos dois, contesta-se um evento, não o número. E é o "corrige o dado, nunca a nota" do RF-033: aceitar a contestação muda a denúncia, e a nota se recalcula por `trg_denuncia_recalcula_score`.
-- **Caso-limite aceito:** o RF-033 fala em "alguma penalidade"; a contestação cobre só denúncias, pelo motivo acima.
-
-📌 **Na própria linha da denúncia, não numa tabela própria.**
-- **Decisão:** 4 colunas em `denuncia` (`contestacao`, `contestacao_status` com o tipo `status_contestacao`: pendente, aceita, recusada, `contestada_em`, `justificativa_contestacao`), com `CK_DENUNCIA_CONTESTACAO_COERENTE` (tudo ou nada; justificativa existe exatamente quando já foi decidida).
-- **Motivo:** a relação é 1 para 1 opcional (no máximo uma contestação por denúncia, sem contestar de novo depois da recusa), e o RF-033 manda seguir "o mesmo fluxo das denúncias": contestação e denúncia são julgadas na mesma tela. Uma linha nova na tabela de denúncia exigiria exceções no score, no alvo, no motivo, no limite diário e em toda lista e contador; uma tabela própria duplicaria a tela, a decisão e o log.
-- **Caso-limite aceito:** se um dia houver mais de uma contestação por denúncia (com histórico de tentativas) ou contestação de penalidade que não vem de denúncia, a relação deixa de ser 1 para 1, e aí cabe uma tabela própria.
-
-📌 **Contestar, decidir e ver: só pelas funções.**
-- **Decisão:** `contestar_denuncia(p_id_denuncia, p_texto)` (03): só o penalizado (o alvo da denúncia de perfil ou o dono da campanha denunciada, 92034), com texto (90032), só denúncia procedente (91044), uma vez por denúncia (91045) e uma esperando análise por vez (91046). `decidir_contestacao(p_id_denuncia, p_aceitar, p_justificativa)` (03): permissão `denuncia_responder` (92035), só contestação esperando (91047), quem registrou a denúncia não decide (92006), justificativa obrigatória (90033); aceitar põe a denúncia em improcedente na mesma operação. `denuncias_contra_mim()` (03): as procedentes e as contestadas do pesquisador logado, sem quem denunciou. `fn_valida_contestacao_pendente` (05): com contestação esperando, a situação da denúncia só muda pela decisão dela (91048). `trg_log_auditoria_denuncia_contestacao`: a decisão entra no log.
-- **Motivo:** o pesquisador não lê nem altera a linha da denúncia (pol_denuncia_select/update, 04), e não pode ver quem o denunciou. O `INSERT` do app em `denuncia` passou a ser por coluna (autor, alvo, motivo e relato): ninguém cria uma denúncia já julgada nem já contestada.
-- **Caso-limite aceito:** aceitar não reabre uma campanha encerrada por moderação, só corrige a nota. Quem julgou a denúncia pode decidir a contestação dela (o mercado usa outra pessoa; numa equipe de moderação de uma ou duas pessoas isso travaria; o log de auditoria registra quem decidiu cada uma). Sem prazo para contestar. O aviso do resultado por e-mail depende do `4-mail`; até lá, o resultado aparece na Minha Conta.
-- **Teste:** suíte PGlite 40.
-
-### [05-K-2-C] Integridade: limites, privilégios, score e configuração
-
-Regras verificadas no PGlite com o banco montado inteiro, usando o papel real `app_nestjs` e a sessão de um usuário (e não só `postgres`, que ignora RLS e esconde defeito de privilégio; ver Anexo F).
-
-**Limites e concorrência**
-
-* **Limite de texto só vale quando o texto muda** (`fn_valida_limite_texto_livre`, ERRCODE 90003). Se rodasse em todo `UPDATE`, baixar `limite_caracteres_descricao_campanha` pelo painel faria toda doação falhar (a soma do arrecadado faz `UPDATE campanha`) e pararia o job `encerrar_campanhas_vencidas()`, com 90003 sobre um texto que ninguém mexeu. A mensagem não cita o nome da chave de configuração.
-* **Limite de campanhas simultâneas só vale na entrada** (`validar_limite_campanhas_pesquisador`, 91018): conta apenas quando a campanha *entra* em `aguardando_aprovacao`/`ativo`, com `pg_advisory_xact_lock` por pesquisador (sem o lock, dois envios simultâneos contariam 1 e os dois passariam).
-* **Total arrecadado com privilégio próprio** (`fn_sincroniza_arrecadado_campanha` é `SECURITY DEFINER`): se rodasse como quem inseriu a contribuição, o `UPDATE` em `campanha` seria filtrado pela RLS (doador não edita campanha) e o total ficaria errado **em silêncio**. Só aparece testando como `app_nestjs`.
-* **Os jobs de expiração não morrem por uma linha.** `expirar_campanhas_rejeitadas()` ignora as que têm contribuição, repasse, solicitação de encerramento ou denúncia; `expirar_campanhas_rascunho()` apaga linha a linha e ignora só `foreign_key_violation`. Uma linha com filho sem `CASCADE` não impede as outras de expirar.
-
-**Máquina de estados e privilégios**
-
-* **Cada permissão abre só a sua transição** (`fn_valida_transicao_campanha`): aprovar (`aguardando_aprovacao` para `ativo`), rejeitar (`aguardando_aprovacao` para `rejeitado`), decidir encerramento (`ativo` para `encerrado`). Sem isso, ter uma dessas permissões liberaria qualquer transição (ex.: `nao_atingido` para `sucesso` sem bater a meta). A mensagem do 92001 mostra `origem -> destino`. Há uma transição extra para quem tem `campanha_editar` (só o admin, mesmo critério de `pol_campanha_update`): colocar na fila (rascunho ou rejeitada para `aguardando_aprovacao`) a campanha de outra pessoa. **Reenvio esgotado (91025) é checado antes das duas**, então barra qualquer perfil, inclusive o admin.
-* **`UPDATE` por coluna em `campanha`** (`06_grants.sql`): `valor_bruto_arrecadado`, `taxa_plataforma`, `encerrado_em`, `enviado_aprovacao_em`, `modelo` e `id_usuario` não fazem parte do `GRANT UPDATE` de `app_nestjs`; só função `SECURITY DEFINER` ou trigger muda esses campos. O `INSERT` também é por coluna desde 02-10-2026 (ver "Campanha sempre nasce rascunho", no fim) (mesmo padrão de `usuario` e `perfil_pesquisador`). Sem isso o dono conseguiria `UPDATE campanha SET valor_bruto_arrecadado = 999999` e só o DTO do Nest impediria. As colunas que o Nest atualiza (`titulo`, `descricao`, `id_area_conhecimento`, `meta_financeira`, `data_inicio`, `data_fim`, `video_apresentacao_url`, `status`, `aprovado_em`, `id_admin`) continuam liberadas.
-* **Toda rejeição grava histórico, venha de onde vier** (`trg_campanha_exige_historico_rejeicao`, constraint trigger que roda no `COMMIT`, ERRCODE 91028). Um `UPDATE status = 'rejeitado'` por qualquer caminho sem registro em `historico_rejeicao` deixaria a campanha em reenvio infinito e nunca expiraria (`MAX(rejeitado_em)` nulo). O Nest faz `UPDATE` e depois `INSERT` na mesma transação.
-
-**Score**
-
-* **Peso de subitem desativado vale 0, não NULL** (`fn_fator_subitem`, que substituiu a função antiga de peso em 03-10-2026, e as 4 funções de score): `SELECT COALESCE(peso,0) INTO x` com **zero linhas** deixa `x = NULL` (o `COALESCE` nunca roda), então desativar o subitem `lattes` zeraria a dimensão inteira de quem tem Lattes. `calcular_score_reputacao` faz uma contagem só.
-* **Soma dos pesos raiz = 100 ao inserir, alterar ou apagar** (`trg_score_config_soma_pesos`, `INSERT OR UPDATE OR DELETE`, sem filtro de `id_pai`); `trg_score_config_recalcula_todos` cobre INSERT, DELETE e mudança de `ativo`.
-* **Pesos e faixas entram no log de auditoria** (`trg_log_auditoria_score_config`, `trg_log_auditoria_score_rotulo`): mudar um peso altera o score público de todos, então precisa deixar rastro.
-* `contar_metricas_dashboard()` acha o papel por `codigo`, não por `nome` (renomear o papel pelo painel não zera a métrica; mesma regra do `08`).
-
-**Configuração**
-
-* **O valor bate com o tipo** (`CK_CONFIGURACOES_VALOR_TIPO`, `01`): `'5,00'` (vírgula, o que um brasileiro digita) em `taxa_plataforma_padrao` derrubaria `config_numero()` com 22P02 em **toda** aprovação; a escrita já falha com 23514.
-* **Mínimo não passa do máximo** (`trg_configuracoes_pares_min_max`, constraint trigger `DEFERRABLE INITIALLY DEFERRED`, função `fn_valida_pares_min_max_configuracoes`, ERRCODE **90019**). Pares conferidos: `prazo_minimo_campanha_dias`/`prazo_maximo_campanha_dias`, `orcamento_min_itens`/`orcamento_max_itens`, `cronograma_min_marcos`/`cronograma_max_marcos` e `arquivo_tamanho_minimo_bytes` contra os dois máximos de arquivo (imagem e documento). **Por quê:** o painel edita uma chave por vez; sem a trava, `prazo_minimo = 70` com `prazo_maximo = 60` impediria qualquer envio de campanha, sem mensagem clara (idem orçamento e cronograma). **Como:** só confere linhas globais (`id_usuario IS NULL`), ativas e numéricas; `mínimo = máximo` vale; a checagem só existe quando as duas chaves existem. Como cada edição do painel é uma transação separada, subir o mínimo acima do máximo atual **exige subir o máximo antes** (e baixar o máximo abaixo do mínimo exige baixar o mínimo antes); numa mesma transação a ordem não importa, porque a constraint é diferida. O erro diz qual par está invertido e qual ordem seguir, e leva os valores em `DETAIL` (JSON), que o filtro do Nest devolve como `dados` no corpo do erro.
-* **Chave global não se apaga nem se desativa** (`pol_config_delete` e `CK_CONFIGURACOES_GLOBAL_ATIVA`, `id_usuario IS NOT NULL OR ativo = TRUE`, erro 23514). Chave global (`id_usuario IS NULL`) é parte do contrato do sistema: apagar `limite_campanhas_simultaneas` pelo painel faria o código cair no padrão escondido, e desativar faria o mesmo. A policy só deixa apagar a configuração **pessoal** do dono. Para "desligar" uma regra, muda-se o valor. O painel de Parâmetros não tem botão Excluir e o "Ativo" fica desabilitado nas globais. Limitações: uma chave global criada por engano pelo botão Criar não se apaga mais pelo painel; e, como `FK_CONFIGURACOES_USUARIO` é `ON DELETE SET NULL`, apagar de verdade (`DELETE`) um usuário com configuração pessoal DESATIVADA falha na `CHECK` (a exclusão de conta do sistema é lógica, então isso não acontece pelo Nest).
-
-### [05-K-3] Regras Transversais - Comunidade, Engajamento e RBAC
-
-| Tabela | Função | Trigger | Regra |
-|---|---|---|---|
-| `comentario` | `fn_valida_comentario_campanha_ativa()` | `trg_valida_comentario_status` | Bloqueia novo comentário em campanha `rejeitado` ou `encerrado_moderacao`. |
-| `comentario` | `validar_comentario_endosso()` | `trg_comentario_limite_endosso` | No máximo `configuracoes.limite_endossos_campanha` endossos ativos simultâneos por campanha (RF-063; conta só `ordem_endosso IS NOT NULL AND ativo = TRUE` - um endosso removido por moderação libera a vaga). 🗑️➡️✅ **CORRIGIDO (28-07-2026, item 16 da Lista C):** limite (4) estava hardcoded; passou a ler `configuracoes`, mesmo valor de hoje como `DEFAULT`. |
-| `comentario` | `validar_comentario_endosso_autor()` | `trg_comentario_endosso_autor` | Só o dono da campanha (ou quem tem `comentario_moderar`) muda `endossado` (ERRCODE 92008). **Desde 26-09-2026 também calcula `ordem_endosso`:** ao endossar, `MAX(ordem_endosso) + 1` dos comentários ativos da campanha, sob `pg_advisory_xact_lock(92008, id_campanha)` (a segunda pessoa espera a primeira, então não há ordem repetida nem limite estourado); ao remover o endosso, zera. Roda antes de `trg_comentario_limite_endosso` (ordem alfabética dos nomes), que por isso confere `NEW.endossado` e não `ordem_endosso`. Suíte `13-ordem-endosso-no-banco.mjs`. |
-| `comentario` | `validar_comentario_autor()` | `trg_comentario_sem_autoria` | O dono da campanha não pode comentar na própria campanha (RF-097). |
-| `comentario` | `fn_comentario_ignora_endosso_na_criacao()` | `trg_comentario_ignora_endosso_criacao` | `BEFORE INSERT`. Zera `endossado` e `ordem_endosso` em todo comentário novo. Só o dono da campanha endossa (RF-094); sem isso, um pesquisador se autoendossava ao comentar na campanha de outro, porque `pol_comentario_insert` só confere a autoria. Não confia no Nest deixar de mandar o campo (defesa em profundidade). |
-| `comentario` | `validar_comentario_edicao_conteudo()` | `trg_comentario_edicao_conteudo` | `BEFORE UPDATE`. O `conteudo` só pode ser editado pelo próprio autor e só enquanto o comentário não está endossado (RF-096). `pol_comentario_update` libera o UPDATE para autor, dono da campanha e moderador sem distinguir coluna; esta trigger é que separa quem pode mudar o texto. Ocultar (`ativo`) fica em `fn_bloqueia_reversao_moderacao_comentario`. |
-| `comentario` | `validar_comentario_frequencia()` | `trg_comentario_limite_taxa` | `BEFORE INSERT`. No máximo `configuracoes.limite_comentarios_por_hora` (5) comentários por pesquisador dentro de `janela_comentarios_horas` (1), somando todas as campanhas: é limite anti-rajada, não de volume por campanha (ERRCODE 93002). |
-| `comentario` | `fn_bloqueia_reversao_moderacao_comentario()` | `trg_comentario_bloqueia_reversao_moderacao` | Bloqueia a transição `ativo: FALSE → TRUE` (reverter uma moderação) por quem não tem a permissão `comentario_moderar`. Fecha a brecha em que `pol_comentario_update` (`04`) libera `UPDATE` para o autor sem restringir coluna - ver `[04-E-4]`. |
-| `denuncia` | `validar_denuncia_frequencia()` | `trg_denuncia_limite_taxa` | No máximo `configuracoes.limite_denuncias_24h` denúncias por usuário dentro da janela `configuracoes.janela_denuncias_horas` (RF-076). 🗑️➡️✅ **CORRIGIDO (28-07-2026, item 16 da Lista C):** limite (5) estava hardcoded; passou a ler `configuracoes`, mesmo valor de hoje como `DEFAULT`. 🗑️➡️✅ **CORRIGIDO (11-08-2026):** só a contagem tinha virado configurável em 28-07 - a janela de tempo (24h) continuou fixa em `INTERVAL '24 hours'` até agora; passou a ler `configuracoes.janela_denuncias_horas`, mesmo valor de hoje (24) como `DEFAULT`. |
-| `denuncia` | `fn_valida_denuncia_sem_autojulgamento()` | `trg_denuncia_sem_autojulgamento` | 🗑️➡️✅ **Nova (28-07-2026, MENOR 5 - 5ª auditoria).** `BEFORE UPDATE`, só quando `status` muda. Reproduzido: um moderador criou denúncia contra um pesquisador e a marcou como `'resolvida'` (custa 4 pontos de score ao alvo) - `pol_denuncia_update` checa a permissão, mas não checa se quem julga é o próprio denunciante. Mesmo conflito de interesse que `validar_comentario_autor()` já bloqueia pra auto-endosso. Bloqueia qualquer transição de status feita pelo próprio `id_usuario` da denúncia. |
-| `permissao` | `trg_admin_recebe_toda_permissao()` | `trg_permissao_auto_admin` | Toda permissão nova criada em `permissao` é automaticamente atribuída ao papel `admin` em `papel_permissao`. |
-| `perfil_pesquisador` (INSERT) | `fn_atribuir_papel_pesquisador()` | `trg_perfil_atribui_papel_pesquisador` | 🗑️➡️✅ **Nova (28-07-2026, MÉDIO 4 - 5ª auditoria, achado na jornada "mestre vira pesquisador").** `SECURITY DEFINER` (mesmo "ovo e galinha" de `atribuir_papel_padrao`, `08` - quem está criando o perfil ainda não tem `papel_atribuir`). O papel `'pesquisador'` nunca era atribuído pelo app (só pelo seed, aos 11 semeados) - mantém o invariante "tem `perfil_pesquisador` ⇔ tem o papel `'pesquisador'`". |
-
-> 📌 **Por que `trg_permissao_auto_admin` existe:** é a rede de segurança da remoção do antigo `eh_admin()` das RLS policies (todas as policies do `04` passaram a checar `tem_permissao('x')` em vez de um bypass genérico de admin - ver Anexo B, ao final deste documento, que consolidou o `RBAC-pontos-discutidos.md` original, já removido do repositório). Sem esta trigger, toda permissão nova criada exigiria lembrar de inserir manualmente a linha correspondente em `papel_permissao` para `'admin'` - e um esquecimento faria o admin perder acesso a algo que antes vinha de graça via `eh_admin()`. Com a trigger, toda permissão nova já nasce atribuída ao papel `admin` automaticamente.
+| `aguardando_aprovacao` | `ativo` | quem tem `campanha_aprovar` | a mesma completude e prazo, de novo |
+| `aguardando_aprovacao` | `rejeitado` | quem tem `campanha_rejeitar` | grava `historico_rejeicao` (91028) |
+| `rejeitado` | `aguardando_aprovacao` | dono | pesquisador ativo, reenvios disponíveis (91025), dentro do prazo (91026), completude e prazo, limite de simultâneas |
+| `rejeitado` | (excluída) | tarefa | prazo de reenvio vencido |
+| `rascunho` | (excluída) | tarefa ou dono | prazo do rascunho vencido; o dono também exclui (`pol_campanha_delete`) |
+
+* Não existe "recolher" (`aguardando_aprovacao → rascunho`) nem estado intermediário de correção: a rejeitada volta direto para a fila.
+* **Rejeição e reenvio:** o primeiro envio mais `campanha_rejeitada_max_reenvios` (3) reenvios = até 4 rejeições; a quarta esgota. Cada rejeição dá `campanha_rejeitada_prazo_dias` (30) contados da **última** rejeição; o prazo não corre enquanto a campanha está na fila.
+* **`fn_campanha_situacao_reenvio(id)` é a única conta** (`rejeicoes`, `reenvios_restantes`, `somente_leitura`, `prazo_reenvio_ate`), usada pela transição, pela tarefa de expiração e por `GET /campanha/:id`: a tela mostra exatamente o que o banco vai decidir. `SECURITY DEFINER`, porque quem escreve pode ser um admin sem `campanha_rejeitar`, que não enxergaria o histórico pela RLS. `fn_campanha_reenvios_esgotados(id)` é um embrulho dela.
+* **Esgotada, a campanha é somente leitura** para qualquer perfil, inclusive o admin (91027 nas três funções de congelamento; 91025 ao tentar reenviar).
+* **Suspenso não envia (92009):** sem isso, um pesquisador suspenso empurraria para a fila até as campanhas que a própria suspensão acabou de rejeitar.
+* **O prazo de reenvio (91026) também é conferido na transição,** não só pela tarefa: a tarefa roda de hora em hora, e a campanha que já deveria ter sumido não pode ser reenviada nessa janela.
+* **Tarefas de expiração:** `expirar_campanhas_rascunho()` apaga linha a linha e pula só o rascunho que uma FK segura (`foreign_key_violation` e `restrict_violation`, ex.: um rascunho com denúncia), para os outros vencidos expirarem; `expirar_campanhas_rejeitadas()` pula a rejeitada com contribuição, repasse, pedido de encerramento ou denúncia, e a sem nenhuma linha de histórico (sem data não há como saber o prazo).
+* **`historico_rejeicao` independente da campanha:** sem FK para `campanha`, com dono e título gravados na hora; imutável. A cascata da suspensão também grava uma linha por campanha rejeitada (`id_admin` = quem suspendeu); rascunhos não são tocados.
+* **A exclusão em cascata não é barrada pelo "só leitura":** ao apagar a campanha, as triggers de congelamento das linhas filhas encontram a campanha já apagada e não bloqueiam. É o que deixa a expiração apagar uma campanha esgotada.
+* **Rejeitada que expira muda o score na hora:** `trg_campanha_recalcula_score_delete` recalcula o dono, e é nesse instante que a campanha passa a contar como rejeitada definitiva ([05-I-2]).
+* **Reagendar datas mantendo a duração:** `deslizar_datas_campanha(id, nova_data_inicio)` move `data_inicio`, `data_fim` e os marcos pelo mesmo intervalo, numa instrução só (a ordem depende do sentido: para frente, os marcos primeiro). Só rascunho ou rejeitada, e só o dono ou quem tem `campanha_editar` (90016, 92010).
+* **Status com nome, em vez de lista repetida:** `fn_status_pos_aprovacao(status)` (as três funções de congelamento) e `fn_status_terminal(status)` (`fn_preenche_encerramento_campanha`): um status novo no enum é lembrado num lugar só. As outras listas parecidas são outra coisa e ficam como estão: a leitura pública de `pol_campanha_select` (sem `encerrado_moderacao`), as dimensões do score e a lista de `deslizar_datas_campanha`.
+
+### [05-K-2-C] Integridade: privilégios e configuração
+
+Regras conferidas no PGlite com o banco inteiro, usando o papel real `app_nestjs` e a sessão de um usuário (e não só `postgres`, que ignora a RLS e esconde defeito de privilégio; Anexo E).
+
+* **`INSERT` e `UPDATE` por coluna em `campanha`** (`06`): `valor_bruto_arrecadado`, `taxa_plataforma`, `encerrado_em`, `enviado_aprovacao_em`, `modelo` (no `UPDATE`) e `id_usuario` ficam fora do `GRANT` do `app_nestjs`; só trigger ou função `SECURITY DEFINER` os mudam. Sem isso, o dono faria `UPDATE campanha SET valor_bruto_arrecadado = 999999`.
+* **Configuração:**
+  * **O valor bate com o tipo** (`CK_CONFIGURACOES_VALOR_TIPO`, `01`): `'5,00'` (vírgula) numa chave decimal derrubaria `config_numero()` em toda aprovação; a escrita já falha com 23514.
+  * **O mínimo não passa do máximo** (`trg_configuracoes_pares_min_max`, `CONSTRAINT TRIGGER` diferida, 90019): prazo da campanha, itens de orçamento, marcos e tamanho de arquivo. Sem a trava, `prazo_minimo = 70` com `prazo_maximo = 60` impediria qualquer envio, sem mensagem clara. Só confere linhas globais, ativas e numéricas; `mínimo = máximo` vale. Como cada edição do painel é uma transação, subir o mínimo acima do máximo atual exige subir o máximo antes; o erro diz qual par e qual ordem seguir, e leva os valores no `DETAIL` (o Nest devolve como `dados`).
+  * **Chave global não se apaga nem se desativa** (`pol_config_delete` e `CK_CONFIGURACOES_GLOBAL_ATIVA`): é parte do contrato do sistema; apagar `limite_campanhas_simultaneas` faria o código cair num padrão escondido. Para "desligar" uma regra, muda-se o valor. **Caso-limite:** uma chave global criada por engano pelo painel não se apaga mais por ele.
+* **`contar_metricas_dashboard()` acha o papel pelo código**, não pelo nome (renomear o papel não zera a métrica).
+
+### [05-K-2-D] Campanha: campos bloqueados numa função só
+
+* **`fn_campanha_campos_bloqueados(campanha) RETURNS TEXT[]`:** os campos que o congelamento trava naquele momento. Aprovada em diante: `meta_financeira`, `modelo`, `taxa_plataforma`, `titulo`, `descricao`, `video_apresentacao_url` e `id_area_conhecimento`, mais `data_fim` e `data_inicio` depois que a campanha começa de verdade. Rejeitada esgotada: todos os campos de conteúdo. Nos outros estados: lista vazia. A ordem da lista decide qual mensagem aparece quando dois campos mudam juntos.
+* **`fn_campanha_erro_congelamento(campo, rejeitada)`:** o código e a mensagem de cada campo (91004 a 91010, 91023, 91024; 91027 para a esgotada).
+* **`fn_congela_regras_campanha()`** percorre a lista e compara `to_jsonb(NEW) -> campo` com `to_jsonb(OLD) -> campo` (`IS DISTINCT FROM`, que trata `NULL` certo). Campo novo em `campanha` só fica editável depois da aprovação se alguém o tirar da lista: esquecer um `IF` não é possível.
+* **`GET /campanha/:id`** devolve `camposBloqueados` (com os nomes do DTO) pela mesma função: a tela trava exatamente o que o banco vai recusar. Suítes 8, 9 e 14 do PGlite.
+
+### [05-K-2-E] Tarefas agendadas: uma linha por vez
+
+* `encerrar_campanhas_vencidas`, `expirar_campanhas_rejeitadas` e `reativar_pesquisadores_vencidos` tratam cada linha num bloco `BEGIN ... EXCEPTION WHEN OTHERS`: a linha recusada vira `WARNING` no log do Postgres (com o SQLSTATE) e é tentada de novo no ciclo seguinte; as outras seguem. **Por quê:** num comando só sobre todas as linhas, uma trigger que recusasse uma linha faria o comando inteiro falhar em todo ciclo, até alguém achar o problema.
+* `expirar_campanhas_rascunho` só engole as violações de FK (causa conhecida); as três acima engolem qualquer erro, porque a causa de uma recusa de trigger não se conhece de antemão. **Caso-limite:** uma linha que sempre falha repete o `WARNING` a cada ciclo; convém olhar o log do Postgres de vez em quando. Cada bloco é uma subtransação, irrelevante no volume do sistema. Suíte 16 do PGlite.
+
+### [05-K-2-F] O pagamento que chega depois do fim da campanha
+
+**Em palavras simples:** o apoio por Pix nasce "pendente" e só conta na meta quando o pagamento é confirmado. A campanha vencida espera os Pix ainda válidos (no máximo o tempo de validade deles) antes de sair o resultado, como o "Aguardando" do Catarse.
+
+* `pix_validade_horas` (24, público; o provedor recebe o mesmo prazo ao gerar o código). `expirar_contribuicoes_pendentes()` vence o Pix mais velho que isso (no mesmo agendamento de 15 minutos, antes do encerramento), e `encerrar_campanhas_vencidas()` pula a campanha que ainda tem Pix pendente válido. Nenhum status novo: o "aguardando confirmação" é calculado, como o "Em breve".
+* **Por quê:** é justo com quem pagou dentro do prazo e com o pesquisador, e tem fim garantido: nenhum Pix novo nasce depois do fim (91017).
+* **Caso-limite:** só o Pix segura o encerramento (o cartão confirma na hora). Uma confirmação que chega depois do encerramento é aplicada com a regra do fechamento: repasse adicional, ou devolução no tudo-ou-nada que não bateu a meta (`aplicar_evento_pagamento`, `DOCUMENTACAO_FINANCEIRO.md`). Suíte 34 do PGlite.
+
+### [05-K-2-G] Denúncia: alvo, julgamento e encerramento por moderação
+
+* **O alvo tem de fazer sentido** (`trg_denuncia_valida_alvo`, `BEFORE INSERT`, `SECURITY DEFINER`): só campanha ativa ("Em breve" conta; 91035), só perfil de pesquisador (90026), e ninguém denuncia a própria campanha nem o próprio perfil (92029). Só na criação: a campanha pode ser encerrada depois e a denúncia segue para julgamento.
+* **Sem "em análise":** a denúncia vai direto de pendente para `resolvida` (procedente) ou `improcedente`. `CK_DENUNCIA_SEM_EM_ANALISE` recusa `'em_analise'`, que continua no tipo, fora de uso (tirar um valor de um tipo obrigaria a recriar as triggers e policies que usam a coluna). **Por quê:** "em análise" não guardava quem estava analisando, então não dizia nada além de "pendente". ⚠️ O texto do RF-111 ainda cita "em análise".
+* **Quem julga muda só a situação e a justificativa** (`UPDATE` por coluna: `status`, `justificativa_moderacao`; limite em `limite_caracteres_justificativa_denuncia`). Motivo, alvo, relato e autor ficam como o denunciante registrou. `julgado_em` e `id_julgador` são gravados por `trg_denuncia_registra_julgador`.
+* **Ninguém julga a própria denúncia** (`trg_denuncia_sem_autojulgamento`, 92006): o mesmo conflito de interesse do autoendosso.
+* **Limite de frequência** (`trg_denuncia_limite_taxa`, 93001): no máximo `limite_denuncias_24h` denúncias por pessoa dentro de `janela_denuncias_horas` (RF-076).
+* **Encerrar a campanha sai de uma denúncia procedente:** `encerrar_campanha_por_denuncia(p_id_denuncia, p_justificativa)` (`03`, `SECURITY DEFINER`): exige `denuncia_responder` e `campanha_encerrar_moderacao` (92030), justificativa (90027), denúncia de campanha (91036) e campanha ativa (91037); a denúncia vira `resolvida` e a campanha `encerrado_moderacao`, juntas, e o dinheiro segue para devolução. **Por quê:** `pol_campanha_update` não abre a campanha ao moderador; ele encerra só por esse caminho, sempre com uma denúncia procedente e uma justificativa (RF-114). **Caso-limite:** as outras denúncias pendentes da mesma campanha continuam pendentes. Suíte 36 do PGlite.
+
+### [05-K-2-H] Encerramento antecipado: pedir, decidir e cancelar o projeto
+
+**Em palavras simples:** sem dinheiro em jogo, o pesquisador cancela o projeto sozinho; com qualquer contribuição em jogo, pede ao administrador, porque o dinheiro precisa ser devolvido ou repassado.
+
+* **`encerrar_campanha_sem_contribuicao(p_id_campanha, p_justificativa)`** (`03`, `SECURITY DEFINER`), o "Cancelar o projeto": só o dono (92031), com justificativa (90028), campanha ativa (91038) e nenhuma contribuição pendente (de qualquer meio) nem confirmada (91043). Pix vencido, pagamento com erro e contribuição já devolvida não contam. Grava um pedido `aprovado` sem `id_admin` e encerra a campanha (ramo 10 da transição). Um pedido pendente da mesma campanha é cancelado na mesma operação. **Por quê:** o encerramento direto fica registrado no mesmo lugar dos outros (quem, quando, por quê), sem tabela nova.
+* **`decidir_solicitacao_encerramento(p_id_solicitacao, p_aprovar, p_justificativa)`** (`03`, `SECURITY DEFINER`): exige `solicitacao_encerramento_decidir` (92032), só pedido pendente (91041), rejeitar com justificativa (90029), aprovar só com a campanha ainda ativa (91042). Grava quem decidiu e quando; aprovar encerra a campanha na mesma operação, e o dinheiro segue `destino_dinheiro_campanha()`. Mudança direta de status para aprovado ou rejeitado é recusada (92033). O app só insere campanha e justificativa e só muda `status` para cancelar (`GRANT` por coluna). **Por quê:** pedido aprovado e campanha encerrada são uma coisa só; em dois passos, um poderia acontecer sem o outro.
+* **Um pendente por vez em cada campanha** (`uq_solicitacao_encerramento_pendente`); pedido decidido ou cancelado não muda mais (91041). Suíte 37 do PGlite.
+
+### [05-K-2-J] Contestação da pontuação na própria denúncia (RF-033)
+
+**Em palavras simples:** o pesquisador que acha injusta uma denúncia julgada procedente contra ele (contra o perfil ou contra uma campanha dele) pede revisão na Minha Conta. A moderação decide na tela de Denúncias: se ele tiver razão, a denúncia vira improcedente e a pontuação se recalcula sozinha; se não, continua valendo. Sempre com justificativa, e o resultado vai por e-mail ([05-Q]).
+
+* **Contesta-se uma denúncia, não a nota.** As outras penalidades são fatos (campanha concluída ou não, atualização publicada ou não) ou dados que o próprio pesquisador corrige (o perfil). A única que nasce de uma decisão humana, e pode estar errada, é a denúncia procedente. Padrão de mercado: no Mercado Livre o vendedor contesta uma avaliação específica; na Uber o motorista pede revisão de uma avaliação. Aceitar muda a denúncia, e a nota se recalcula por `trg_denuncia_recalcula_score` ("corrige o dado, nunca a nota").
+* **Na própria linha da denúncia:** `contestacao`, `contestacao_status` (`status_contestacao`: pendente, aceita, recusada), `contestada_em`, `justificativa_contestacao` e `id_julgador_contestacao`, com `CK_DENUNCIA_CONTESTACAO_COERENTE`. **Por quê:** a relação é 1 para 1 opcional (no máximo uma contestação por denúncia, sem recontestar depois da recusa), e a contestação é julgada na mesma tela da denúncia. **Caso-limite:** se um dia houver várias tentativas ou contestação de penalidade que não vem de denúncia, cabe uma tabela própria.
+* **Só pelas funções (`03`):**
+  * `contestar_denuncia(p_id_denuncia, p_texto)`: só o penalizado (o alvo da denúncia de perfil ou o dono da campanha denunciada, 92034), com texto (90032), só denúncia procedente (91044), uma vez por denúncia (91045) e uma esperando análise por vez (91046);
+  * `decidir_contestacao(p_id_denuncia, p_aceitar, p_justificativa)`: exige `denuncia_responder` (92035), só contestação esperando (91047), quem registrou a denúncia não decide (92006), quem **julgou** a denúncia também não decide a contestação contra a própria decisão (92036), justificativa obrigatória (90033); aceitar põe a denúncia em improcedente na mesma operação;
+  * `denuncias_contra_mim()`: as procedentes e as contestadas do pesquisador logado, **sem quem denunciou**.
+  * `fn_valida_contestacao_pendente` (`05`): com contestação esperando, a situação da denúncia só muda pela decisão dela (91048). A decisão entra no log de auditoria.
+* **Por quê:** o pesquisador não lê nem altera a linha da denúncia (`04`) e não pode saber quem o denunciou. O `INSERT` do app em `denuncia` é por coluna (autor, alvo, motivo, relato): ninguém cria uma denúncia já julgada nem já contestada.
+* **Caso-limite:** aceitar não reabre uma campanha encerrada por moderação; só corrige a nota. Sem prazo para contestar. Suíte 40 do PGlite.
+
+### [05-K-2-K] "Esperando há X dias": a ordem das filas
+
+* **`campanha.enviado_aprovacao_em`** é gravada a cada entrada na fila (envio ou reenvio, `trg_campanha_carimba_envio_aprovacao`). A fila Aprovar Campanhas mostra há quantos dias cada campanha espera, desde o último envio, e não "criada em" (uma campanha criada em agosto e enviada hoje não espera desde agosto).
+* **Toda tela com a coluna "esperando" põe primeiro o que ainda espera uma pessoa, o mais antigo no topo**, e depois o que já foi resolvido, o mais novo primeiro: Aprovar Campanhas, Denúncias, Pedidos de Encerramento, Eventos de Pagamento e Notificações. A espera é pintada por cor: verde até `espera_atencao_dias` (7), laranja até `espera_critica_dias` (30), vermelho acima. É o mesmo cálculo em toda tela (`ordenarFilaSla`, `react/src/services/constant/util/fila-sla.util.ts`; regra DS-49). **Por quê:** é a ordem de atendimento de qualquer fila com prazo (SLA, o acordo de quanto tempo cada pedido pode esperar): quem espera há mais tempo é atendido primeiro.
 
 ---
 
-### [05-G] Arquivo: posse da foto de perfil e limpeza de órfãos (28-09-2026)
+### [05-K-3] Regras Transversais - Comunidade, Engajamento e RBAC
 
-> 📌 **Anexos também: cada arquivo mora num lugar só (29-09-2026).**
-> - **Em palavras simples:** um arquivo enviado pode virar a foto de alguém **ou** o anexo de **uma** atualização **ou** o de **uma** recompensa, nunca dois ao mesmo tempo. Só quem enviou o arquivo pode anexá-lo. Para usar o mesmo PDF em dois lugares, envia-se de novo.
-> - **Decisão:** `fn_valida_posse_anexo()` (`SECURITY DEFINER`), ligada por `trg_valida_posse_anexo_atualizacao` e `trg_valida_posse_anexo_recompensa` (`BEFORE INSERT OR UPDATE OF id_arquivo`), com as mesmas três recusas da foto: arquivo inexistente ou removido (90022), enviado por outra pessoa (92025), em uso em outro lugar (91029). Como segunda proteção, a regra de valor único das duas tabelas passou de "(arquivo, atualização)" para só "arquivo" (`UK_ARQUIVO_ATUALIZACAO_ARQUIVO` e `UK_ARQUIVO_RECOMPENSA_ARQUIVO`, `01`); o índice `arquivo_recompensa(id_arquivo)` do `02` saiu porque a regra já cria um. O Nest traduz essas duas regras em "Este arquivo já está anexado em outro lugar." (`mensagens-duplicidade.constants.ts`).
-> - **Motivo:** a rota `POST /arquivo-atualizacao` já existia e `pol_arqatu_insert` (04) só conferia se a atualização era de quem está logado, não quem enviou o arquivo. O dono de uma atualização anexava o arquivo de outra pessoa e, pela posse que o anexo dá em `pol_arquivo_update`, podia apagá-lo. E compartilhar um arquivo entre dois lugares fazia a remoção de um levar o outro junto: no próprio seed, os anexos das atualizações reaproveitavam as fotos de perfil, e trocar a foto da Ana sumia com o anexo da atualização 1. O seed agora tem arquivos próprios para os anexos (ids 9 a 14).
-> - **Caso-limite aceito:** a regra só vale com alguém logado (seed e manutenção direta passam), mas a regra de valor único vale sempre. No Supabase, o Grupo X separou os 6 anexos que reaproveitavam fotos, criando uma linha nova em `arquivo` para cada um, com a chave antiga mais `.anexo-<id>` (os objetos de seed não existem no armazenamento de qualquer jeito). Coberto pela suíte de teste do banco de posse de arquivo e órfãos.
->
-> **O que acontece quando... (foto e anexos, com alguém logado):**
->
-> | Situação | Resultado |
-> |---|---|
-> | A pessoa usa como foto, ou anexa, um arquivo que ela mesma enviou e que não está em uso | Passa |
-> | O arquivo foi enviado por outra pessoa | Recusa, 92025 (o Nest responde 403) |
-> | O arquivo não existe ou já foi removido (`ativo = false`) | Recusa, 90022 (400) |
-> | O arquivo já é a foto de alguém, ou anexo de outra atualização ou recompensa | Recusa, 91029 (409) |
-> | Um anexo tem o arquivo trocado (`UPDATE ... SET id_arquivo`) por um de outra pessoa | Recusa, 92025 |
-> | Alguém sem sessão (seed, SQL direto) tenta pôr o mesmo arquivo em dois anexos da mesma tabela | Recusa pela regra de valor único (23505); o Nest mostra "Este arquivo já está anexado em outro lugar." |
-> | A pessoa tira a foto (`id_imagem_perfil = NULL`) | Passa sempre |
-> | Um arquivo enviado não vira foto nem anexo em 24 horas | A faxina das 4h desativa e apaga do armazenamento (`desativar_arquivos_orfaos`) |
->
-> **Por que o admin passa:** quem troca a foto de outra pessoa (ou anexa por ela) é quem envia o arquivo naquele momento, então "enviado por quem está logado" continua valendo.
+| Tabela | Trigger (função) | Regra |
+|---|---|---|
+| `comentario` | `trg_valida_comentario_status` | Só se comenta em campanha publicada: não em `rascunho`, `aguardando_aprovacao`, `rejeitado` nem `encerrado_moderacao` (91020). |
+| `comentario` | `trg_comentario_sem_autoria` (`validar_comentario_autor`) | O dono não comenta na própria campanha (RF-097; 92004). |
+| `comentario` | `trg_comentario_ignora_endosso_criacao` | Zera `endossado` e `ordem_endosso` em todo comentário novo: só o dono da campanha endossa (RF-094). Não confia no Nest deixar de mandar o campo. |
+| `comentario` | `trg_comentario_endosso_autor` (`validar_comentario_endosso_autor`) | Só o dono da campanha ou quem tem `comentario_moderar` muda `endossado` (RF-089; 92008). Ao endossar, calcula `ordem_endosso` = `MAX + 1` dos comentários ativos da campanha, sob `pg_advisory_xact_lock(92008, id_campanha)` (dois endossos ao mesmo tempo não repetem o número nem passam do limite); ao tirar o endosso, zera. |
+| `comentario` | `trg_comentario_limite_endosso` (`validar_comentario_endosso`) | No máximo `limite_endossos_campanha` endossos ativos por campanha (RF-063; 91021). Roda depois da anterior (ordem alfabética) e por isso confere `NEW.endossado`. O comentário ocultado pela moderação não ocupa vaga. |
+| `comentario` | `trg_comentario_edicao_conteudo` (`validar_comentario_edicao_conteudo`) | Só o autor edita o texto (92007), e só enquanto não está endossado (RF-096; 91022). |
+| `comentario` | `trg_comentario_bloqueia_reversao_moderacao` | Só quem tem `comentario_moderar` reverte um comentário ocultado (`ativo: FALSE → TRUE`; 92005). O autor continua podendo ocultar o próprio. |
+| `comentario` | `trg_comentario_limite_taxa` (`validar_comentario_frequencia`) | No máximo `limite_comentarios_por_hora` comentários por pesquisador dentro de `janela_comentarios_horas`, somando todas as campanhas: limite contra rajada (93002). |
+| `termos_de_uso` | `fn_protege_termo_aceito` | Versão já aceita não se exclui (91032) nem tem texto, tipo ou versão alterados (91033), RF-091: é a prova do que cada pessoa aceitou. Versão nunca aceita se corrige à vontade. Ativar e desativar continuam livres. As FKs dos aceites (`FK_USUARIO_TERMO_TERMO`, `FK_ACEITE_TERMO_CONTRIBUICAO_TERMO`) não são `ON DELETE CASCADE`. |
+| `permissao` | `trg_permissao_auto_admin` (`trg_admin_recebe_toda_permissao`) | Toda permissão nova é dada sozinha ao papel `admin` (reconhecido pelo código). **Por quê:** as policies conferem permissão (`tem_permissao('x')`), nunca "é admin"; sem esta trigger, toda permissão nova exigiria lembrar de concedê-la ao admin (Anexo B). |
+| `perfil_pesquisador` (INSERT) | `trg_perfil_atribui_papel_pesquisador` (`fn_atribuir_papel_pesquisador`, `SECURITY DEFINER`) | Quem ganha perfil de pesquisador ganha o papel `pesquisador`: "tem perfil ⇔ tem o papel". `SECURITY DEFINER` pelo mesmo motivo de `atribuir_papel_padrao` ([08-D-1]): quem cria o perfil ainda não tem `papel_atribuir`. |
+| `usuario_papel` | `trg_usuario_papel_protege_ultimo_admin` (`fn_protege_ultimo_admin`) | Ninguém tira o papel admin do último administrador ativo (91030); suspender e excluir a conta conferem o mesmo nas próprias funções ([03-N]). |
 
-- **Em palavras simples:** duas regras do banco para arquivos. A primeira é uma "trava" (trigger, uma regra que o banco roda sozinho a cada gravação): só deixa usar como foto um arquivo que a própria pessoa enviou e que ninguém mais está usando. A segunda é uma "faxina" (função chamada todo dia às 4h): apaga o arquivo que ninguém usou em 24 horas.
-- **Decisão:** `trg_valida_posse_imagem_perfil` (`BEFORE INSERT OR UPDATE OF id_imagem_perfil ON usuario`, função `fn_valida_posse_imagem_perfil`, `SECURITY DEFINER`) só aceita como foto um arquivo ativo (90022), enviado por quem está logado (92025) e sem outro dono: foto de outra pessoa, anexo de atualização ou de recompensa (91029). `desativar_arquivos_orfaos()` desativa todo arquivo ativo que ninguém adotou em `configuracoes.arquivo_horas_para_vincular` (24h; 0 = desligado), devolve as chaves para o Nest apagar do armazenamento e deixa uma linha de rastro em `log_auditoria`. Chamada pelo job diário das 4h.
-- **Motivo:** o upload é confirmado antes de o dono existir (a tela mostra a foto antes de salvar), então o órfão nasce sempre que alguém envia e não salva. E `pol_arquivo_update` ([04]) dá posse do arquivo a quem o tem como foto: sem a trava, qualquer conta apontava a própria foto para o arquivo de outra pessoa e podia apagá-lo.
-- **Caso-limite aceito:** a regra só vale com alguém logado (o seed e a manutenção direta não têm sessão; o cadastro público não aceita foto). Tabela nova que aponte para `arquivo` precisa entrar nos `NOT EXISTS` da função de órfãos e na regra de posse. Coberto pela suíte de teste do banco de posse de arquivo e órfãos.
+---
 
-### [05-Q] Notificação: a fila de e-mails e os gatilhos que a alimentam (19-10-2026)
+### [05-G] Arquivo: posse e limpeza de órfãos
+
+**Em palavras simples:** duas regras do banco para arquivos. Uma "trava": só se usa como foto, ou se anexa, um arquivo que a própria pessoa enviou e que ninguém mais está usando. Uma "faxina", todo dia às 4h: o arquivo que ninguém usou em 24 horas é apagado.
+
+* **Posse da foto** (`trg_valida_posse_imagem_perfil`, função `fn_valida_posse_imagem_perfil`, `SECURITY DEFINER`) e **dos anexos** (`trg_valida_posse_anexo_atualizacao`, `trg_valida_posse_anexo_recompensa`, função `fn_valida_posse_anexo`): o arquivo precisa estar ativo (90022), ter sido enviado por quem está logado (92025) e não estar em uso em outro lugar (91029).
+* **Cada arquivo mora num lugar só:** ou a foto de alguém, ou o anexo de **uma** atualização, ou o de **uma** recompensa. Como segunda proteção, `UK_ARQUIVO_ATUALIZACAO_ARQUIVO` e `UK_ARQUIVO_RECOMPENSA_ARQUIVO` (`01`) são só pelo arquivo; o Nest traduz em "Este arquivo já está anexado em outro lugar.". Para usar o mesmo PDF em dois lugares, envia-se de novo.
+* **Por quê:** a posse da foto ou do anexo dá permissão de apagar o arquivo (`pol_arquivo_update`, `04`); sem a trava, qualquer conta apontaria a própria foto para o arquivo de outra pessoa e poderia apagá-lo. E um arquivo compartilhado faria a remoção de um lugar levar o outro junto.
+* **Faxina:** `desativar_arquivos_orfaos()` desativa todo arquivo ativo que ninguém adotou em `configuracoes.arquivo_horas_para_vincular` (24; 0 = desligado), devolve as chaves para o Nest apagar do armazenamento e deixa uma linha de rastro no log. **Por quê:** o upload é confirmado antes de salvar (a tela mostra a foto antes), então todo "enviou e não salvou" vira órfão.
+* **O que acontece quando...** (com alguém logado):
+
+  | Situação | Resultado |
+  |---|---|
+  | Usa como foto, ou anexa, um arquivo que a própria pessoa enviou e que não está em uso | Passa |
+  | O arquivo foi enviado por outra pessoa (inclusive trocando o arquivo de um anexo) | Recusa, 92025 (403) |
+  | O arquivo não existe ou já foi removido | Recusa, 90022 (400) |
+  | O arquivo já é foto de alguém ou anexo de outro lugar | Recusa, 91029 (409) |
+  | Sem sessão (seed, SQL direto), o mesmo arquivo em dois anexos da mesma tabela | Recusa pela regra de valor único (23505) |
+  | A pessoa tira a foto (`id_imagem_perfil = NULL`) | Passa sempre |
+  | Um arquivo enviado não vira foto nem anexo em 24 horas | A faxina das 4h desativa e apaga do armazenamento |
+
+* **Caso-limite:** a trava só vale com alguém logado (o cadastro público não aceita foto). O admin que troca a foto de outra pessoa envia o arquivo ele mesmo, então passa. Uma tabela nova que aponte para `arquivo` precisa entrar nos `NOT EXISTS` da faxina e na regra de posse. Suíte 22 do PGlite.
+
+---
+
+### [05-Q] Notificação: a fila de e-mails e os gatilhos que a alimentam
 
 **Em palavras simples:** todo e-mail do sistema nasce como uma linha `pendente` em `notificacao`, na mesma transação do evento (aprovar, rejeitar, encerrar, devolver, suspender). O Nest (`4-mail`) reserva uma linha por vez, monta o texto e envia; o resultado volta para a mesma linha. Se a ação for desfeita, o e-mail some junto; se o servidor cair, nada se perde.
 
 | Função | Quem chama | O que faz |
 |---|---|---|
-| `enfileirar_notificacao(id_usuario, tipo, dados)` | gatilhos e o Nest (verificação de conta, nova senha) | Copia o e-mail e o nome da conta; conta excluída ou inexistente: `NULL`, nada gravado |
-| `enfileirar_notificacao_doadores(id_campanha, tipo, dados)` | só gatilhos (sem EXECUTE para o `app_nestjs`) | Um e-mail por pessoa com conta que pagou alguma contribuição da campanha |
-| `enfileirar_notificacao_seguidores(id_campanha, tipo, dados)` | só gatilhos | Quem segue a campanha OU o pesquisador dono, uma vez por pessoa, nunca o dono |
-| `reservar_proxima_notificacao(p_ignorar_espera)` | worker (sem sessão) | Pega a próxima `pendente` vencida (com `TRUE`, só no Rodar agora da T6, também a que espera nova tentativa), conta a tentativa e empurra `proxima_tentativa_em` (`email_lease_minutos`); `FOR UPDATE SKIP LOCKED` |
-| `concluir_notificacao(...)` | worker | `enviado`, com assunto, provedor e id da mensagem; apaga `dados.segredo` |
-| `falhar_notificacao(...)` | worker | Recuperável e com tentativas: volta com espera `email_backoff_base_minutos * 2^(n-1)` até `email_backoff_max_minutos`; senão `falhou` |
+| `enfileirar_notificacao(id_usuario, tipo, dados)` | gatilhos e o Nest (verificação de conta, nova senha) | Copia o e-mail e o nome da conta; conta excluída ou inexistente: nada gravado |
+| `enfileirar_notificacao_doadores(id_campanha, tipo, dados)` | só gatilhos (sem `EXECUTE` para o `app_nestjs`) | Um e-mail por pessoa com conta que pagou alguma contribuição da campanha |
+| `enfileirar_notificacao_seguidores(id_campanha, tipo, dados)` | só gatilhos | Quem segue a campanha ou o pesquisador dono, uma vez por pessoa, nunca o dono |
+| `reservar_proxima_notificacao(p_ignorar_espera)` | o envio (sem sessão) | A próxima `pendente` vencida (com `TRUE`, só no "Rodar agora" da T6, também a que espera nova tentativa); conta a tentativa e empurra `proxima_tentativa_em` (`email_lease_minutos`); `FOR UPDATE SKIP LOCKED` |
+| `concluir_notificacao(...)` | o envio | `enviado`, com assunto, provedor e id da mensagem; apaga `dados.segredo` |
+| `falhar_notificacao(...)` | o envio | Recuperável e com tentativas: volta com espera `email_backoff_base_minutos * 2^(n-1)`, até `email_backoff_max_minutos`; senão, `falhou` |
 | `reenviar_notificacao(id)` / `cancelar_notificacao(id)` | aba Notificações | Exigem `notificacao_processar` (92039); só `falhou` reenvia, só `pendente`/`falhou` cancela (91054); inexistente: 90039 |
 
 | Gatilho | Tabela e momento | E-mail |
 |---|---|---|
-| `trg_notifica_situacao_campanha` | `campanha`, AFTER UPDATE OF status | aprovada (dono + quem segue o pesquisador), tudo-ou-nada `sucesso` e `nao_atingido` (quem pagou), `encerrado_moderacao` (quem pagou) |
-| `trg_notifica_rejeicao_campanha` | `historico_rejeicao`, AFTER INSERT | rejeitada, com justificativa e `fn_campanha_situacao_reenvio` |
-| `trg_notifica_devolucao` | `contribuicao`, AFTER UPDATE OF status para `devolvido`, com conta | devolução concluída |
-| `trg_notifica_decisao_encerramento` | `solicitacao_encerramento`, `pendente` para `aprovado`/`rejeitado` | decisão do encerramento antecipado |
-| `trg_notifica_situacao_pesquisador` | `perfil_pesquisador`, AFTER UPDATE OF status_pesquisador | suspenso (motivo e prazo) ou reativado |
-| `trg_notifica_contestacao` | `denuncia`, `contestacao_status` `pendente` para `aceita`/`recusada` | resultado da contestação |
-| `trg_notifica_atualizacao` | `atualizacao_campanha`, AFTER INSERT ativa | atualização publicada, para quem segue |
+| `trg_notifica_situacao_campanha` | `campanha`, depois de mudar `status` | aprovada (o dono e quem segue o pesquisador); tudo-ou-nada `sucesso` e `nao_atingido`, e `encerrado_moderacao` (quem pagou) |
+| `trg_notifica_rejeicao_campanha` | `historico_rejeicao`, depois do `INSERT` | rejeitada, com a justificativa e os reenvios que restam |
+| `trg_notifica_devolucao` | `contribuicao`, ao virar `devolvido`, com conta | devolução concluída |
+| `trg_notifica_decisao_encerramento` | `solicitacao_encerramento`, `pendente` para `aprovado`/`rejeitado` | a decisão do pedido |
+| `trg_notifica_situacao_pesquisador` | `perfil_pesquisador`, ao mudar `status_pesquisador` | suspenso (motivo e prazo) ou reativado |
+| `trg_notifica_contestacao` | `denuncia`, contestação decidida | o resultado da contestação |
+| `trg_notifica_atualizacao` | `atualizacao_campanha`, nova e ativa | atualização publicada, para quem segue |
 
-- **Decisão:** os e-mails nascem em gatilhos novos (só `AFTER`, nenhuma função antiga reescrita), e o texto é montado no Nest na hora de enviar, a partir de `tipo_evento` + `dados`.
-- **Motivo:** qualquer caminho que mude a situação (tela, tarefa agendada, função de moderação, webhook, o próprio seed) gera o aviso, sem depender de cada service lembrar. É o padrão "caixa de saída" (outbox), o mesmo desenho da fila do repasse.
-- **Caso-limite aceito:** o seed de demonstração chama as funções reais, então gera e-mails de verdade na fila; o `[07-D-7]` os marca como enviados pelo provedor `seed` (o worker não dispara dezenas de e-mails ao subir) e acrescenta um de cada situação para a aba Notificações. O banco de produção nasce sem esses dados.
-
-- **Decisão:** o link com token (verificar conta, nova senha) espera cifrado em `dados.segredo` e é apagado ao enviar ou cancelar.
-- **Motivo:** `verificacao_email` e `recuperacao_senha` guardam o token só como hash; a fila não pode desfazer essa proteção.
-- **Caso-limite aceito:** reenviar um e-mail que falhou manda o mesmo link, que pode ter vencido.
-
-### Idempotência
-
-Todas as triggers deste arquivo têm `DROP TRIGGER IF EXISTS` imediatamente antes do `CREATE TRIGGER` correspondente - o arquivo pode ser reaplicado sozinho num banco de desenvolvimento já existente, sem precisar resetar tudo do zero (mesmo padrão já aplicado em `04_rls_policies.sql`). *(Nota 28-07-2026: esta linha tinha ficado presa numa contagem antiga - 33 - enquanto a Visão Geral, no topo deste mesmo capítulo, já dizia o número certo. Achado na 5ª auditoria de IA; as duas contagens do capítulo foram sincronizadas de novo em 03-08-2026, depois de mais uma rodada de auditoria - ver "Como conferir este inventário", ao final do documento.)*
+* **Os e-mails nascem nos gatilhos** (só `AFTER`), e o texto é montado no Nest na hora de enviar, a partir de `tipo_evento` + `dados`. **Por quê:** qualquer caminho que mude a situação (tela, tarefa agendada, função de moderação, webhook, o seed) gera o aviso, sem depender de cada service lembrar: o padrão "caixa de saída" (outbox), o mesmo da fila do repasse.
+* **O link com token** (verificar conta, nova senha) espera cifrado em `dados.segredo` e é apagado ao enviar ou cancelar. **Por quê:** `verificacao_email` e `recuperacao_senha` guardam o token só como hash; a fila não pode desfazer essa proteção. **Caso-limite:** reenviar um e-mail que falhou manda o mesmo link, que pode ter vencido.
+* **Seed:** o de demonstração chama as funções reais, então gera e-mails de verdade na fila; o `[07-D-7]` os marca como enviados pelo provedor `seed`. O banco de produção nasce sem esses dados.
 
 ---
 
 ### ERRCODE customizado - 90xxx/91xxx/92xxx/93xxx
 
-🗑️➡️✅ **CORRIGIDO (03-08-2026, Alexia, com apoio de ferramentas de IA - pendência apontada pela IA usada pela Alexia em 02-08-2026):** as 42 `RAISE EXCEPTION` deste arquivo caíam todas no SQLSTATE genérico do Postgres pra exceção sem código explícito (`P0001`) - o NestJS não tinha como diferenciar "sem permissão" de "dado inválido" de "estado conflitante" olhando só o código do erro, só o texto da mensagem (frágil: qualquer reformulação de mensagem quebraria a distinção). Cada uma das 42 ganhou `USING ERRCODE = '<código>'` - mudança puramente aditiva, nenhuma mensagem/lógica/trigger foi alterada (conferido linha a linha no diff).
-
-**4 faixas, sem colidir com nenhum SQLSTATE nativo do Postgres já tratado em `postgres-exception.filter.ts` (`23505`, `23503`, `23502`, `23514`, `42501`, `P0001`):**
+Toda recusa de regra deste arquivo e do `03` sai com `RAISE EXCEPTION ... USING ERRCODE = '<código>'`, em quatro faixas que não colidem com os SQLSTATE nativos tratados pelo Nest (`23505`, `23503`, `23502`, `23514`, `42501`, `P0001`):
 
 | Faixa | Categoria | HTTP |
 |---|---|---|
-| `90001`–`90999` | Validação de dado/negócio (formato, limite de tamanho, mínimo, campo obrigatório fora do CHECK técnico) | 400 |
-| `91001`–`91999` | Conflito de estado/regra de negócio (campanha congelada após aprovação, transição inválida, limite atingido) | 409 |
-| `92001`–`92999` | Autorização negada por regra de negócio (checada via `tem_permissao()` dentro da trigger, ou conflito de interesse - dono/autor/denunciante agindo sobre o próprio registro) - **não é RLS**, é checagem procedural dentro da própria função/trigger | 403 |
-| `93001`–`93999` | Limite de taxa (rate limit) | 429 |
+| `90001`–`90999` | Validação de dado ou de negócio (formato, limite, mínimo, obrigatório fora do `CHECK`) | 400 |
+| `91001`–`91999` | Conflito de estado (campanha congelada, transição inválida, limite atingido) | 409 |
+| `92001`–`92999` | Autorização negada por regra de negócio (permissão conferida dentro da função, ou conflito de interesse: dono, autor ou denunciante agindo sobre o próprio registro); **não é RLS** | 403 |
+| `93001`–`93999` | Limite de taxa | 429 |
 
-Tabela completa (código → função/trigger → tabela → mensagem, hoje 55 linhas, as 42 do início mais as acrescentadas depois) fica em **`DOCUMENTACAO_ERRCODE.md`**, na raiz do projeto - não duplicada aqui pra este arquivo (já grande) não crescer mais, e pra ter um lugar só de onde tirar a lista quando uma regra nova entrar.
-
-**Lado Nest (fechando o ciclo, mesma data):** `commons/database/postgres-exception.filter.ts` ganhou uma checagem pelo prefixo de 2 dígitos do código (`90`/`91`/`92`/`93`) antes do `switch` dos SQLSTATE nativos, mapeando pra 400/409/403/429 automaticamente, com a mensagem original da função (já em português, já específica) - nenhuma tradução manual código-a-código do lado do Nest, só a faixa.
-
-**Ponto em aberto, não deste arquivo:** `excluir_conta_usuario()` (`03_funcoes_seguranca.sql`, `[03-O]`) ainda lança `RAISE EXCEPTION` sem ERRCODE customizado - hoje sem problema prático (nenhuma trigger de `05` está ligada à tabela `usuario`, então o catch-all de `usuario.service.remove.ts` não tem como confundir um erro de validação com um de permissão), mas se um dia uma trigger de `05` passar a valer sobre `usuario`, vale revisitar com o mesmo padrão de faixa daqui.
+A tabela completa (código, função, tabela, mensagem) mora só no **`DOCUMENTACAO_ERRCODE.md`**. O Nest (`postgres-exception.filter.ts`) reconhece a faixa pelos dois primeiros dígitos e responde com a mensagem original da função, que já é escrita para quem usa o sistema.
 
 ---
 
-### `log_auditoria` - quem alterou o quê e quando (03-08-2026, sugestão de uma auditoria de IA)
+### [05-L] `log_auditoria`: quem alterou o quê e quando
 
-Registro genérico de INSERT/UPDATE/DELETE, pensado pra fechar um buraco real: os dois logs que já existiam no banco (`auditoria_financeira` e `historico_rejeicao`) são pontuais - nenhum dos dois cobre uma ação administrativa comum, tipo "admin editou o nome de um usuário" ou "admin revogou uma permissão pela matriz".
+Registro genérico de `INSERT`, `UPDATE` e `DELETE` das ações administrativas comuns ("o admin editou o nome de um usuário", "revogou uma permissão pela matriz"), que os registros específicos (`auditoria_financeira`, `historico_rejeicao`) não cobrem.
 
-- **Tabela** (`01_extensoes_enums_tabelas.sql` `[01-L]`): `log_auditoria(id_log, tabela, identidade_registro, operacao, id_usuario_responsavel, campos_alterados, dados_anteriores, dados_novos, ocorrido_em)`. `identidade_registro` é `TEXT` (não `INT`) de propósito - cobre PK simples (`'42'`) e PK composta (`usuario_papel`/`papel_permissao`, sem coluna `id_X` própria - vira `'8,3'`).
-- 🗑️➡️✅ **`CK_LOG_AUDITORIA_OPERACAO` ganhou `'EXPORT'` (05-09-2026, RF-016, exportação de dados (LGPD Art. 18)):** antes só aceitava `INSERT`/`UPDATE`/`DELETE` (as 3 operações que a trigger genérica grava sozinha). `GET /usuario/eu/exportar-dados` (novo) precisa registrar quando alguém exporta os próprios dados (LGPD Art. 18) - não é um `INSERT`/`UPDATE`/`DELETE` de verdade, então virou um 4º valor de `operacao`, gravado por uma função dedicada (`registrar_exportacao_dados`, `[03-O]` em `03_funcoes_seguranca.sql`), não pela trigger.
-- **Função + triggers** (`05_regras_negocio.sql` `[05-L]`): `fn_log_auditoria()`, `SECURITY DEFINER`, aplicada via `EXECUTE FUNCTION fn_log_auditoria('coluna_pk'[, 'coluna_pk_2'])` em `usuario`, `perfil_pesquisador`, `configuracoes`, `usuario_papel`, `papel_permissao`, `papel`, `motivo_denuncia`, `area_conhecimento`, `tipo_link`, `termos_de_uso` (completo) e em `campanha`/`denuncia` só na transição de `status` (`WHEN (OLD.status IS DISTINCT FROM NEW.status)`). 🗑️➡️✅ **`papel` - trigger nova (07-08-2026, pedido do Lucas: "renomear papel precisa registrar quem e quando, nome antigo e novo"):** mesmo mecanismo genérico de todo o resto, `trg_log_auditoria_papel` - `fn_log_auditoria()` já grava `campos_alterados`/`dados_anteriores`/`dados_novos` sozinha, não precisou de nada especial só pra `nome`.
-- **Redação de coluna sensível**: `senha_hash`/`cpf_criptografado` nunca entram em `dados_anteriores`/`dados_novos` (removidas do JSONB antes de gravar) - mas o NOME da coluna continua aparecendo em `campos_alterados` quando muda, porque saber QUE mudou é auditoria válida.
-- **Snapshot completo, não diff**: `campos_alterados` é só a lista do que mudou, mas `dados_anteriores`/`dados_novos` guardam a LINHA INTEIRA (redigida) nas duas pontas - decisão consciente, um snapshot completo tem valor pra reconstruir o estado, não só saber o que mudou.
-- **Filtro de ruído em `perfil_pesquisador`**: o seed sozinho já gera dezenas de linhas de recálculo automático de score (disparado por `recalcular_score_pesquisador()` toda vez que uma campanha muda de status - não é ação de ninguém sobre o próprio perfil). `fn_log_auditoria()` não registra um `UPDATE` quando as ÚNICAS colunas que mudaram são `score_atual`/`score_atualizado_em` - qualquer outra mudança no perfil continua registrando normal.
-- **À prova do próprio admin** (`04_rls_policies.sql` `[04-L]` + `06_grants.sql` `[06-L]`): só existe policy/GRANT de SELECT (atrás da permissão nova `log_visualizar`) - sem INSERT/UPDATE/DELETE pra ninguém, nunca. Só a trigger `SECURITY DEFINER` grava.
-- **Retenção.** Sem limite a tabela só cresce. `limpar_log_auditoria()` (`SECURITY DEFINER`, `[05-L]`) apaga o que passou de `configuracoes.log_auditoria_retencao_dias` (**365**, inteiro, não público). É a **única** forma de apagar log: não existe policy nem GRANT de DELETE para `app_nestjs`. Regras: valor **0 = guardar para sempre** (valor negativo o `CHECK` de `configuracoes` barra); chave ausente cai no padrão 365 do código, igual ao seed; ao apagar, grava **uma** linha de rastro (`tabela = 'log_auditoria'`, `operacao = 'DELETE'`, `identidade_registro = 'anteriores a AAAA-MM-DD'`, e em `dados_anteriores` a `quantidade`, os `dias_retencao` e o `corte`), sem precisar de valor novo em `CK_LOG_AUDITORIA_OPERACAO`; se não apaga nada, não grava nada, e a linha de rastro (nova) não é apagada pelo job seguinte. Quem chama é o `@Cron` diário do Nest (`LogAuditoriaServiceClean`, 3h). O que é apagado não é arquivado: o prazo de 1 ano cobre a contestação razoável. **Índice:** `idx_log_auditoria_ocorrido` é **BRIN**: a tabela só cresce em ordem de data e as leituras da tela sempre filtram por tabela ou por usuário (índices B-tree), então o BRIN serve à limpeza por data com uma fração do espaço. A primeira execução apaga de uma vez tudo que passou de 365 dias.
-📌 **IP do aceite na contribuição: guardado por 5 anos, configurável (03-10-2026).**
-- **Em palavras simples:** a cada contribuição, inclusive anônima, a plataforma registra o IP de onde ela foi feita, como prova do aceite do Termo numa contestação de pagamento. O Termo diz isso e diz o prazo; depois do prazo, o IP é apagado e o resto do aceite continua.
-- **Decisão:**
-  - parâmetro `ip_aceite_contribuicao_retencao_dias` (**1825**, 5 anos; 0 = guardar para sempre; interno);
-  - `limpar_ip_aceite_contribuicao()` (`SECURITY DEFINER`) deixa vazio o `ip_aceite` de `aceite_termo_contribuicao` mais velho que isso, chamada pelo mesmo job diário (3h) do log;
-  - o Termo da conta ganhou a v5: o item 5.4 cita o IP e os 5 anos. A v4 foi para o histórico, e toda conta aceita a v5 no próximo login.
-- **Motivo:** 5 anos é o prazo do Código de Defesa do Consumidor para reclamar (art. 27) e o padrão de guarda de registros de consumo; a LGPD permite guardar o IP para defesa em processo (art. 7º, VI). Configurável como todo parâmetro, a pedido do Lucas.
-- **Caso-limite aceito:**
-  - mudar o parâmetro não muda o Termo, que tem o prazo escrito: mudar o prazo pede uma versão nova do Termo (a descrição do parâmetro avisa);
-  - gravar o IP na hora do pagamento fica para o módulo de contribuição (o Nest pega o IP da requisição e grava em `ip_aceite`). Sem esse módulo, nenhum IP novo nasce hoje; a limpeza já vale para os do seed.
-- **Teste:** suíte PGlite 35.
+* **Tabela** ([01-L]): `log_auditoria(id_log, tabela, identidade_registro, operacao, id_usuario_responsavel, campos_alterados, dados_anteriores, dados_novos, ocorrido_em)`. `identidade_registro` é `TEXT`: cobre PK simples (`'42'`) e composta (`'8,3'`). `operacao` aceita `INSERT`, `UPDATE`, `DELETE` e `EXPORT` (a exportação de dados, gravada por `registrar_exportacao_dados`, [03-O]).
+* **Função e triggers:** `fn_log_auditoria()`, `SECURITY DEFINER`, aplicada com `fn_log_auditoria('coluna_pk'[, 'coluna_pk_2'])` em `usuario`, `perfil_pesquisador`, `configuracoes`, `usuario_papel`, `papel_permissao`, `papel`, `motivo_denuncia`, `area_conhecimento`, `tipo_link`, `termos_de_uso`, `score_config`, `score_rotulo`, e em `campanha` e `denuncia` só na mudança de `status` (o que importa é "quem aprovou, rejeitou ou suspendeu o quê e quando"). `contribuicao` fica de fora: já tem `auditoria_financeira`.
+* **Coluna sensível nunca entra no conteúdo:** `senha_hash`, `cpf_criptografado` e `cpf_hash` são removidas de `dados_anteriores`/`dados_novos` antes de gravar, mas o **nome** da coluna aparece em `campos_alterados` (saber **que** a senha mudou é auditoria válida). Uma tabela nova com coluna sensível precisa entrar nessa remoção.
+* **Retrato completo, não diferença:** `dados_anteriores`/`dados_novos` guardam a linha inteira (já sem o sensível) nas duas pontas, para reconstruir o estado.
+* **Sem ruído do motor de score:** um `UPDATE` em `perfil_pesquisador` que só mudou `score_atual`/`score_atualizado_em` não gera linha. Um `UPDATE` que não muda valor nenhum também não.
+* **À prova do próprio admin** ([04-L], [06-L]): só existe leitura (`log_visualizar`); nenhuma escrita para ninguém. Só a trigger grava.
+* **Retenção:** `limpar_log_auditoria()` (`SECURITY DEFINER`, tarefa diária das 3h) apaga o que passou de `configuracoes.log_auditoria_retencao_dias` (**365**; 0 = guardar para sempre). É a **única** forma de apagar log. Ao apagar, grava **uma** linha de rastro (`tabela = 'log_auditoria'`, `operacao = 'DELETE'`, com a quantidade, os dias e a data de corte); se não apaga nada, não grava nada. O que sai não é arquivado: um ano cobre a contestação razoável. O índice BRIN de `ocorrido_em` serve a essa limpeza ([02-L]).
+* **Tela:** `GET /log-auditoria` (`nest/src/28-log-auditoria`, só leitura) e o botão "Ver log" das listas do painel.
 
-📌 **IP: base legal e anonimato do Pix (04-10-2026).**
-- **Em palavras simples:** guardar o IP é uma obrigação legal para sites comerciais, serve de prova numa contestação e não quebra o anonimato da contribuição anônima, porque o próprio Pix já não é anônimo para o sistema de pagamento.
-- **Decisão:** o registro do IP no aceite de toda contribuição, inclusive a anônima, fica mantido.
-- **Motivo:**
-  - o Marco Civil da Internet (Lei 12.965/2014, art. 15) obriga o provedor de aplicação que atua como pessoa jurídica, de forma profissional e com fins econômicos, a guardar os registros de acesso (IP, data e hora) por 6 meses, para qualquer usuário, anônimo ou não;
-  - numa contestação de pagamento ou fraude, o IP ligado ao aceite mostra de onde e quando o Termo foi aceito: é a defesa da plataforma;
-  - o Pix anônimo é anônimo para o público, não para o sistema: o banco de quem pagou sabe quem pagou, e o recebedor costuma ver o nome e parte do CPF do pagador. O IP não tira um anonimato que o Pix já não dá.
-- **Caso-limite aceito:**
-  - o art. 15 pede o registro de **cada acesso**, não só do aceite. Hoje o IP fica em três lugares: `usuario_termo.ip_aceite`, `aceite_termo_contribuicao.ip_aceite` e `usuario.ultimo_login_ip` (sobrescrito a cada login). Não existe registro de acessos que atenda ao art. 15. A obrigação só vale quando o sistema operar como empresa; enquanto for TCC sem operação real, não se aplica. Fazer esse registro é item para antes de entrar em operação;
-  - os 5 anos do IP do aceite vão além dos 6 meses do Marco Civil: a justificativa é o prazo do CDC (art. 27, decisão acima). A LGPD pede o período mínimo necessário, então o prazo precisa continuar justificado no Termo;
-  - o parâmetro aceita 0 (guardar para sempre), que não combina com o "período mínimo necessário" da LGPD. Mantido de propósito (decisão do Lucas, 04-10): é prático para testes. Em operação, o valor fica no prazo que o Termo promete.
+#### IP do aceite na contribuição
 
-- 🗑️➡️✅ **Já é feature de tela (achado desatualizado, corrigido nesta revisão):** este parágrafo dizia "não é feature de tela ainda" - isso ficou pra trás. O módulo `nest/src/28-log-auditoria` (`GET /log-auditoria`, só leitura) e o componente `react/src/components/crud/log-auditoria-painel.tsx` (botão "Ver log" no rodapé de cada `GenericTable`) já existem e consomem esta tabela.
+**Em palavras simples:** a cada contribuição, inclusive sem conta, a plataforma registra o IP de onde ela foi feita, como prova do aceite do Termo numa contestação de pagamento. O Termo diz isso e diz o prazo; depois do prazo, o IP é apagado e o resto do aceite continua.
+
+* `ip_aceite_contribuicao_retencao_dias` (**1825**, 5 anos; 0 = guardar para sempre; interno). `limpar_ip_aceite_contribuicao()` (`SECURITY DEFINER`, na mesma tarefa diária das 3h) apaga o `ip_aceite` mais velho que isso. O IP vem da requisição (`trust proxy` no deploy, `DOCUMENTACAO_BACKEND.md`).
+* **Por quê:** 5 anos é o prazo do Código de Defesa do Consumidor para reclamar (art. 27), e a LGPD permite guardar o IP para defesa em processo (art. 7º, VI). O Marco Civil da Internet (art. 15) obriga quem opera como empresa a guardar os registros de acesso (IP, data e hora) por 6 meses. E o IP não tira um anonimato que o Pix não dá: o banco de quem pagou sabe quem pagou, e o recebedor costuma ver o nome e parte do CPF.
+* **Casos-limite:** mudar o parâmetro não muda o Termo, que tem o prazo escrito (mudar o prazo pede uma versão nova do Termo). O parâmetro aceita 0, que não combina com o "período mínimo necessário" da LGPD; fica por ser prático em testes, e em operação o valor é o que o Termo promete. ⚠️ O art. 15 do Marco Civil pede o registro de **cada acesso**, não só do aceite; hoje o IP fica no aceite do termo, no aceite da contribuição e no último login. Fazer esse registro é item para antes de entrar em operação (PENDENCIAS, "No dia do deploy"). Suíte 35 do PGlite.
 
 ---
 
@@ -1131,86 +934,98 @@ Registro genérico de INSERT/UPDATE/DELETE, pensado pra fechar um buraco real: o
 
 ### Visão Geral
 
-Este arquivo concede à role `app_nestjs` (criada em `01`) exatamente os privilégios que a RLS (`04`) pressupõe. RLS e GRANT são duas checagens **independentes** que o Postgres exige em conjunto: mesmo com uma policy liberando o acesso, se o GRANT de tabela/coluna não existir, a operação falha antes com `permission denied` - a policy nunca chega a ser avaliada. O arquivo segue a mesma ordem de blocos de domínio do `01`.
+Concede à role `app_nestjs` (criada no `01`) exatamente os privilégios que a RLS (`04`) pressupõe. RLS e GRANT são duas checagens **independentes** que o Postgres exige juntas: sem o GRANT de tabela ou de coluna, a operação falha com `permission denied` antes de a policy ser avaliada. E um GRANT sem policy correspondente nunca funciona (só dá a falsa impressão de que a operação é possível); por isso cada GRANT de escrita existe só onde há policy para ele. Todos os GRANTs moram neste arquivo, na ordem dos blocos do `01`.
 
-> 📌 **Por que os GRANTs ficam consolidados aqui:** antes, esses privilégios estavam espalhados - o bloco principal de schema/tabela/coluna vinha de um arquivo à parte de "artifícios", o GRANT nas sequências vinha do fim do arquivo de seed (como correção avulsa, provavelmente depois que alguém esbarrou no erro 42501 ao tentar inserir), e o GRANT `EXECUTE` das funções de score também vinha do arquivo de artifícios. Consolidado aqui, nenhum GRANT corre mais o risco de ficar esquecido num outro arquivo.
+**Regras gerais:**
+* **Por coluna onde há dado que o app não pode mudar:** `usuario`, `perfil_pesquisador`, `campanha`, `denuncia`, `score_config`, `score_rotulo`, `papel` e `solicitacao_encerramento` têm `INSERT` ou `UPDATE` só nas colunas que o Nest grava; o resto muda só por trigger ou função `SECURITY DEFINER`.
+* **Dinheiro sem escrita direta:** `contribuicao` só tem `INSERT`; `repasse` e `auditoria_financeira`, nenhuma escrita ([06-H]).
+* **Funções que escrevem saem do `EXECUTE` padrão de `PUBLIC`:** `REVOKE EXECUTE ... FROM PUBLIC` e `GRANT EXECUTE` só para `app_nestjs`. Hoje só o `app_nestjs` conecta, mas fechar é de graça para funções que apagam conta ou recalculam a plataforma inteira.
 
 ---
 
 ### [06-A] Geral (Schema e Sequências)
 
-* **`GRANT USAGE ON SCHEMA public` e `GRANT SELECT ON ALL TABLES`:** acesso de base ao schema e leitura geral - depois refinada por `REVOKE`/GRANT de coluna nas tabelas sensíveis (`[06-D]`).
-* **[06-A-1] `GRANT USAGE, SELECT ON ALL SEQUENCES`:** sem isso, `GRANT INSERT` sozinho não é suficiente - o Postgres não consegue gerar o próximo valor de uma coluna `SERIAL`/`IDENTITY` sem `USAGE` na sequência por trás dela (erro `42501`). Afeta toda tabela com `GRANT INSERT` neste arquivo; resolvido de uma vez para todas com um único `GRANT` sobre todas as sequências do schema.
+* **`GRANT USAGE ON SCHEMA public` e `GRANT SELECT ON ALL TABLES`:** a base, refinada por `REVOKE` e GRANT de coluna nas tabelas sensíveis ([06-D]).
+* **[06-A-1] `GRANT USAGE, SELECT ON ALL SEQUENCES`:** sem isso, o `INSERT` não consegue gerar o próximo valor de uma coluna `SERIAL` (42501).
 
 ---
 
 ### [06-B] RBAC
 
-Nenhum GRANT adicional. `papel`, `permissao` e `papel_permissao` só têm policy de `SELECT` em `04_rls_policies.sql` (leitura pública), já coberta pelo `GRANT SELECT ON ALL TABLES` de `[06-A]`. A gestão dessas 3 tabelas acontece via seed/migração direta, não pela aplicação.
+* `GRANT INSERT, DELETE ON papel_permissao` (a matriz Papel × Permissão, com `papel_gerenciar`) e `GRANT UPDATE (nome, descricao) ON papel` (Alterar Papel). `codigo` e `ordem_exibicao` não têm GRANT nenhum ([01-B]). `permissao` e a criação de papel novo não têm escrita pela aplicação.
 
 ---
 
 ### [06-C] CONFIG
 
-* **Tabelas:** `configuracoes` (INSERT/UPDATE/DELETE completos), `arquivo` (INSERT/UPDATE, sem `DELETE`), `area_conhecimento`, `motivo_denuncia`, `tipo_link` (as 3 com INSERT/UPDATE/DELETE completos desde 18-08-2026).
-
-**Detalhamento por grant:**
-* 🗑️➡️✅ **[06-C-0] `arquivo` - `DELETE` removido - CORRIGIDO (27-07-2026):** nenhuma policy de RLS de `DELETE` existe pra essa tabela (só `configuracoes`, do mesmo bloco, tem policy de `DELETE` de verdade) - o `GRANT DELETE` que existia nunca funcionava, só dava a falsa impressão de que a operação era possível. Faz parte da limpeza mais ampla de 21 tabelas nesse mesmo estado - ver nota geral em `[06-D]`, mais abaixo, e `PENDENCIAS e correcoes.md`, item `A7`.
-* **[06-C-1] `area_conhecimento` / `motivo_denuncia`:** originalmente receberam apenas os GRANTs mínimos necessários (INSERT/UPDATE) para que as policies de RLS funcionassem na gestão de catálogos - princípio de privilégio mínimo. 🗑️➡️✅ **`DELETE` adicionado (18-08-2026, pedido do Lucas/Alexia - botão Excluir no painel):** a FK sem `CASCADE` que aponta pra cada uma continua de pé (`FK_CAMPANHA_AREA_CONHECIMENTO`, `FK_DENUNCIA_MOTIVO`), então o `GRANT`+a policy só destravam a operação - o banco ainda rejeita (`23503`) se o registro estiver em uso, e o `service.remove` de cada módulo traduz isso numa mensagem própria em vez do 400 genérico do filtro global.
-* **[06-C-2] `tipo_link`:** ganhou `pol_tipolink_insert`/`pol_tipolink_update` em `04` (permissão `tipolink_gerenciar`), mas faltava o GRANT de tabela correspondente - sem ele, mesmo um curador/admin com a permissão certa recebia `permission denied for table tipo_link` antes de a RLS ser avaliada, e cadastrar um novo tipo de link (ex.: "TikTok") continuava impossível na prática (mesmo tipo de furo - GRANT de tabela faltando atrás de uma policy que já existia - descrito em geral no Anexo B, ao final deste documento). 🗑️➡️✅ **`DELETE` adicionado (18-08-2026):** mesmo motivo/mesmo cuidado de `area_conhecimento`/`motivo_denuncia` acima - `tipo_link` continua com `ativo` disponível pra desativação lógica quando o registro estiver em uso e o DELETE for rejeitado.
+* `configuracoes`: `INSERT`, `UPDATE`, `DELETE` (a policy só deixa apagar a configuração pessoal do dono, [05-K-2-C]).
+* **[06-C-1]** `area_conhecimento`, `motivo_denuncia`, `tipo_link`: `INSERT`, `UPDATE`, `DELETE`. As FKs que apontam para eles não têm `CASCADE`: o banco recusa (23503) a exclusão de um item em uso, e o Nest responde 409 dizendo onde ele é usado; desativar (`ativo`) continua disponível.
+* `arquivo`: `INSERT`, `UPDATE` (desativar), sem `DELETE`: a exclusão é lógica, e o objeto do armazenamento é apagado pela faxina ([05-G]).
 
 ---
 
 ### [06-D] USUÁRIO
 
-* **Tabelas:** `usuario` (`INSERT` **por coluna**, ver `[06-D-10]`), `perfil_pesquisador` (INSERT de tabela inteira; `UPDATE` **por coluna**, ver `[06-D-9]`), `termos_de_uso` (INSERT/UPDATE, sem `DELETE`); `usuario_termo` (só INSERT); `usuario_papel`, `seguir_pesquisador` (INSERT/DELETE, sem `UPDATE`); `notificacao` (INSERT/UPDATE); `verificacao_email`/`recuperacao_senha`/`sessao` (SELECT/INSERT/UPDATE).
-
-**Detalhamento por grant:**
-* **[06-D-1] `usuario` / `perfil_pesquisador` - SELECT geral revogado:** o acesso público a essas duas tabelas foi reduzido no nível de GRANT para evitar que `app_nestjs` tenha acesso indiscriminado a dados sensíveis antes mesmo da avaliação das policies de RLS.
-* **[06-D-2] `usuario` - colunas de autenticação no GRANT de coluna:** faltavam as colunas usadas pelo próprio fluxo de login (`senha_hash`, `tentativas_login_falhas`, `bloqueado_ate`, `ultimo_login_em`, `ultimo_login_ip`). Sem elas, o GRANT de coluna barra o `SELECT` antes mesmo de a RLS ser avaliada, e o NestJS não consegue checar a senha no login nem aplicar a proteção contra brute-force. 🗑️➡️✅ **`email_verificado` - CORRIGIDO (27-07-2026):** a coluna existe desde `01`, mas nunca tinha entrado nessa lista - sem ela, o fluxo de verificação de e-mail não conseguia nem ler a própria flag. 🗑️ **`suspenso` removida da lista do GRANT de `perfil_pesquisador` (27-07-2026):** consequência direta da coluna ter sido removida da tabela em `01` - ver `[01-D]`. 🗑️➡️✅ **`cpf_criptografado` e `tipo_vinculo` adicionadas ao GRANT SELECT de `perfil_pesquisador` (28-07-2026):** o CPF é `NOT NULL` (Alexia) - o `app_nestjs` já era obrigado a gravá-lo, mas continuava sem conseguir lê-lo (coluna fora do `GRANT SELECT`), travando o KYC do RF-015 (a API de pagamento precisa desse dado pra configurar o recebimento do pesquisador). A proteção de acesso que de fato importa passa a ser a permissão `perfil_pesquisador_visualizar_sensivel` (já seedada, até então sem nenhum efeito) gateando a leitura no NestJS - não a coluna ficar inacessível pro próprio backend. 🗑️➡️✅ **`score_atual`/`score_atualizado_em` SAÍRAM do GRANT SELECT (28-07-2026, item 12 da Lista C):** eram uma porta dos fundos pro score de qualquer pesquisador - a policy de `score_pesquisador` foi corrigida pra parar de ser pública (ver `[04-I-3]`), mas essas 2 colunas aqui, sem RLS de coluna (o Postgres não tem), continuavam vazando o mesmo dado pra qualquer um via `perfil_pesquisador`. O valor continua acessível de onde já era acessível de propósito: `score_pesquisador.score_total`, via a policy corrigida.
-* 🗑️➡️✅ **[06-D-8] `DELETE`/`UPDATE` mortos removidos de vários GRANTs - CORRIGIDO (27-07-2026):** dois achados separados, mesmo padrão nos dois - um `GRANT` sem nenhuma policy de RLS correspondente pra aquela operação nunca funcionava de verdade, só dava a falsa impressão de que era possível. **`DELETE`** foi removido de 21 tabelas que não tinham policy de `DELETE` (mantido só onde a policy existe: `configuracoes`, `usuario_papel`, `seguir_pesquisador`, `seguir_campanha`, `link_academico`, `link_atualizacao`, `link_recompensa`) - neste bloco, isso tirou `DELETE` de `usuario`, `perfil_pesquisador` e `termos_de_uso`. **`UPDATE`** foi removido de 6 tabelas que não tinham policy de `UPDATE` - neste bloco, `usuario_termo` (registro de aceite de termo, não deveria ser editável depois de criado) e `usuario_papel`/`seguir_pesquisador` (só existe inserir/apagar essas relações, não faz sentido "editar"). Ver `PENDENCIAS e correcoes.md`, itens `A7` e `27`, pra contagem completa nos 8 arquivos e pra prova de que nada quebrou.
-* **[06-D-3] `notificacao`:** ganhou `pol_notificacao_insert`/`pol_notificacao_update` em `04` (o backend passou a gravar notificação através do próprio `app_nestjs`, não mais via um role que ignorasse RLS), mas faltava o GRANT de tabela correspondente - sem os dois níveis juntos (RLS + GRANT), toda tentativa de `INSERT`/`UPDATE` falhava com `permission denied for table notificacao`, mesmo com a policy liberando.
-* 🗑️➡️✅ **[06-D-9] `usuario`/`perfil_pesquisador` - `GRANT UPDATE` de tabela inteira era um furo de segurança - CORRIGIDO (28-07-2026, achado em auditoria de IA):** o `SELECT` já era por coluna (`[06-D-2]`), mas o `UPDATE` era de tabela inteira - testado como usuário comum: forjar `score_atual`, auto-verificar o próprio e-mail, limpar o próprio bloqueio de login, e reverter `deletado`. **Corrigido:** `perfil_pesquisador` ganhou `GRANT UPDATE` por coluna (mesma lista do `SELECT` menos `score_atual`/`score_atualizado_em`); `usuario` ficou só com `nome`/`id_imagem_perfil`/`senha_hash` no `GRANT UPDATE` direto - as 6 colunas restantes (`email_verificado`, `tentativas_login_falhas`, `bloqueado_ate`, `ultimo_login_em`, `ultimo_login_ip`, `deletado`) só mudam via as funções `SECURITY DEFINER` de `[03-O]`. **Rodada seguinte (mesma data, 2ª auditoria):** essas funções também não checavam quem estava chamando - furo maior que o original. `REVOKE EXECUTE ... FROM PUBLIC` + `GRANT` só pra `app_nestjs` nas 5, e checagem de autorização própria em 2 delas. Detalhamento completo em `[03-O]`.
-* **[06-D-10] `usuario` - `GRANT INSERT` por coluna (26-09-2026, achado da revisão externa, F3.7):** o `app_nestjs` tinha `INSERT` na tabela inteira, então o banco aceitaria um `INSERT` já com `email_verificado = TRUE`, `deletado`, bloqueio ou suspensão preenchidos; só o DTO do Nest impedia. Agora o `INSERT` cobre apenas `nome`, `email`, `senha_hash` e `id_imagem_perfil`, que são as 4 colunas que `UsuarioServiceCreate` envia (cadastro público e criação pelo admin); o resto nasce do `DEFAULT`. Tentar as outras dá 42501 (`permission denied`). Mesmo padrão do `UPDATE` por coluna de `[06-D-9]` e de `campanha`. `perfil_pesquisador` e `termos_de_uso` continuam com `INSERT` de tabela inteira. Suíte `12-grants-por-coluna-usuario.mjs`.
-* **[06-D-4] `verificacao_email` / `recuperacao_senha` / `sessao`:** têm policy real em `04` (`TO app_nestjs USING (true)`) e precisam do GRANT correspondente - RLS libera mas falta permissão de tabela, e vice-versa; os dois níveis são exigidos juntos pelo Postgres. 🗑️➡️✅ **`DELETE` concedido nas 3 - CORRIGIDO (28-07-2026, antigo item 28 do `PENDENCIAS`):** a policy das 3 já era `FOR ALL` (cobre `DELETE`), mas o `GRANT` só ia até `UPDATE` - sem isso, um token de recuperação de senha expirado nunca saía da tabela, e o índice parcial `ux_recuperacao_senha_ativo_por_usuario` (`02`, só 1 token não-usado por vez) bloqueava qualquer novo pedido de recuperação depois do primeiro expirar sem uso (testado e confirmado antes da correção). Dois usos previstos pra esse `DELETE`: (1) apagar o token de recuperação anterior no ato de um novo pedido, em vez de marcar `usado_em` à força (o que faria a coluna mentir sobre o que de fato aconteceu); (2) expurgo periódico por retenção (RNF-003 - dado pessoal só pelo tempo necessário; `sessao` guarda IP/user-agent) - sugestão de janela: 30 dias pra `verificacao_email`/`recuperacao_senha` após confirmado/usado/expirado, 90 dias pra `sessao` após revogado/expirado. Como as policies são `USING (true)`, o `DELETE` vale pra qualquer linha de qualquer usuário - o expurgo do NestJS precisa ser sempre uma consulta fixa com `WHERE` explícito em data, nunca um filtro dinâmico.
+* **[06-D-1] `usuario` e `perfil_pesquisador`:** `SELECT` geral revogado; o `SELECT` é por coluna, para o `app_nestjs` não ter acesso indiscriminado antes mesmo da RLS.
+* **[06-D-2] `usuario`, colunas de autenticação no `SELECT`:** `senha_hash`, `tentativas_login_falhas`, `bloqueado_ate`, `ultimo_login_em`, `ultimo_login_ip` e `email_verificado` estão no GRANT de coluna: o login precisa conferir a senha e o bloqueio. Só o login lê `senha_hash` (`DOCUMENTACAO_BACKEND.md`, seção 6.3).
+* **`perfil_pesquisador` no `SELECT`:** inclui `cpf_criptografado` (o Nest decifra só para o dono ou para quem tem `perfil_pesquisador_visualizar_sensivel`; quem decide é o Nest, não a coluna ficar inacessível para o próprio backend), `tipo_vinculo`, as colunas de suspensão e `score_atual`/`score_atualizado_em` (a pontuação é pública, [04-I-3]).
+* **[06-D-9] `UPDATE` por coluna:** `usuario` só `nome`, `id_imagem_perfil` e `senha_hash`; as colunas de verificação, bloqueio, login e exclusão mudam só pelas funções de [03-O]. `perfil_pesquisador` sem `score_atual`/`score_atualizado_em` (só o recálculo, [05-I-3]), sem `status_pesquisador` e as colunas de suspensão ([03-P]) e sem `cpf_criptografado` ([03-P-1]).
+* **[06-D-10] `usuario`, `INSERT` por coluna:** só `nome`, `email`, `senha_hash` e `id_imagem_perfil` (o que o cadastro e a criação pelo admin enviam); o resto nasce do `DEFAULT`. Um `INSERT` com `email_verificado = TRUE` ou já suspenso dá 42501. Suíte 12 do PGlite.
+* **`termos_de_uso`:** `INSERT`, `UPDATE`, `DELETE` (a versão já aceita é protegida por trigger, [05-K-3]). **`usuario_termo`:** só `INSERT` (o aceite não se edita).
+* **`usuario_papel` e `seguir_pesquisador`:** `INSERT`, `DELETE` (não se "edita" uma relação; a suspensão de papel é por função, [03-N]).
+* **[06-D-3] `notificacao`:** `INSERT`, `UPDATE`, com as policies de [04-D-5].
+* **[06-D-4] `verificacao_email`, `recuperacao_senha`, `sessao`:** `SELECT`, `INSERT`, `UPDATE`, `DELETE`, com a policy `FOR ALL` de [04-D-1]. O `DELETE` serve para apagar o pedido de nova senha anterior a cada pedido novo (sem isso, o índice de um só token ativo, [02-D], bloquearia o segundo pedido). ⚠️ Como a policy é `USING (true)`, um `DELETE` vale para qualquer linha: uma limpeza por retenção precisa ser sempre uma consulta fixa por data, nunca um filtro dinâmico.
+* **[06-D-2b] Funções:** as de autenticação e moderação ([03-O], [03-N], [03-P], [03-P-1] a [03-P-3], [03-E-1] e [03-E-2]) com `REVOKE ... FROM PUBLIC` e `GRANT EXECUTE` só para `app_nestjs`.
 
 ---
 
 ### [06-E] CAMPANHA
 
-* **Tabelas:** `campanha`, `atualizacao_campanha`, `solicitacao_encerramento`, `historico_rejeicao`, `comentario`, `denuncia`, `recompensa` (INSERT/UPDATE, sem `DELETE`, **exceto `historico_rejeicao`: só INSERT desde 21-09-2026**, histórico de moderação é imutável); `seguir_campanha` (INSERT/DELETE, sem `UPDATE`); `repasse` (só INSERT, ver nota abaixo).
-* 🗑️➡️✅ **`DELETE` removido das 8 primeiras - CORRIGIDO (27-07-2026):** nenhuma delas tem policy de `DELETE` em `04` - só `seguir_campanha` tem (`pol_seg_campanha_delete`, RF-009 "deixar de seguir"). `UPDATE` também não faz sentido pra `seguir_campanha` (só existe seguir/deixar de seguir), por isso ficou com `INSERT`/`DELETE` em vez de `INSERT`/`UPDATE`. Mesma limpeza geral do `A7`/`27` - ver `[06-D-8]`, mais acima, e `PENDENCIAS e correcoes.md`.
-* 🗑️➡️✅ **`repasse` perdeu `UPDATE` de tabela inteira - CORRIGIDO (28-07-2026, 5ª auditoria de IA, extensão do CRÍTICO 2):** `pol_repasse_update` (`04`) é `USING(true)` - é dinheiro saindo, mesmo raciocínio de `contribuicao` (`[06-H]`, abaixo). `status`/`repassado_em` só mudam via `atualizar_status_repasse()` (`05`, `SECURITY DEFINER`, `[05-K-2]`).
+* **`campanha`:** `INSERT` e `UPDATE` por coluna (sem `valor_bruto_arrecadado`, `taxa_plataforma`, `encerrado_em`, `enviado_aprovacao_em`, e sem `modelo` e `id_usuario` no `UPDATE`; [05-K-2-C]) e `DELETE` (a policy só libera `rascunho`).
+* **`atualizacao_campanha`, `comentario`, `recompensa`:** `INSERT`, `UPDATE`; `comentario` também `DELETE` (o autor apaga o próprio).
+* **`denuncia`:** `INSERT` por coluna (autor, alvo, motivo, relato) e `UPDATE` por coluna (`status`, `justificativa_moderacao`): ninguém cria uma denúncia já julgada ou já contestada ([05-K-2-J]).
+* **`solicitacao_encerramento`:** `INSERT` (campanha e justificativa) e `UPDATE (status)`, só para cancelar ([05-K-2-H]).
+* **`historico_rejeicao`:** só `INSERT` (imutável).
+* **`orcamento_campanha`, `marco_cronograma`:** `INSERT`, `UPDATE`, `DELETE`.
+* **`seguir_campanha`:** `INSERT`, `DELETE`.
+* **`repasse`:** nenhuma escrita. `status` e `repassado_em` só mudam por `atualizar_status_repasse()`, e o repasse nasce pelas funções do fechamento ([05-K-2]).
 
 ---
 
 ### [06-F] LINK
 
-* **Tabelas:** `link_academico`, `link_atualizacao`, `link_recompensa` - INSERT/UPDATE/DELETE completos.
+* `link_academico`, `link_atualizacao`, `link_recompensa`: `INSERT`, `UPDATE`, `DELETE`.
 
 ---
 
 ### [06-G] ARQUIVO
 
-* **Tabelas:** `arquivo_atualizacao`, `arquivo_recompensa` - INSERT/UPDATE, sem `DELETE`. 🗑️➡️✅ **CORRIGIDO (27-07-2026):** nenhuma das duas tem policy de `DELETE` em `04` - mesma limpeza geral do `A7`, ver `[06-D-8]`.
+* `arquivo_atualizacao`, `arquivo_recompensa`: `INSERT`, `UPDATE`, sem `DELETE` (não há policy de `DELETE`).
 
 ---
 
 ### [06-H] CONTRIBUIÇÃO
 
-* **Tabelas:** `auditoria_financeira` (INSERT/UPDATE, sem `DELETE`); `contribuicao_recompensa`, `aceite_termo_contribuicao` (só INSERT); `contribuicao` (só INSERT, ver nota abaixo).
-* 🗑️➡️✅ **CORRIGIDO (27-07-2026):** nenhuma das quatro tem policy de `DELETE` em `04` (mesma limpeza geral do `A7`, ver `[06-D-8]`). `contribuicao_recompensa`/`aceite_termo_contribuicao` também perderam `UPDATE` - os comentários do `04` já diziam que os dois são registro de auditoria/aquisição, não deveriam ser editáveis depois de criados (mesmo raciocínio do `27`).
-* 🗑️➡️✅ **`contribuicao` perdeu `UPDATE` de tabela inteira - CORRIGIDO (28-07-2026, 5ª auditoria de IA, CRÍTICO 2):** `pol_contribuicao_update` era `USING(true)` - reproduzido: fraudador doava pra própria campanha e se auto-confirmava por `UPDATE` direto, inflando `campanha.valor_bruto_arrecadado` publicamente sem pagamento real. `status`/`id_transacao_api` só mudam via `atualizar_status_contribuicao()` (`05`, `SECURITY DEFINER`, `[05-K-2]`) - pré-autorização (webhook do gateway), mesma categoria das funções de `[03-O]`. `auditoria_financeira` continua com `UPDATE` de tabela inteira, de propósito (item "Validação de escrevibilidade financeira" de `PENDENCIAS`, ainda em aberto, travado no gateway de pagamento).
+* **`contribuicao`:** só `INSERT`. A situação e a cobrança só mudam por `atualizar_status_contribuicao()` e pelas outras funções `SECURITY DEFINER` do `05`. **Por quê:** com `UPDATE` direto, alguém confirmaria a própria contribuição sem pagar e o arrecadado público subiria.
+* **`contribuicao_recompensa`, `aceite_termo_contribuicao`:** só `INSERT` (registro de escolha e de aceite, não se editam).
+* **`auditoria_financeira`:** nenhuma escrita: só as funções do `05` gravam, e o histórico do dinheiro não se apaga nem se edita.
+* **Funções do dinheiro:** `GRANT EXECUTE` para `app_nestjs` nas que o Nest chama (listagens e ações das pendências de pagamento, webhook, tarefas automáticas).
 
 ---
 
 ### [06-I] SCORE
 
-* **Tabelas:** `score_config`, `score_rotulo` - INSERT/UPDATE, sem `DELETE`. 🗑️➡️✅ **CORRIGIDO (27-07-2026):** nenhuma das duas tem policy de `DELETE` em `04` - mesma limpeza geral do `A7`, ver `[06-D-8]`.
-* **`score_pesquisador` não recebe GRANT de tabela direto:** toda escrita passa pela função `recalcular_score_pesquisador()` (`SECURITY DEFINER`, ver `05_regras_negocio.sql`), que grava com os privilégios de quem criou a função, não com os de `app_nestjs`.
+* **`score_config` e `score_rotulo`:** `INSERT` e `UPDATE` por coluna (`peso`, `ativo` em `score_config`; `rotulo`, `descricao`, `score_minimo`, `score_maximo` em `score_rotulo`): `nome` e `id_pai` são a estrutura que as funções procuram ([05-I-4]).
+* **`score_pesquisador`:** nenhuma escrita: só `recalcular_score_pesquisador()` (`SECURITY DEFINER`) grava.
+* **[06-I-1] Funções:** `recalcular_score_pesquisador()`, `recalcular_todos_os_scores()`, `contar_seguidores_pesquisador()` e `contar_seguidores_campanha()` com `GRANT EXECUTE` para `app_nestjs`; as duas de recálculo também com `REVOKE ... FROM PUBLIC` (`recalcular_todos_os_scores()` aberta seria negação de serviço barata).
 
-**Detalhamento por grant:**
-* **[06-I-1] Funções do motor de score:** precisam de `GRANT EXECUTE` para que o app possa chamar `recalcular_todos_os_scores()` via RPC (botão "Recalcular" do Painel Admin) e `recalcular_score_pesquisador()`. 🗑️➡️✅ **`contar_seguidores_pesquisador`/`contar_seguidores_campanha` (28-07-2026, item 18 da Lista C):** mesmo motivo - chamadas diretas como RPC pela aplicação pra exibir contagem de seguidores (ver `[03-E]`). 🗑️➡️✅ **`REVOKE EXECUTE ... FROM PUBLIC` nas duas de score - CORRIGIDO (28-07-2026, 3ª auditoria de IA):** as duas escrevem (`score_pesquisador`/`perfil_pesquisador`); `recalcular_todos_os_scores()` sem `REVOKE` era negação de serviço barata liberada pra `PUBLIC` (percorre todos os pesquisadores, sem custo pra quem chama) - mesmo padrão de `REVOKE` já aplicado às 5 funções de `[03-O]`.
+### [06-L] LOG DE AUDITORIA
+
+* `log_auditoria`: só `SELECT`. Nenhuma escrita para ninguém; a trigger `fn_log_auditoria()` grava ([05-L]).
+
+### [06-Q] NOTIFICAÇÃO
+
+* `GRANT EXECUTE` para `app_nestjs` nas funções da fila que o Nest chama ([05-Q]); as de enfileirar para quem pagou e para quem segue ficam sem: só os gatilhos as usam.
 
 ---
 
@@ -1218,116 +1033,96 @@ Nenhum GRANT adicional. `papel`, `permissao` e `papel_permissao` só têm policy
 
 ### Visão Geral
 
-📌 **Um arquivo só, em duas partes (03-10-2026).**
-- **Em palavras simples:** o `07` tem primeiro o que o sistema precisa para funcionar em qualquer banco (pontuação do score, papéis e permissões, tipos de link, áreas, motivos de denúncia, a versão **vigente** de cada termo, parâmetros). Depois do marcador `[07-DEMONSTRACAO]` vem a demonstração: contas (senha `DevTcc123!`), perfis, campanhas, contribuições, comentários, denúncias, versões antigas dos termos, a leitura liberada de desenvolvimento (`[07-B-4]`) e as permissões das ferramentas de teste.
-- **Decisão:** no desenvolvimento e na sala da Alexia, o arquivo roda inteiro, como sempre. Num banco de produção, roda só até o marcador: o banco nasce sem nenhuma conta, sem as permissões de teste e sem a leitura liberada. A primeira pessoa se cadastra pelo site e quem administra o banco a promove a admin uma vez (`INSERT INTO usuario_papel` com o papel `admin`).
-- **Motivo:** manter um `07` só (decisão do Lucas) e, mesmo assim, ir para produção sem contas de senha conhecida nem permissões de teste. Por algumas horas o seed esteve dividido em dois arquivos; essa versão está guardada, sem manutenção, em `informacoes/sql-guardados/`.
-- **Caso-limite aceito:** a versão antiga de um termo, que a demonstração precisa para o histórico de aceites, entra já desativada (a vigente nasce antes, na referência). Conferido pela suíte PGlite 33, que monta o banco de produção cortando o `07` no marcador.
+📌 **Um arquivo só, em duas partes.**
+- **Em palavras simples:** o `07` tem primeiro o que o sistema precisa para funcionar em qualquer banco (a pontuação, os papéis e as permissões, os tipos de link, as áreas, os motivos de denúncia, a versão **vigente** de cada termo e os parâmetros). Depois do marcador `[07-DEMONSTRACAO]` vem a demonstração: contas (senha `DevTcc123!`), perfis, campanhas, contribuições, comentários, denúncias, as versões antigas dos termos, a leitura liberada de desenvolvimento ([07-B-4]) e as permissões das ferramentas de teste.
+- **Uso:** no desenvolvimento e na sala de aula, o arquivo roda inteiro. Num banco de produção, roda **só até o marcador**: o banco nasce sem nenhuma conta, sem as permissões de teste e sem a leitura liberada. A primeira pessoa se cadastra pelo site e quem administra o banco a promove a admin uma vez (`INSERT INTO usuario_papel` com o papel `admin`; `.Tutorial-rodar-projeto.md`).
+- **Caso-limite:** a versão antiga de um termo, que a demonstração precisa para o histórico de aceites, entra já desativada (a vigente nasce antes, na referência). Conferido pela suíte 33 do PGlite, que monta o banco de produção cortando o `07` no marcador.
 
-📌 **Demonstração refeita: uma situação do sistema em cada canto (18-10-2026).**
-- **Em palavras simples:** a demonstração mostra para a banca tudo o que o sistema faz: cada status de campanha, de contribuição, de repasse, de pedido de encerramento, de denúncia e de contestação; Pix, cartão e boleto; cada situação da caixa de avisos do provedor; e pesquisadores nas quatro faixas de score por motivos reais (a Ana chega a Referência com duas campanhas de sucesso). As datas são contadas a partir do dia em que o banco é montado, então ela nunca envelhece.
-- **Decisão:** 23 contas (as 7 "Sistema", 10 pesquisadores, 3 pessoas que apoiam e 3 contas comuns zeradas) e 21 campanhas, uma para cada situação (lista no cabeçalho de `[07-E-1]`). Toda contribuição nasce pendente e o resto acontece pelas mesmas funções que o sistema usa com o provedor de verdade (`[07-H-5]`): o aviso do provedor confirma, o fechamento da campanha cria o repasse ou manda devolver, o worker de repasse e o de estorno andam, a moderação julga e o admin decide. Funções temporárias (`pg_temp`, somem no fim da sessão) só fazem o papel do provedor e datam cada passo. O dinheiro da demonstração usa o provedor `seed`, que nenhuma tarefa automática trata. Saíram as 4 contas da equipe com nome de gente (repetiam os papéis das contas "Sistema") e os nomes repetidos.
-- **Motivo:** o seed antigo tinha datas fixas de 2024, dinheiro escrito à mão (sem eventos de pagamento, sem repasse em andamento, só Pix) e gente sem papel na história. Escrever o resultado à mão também não prova nada; passar pelas funções reais prova que elas aceitam cada caminho.
-- **Caso-limite:** ninguém nasce suspenso (suspender é uma ação demonstrada ao vivo), e as recompensas ficam para quando o módulo existir. A suíte de coerência do seed (PGlite 18) confere que todo status aparece, que a caixa de avisos tem cada situação, que nada passa pelo provedor de verdade, que ninguém passa do limite de campanhas simultâneas e que nenhum registro financeiro fica com a data da montagem do banco. Montar a demonstração achou um defeito real, corrigido em `criar_repasses_liberados` (ver `DOCUMENTACAO_FINANCEIRO.md`, seção 6).
+📌 **A demonstração mostra uma situação do sistema em cada canto.**
+- **Em palavras simples:** a demonstração mostra tudo o que o sistema faz: cada situação de campanha, de contribuição, de repasse, de pedido de encerramento, de denúncia e de contestação; Pix, cartão e boleto; cada situação da caixa de avisos do provedor; e pesquisadores nas faixas de pontuação por motivos reais. As datas são contadas a partir do dia em que o banco é montado, então ela nunca envelhece.
+- **Quem é quem** (os ids assumem esta ordem de inserção; os ids da demonstração são fixos de propósito):
+  - **1 a 7:** contas "Sistema", uma por papel (o Admin Sistema 2 é o admin de reserva), para os testes rápidos e o "Entrar como" de desenvolvimento.
+  - **8 a 17:** os pesquisadores da demonstração, cada um com uma história (o resumo da pontuação de cada um está no fim do `07`, [07-D-5]).
+  - **18 a 20:** quem apoia as campanhas.
+  - **21 a 23:** contas comuns zeradas, com o e-mail ainda não verificado; a 21 também fica com o aceite do termo da conta pendente, para demonstrar a tela de aceite (o pesquisador 16 fica pendente no termo de pesquisador).
+- **21 campanhas**, uma para cada situação, listadas no cabeçalho de [07-E-1] (sucesso com repasse, não atingida com cada devolução numa situação, repasse em erro, "Em breve", rascunho, rejeitada com reenvio, encerrada por moderação, fila de aprovação nas três cores da espera, pedidos de encerramento em cada situação...).
+- **O dinheiro passa pelas funções reais:** toda contribuição nasce pendente, e o resto acontece pelas mesmas funções que o sistema usa com o provedor de verdade ([07-H-5]): o aviso do provedor confirma, o fechamento da campanha cria o repasse ou manda devolver, as tarefas de repasse e de estorno andam, a moderação julga, o admin decide. Funções temporárias (`pg_temp`) só fazem o papel do provedor e datam cada passo. O provedor da demonstração é `seed`, que nenhuma tarefa automática trata: ligar o provedor de verdade nunca tenta cobrar, devolver ou transferir um dado de demonstração.
+  - **Por quê:** escrever o resultado à mão não prova nada; passar pelas funções reais prova que elas aceitam cada caminho.
+- **Regras da demonstração:**
+  - **ninguém nasce suspenso** (suspender é uma ação do painel, demonstrada ao vivo);
+  - **ninguém nasce com foto, e nenhuma atualização com anexo** (`arquivo` fica vazio, [07-C-4]): os objetos não existem no armazenamento, e a foto ou o anexo não abririam;
+  - **toda campanha que já foi enviada tem orçamento (soma igual à meta) e cronograma** ([07-E-1b]), como a aprovação exige; a campanha 20 fica na fila com 2 marcos, de propósito, para o checklist "Pronta para aprovar?" mostrar o que falta;
+  - **o endosso de comentário é feito como o dono da campanha** ([07-E-7]), porque a criação do comentário zera o endosso;
+  - **todo aceite é da versão vigente na data** (escolhida pela data, nunca por id fixo); cada termo tem a versão antiga (ids 1 e 2), a vigente (3 e 4) e um rascunho da próxima (5 e 6, sem aceite, [07-H-4]);
+  - **CPFs falsos** (dígito verificador válido) cifrados de verdade com as chaves do `.env` de desenvolvimento ([01-D]); as chaves Pix também são fictícias; dois pesquisadores não cadastraram chave, e o repasse de um deles espera na fila;
+  - **toda conta confirmou o e-mail** pelo mesmo caminho do sistema ([07-D-8]), menos as contas 21 a 23;
+  - **recompensas simbólicas** ([07-E-8]): os três tipos, uma desativada e um link especial; cada contribuição paga de quem tem conta ganha a maior recompensa que o valor alcançou;
+  - **e-mails** ([07-D-7]): os que as funções do seed puseram na fila viram "enviados" (provedor `seed`), para o envio não disparar tudo ao subir, e entram casos de cada situação (esperando nova tentativa, falhou, cancelado) para a aba Notificações.
+- **Conferido** pela suíte de coerência do seed (PGlite 18): todo status aparece, a caixa de avisos tem cada situação, nada passa pelo provedor de verdade, ninguém passa do limite de campanhas simultâneas, e nada acontece antes de a conta existir.
 
-📌 **Datas do seed no horário de Brasília (28-09-2026).**
-- **Em palavras simples:** o seed escreve datas como "01/01/2024 00:00". O Supabase trabalha no horário de Londres, então lia isso como meia-noite de lá, que em Brasília ainda é dia 31/12. Por isso a conta admin aparecia como "Membro desde 12/2023".
-- **Decisão:** `SET TIME ZONE 'America/Sao_Paulo'` no início do `07` e `RESET TIME ZONE` no fim: toda data escrita no seed passa a valer como horário de Brasília.
-- **Motivo:** conta criada de verdade usa `NOW()` e nunca teve o problema; só os dados de teste.
-- **Caso-limite aceito:** o Supabase atual continua com as datas antigas até o banco ser recriado. Corrigir lá só a data das contas deixaria cada conta criada depois do próprio aceite e do próprio perfil (a suíte de coerência do seed acusou), e corrigir todas as datas do seed é amplo demais para um problema só de teste.
+📌 **Datas do seed no horário de Brasília.** `SET TIME ZONE 'America/Sao_Paulo'` no começo do `07` e `RESET TIME ZONE` no fim: toda data escrita no seed vale como horário de Brasília. Sem isso, o Postgres (que no Supabase roda em UTC) leria "01/01/2024 00:00" como meia-noite de Londres, e a conta apareceria como "Membro desde 12/2023". Conta criada de verdade usa `NOW()` e nunca tem o problema.
 
-Povoa o banco com dados de demonstração/teste (mínimo 7 registros por tabela relevante). É o único arquivo em que a **ordem física não segue a ordem alfabética do índice global de letras** - ela segue estritamente a ordem de dependência de Foreign Key, porque aqui (diferente de `04`/`06`) a ordem das instruções importa de verdade: uma tabela filha só pode receber `INSERT` depois que a linha da tabela pai já existe.
-
-> ⚠️ **Por que a ordem não é alfabética:** o exemplo mais claro é `configuracoes` (letra C). Uma das suas linhas de seed (`notificar_novas_campanhas`) referencia o usuário admin pelo `id_usuario`. Por isso o `INSERT` em `configuracoes` só pode rodar depois do `INSERT` em `usuario` (letra D) - o arquivo intercala C e D de propósito, e isso já estava correto antes desta reorganização. Reordenar cegamente para "C sempre antes de D" quebraria o script. *(Correção 28-07-2026: esta nota citava também `limite_denuncias_suspensao` como segundo exemplo - a chave foi removida do seed numa rodada anterior, ver "🟢 Já corrigido" em `PENDENCIAS e correcoes.md`, item 45; a nota ficou desatualizada e só foi pega agora, na 5ª auditoria de IA.)*
+**A ordem física segue a dependência de FK**, não a ordem alfabética das letras: uma tabela filha só recebe `INSERT` depois que a linha da tabela pai existe. Por isso, por exemplo, o parâmetro pessoal do admin (`notificar_novas_campanhas`, `id_usuario = 1`) entra depois de `usuario`.
 
 ### Ordem de Execução (com a letra de cada bloco)
 
-*(Correção 28-07-2026, achado na 5ª auditoria de IA: 3 blocos que existem de verdade no `.sql` - `[07-D-6]`, `[07-D-7]` e `[07-H-3]` - não apareciam nesta tabela nem no detalhamento abaixo. São justamente os blocos de termos de uso e aceite por contribuição, a trilha que sustenta o RF-011/054/055. Adicionados agora, na posição física correta.)*
+| Ordem | Bloco | Marcador |
+|---|---|---|
+| 1 | `score_config` (dimensões e itens) e `score_rotulo` | `[07-I-1]` |
+| 2 | `papel` | `[07-B-1]` |
+| 3 | `permissao` | `[07-B-2]` |
+| 4 | `papel_permissao` | `[07-B-3]` |
+| 5 | `tipo_link` | `[07-C-1]` |
+| 6 | `area_conhecimento` | `[07-C-2]` |
+| 7 | `motivo_denuncia` | `[07-C-3]` |
+| 8 | `termos_de_uso` (as versões vigentes) | `[07-D-6]` |
+| 9 | `configuracoes` (parâmetros do sistema) | `[07-C-5]` |
+| 10 | `configuracoes` (constantes do score) | `[07-I-2]` |
+| 11 | `configuracoes` (retenção do log) | `[07-L]` |
+| 12 | `configuracoes` (cores da espera) | `[07-I-4]` |
+| 13 | `configuracoes` (limites de upload) | `[07-G]` |
+| - | **Marcador `[07-DEMONSTRACAO]`**: daqui para baixo, só desenvolvimento e aula | - |
+| 14 | Leitura liberada de desenvolvimento | `[07-B-4]` |
+| 15 | `arquivo` (vazio) | `[07-C-4]` |
+| 16 | `usuario` | `[07-D-1]` |
+| 17 | `usuario_papel` | `[07-D-2]` |
+| 18 | `termos_de_uso` (versões antigas), `usuario_termo` e o parâmetro pessoal do admin | `[07-D-6]` |
+| 19 | `perfil_pesquisador` (com chave Pix e aceite do termo de pesquisador) | `[07-D-3]` |
+| 20 | `verificacao_email` | `[07-D-8]` |
+| 21 | `link_academico` | `[07-F-1]` |
+| 22 | `campanha` | `[07-E-1]` |
+| 23 | `orcamento_campanha` e `marco_cronograma` | `[07-E-1b]` |
+| 24 | `historico_rejeicao` | `[07-E-6]` |
+| 25 | `atualizacao_campanha` | `[07-E-3]` |
+| 26 | `comentario` (e os endossos, como o dono) | `[07-E-7]` |
+| 27 | `seguir_campanha` e `seguir_pesquisador` | `[07-E-2]`, `[07-D-4]` |
+| 28 | `contribuicao` (todas nascem pendentes) | `[07-H-1]` |
+| 29 | `aceite_termo_contribuicao` | `[07-H-3]` |
+| 30 | A vida de cada contribuição pelas funções do sistema: avisos do provedor, auditoria financeira, repasses, denúncias, pedidos de encerramento e contestações | `[07-H-5]` |
+| 31 | `recompensa`, `link_recompensa`, `contribuicao_recompensa` | `[07-E-8]` |
+| 32 | `notificacao` | `[07-D-7]` |
+| 33 | `termos_de_uso` (rascunhos da próxima versão) | `[07-H-4]` |
+| - | Resumo da demonstração e como entrar no sistema | `[07-D-5]` |
+| 34 | `recalcular_todos_os_scores()` (rede de segurança) | `[07-I-3]` |
 
-| Ordem física | Bloco | Letra | Marcador |
-|---|---|---|---|
-| 1 | `score_config` (dimensões + subitens) | SCORE | `[07-I-1]` |
-| 2 | `score_rotulo` | SCORE | `[07-I-1]` |
-| 3 | `papel` | RBAC | `[07-B-1]` |
-| 4 | `permissao` | RBAC | `[07-B-2]` |
-| 5 | `papel_permissao` | RBAC | `[07-B-3]` |
-| 6 | `tipo_link` | CONFIG | `[07-C-1]` |
-| 7 | `area_conhecimento` | CONFIG | `[07-C-2]` |
-| 8 | `motivo_denuncia` | CONFIG | `[07-C-3]` |
-| 9 | `arquivo` | CONFIG | `[07-C-4]` |
-| 10 | `configuracoes` (parâmetros de sistema) | CONFIG | `[07-C-5]` |
-| 11 | `configuracoes` (constantes do motor de score) | SCORE¹ | `[07-I-2]` |
-| 12 | `configuracoes` (limites de upload de arquivo) | ARQUIVO² | `[07-G]` |
-| - | Marcador `[07-DEMONSTRACAO]`: daqui para baixo, só desenvolvimento e aula | - | - |
-| 13 | `usuario` | USUÁRIO | `[07-D-1]` |
-| 14 | `usuario_papel` | USUÁRIO | `[07-D-2]` |
-| 15 | `termos_de_uso` (versões antigas) / `usuario_termo` | USUÁRIO | `[07-D-6]` |
-| 16 | `configuracoes` (preferência do admin e Campo de Testes) | CONFIG | `[07-C-5]` |
-| 17 | `perfil_pesquisador` (+ chave Pix e aceite do termo de pesquisador) e `verificacao_email` | USUÁRIO | `[07-D-3]`, `[07-D-8]` |
-| 18 | `link_academico` | LINK | `[07-F-1]` |
-| 19 | `campanha` | CAMPANHA | `[07-E-1]` |
-| 20 | `orcamento_campanha` / `marco_cronograma` | CAMPANHA | `[07-E-1b]` |
-| 21 | `historico_rejeicao` | CAMPANHA | `[07-E-6]` |
-| 22 | `atualizacao_campanha` | CAMPANHA | `[07-E-3]` |
-| 23 | `comentario` (+ endossos feitos como o dono) | CAMPANHA | `[07-E-7]` |
-| 24 | `seguir_campanha` / `seguir_pesquisador` | CAMPANHA, USUÁRIO | `[07-E-2]`, `[07-D-4]` |
-| 25 | `contribuicao` (todas nascem pendentes) | CONTRIBUIÇÃO | `[07-H-1]` |
-| 26 | `aceite_termo_contribuicao` | CONTRIBUIÇÃO | `[07-H-3]` |
-| 27 | A vida de cada contribuição pelas funções do sistema: `evento_pagamento`, `auditoria_financeira`, `repasse`, `denuncia`, `solicitacao_encerramento` e contestações | CONTRIBUIÇÃO, CAMPANHA | `[07-H-5]` |
-| 28 | `notificacao` | USUÁRIO | `[07-D-7]` |
-| 29 | `termos_de_uso` (rascunhos da próxima versão) | USUÁRIO | `[07-H-4]` |
-| - | Resumo da demonstração e nota sobre como logar após o seed | - | `[07-D-5]` |
-| 30 | Backfill (`recalcular_todos_os_scores()`) | SCORE | `[07-I-3]` |
+### Detalhamento
 
-¹ A *tabela* `configuracoes` é do domínio CONFIG (`01-C`), mas este bloco específico só contém constantes usadas pelo motor de cálculo de score - por isso foi arquivado sob a letra `I`, junto com o resto do que envolve pontuação. É a mesma tabela, mas o **conteúdo** desse bloco pertence a outro domínio; ver nota abaixo.
-
-² Mesmo raciocínio da nota ¹, outro domínio: bloco `[07-G]` (04-09-2026) traz os 7 limites de upload de arquivo que viraram configuráveis pelo Painel Admin (tamanho mín./máx., cota por usuário, rate limit) - ver `DOCUMENTACAO_BACKEND.md`, seção 8.6, e `ConfiguracaoValorService`.
-
----
-
-### Detalhamento (blocos com histórico ou decisão de design)
-
-* **[07-I-1] `score_config` / `score_rotulo`:** este `INSERT` era originalmente um resquício de uma versão anterior do seed (o comentário antigo citava `AuthContext.tsx`, do fluxo de autenticação via Supabase que não existe mais) e duplicava parcialmente o `INSERT INTO papel` mais completo do bloco `[07-B-1]`. Os papéis `'admin'`, `'pesquisador'` e `'usuario'` continuam seedados só em `[07-B-1]`; aqui ficou só a inserção de verdade das dimensões e subitens de score.
-
-* **[07-B-1] `papel`:** 7 papéis seedados de uma vez: `'admin'` (recebe automaticamente toda permissão nova via `trg_permissao_auto_admin`, ver `05_regras_negocio.sql`), `'pesquisador'` (usado pela regra de dono de campanha), `'usuario'` (papel padrão atribuído a todo novo cadastro por `atribuir_papel_padrao()`, ver `08_trigger_signup_usuario.sql`), e `'moderador'`/`'revisor'`/`'curador'`/`'suporte'` (RBAC granular via `papel_permissao`, ver `[07-B-3]`). `ON CONFLICT DO NOTHING` evita erro de duplicidade se o script rodar mais de uma vez; os IDs resultantes não são fixados em lugar nenhum - `papel_permissao` e `usuario_papel` sempre resolvem por nome. O papel `'apoiador'` foi removido deliberadamente: contribuir financeiramente não é uma ação restrita a um papel específico, qualquer usuário autenticado (`'usuario'` ou `'pesquisador'`) pode fazer isso.
-
-* **[07-B-2] `permissao`:** nomes padronizados no formato `"entidade_acao"` (ver Anexo B, ao final deste documento, para o raciocínio completo da convenção). Mantém idempotência via `ON CONFLICT (nome) DO NOTHING`.
-  - 🗑️ **`campanha_encerrar` removida deste `INSERT` (era permissão órfã, nunca usada por nenhuma policy do `04`)** - detalhamento completo de como era, por que existia e por que foi removida (em vez de implementada) está em `[04-E]` mais acima neste mesmo documento.
-
-* **[07-B-3] `papel_permissao`:** resolvido por nome (não por número fixo), já que os IDs de `papel` não são previsíveis depois do `ON CONFLICT DO NOTHING` de `[07-B-1]`. Como `trg_permissao_auto_admin` (`05_regras_negocio.sql`, executado antes deste arquivo) já dispara em todo `INSERT` em `permissao` e atribui a permissão nova ao papel `'admin'` automaticamente, as linhas `('admin', ...)` deste bloco já seriam preenchidas sozinhas pela trigger - foram mantidas explícitas mesmo assim só por clareza de leitura (documentam a intenção "admin tem tudo" sem depender de abrir outro arquivo para confirmar). `ON CONFLICT DO NOTHING` garante que não há duplicidade.
-  * **Só o admin muda a Pontuação (10-10-2026).**
-    - **Decisão:** `score_editar` (mudar pesos e faixas, regras de acesso de `score_config` e `score_rotulo`) é só do `admin`. O `revisor` ficou só com `score_visualizar`: vê a pontuação de todos, não muda os números.
-    - **Motivo:** os requisitos dizem que pesos e faixas são configurados pelo Administrador; o seed dava `score_editar` também ao revisor.
-    - **Caso-limite:** o revisor que tenta salvar não recebe erro do banco (a regra de acesso filtra: 0 linhas); o Nest transforma 0 linhas em falta de permissão. Provado no PGlite (suíte 41). No Supabase, Grupo AU do `ATUALIZAR`.
-  * **Curador aprova campanhas; Termo de Uso só com o admin (10-10-2026).**
-    - **Decisão:** o curador ganhou `campanha_aprovar`, `campanha_rejeitar` e `relatorio_visualizar` e perdeu `termos_uso_gerenciar`.
-    - **Motivo:** o curador existe para as campanhas (a curadoria), não para os termos. Publicar uma versão nova do Termo obriga todas as contas a aceitar de novo, e documento jurídico fica com o dono do sistema (separação de funções).
-    - **Caso-limite:** sem `relatorio_visualizar`, a fila de campanhas aguardando aprovação ficaria vazia para ele depois do deploy (`pol_campanha_select`, 04).
-  * **Revisor vê tudo do funcionamento, sem dados pessoais (10-10-2026).**
-    - **Decisão:** o revisor tem só leituras: `relatorio_visualizar`, `auditoria_financeira_visualizar` e `log_visualizar` (a pontuação é pública, não precisa de permissão). Não tem nenhuma permissão de alterar.
-    - **Motivo:** papel de visualizador, como o Viewer do Google Cloud, com o menor privilégio: as leituras de dados pessoais (conta, perfil do pesquisador, quem doou) ficam de fora (LGPD).
-    - **Caso-limite:** em desenvolvimento toda conta já lê tudo ([07-B-4]); as leituras do revisor valem depois do deploy.
-  * **Quem julgou a denúncia não decide a contestação dela (10-10-2026).**
-    - **Decisão:** `denuncia.id_julgador` guarda quem julgou (trigger `trg_denuncia_registra_julgador`, 05), e `decidir_contestacao` (03) recusa essa pessoa (92036).
-    - **Motivo:** o recurso é revisto por outra pessoa, nunca por quem tomou a decisão (separação de funções; padrão do Mastodon e de guias de moderação). Os requisitos só proibiam quem fez a denúncia.
-    - **Caso-limite:** decidir a contestação também muda o status, mas não troca quem julgou. Denúncias julgadas antes desta regra têm `id_julgador` vazio e não ganham a trava. Provado no PGlite (suíte 42); no Supabase, Grupo AV.
-* **[07-B-4] DESENVOLVIMENTO: toda conta logada lê tudo (26-09-2026).** O papel `'usuario'` recebe só as 6 permissões de LEITURA (`relatorio_visualizar`, `usuario_visualizar_sensivel`, `perfil_pesquisador_visualizar_sensivel`, `contribuicao_visualizar_sensivel`, `auditoria_financeira_visualizar`, `log_visualizar`), para qualquer papel testar todas as telas. Nenhuma permissão de alterar muda. E toda conta do seed ganha também o papel `'usuario'` (bloco `[07-D-2]`), como no cadastro real (`atribuir_papel_padrao`, `08`): antes, as 22 contas de admin, moderação e pesquisa nasciam sem ele. **Antes do deploy, o bloco "modo produção" tira as 7 permissões do `'usuario'`** (o SQL está na pendência "modo produção" de `PENDENCIAS e correcoes.md`; as suítes de teste do banco rodam as regras de produção sem essas 7 permissões e têm uma suíte própria para este modo de desenvolvimento).
-  - 🗑️ **`('admin', 'campanha_encerrar')` removida junto** - consequência direta de `campanha_encerrar` ter saído de `[07-B-2]`; sem a permissão existir, essa atribuição não faria sentido.
-
-* 🗑️➡️✅ **[07-D-6] `termos_de_uso` / `usuario_termo` - não aparecia neste capítulo (achado na 5ª auditoria de IA):** sustenta o RF-011 (aceite obrigatório no cadastro). Duas versões: `v1-2024-01-01` (vigente durante todo o cadastro dos usuários do seed, por isso é ela que aparece em `usuario_termo`) e `v2-2025-01-01` (versão atual, publicada depois, ainda sem nenhum aceite - cenário realista de "termo novo no ar, usuários antigos não foram re-avisados"). Texto real é `[PLACEHOLDER]` - a estrutura existe, o conteúdo jurídico definitivo entra quando a equipe/jurídico validar. **Pegadinha documentada no próprio `.sql`:** publicar uma v2 sem desativar a v1 antes quebra o índice parcial `uq_termos_uso_ativo` (`02`, só 1 versão `ativo=TRUE` por vez) - o `UPDATE` que desativa a velha e o `INSERT` da nova precisam estar na mesma transação. **Dois termos, não três (26-09-2026, decisão de Lucas e Alexia):** o enum `tipo_termo` (`01`) tem só `'cadastro'` (o termo da CONTA, que passou a cobrir também as contribuições: natureza, modelo tudo ou nada/flexível e repasse, reembolso, dados de pagamento) e `'upgrade_pesquisador'`. Existia um terceiro, `'contribuicao'`, com texto próprio exibido a cada contribuição; foi fundido no da conta porque o apoiador aceitava praticamente as mesmas regras duas vezes. O que NÃO mudou: cada contribuição continua registrando em `aceite_termo_contribuicao` a versão do termo da conta vigente naquele momento (RF-081/RF-082), o que também cobre a contribuição anônima, que nunca passou pelo cadastro. O seed publica a `v4-2026-09-26` (v3 + seção de contribuições) como vigente; a v3 fica no histórico. Os `INSERT` de aceite do seed procuram a versão pelo nome (`tipo` + `versao`), não por `id_termo` fixo. No Supabase, o Grupo P do `ATUALIZAR O SUPABASE.sql` faz a troca: aponta os aceites de contribuição que estivessem no termo antigo para a versão do termo da conta vigente naquele dia, apaga o termo de contribuição e recria o enum sem `'contribuicao'`.
-* **Seed coerente (27-09-2026): o seed conta uma história possível.** Nada acontece antes de a conta existir (contas da Juliana, Patrícia, Marcos e Fernanda passaram a nascer antes das próprias contribuições/denúncia; a campanha 10 do Eduardo, depois do perfil dele). Todo papel pesquisador tem perfil e aceite do termo de pesquisador (o Pesquisador Sistema, conta 7, ganhou perfil com CPF falso cifrado, sem campanha). Todo aceite (cadastro, upgrade de pesquisador, contribuição) é da versão vigente NA DATA, escolhida por `criado_em`, nunca por versão ou id fixo; por isso o termo de pesquisador ganhou uma `v1-2024-01-01` [PLACEHOLDER], e o texto realista virou a `v2-2026-09-13`. **[07-D-8] `verificacao_email`:** toda conta confirmou o e-mail logo depois do cadastro pelo mesmo caminho do sistema (token em `verificacao_email` e `email_verificado = TRUE`), com a validade lida de `verificacao_email_horas_validade`; as 5 contas comuns zeradas (24 a 28) seguem com o e-mail não verificado, de propósito, para testar esse estado. A suíte de coerência do seed, nos testes do banco em PGlite, confere todas essas regras.
-* **[07-C-5] `configuracoes` (parâmetros de sistema):** este bloco só pode rodar depois de `[07-D-1]` (`usuario`) porque uma das suas linhas (`notificar_novas_campanhas`) tem `id_usuario = 1`, referenciando o usuário Admin do seed (ATUALIZADO 07-08-2026: Admin virou o 1º usuário inserido, ver [07-D-1]). **Ganhou 2 linhas novas em 04-09-2026** (`refresh_token_dias_validade`, `verificacao_email_horas_validade`, domínio D) - eram constantes fixas em `3-auth/constants/auth.constants.ts`, lidas agora por `ConfiguracaoValorService` em `auth.service.login.ts`/`auth.service.register.ts`. Mesmo raciocínio de `limite_tentativas_login`/`bloqueio_login_minutos`, logo acima na mesma seção D: janela de tempo de produto, não parâmetro de segurança - `CUSTO_BCRYPT_REFRESH_TOKEN` continua fixo no código, esse sim é parâmetro de segurança de verdade.
-
-* **[07-I-4] `configuracoes` (cor do tempo de espera, 12-10-2026):** `espera_atencao_dias` (7) e `espera_critica_dias` (30), públicos (o painel lê para pintar a coluna "esperando"), conferidos como par mínimo/máximo por `fn_valida_pares_min_max_configuracoes` (o primeiro não pode passar do segundo). Grupo BA do ATUALIZAR.
-* **[07-I-2] `configuracoes` (constantes do motor de score):** dados (não lógica) que alimentam as fórmulas de `05_regras_negocio.sql` - `score_frequencia_esperada_mensal` e `score_denuncias_para_zerar` (as penalidades de abandono saíram em 03-10-2026, ver [05-K-2-I]). Ficam em `configuracoes` (não hardcoded no código) exatamente para que o admin possa ajustar a régua de penalidades pelo Painel Admin sem precisar editar SQL/app.
-
-* **[07-G] `configuracoes` (limites de upload de arquivo, 04-09-2026):** mesmo raciocínio de `[07-I-2]`, domínio ARQUIVO em vez de SCORE - 7 linhas (`arquivo_tamanho_minimo_bytes`, `arquivo_tamanho_maximo_imagem_bytes`, `arquivo_tamanho_maximo_documento_bytes`, `arquivo_cota_bytes_por_usuario`, `arquivo_limite_uploads_janela`, `arquivo_janela_limite_uploads_minutos`, `arquivo_intervalo_minimo_segundos`), todas `tipo = 'inteiro'`. Diferença em relação a `[07-C-5]`/`[07-I-2]`: quem lê estas linhas não é uma trigger de Postgres, é o próprio Nest (`ConfiguracaoValorService`, `commons/configuracao/`) - a primeira vez que a camada de aplicação lê `configuracoes` diretamente para uma regra de negócio. Ver `DOCUMENTACAO_BACKEND.md`, seção 8.6, para o código e o porquê de cada uma das 7 chaves.
-
-* 🗑️➡️✅ **[07-H-3] `aceite_termo_contribuicao` - não aparecia neste capítulo (achado na 5ª auditoria de IA):** sustenta o RF-054/RF-055 - a Etapa 2 descreve essa trilha (aceite dos termos por transação) como a defesa principal da plataforma numa disputa de chargeback com operadora de cartão. Gerado por `SELECT` a partir da própria `contribuicao` (não digitado linha por linha) - cada contribuição aceitou a versão do termo da conta vigente na época (`v1-2024-01-01` do tipo `'cadastro'`, procurada pelo nome, ver `[07-D-6]`), no mesmo instante da contribuição.
-* 🗑️➡️✅ **[07-D-7] `notificacao` - não aparecia neste capítulo (achado na 5ª auditoria de IA):** estava vazia; 7 linhas em estados diferentes (`enviado`/`pendente`/`falhou`/`cancelado`) pra exercitar de verdade a permissão `notificacao_processar` e o índice `idx_notificacao_status` (`02`) - até então, nenhum dos dois tinha rodado contra nenhuma linha real.
-* **[07-D-5] Como logar no app após o seed:** com autenticação própria, o fluxo é: 1) cadastrar o usuário pelo endpoint de signup do NestJS (gera o `senha_hash` e chama `public.atribuir_papel_padrao(id_usuario)`, que atribui o papel `'usuario'` - ver `08_trigger_signup_usuario.sql`); 2) o papel `'admin'` não é atribuído automaticamente por nada disso - depois do signup, é preciso dar o papel a um usuário manualmente com `INSERT INTO usuario_papel (id_usuario, id_papel) SELECT <id_usuario>, id_papel FROM papel WHERE nome = 'admin'`.
-
-> 🗑️ **Dois blocos removidos por estarem 100% obsoletos** (não só migrados - de fato apagados, sem equivalente aqui): um "FIX - permission denied for sequence" que descrevia um problema já resolvido, e uma "NOTA DE REORGANIZAÇÃO" que apontava para um arquivo `05_grants.sql` que nunca existiu de verdade (o nome correto sempre foi `06_grants.sql`). Ambos descreviam o `GRANT USAGE, SELECT ON ALL SEQUENCES`, que já vive e já está plenamente documentado em `06_grants.sql` (`[06-A-1]`) - mantê-los aqui seria pura duplicação desatualizada.
+* **[07-I-1] `score_config` e `score_rotulo`:** as quatro dimensões (Perfil Acadêmico 30, Histórico 25, Atualização 20, Reputação 25) e os itens de cada uma; as faixas de rótulo cobrindo 0 a 100. No Perfil Acadêmico, Lattes e ORCID valem 8 cada, "outro link" 6, instituição e título 4 cada; na Reputação, perfil 10 e campanhas 15.
+* **[07-B-1] `papel`:** os 7 papéis, com `codigo`, `descricao` e `ordem_exibicao` (admin 1, moderador 2, revisor 3, suporte 4, curador 5, pesquisador 6, usuario 7). `ON CONFLICT DO NOTHING`; os ids não são fixados em lugar nenhum: `papel_permissao` e `usuario_papel` sempre resolvem pelo nome ou pelo código. Não existe papel "apoiador": contribuir não é ação restrita a um papel.
+* **[07-B-2] `permissao`:** nomes no formato `entidade_acao` (Anexo B). Não existe permissão de "encerrar campanha direto": o encerramento antes do prazo é pelo pedido, pelo "Cancelar o projeto" ou pela moderação a partir de uma denúncia ([04-E]).
+* **[07-B-3] `papel_permissao`:** resolvido pelo nome. As linhas `('admin', ...)` são redundantes com `trg_permissao_auto_admin`, mas ficam explícitas para documentar "o admin tem tudo" sem abrir outro arquivo. O que cada papel tem está em [01-B-1]. Três regras de separação de funções:
+  * **Só o admin muda a pontuação** (`score_editar`): os requisitos dizem que pesos e faixas são do Administrador. O revisor que tenta salvar não recebe erro do banco (a RLS filtra: 0 linhas), e o Nest transforma isso em falta de permissão. Suíte 41.
+  * **O curador aprova e rejeita campanhas e cuida dos catálogos; o Termo de Uso é só do admin:** publicar uma versão nova obriga todas as contas a aceitar de novo, e documento jurídico fica com o dono do sistema. O curador tem `relatorio_visualizar`, sem a qual a fila de aprovação ficaria vazia para ele.
+  * **O revisor só lê** (`relatorio_visualizar`, `auditoria_financeira_visualizar`, `log_visualizar`), sem dados pessoais (LGPD), como o "Viewer" do Google Cloud.
+* **[07-B-4] Desenvolvimento: toda conta logada lê tudo.** O papel `usuario` recebe as 6 permissões de **leitura** (`relatorio_visualizar`, `usuario_visualizar_sensivel`, `perfil_pesquisador_visualizar_sensivel`, `contribuicao_visualizar_sensivel`, `auditoria_financeira_visualizar`, `log_visualizar`), para qualquer papel testar todas as telas. Nenhuma permissão de alterar. Como fica depois do marcador, o banco de produção nasce sem elas; as suítes de teste do banco rodam as regras de produção sem essas permissões.
+* **[07-C-5] `configuracoes`:** agrupado por domínio; a ordem do `INSERT` é a ordem que a tela de Parâmetros mostra (`id_config`). **Sem "alavanca fantasma":** chave sem nenhum consumidor não entra, porque o admin mudaria algo e nada aconteceria (pior que um valor fixo, porque parece que devia funcionar). A **descrição** de cada parâmetro é o que o admin lê primeiro na tela de Parâmetros: sem número de RF, sem nome de coluna nem de outra chave. Janelas de tempo de produto (validade da sessão, do link de verificação, do pedido de nova senha) são parâmetros; parâmetros de segurança, como o custo do bcrypt, ficam no código.
+* **[07-I-2] Constantes do score:** `score_frequencia_esperada_mensal` e `score_denuncias_para_zerar`, para o admin ajustar a régua pelo painel.
+* **[07-L] Retenção do log:** `log_auditoria_retencao_dias` (365) e `ip_aceite_contribuicao_retencao_dias` (1825) ([05-L]).
+* **[07-I-4] Cores da espera:** `espera_atencao_dias` (7) e `espera_critica_dias` (30), públicos, conferidos como par mínimo e máximo ([05-K-2-C], [05-K-2-K]).
+* **[07-G] Limites de upload:** as 7 chaves de arquivo (tamanho mínimo e máximos, cota por conta, limite de envios por janela, intervalo mínimo). Quem as lê é o Nest (`ConfiguracaoValorService`, `DOCUMENTACAO_BACKEND.md`, seção 8).
+* **[07-D-6] e [07-H-3] Termos e aceites:** o `tipo_termo` tem só `'cadastro'` (o termo da conta, que cobre também as contribuições) e `'upgrade_pesquisador'`. Cada contribuição registra em `aceite_termo_contribuicao` a versão do termo da conta vigente naquele momento (RF-054, RF-055), o que cobre também quem contribui sem conta. ⚠️ Publicar uma versão nova sem desativar a anterior quebra o índice `uq_termos_uso_ativo` ([02-D]): desativar a velha e inserir a nova precisam estar na mesma transação.
+* **[07-D-5] Como entrar no sistema depois do seed:** qualquer conta da demonstração entra com `DevTcc123!`. Num banco sem a demonstração, a primeira conta é criada pelo cadastro (que dá o papel `usuario`, [08-D-1]) e promovida a admin uma vez, à mão: `INSERT INTO usuario_papel (id_usuario, id_papel) SELECT <id_usuario>, id_papel FROM papel WHERE codigo = 'admin'`.
+* **[07-I-3] Recálculo final:** cada `INSERT` acima já dispara a trigger de recálculo, então a pontuação já estaria certa; `recalcular_todos_os_scores()` no fim é só a rede de segurança, caso uma trigger seja desligada no futuro.
 
 ---
 
@@ -1335,361 +1130,117 @@ Povoa o banco com dados de demonstração/teste (mínimo 7 registros por tabela 
 
 ### Visão Geral
 
-O menor arquivo do banco: 1 função + 1 `GRANT`. Apesar do nome do arquivo ainda dizer "trigger", **não existe mais nenhuma trigger aqui** - é histórico do nome, mantido porque o projeto já decidiu não renomear arquivos (ver regras de edição). O conteúdo real é uma função chamável, não uma trigger de tabela.
-
-> 📌 **Por que o nome do arquivo menciona "trigger" mas o conteúdo não tem nenhuma:** a versão original deste arquivo continha um trigger em `auth.users` (`on_auth_user_created`/`handle_new_user`) que criava a linha em `public.usuario` automaticamente quando o Supabase Auth cadastrava alguém. Com a saída do Supabase Auth do fluxo (autenticação própria), nunca mais existe um `INSERT` em `auth.users` - esse trigger não tinha mais como disparar e foi removido. A única parte que ainda valia a pena manter - "atribuir o papel padrão `'usuario'` a quem acabou de se cadastrar" - foi reaproveitada como uma função chamável pelo NestJS, em vez de ficar presa a um trigger de tabela que não existe mais.
+O menor arquivo do banco: uma função e um `GRANT`. O nome do arquivo diz "trigger", mas **não há trigger nenhuma aqui**: o conteúdo é uma função chamada pelo Nest. O nome ficou porque os arquivos numerados não são renomeados.
 
 ### [08-D-1] `atribuir_papel_padrao(p_id_usuario)`
 
-* **Quando roda:** chamada pelo NestJS manualmente, dentro da mesma transação do signup, logo após o `INSERT` em `usuario`. O fluxo completo de signup é: 1) gerar o hash da senha e inserir em `usuario`; 2) chamar esta função; 3) criar o registro em `verificacao_email` e disparar o e-mail de confirmação (ver Anexo A, no final deste documento).
-* **Por que é `SECURITY DEFINER`:** a policy `pol_usuariopapel_insert` (`04`) exige a permissão `'papel_atribuir'` para inserir em `usuario_papel` - mas um usuário que acabou de se cadastrar não tem nenhuma permissão ainda (nem papel nenhum). A função roda com os privilégios de quem a criou, contornando esse problema de "ovo e galinha" só para esta gravação específica (atribuir o papel `'usuario'` - nunca `'admin'`, que continua exigindo atribuição manual, ver `[07-D-5]`).
-* **`ON CONFLICT DO NOTHING`:** protege contra chamar a função duas vezes para o mesmo usuário (ex.: retry de rede) sem gerar erro de duplicidade.
-* **`GRANT EXECUTE`:** sem ele, a chamada do NestJS falharia com `permission denied` (erro `42501`) - o mesmo problema que as funções de score já tiveram, resolvido da mesma forma (ver `[06-I-1]`). 🗑️➡️✅ **`REVOKE EXECUTE ... FROM PUBLIC` antes do `GRANT` - CORRIGIDO (28-07-2026, 3ª auditoria de IA):** a função escreve em `usuario_papel`; mesmo padrão de higiene já aplicado às funções de `[03-O]` e às de score (`[06-I-1]`).
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+* **Quando roda:** o Nest a chama na mesma transação do cadastro, logo depois do `INSERT` em `usuario`. O cadastro completo: 1) gravar a conta com o hash da senha; 2) chamar esta função; 3) gravar o aceite do termo (`registrar_aceite_termo`, [03-D-1]) e o token de verificação de e-mail, que vai para a fila de e-mails ([05-Q]).
+* **Por que `SECURITY DEFINER`:** `pol_usuariopapel_insert` (`04`) exige `papel_atribuir`, e quem acabou de se cadastrar não tem papel nenhum ("ovo e galinha"). A função grava só o papel `usuario` (reconhecido pelo código), nunca `admin`.
+* **`ON CONFLICT DO NOTHING`:** chamar duas vezes para a mesma conta (ex.: nova tentativa da rede) não dá erro.
+* **`REVOKE ... FROM PUBLIC` + `GRANT EXECUTE` só para `app_nestjs`:** a função escreve em `usuario_papel`.
 
 ---
 
-# 📎 ANEXOS - conteúdo consolidado de `PLANO_AUTENTICACAO_PROPRIA.md` e `RBAC-pontos-discutidos.md` (28-07-2026)
+# 📎 ANEXOS
 
-> Os dois arquivos de origem eram documentos de **discussão técnica escritos antes da implementação** (plano de migração para autenticação própria; diagnóstico e decisões do RBAC granular). Quase tudo que eles propunham já foi implementado - e já está documentado nos capítulos `03`, `04`, `06` e `08` acima, com muito mais detalhe e já refletindo o código real. Este anexo existe só para não perder duas coisas que os capítulos numerados não cobrem: **o raciocínio de arquitetura por trás de decisões já tomadas** (o "por quê", não só o "o quê") e **os pontos que os próprios documentos originais já marcavam como em aberto** - pra não sumirem quando os arquivos forem apagados.
+O raciocínio de arquitetura por trás de regras que valem para o banco inteiro.
 
 ---
 
 ## Anexo A - Por que a autenticação própria funciona do jeito que funciona
 
-*(Consolidado de `PLANO_AUTENTICACAO_PROPRIA.md` - o plano que tirou o sistema do Supabase Auth.)*
-
-* **Contexto histórico:** o sistema nasceu usando o Supabase Auth (GoTrue) pra login/cadastro/recuperação de senha, com o frontend falando direto com o Postgres via PostgREST. A decisão foi trocar por autenticação própria no NestJS, com a arquitetura confirmada **React → NestJS → Postgres** (o frontend nunca mais fala direto com o banco). Isso muda a forma como a RLS precisa ser pensada - ver abaixo.
-* **`id_usuario_atual()` não usa mais `auth.uid()`:** no modelo Supabase, essa função existia só porque o GoTrue injetava o JWT dele diretamente na sessão do Postgres via PostgREST. Sem PostgREST no meio, não existe mais esse JWT automático - quem valida o JWT agora é o próprio NestJS, que define `SET LOCAL app.id_usuario_atual = '<id>'` no início de cada transação, depois de validar o token. `SET LOCAL` é escopado à transação atual (some sozinho no `COMMIT`/`ROLLBACK`), o que é seguro mesmo com pool de conexões compartilhado entre requests - é por isso que o mesmo mecanismo tem que ser um `Client` retirado do pool dentro de uma transação, nunca um `pool.query(...)` solto (ver `.Tutorial-rodar-projeto.md`, item 1).
-* **`id_supabase UUID REFERENCES auth.users(id)` foi removida de `usuario` de propósito:** essa coluna só fazia sentido enquanto o GoTrue populava `auth.users`. Sem ele, não sobra nada pra essa FK apontar - mantê-la travaria todo cadastro novo. Se um dia entrar SSO/OAuth como método *adicional* (não substituindo login por senha), a coluna pode voltar, sem FK e nullable.
-* **O trigger de signup em `auth.users` foi substituído por lógica explícita no NestJS:** antes, um trigger `AFTER INSERT ON auth.users` criava a linha em `usuario` automaticamente. Sem Supabase Auth, esse `INSERT` nunca mais acontece - o trigger simplesmente para de disparar. A criação do usuário (hash de senha, papel padrão via `atribuir_papel_padrao()`, disparo do e-mail de verificação) virou um passo explícito dentro do endpoint de signup do NestJS, na mesma transação - o que é até uma vantagem: fica tudo num lugar só, mais fácil de testar e logar erro (ver `08_trigger_signup_usuario.sql`).
-* **Por que a RLS continua existindo mesmo não sendo mais "estritamente necessária":** como o NestJS é o único client do Postgres, toda autorização já poderia - e deveria - ser aplicada em código antes da query chegar no banco (guards, interceptors, checagem de dono no service layer). A RLS deixou de ser a *única* barreira (como era no modelo Supabase, onde o frontend batia direto no PostgREST) e virou **defesa em profundidade**: se um dia um service esquecer um `WHERE id_usuario = ...`, tiver uma falha de SQL injection, ou uma credencial vazar, a RLS ainda impede um usuário de ler/alterar dado de outro. O custo de manter é baixo porque a maior parte de `04_rls_policies.sql` já é regra de negócio pura (dono vê o próprio recurso, campanha aprovada é pública) - só a peça que identifica "quem é o usuário atual" precisou trocar.
-* **Ponto de atenção sobre portabilidade, se um dia trocarem de banco:** RLS é sintaxe específica do Postgres - não migra pra outro SGBD. Por isso a autorização "de verdade" sempre deve morar no NestJS (isso sim é portável). A RLS fica como camada extra de segurança no Postgres, não como algo que o sistema *depende* pra funcionar corretamente - trocar de banco no futuro perderia essa camada redundante (recriável ou não na tecnologia nova), mas nenhuma regra crítica de negócio se perderia junto, porque essa mora no NestJS.
+* **React → NestJS → Postgres:** o navegador nunca fala direto com o banco; o Supabase Auth (GoTrue) e o PostgREST não são usados. Quem valida o JWT é o Nest, que diz ao banco quem está pedindo com `set_config('app.id_usuario_atual', '<id>', true)` no começo de cada transação ([03-J]). O valor é local à transação e some no `COMMIT`/`ROLLBACK`, o que é seguro com o pool de conexões, desde que cada requisição use **uma** conexão do pool dentro de uma transação, nunca um `pool.query(...)` solto (`DOCUMENTACAO_BACKEND.md`, seção 2).
+* **`usuario` não tem coluna ligada a `auth.users`:** sem o Supabase Auth, ela não apontaria para nada. Se um dia entrar login social como método **adicional**, uma coluna assim pode voltar, sem FK e opcional.
+* **O cadastro é um passo explícito no Nest,** na mesma transação: hash da senha, papel padrão (`atribuir_papel_padrao()`, [08-D-1]), aceite do termo e e-mail de verificação. Fica tudo num lugar só, mais fácil de testar e de registrar erro.
+* **Por que a RLS existe mesmo com o Nest sendo o único cliente:** é **defesa em profundidade**. Se um service esquecer um `WHERE id_usuario = ...`, tiver uma falha de injeção de SQL ou uma credencial vazar, a RLS ainda impede que uma pessoa leia ou altere o dado de outra. O custo é baixo, porque a maior parte das policies é regra de negócio pura (o dono vê o próprio recurso, campanha aprovada é pública).
+* **Portabilidade:** RLS é do Postgres e não migra para outro banco. Trocar de banco perderia essa camada (recriável ou não na tecnologia nova); por isso as regras que o Nest também confere não dependem só dela.
 
 ---
 
 ## Anexo B - Por que o RBAC é 100% orientado a dado, nunca a nome de papel
 
-*(Consolidado de `RBAC-pontos-discutidos.md` - o diagnóstico que resultou no `tem_permissao()` atual.)*
-
-* **O problema histórico que motivou o redesenho - "RBAC de enfeite":** existia uma função `eh_admin()` que checava o **nome do papel** (`'admin'`) diretamente, usada em 35 lugares de `04_rls_policies.sql` como bypass genérico de "admin vê/mexe em tudo". Isso criava dois vocabulários de autorização ao mesmo tempo (nome de papel vs. permissão): mesmo que o NestJS implementasse corretamente "usuário com permissão X pode fazer Y", a RLS rejeitava a operação mesmo assim, porque só sabia distinguir admin de não-admin - os papéis `moderador`/`revisor`/`curador`/`suporte` nunca eram respeitados por nenhuma policy que usasse `eh_admin()`.
-* **Decisão tomada (já aplicada, é o estado atual do banco):** `eh_admin()` foi removida por completo, e as 35 ocorrências migraram para `tem_permissao(...)` (`03_funcoes_seguranca.sql`, `[03-B]`) - hoje é o único mecanismo de autorização usado em RLS, nenhuma policy referencia nome de papel. A rede de segurança contra "admin perde acesso sozinho ao esquecerem de atribuir uma permissão nova a ele" é a trigger `trg_permissao_auto_admin` (`05_regras_negocio.sql`, `[05-K-3]`): toda permissão nova já nasce atribuída ao papel `admin` automaticamente.
-* **Critério usado pra mapear os bypasses antigos pra permissões novas:** reaproveitar uma permissão já existente e semanticamente equivalente sempre que havia uma (`denuncia_responder`, `repasse_aprovar`, etc.); quando o bypass cobria uma entidade filha de outra já coberta (arquivo/link de atualização ou de recompensa), reaproveitar a permissão da entidade-mãe (`atualizacao_moderar`, `campanha_editar`) em vez de criar uma permissão nova por tabela; e só criar permissão nova quando não havia nenhuma equivalente razoável - foi o caso de só duas, `link_academico_gerenciar` e `arquivo_gerenciar`.
-* **Convenção de nomenclatura das permissões em uso - `entidade_acao`, minúsculo, sem acento:** o raciocínio por trás, pra quem for criar permissão nova no futuro: CRUD genérico (create/read/update/delete) ficaria em inglês, porque mapeia 1:1 com verbo HTTP (permite um guard genérico no NestJS que deriva a ação da rota, sem tradução manual); já uma ação de negócio específica que não é um CRUD (ex.: "aprovar") fica em português, com o mesmo nome usado no segmento da URL (`POST /campanhas/:id/aprovar` → `campanha_aprovar`) - facilita auditoria porque o nome da permissão bate literalmente com a rota. E o mais importante: **CRUD do próprio dono sobre o próprio recurso não vira permissão nenhuma** - continua resolvido só pela RLS de posse (`id_usuario = id_usuario_atual()`). Só viram permissão as ações administrativas sobre recurso de terceiro, ou ações que não pertencem ao dono de forma alguma (aprovar, moderar, estornar, atribuir papel).
-* **Reforço pro dia do guard no NestJS:** RLS e NestJS devem sempre checar a **mesma string de permissão**, nunca nome de papel - as duas camadas precisam falar o mesmo vocabulário, ou elas divergem silenciosamente com o tempo.
-
----
-
-## Anexo C - Pontos que já eram "em aberto" nos documentos originais e ainda merecem uma linha de decisão
-
-1. **`tipo_link.regex`/`tipo_link.dominio` nunca foram validados por nenhuma trigger.** As duas colunas existem e são preenchidas no seed (sugerindo validação de formato de URL - ex.: Orcid bater com `orcid.org`), mas nenhuma função no `.sql` de fato confere a `url` inserida contra elas. Hoje qualquer URL passa, desde que o tipo de link seja permitido no contexto (`permite_perfil`/`permite_atualizacao`/`permite_recompensa`). **Ainda não decidido:** essa validação fica só no NestJS (as colunas viram fonte de verdade pro backend buscar o padrão) ou o banco também valida (reaproveitando o padrão dinâmico já usado em `trg_valida_escopo_tipolink`)? Continua genuinamente em aberto - não foi resolvido em nenhuma das rodadas de auditoria posteriores.
-2. **Endosso de comentário - é ação de curadoria ou só o dono da campanha?** Nunca foi confirmado se "endossar comentário" deveria virar uma permissão dedicada (curadoria por papel específico) ou se continua sendo só o dono da campanha endossando um comentário recebido na própria campanha (nesse caso, RLS de posse, sem permissão nenhuma - é como está hoje). Vale confirmar antes do NestJS implementar a tela de endosso, pra não modelar guard nenhum que a regra de negócio real não pede.
-3. **Papel `pesquisador` seguiu sem permissões próprias** - isso já foi confirmado, em rodada bem posterior a estes dois documentos, como não sendo mais um problema de "enfeite": as policies checam a existência do `perfil_pesquisador`, não o papel; o papel em si existe pra granularidade futura, caso um dia precise de uma permissão específica de pesquisador que não dependa de ter perfil. (O item relacionado - o papel nunca era atribuído automaticamente pelo app - já foi corrigido, ver a trigger `trg_perfil_atribui_papel_pesquisador` no capítulo `05`.)
+* **Uma função só decide permissão, `tem_permissao(...)`** ([03-B]); nenhuma policy nem função confere nome de papel. Um "é admin?" genérico criaria dois vocabulários de autorização (nome de papel × permissão), e os outros papéis (moderador, revisor, curador, suporte) nunca seriam respeitados por uma policy que só soubesse distinguir admin de não admin.
+* **A rede de segurança do admin** é `trg_permissao_auto_admin` ([05-K-3]): toda permissão nova nasce dada ao papel `admin`, que ninguém precisa lembrar de atualizar.
+* **Quando uma permissão nova é criada:** reaproveitar uma permissão existente e equivalente sempre que houver; para uma entidade filha de outra já coberta (o arquivo ou o link de uma atualização), usar a permissão da entidade-mãe (`atualizacao_moderar`, `campanha_editar`); criar permissão nova só quando não houver equivalente.
+* **Nome no formato `entidade_acao`**, minúsculo, sem acento. A ação de negócio usa o mesmo nome do segmento da rota (`POST /campanha/:id/aprovar` → `campanha_aprovar`), o que facilita a auditoria. E o essencial: **o que o dono faz com o próprio recurso não vira permissão**, continua resolvido pela RLS de posse (`id_usuario = id_usuario_atual()`). Só viram permissão as ações sobre recurso de terceiro, ou que não pertencem ao dono (aprovar, moderar, atribuir papel).
+* **O Nest e a RLS falam o mesmo vocabulário:** onde o Nest confere uma permissão, ele pergunta à mesma `tem_permissao()` com a mesma string (`DOCUMENTACAO_BACKEND.md`, seção 4); se as duas camadas usassem nomes diferentes, divergiriam em silêncio.
+* **O papel `pesquisador` não tem permissões próprias:** as policies conferem a existência do `perfil_pesquisador` (ativo), não o papel. O papel existe para a lista de Usuários e para uma permissão futura de pesquisador que não dependa do perfil, e é dado sozinho no upgrade (`trg_perfil_atribui_papel_pesquisador`, [05-K-3]).
 
 ---
 
-## Anexo D - Proposta de `contexto_link` (documento original completo - ligada ao item 2 do `PENDENCIAS e correcoes.md`)
+## Anexo C - Os contextos de link: três colunas, não tabela
 
-Esta é a proposta técnica completa por trás do item 2 ("Debate `tipo_link`/`contexto_link`", ainda **adiado, não mexer sem pedir**) - preservada aqui na íntegra porque tem o desenho de schema e a análise de prós/contras que vão ser necessários no dia em que essa decisão for tomada.
+* **Como é:** `tipo_link` diz onde cada tipo pode ser usado com três colunas booleanas (`permite_perfil`, `permite_atualizacao`, `permite_recompensa`), lidas por `trg_valida_escopo_tipolink` ([05-K-1]).
+* **Por quê:** dos cinco tipos ativos, só o `GITHUB` usa mais de um lugar, e não há um quarto lugar previsto. Três colunas são fáceis de ler num `SELECT * FROM tipo_link`.
+* **Se um dia aparecer um quarto lugar,** o caminho é trocar as três colunas por uma coluna de vetor de ENUM (`contextos contexto_link[]`), como o vetor `dominio` da mesma tabela. **Não** uma tabela dinâmica `contexto_link`/`tipolink_contexto`: ela exigiria `JOIN` em toda consulta, uma tela administrativa própria e uma trigger para garantir pelo menos um lugar por tipo, sem flexibilidade real (todo lugar novo pede código novo para ser interpretado, com tabela ou sem).
 
-**Motivação original:** os contextos de link já cresceram uma vez na prática - `link_atualizacao` e `link_recompensa` foram acrescentadas depois de `link_academico` já existir com as 3 flags booleanas (`permite_perfil`, `permite_atualizacao`, `permite_recompensa`). Isso sugere que "quais entidades podem ter link" é uma dimensão que muda ao longo do tempo - e hoje mudar isso exige alterar schema (`ALTER TABLE tipo_link ADD COLUMN`) e código (o `CASE` dentro de `trg_valida_escopo_tipolink`), não só dado.
-
-**Modelo proposto, caso a decisão seja migrar:**
-```sql
-CREATE TABLE contexto_link (
-    id_contexto SERIAL PRIMARY KEY,
-    nome        VARCHAR(50) NOT NULL UNIQUE,  -- 'perfil', 'atualizacao', 'recompensa'
-    tabela      VARCHAR(63) NOT NULL UNIQUE   -- nome real da tabela alvo: 'link_academico', etc.
-);
-
-CREATE TABLE tipolink_contexto (
-    id_tipolink INT NOT NULL REFERENCES tipo_link(id_tipolink)     ON DELETE CASCADE,
-    id_contexto INT NOT NULL REFERENCES contexto_link(id_contexto) ON DELETE CASCADE,
-    PRIMARY KEY (id_tipolink, id_contexto)
-);
-```
-A trigger de validação deixaria de ter qualquer `CASE`/nome de contexto hardcoded, virando um `EXISTS` genérico contra `tipolink_contexto` + `contexto_link`, filtrando por `TG_TABLE_NAME` - mesmo espírito do resto do banco (comportamento guiado por dado, não por string fixa em código).
-
-**Prós:** adicionar um contexto novo no futuro (ex.: link em denúncia, em perfil de instituição, ou o "vídeo/YouTube" que a Alexia citou como exemplo - ver item 15 do `PENDENCIAS`) vira só dado, sem `ALTER TABLE` nem editar a função da trigger; abre espaço pra regras por contexto que um booleano não expressa (ex.: uma coluna `obrigatorio` ou `regex_override` em `tipolink_contexto`, caso um tipo de link precise de validação diferente dependendo de onde é usado).
-
-**Contras:** mais um `JOIN` pra validar cada insert/update de link (custo desprezível no tamanho atual das tabelas, mas uma indireção a mais pra quem lê o schema pela primeira vez); com só 3 contextos conhecidos hoje, o ganho imediato é menor do que parece - 3 booleanos também são fáceis de ler direto num `SELECT * FROM tipo_link`; é trabalho de migração agora (ainda que mais barato fazer sem dado em produção do que depois).
-
-~~**A decisão que falta:** se vocês têm expectativa razoável de mais contextos de link aparecerem, vale migrar agora, antes do NestJS modelar as entities em cima do formato atual. Se o modelo for considerado fechado nesses 3 contextos, manter os booleanos é aceitável e mais simples.~~
-
-**🟢 Decidido (05-09-2026):** mantidas as três colunas booleanas (`permite_perfil`, `permite_atualizacao`, `permite_recompensa`). Dos cinco tipos ativos, apenas `GITHUB` utiliza mais de um contexto, e a remoção de `SITE_INSTITUCIONAL`/`OUTRO` em 15-08-2026 foi definitiva - o `RF-020` (Requisitos Funcionais) foi corrigido em 05-09-2026 pra refletir isso (a lista de tipos ainda citava os dois removidos). **Não há quarto contexto previsto.** Caso um venha a existir, **o caminho de migração pré-decidido é substituir as três colunas por uma coluna de vetor de ENUM** (`contextos contexto_link[]`), coerente com o vetor `dominio` que já existe nesta mesma tabela e com o uso extensivo de `ENUM` no restante do esquema - **não** a tabela `contexto_link`/`tipolink_contexto` dinâmica esboçada acima, que exigiria `JOIN` em toda consulta, tela administrativa própria e gatilho (não `CHECK` simples) pra garantir o mínimo de um contexto por tipo, sem entregar flexibilidade real (todo contexto novo exige código novo pra ser interpretado, com tabela dinâmica ou sem ela). Discussão completa (achada por uma auditoria de IA e revisada por outra) em `PENDENCIAS e correcoes.md`, item 2.
-
-> 📌 **Por que `atribuir_papel_padrao()` não aparece aqui:** o `GRANT EXECUTE` dessa função fica junto dela mesma em `08_trigger_signup_usuario.sql`, porque `06` roda antes do `08` na ordem de dependência - a função ainda não existiria neste ponto da execução se o grant estivesse aqui.
+> 📌 **Por que `atribuir_papel_padrao()` não tem `GRANT` no `06`:** o `06` roda antes do `08`; a função ainda não existiria. O `GRANT EXECUTE` dela fica junto dela, no `08`.
 
 ---
 
-## Anexo E - Política: onde mora uma regra de negócio, banco ou Nest (movido de um arquivo de próximos passos, 05-09-2026)
+## Anexo D - Onde mora uma regra de negócio: banco ou Nest
 
-**Isto não é uma pendência - é uma decisão de arquitetura já tomada, registrada aqui como referência permanente**, não como tarefa esperando ser feita. Achado numa auditoria de IA: enquanto estava na lista de "próximos passos", dava a impressão errada de dívida técnica acumulando; o estado atual do projeto está correto, a "migração" é só uma conveniência a exercer quando a ocasião surgir, não um trabalho pendente.
+**Critério:**
 
-**Origem:** a Alexia recebeu uma mensagem genérica (não sobre este projeto) dizendo que lógica de negócio pesada no banco é anti-padrão. Ela mesma já filtrou o que se aplicava e o que não: RLS/trigger de **autorização** está OK pro nosso caso (o front nunca fala com o banco direto, só com o Nest - é exatamente o padrão que a mensagem defende); o que ela concorda que exageramos é regra de **produto** (que muda com o tempo) misturada com invariante estrutural, dentro das mesmas triggers.
+> Se um defeito no Nest violar essa regra, **alguém perde dinheiro ou dado**? → fica no banco.
+> Se a regra é só **escolha de negócio, sem consequência de integridade**? → pode ir para o Nest.
 
-**Critério (refinado com apoio de IA em cima da proposta dela):**
-
-> Se um bug no Nest violar essa regra, **alguém perde dinheiro ou dado**? → fica no banco.
-> Se a regra é só **escolha de negócio, sem consequência de integridade**? → pode ir pro Nest.
-
-- **Fica no banco, sem prazo pra sair:** `all-or-nothing` do repasse, congelamento pós-aprovação de campanha (`fn_congela_regras_campanha`), **transição de status de campanha** (`fn_valida_transicao_campanha`).
-- **Pode ir pro Nest, quando a ocasião surgir:** limite de campanhas simultâneas por pesquisador, rate limit de denúncia (24h).
-
-⚠️ **Nota importante sobre `fn_valida_transicao_campanha`:** a primeira proposta da Alexia classificava "transição de status" como regra de produto que poderia sair do banco. Uma IA discordou nesse ponto específico, com um contraexemplo empírico, não teórico - testou ao vivo uma cadeia de fraude completa: pesquisador cria campanha, aprova a própria campanha, doa pra si mesmo, marca a doação como paga. Todos os passos passavam pelo Nest normalmente (nenhuma validação de aplicação barrou nada) - quem impediu foi a trigger do banco. Se essa regra estivesse só no backend, essa fraude teria ido pra produção. **Esta função fica no banco, não é candidata a migrar.**
-
-**Como aplicar esta política daqui pra frente:** não existe rodada dedicada a "migrar regra de negócio" - migração pura não entrega nada visível e por isso nunca ganha prioridade de verdade. Em vez disso, toda vez que alguém for mexer numa regra de produto específica que já está classificada como "pode ir pro Nest" (por exemplo, se decidirem mudar o limite de campanhas simultâneas de 2 pra 3), aproveitar esse momento pra já mover ESSA regra pro Nest, como parte natural da mudança - nunca como projeto à parte.
+* **Fica no banco:** o tudo-ou-nada do repasse, o congelamento da campanha depois da aprovação (`fn_congela_regras_campanha`), a **transição de status da campanha** (`fn_valida_transicao_campanha`) e toda mudança de dinheiro.
+  * **Por que a transição fica no banco:** uma cadeia de fraude testada de ponta a ponta (o pesquisador cria a campanha, aprova a própria campanha, doa para si mesmo e marca a doação como paga) passava por todas as rotas do Nest; quem a impediu foi a trigger do banco.
+* **Pode ir para o Nest:** o limite de campanhas simultâneas por pesquisador e o limite de denúncias por dia.
+* **Como aplicar:** não existe rodada dedicada a "migrar regra". Quando alguém for mudar uma regra que está em "pode ir para o Nest", aproveita a mudança para levá-la, nunca como projeto à parte.
 
 ---
 
-## Anexo F - Como testamos o banco sem tocar no Supabase (PGlite)
+## Anexo E - Como testamos o banco sem tocar no Supabase (PGlite)
 
-**O que é.** PGlite (`@electric-sql/pglite`) é o PostgreSQL de verdade, compilado para WebAssembly, rodando *dentro de um processo Node* na sua máquina, em memória. Não é um "parecido com Postgres": é o mesmo motor, então `CREATE TRIGGER`, `CONSTRAINT TRIGGER ... DEFERRABLE`, `EXCLUDE USING gist`, RLS, `SECURITY DEFINER`, `SET ROLE` e `ERRCODE` se comportam como no Supabase. Cada execução nasce vazia e some ao terminar. Não há servidor, não há senha, não há conexão de rede.
+**O que é.** PGlite (`@electric-sql/pglite`) é o PostgreSQL de verdade, compilado para WebAssembly, rodando dentro de um processo Node, em memória. É o mesmo motor, então `CREATE TRIGGER`, `CONSTRAINT TRIGGER ... DEFERRABLE`, `EXCLUDE USING gist`, RLS, `SECURITY DEFINER`, `SET ROLE` e `ERRCODE` se comportam como no Supabase. Cada execução nasce vazia e some ao terminar: sem servidor, sem senha, sem rede.
 
-**Para que serve aqui.** Este projeto tem a maior parte das regras de negócio em triggers e funções SQL, e regra que ninguém exercita só é descoberta quando alguém esbarra nela. Com o PGlite montamos o banco **inteiro** a partir dos arquivos `01` a `08` (mais o `ATUALIZAR O SUPABASE.sql`), tentamos cada fraude ou erro que o sistema deve barrar, e conferimos se o banco barra com o ERRCODE certo. Achou coisas que só *ler* o código não achava: o total arrecadado que ficava errado em silêncio para o doador, a rejeição sem histórico, o admin que perdia o "Enviar para aprovação" depois de um endurecimento de regra.
+**Para que serve aqui.** A maior parte das regras de negócio mora em triggers e funções, e regra que ninguém exercita só é descoberta quando alguém esbarra nela. Com o PGlite, o banco é montado **inteiro** a partir dos arquivos `01` a `08`, e cada fraude ou erro que o sistema deve barrar é tentado de verdade, conferindo o ERRCODE. Achou o que só ler o código não achava (ex.: o total arrecadado errado em silêncio para quem doava, a rejeição sem histórico).
 
-**O que ele NÃO é.** Não é o banco de vocês, nada do que roda nele muda o Supabase, e ele **não** substitui colar o `ATUALIZAR O SUPABASE.sql` (isso continua sendo feito à mão pelo Lucas, regra do projeto: nenhum DDL no Supabase compartilhado sem ele mesmo colar). Ele só responde "esse SQL funciona e faz o que eu disse?" *antes* de chegar lá.
+**O que ele não é.** Não é o banco de ninguém: nada do que roda nele muda o Supabase. Ele responde "este SQL funciona e faz o que eu disse?" antes de o banco ser recriado.
 
-**Como usamos (a técnica).**
+**A técnica:**
+1. Um script Node cria `new PGlite({ extensions: { pgcrypto } })` e executa os 8 arquivos em ordem.
+2. Funções isoladas são **extraídas do arquivo-fonte por código** (do `CREATE OR REPLACE FUNCTION` até o `$$;`), nunca redigitadas de memória.
+3. Cada caso roda entre `BEGIN` e `ROLLBACK`; o esperado é `OK` ou `ERRO <SQLSTATE>`.
+4. Para simular o Nest: `SET LOCAL ROLE app_nestjs` e `select set_config('app.id_usuario_atual', '17', true)`. **Sem isso o teste roda como `postgres`, que ignora a RLS e esconde os defeitos de privilégio.**
+5. Para preparar um dado que o banco proibiria criar (campanha com data no passado): `SET LOCAL session_replication_role = replica` desliga as triggers só naquele trecho, e `= origin` religa.
 
-1. Um script Node cria `new PGlite({ extensions: { pgcrypto } })` e executa os 8 arquivos em ordem com `db.exec()`. O `pgcrypto` é uma extensão que o seed e o CPF cifrado usam.
-2. Funções isoladas são **extraídas do arquivo-fonte por código** (procurando o `CREATE OR REPLACE FUNCTION ...` até o `$$;` de fechamento), nunca redigitadas. Regra do projeto depois de quase entregarmos duas regressões de autorização reescrevendo `fn_valida_transicao_campanha` de memória.
-3. Cada caso roda entre `BEGIN` e `ROLLBACK`, então um não contamina o outro. O esperado é `OK` ou `ERRO <SQLSTATE>`.
-4. Para simular o Nest de verdade: `SET LOCAL ROLE app_nestjs` (o papel sem `BYPASSRLS`, o mesmo do Supabase) e `select set_config('app.id_usuario_atual', '17', true)` (quem está logado). **Sem isso o teste passa como `postgres`, que ignora a RLS, e esconde os bugs de privilégio.**
-5. Para preparar dados que o banco proibiria criar (campanha com data no passado, por exemplo): `SET LOCAL session_replication_role = replica` desliga as triggers só naquele trecho, e `= origin` religa.
-6. Idempotência: o bloco do `ATUALIZAR` é aplicado **duas vezes** seguidas sobre um banco no estado antigo; a segunda não pode dar erro nem mudar o resultado.
+**Cuidados conhecidos.** No Windows, o Node imprime `Assertion failed ... UV_HANDLE_CLOSING` ao encerrar: é ruído do PGlite, o resultado antes dele vale. `ROLLBACK` depois de um `COMMIT` que já falhou por constraint diferida derruba o PGlite. Cada instrução solta é sua própria transação, então um teste que passa por um estado intermediário inválido precisa de `BEGIN ... COMMIT` explícito. E, ao gerar `.sql` por script JavaScript, nunca `texto.replace(a, b)` quando `b` contém `$$` (o JavaScript trata `$$` como um `$` só e corrompe o corpo das funções): `replace(a, () => b)`.
 
-**Cuidados conhecidos.** No Windows, o processo Node imprime `Assertion failed ... UV_HANDLE_CLOSING` ao encerrar: é ruído do PGlite, o resultado antes dele é válido. `ROLLBACK` depois de um `COMMIT` que já falhou por constraint diferida derruba o PGlite (o Postgres já desfez a transação sozinho). Cada instrução solta é sua própria transação: uma constraint `DEFERRABLE INITIALLY DEFERRED` dispara no fim de *cada* instrução, então testes que passam por um estado intermediário inválido precisam de `BEGIN ... COMMIT` explícito. E, ao gerar arquivo `.sql` por script JavaScript, nunca use `texto.replace(a, b)` quando `b` contém `$$` (o JavaScript trata `$$` como um `$` só e corrompe o corpo das funções): use `replace(a, () => b)` ou concatenação com `slice`.
-
-**Onde ficam os testes.** Em `informacoes/testes-banco/` (16 suítes numeradas com 1.227 casos, um executor que grava o relatório em `resultados/`, 3 ferramentas de comparação, snapshots de comportamento e um `prompt.md` para testar a interface com Playwright; o `README.md` da pasta explica o uso). As suítes 8 e 9 são de caracterização (grade de estados x usuários x operações de `campanha` e `comentario`) e servem de rede de segurança para o dispatcher de triggers: `cd informacoes/testes-banco && npm install && npm test`. Cada suíte monta o banco do zero a partir de `01` a `08` (ou com o `ATUALIZAR O SUPABASE.sql` por cima, com `npm run test:com-atualizar`) e roda os casos em `BEGIN ... ROLLBACK`; cada módulo novo só acrescenta um arquivo com o próximo número. A pasta está em `informacoes/`, que o `.gitignore` ignora: por enquanto é local (fora do git e sem acesso da Alexia), e a ideia é mover para uma pasta de testes do repositório quando estiver completa.
-
-## Anexo G - ENUM ou tabela de catálogo (decisão fechada, 05-09-2026)
-
-**Não é pendência.** Ao mapear "o que o admin ainda não edita pelo painel sem SQL", os 15 `ENUM` do banco apareceram como o maior teto restante, e a pergunta natural era por que não virar tabela editável, como `motivo_denuncia`, `tipo_link` e `area_conhecimento`. A resposta não é "converter tudo": `ENUM` é um contrato que trigger, policy e função assumem. Se o admin pudesse criar `status = 'suspenso_temporario'` pelo painel, nenhuma regra saberia tratar o valor e a campanha entraria num estado que ninguém previu, em silêncio. Isso tem nome, *inner-platform effect*: o sistema fica tão configurável que vira um segundo banco de dados mal feito dentro do primeiro (o extremo oposto do problema do Anexo E).
-
-**Critério:** se o admin adicionar um valor novo, alguma regra precisa saber o que fazer com ele? Se sim, fica `ENUM` (mudança vira código, com revisão); se não, pode virar catálogo. Conferido em `05_regras_negocio.sql`:
-
-* `status_campanha`, `status_contribuicao`, `status_encerramento`, `modelo_campanha` ficam `ENUM`: a lógica depende do valor específico (por exemplo, `meio_pagamento <> 'pix'` trava contribuição all-or-nothing).
-* `titulo_academico` é candidato real a catálogo: só é checado como "preenchido ou não" (`IS NOT NULL`) no score.
-* `meio_pagamento` é candidato real a catálogo: só é comparado com `'pix'`; um método novo seria tratado como os outros não-PIX.
-* `permissao` continua só-leitura pela API, de propósito: uma permissão só existe de verdade quando alguma policy a consulta, e criar a linha sem a policy vira um botão que não faz nada.
-
-Nada a implementar; `titulo_academico` e `meio_pagamento` ficam anotados como candidatos futuros.
+**Onde ficam os testes.** Numa pasta local de testes do banco, fora do repositório: as suítes numeradas (uma por regra ou módulo, cada uma montando o banco do zero), o executor que grava o relatório, as ferramentas de conferência (tipos do Nest contra o banco, documentação contra o código, valores escritos no React) e os snapshots de comportamento. As suítes de caracterização de `campanha` e `comentario` (grade de estados × usuários × operações) são a rede de segurança das regras mais críticas.
 
 ---
 
-## Correções da super auditoria (29-09-2026)
+## Anexo F - ENUM ou tabela de catálogo
 
-**Em palavras simples:** a super auditoria (o relatório dela fica na pasta de informações, fora do repositório) achou regras que o banco não fazia. Todas estão nos arquivos 01 a 08, nos Grupos Y e Z do ATUALIZAR e na suíte PGlite 25 (correções da super auditoria). Os códigos de erro novos estão no `DOCUMENTACAO_ERRCODE.md`: 90023, 90024, 90025, 91030, 91031, 91032, 91033, 92026 e 92027.
+* **`ENUM` é um contrato** que trigger, policy e função assumem. Se o admin pudesse criar `status = 'suspenso_temporario'` pelo painel, nenhuma regra saberia tratar o valor, e a campanha entraria num estado que ninguém previu, em silêncio. Configurável demais, o sistema vira um segundo banco de dados mal feito dentro do primeiro (*inner-platform effect*).
+* **Critério:** se o admin adicionar um valor novo, alguma regra precisa saber o que fazer com ele? Se sim, fica `ENUM` (mudança vira código, com revisão); se não, pode virar catálogo.
+  * `status_campanha`, `status_contribuicao`, `status_encerramento` e `modelo_campanha` ficam `ENUM`: a lógica depende do valor.
+  * `titulo_academico` (só conferido como preenchido ou não, no score) e `meio_pagamento` são candidatos a catálogo no futuro.
+  * `permissao` continua só leitura pela API: uma permissão só existe de verdade quando alguma policy ou função a confere; criar a linha sem a regra vira um botão que não faz nada.
 
-📌 **O sistema nunca fica sem admin.**
-- **Decisão:** `fn_eh_ultimo_admin_ativo()` (03, [03-N]) diz se a conta é a única com o papel admin valendo agora. Com ela, recusam com 91030:
-  - `suspender_usuario()`;
-  - `suspender_papel_usuario()`, no papel admin;
-  - `excluir_conta_usuario()`;
-  - a trigger `trg_usuario_papel_protege_ultimo_admin`, em `DELETE` de `usuario_papel`.
-
-  Ninguém suspende a própria conta (92027).
-- **Motivo:** o último admin conseguia tirar o próprio papel, se suspender ou se excluir. O sistema ficava sem ninguém para administrar, sem caminho pela tela para desfazer.
-- **Caso-limite aceito:** "admin valendo agora" ignora papel suspenso e conta suspensa ou excluída. Então com dois admins em que um está suspenso, o outro conta como o último.
-
-📌 **Suspensão só com data no futuro, e a de papel com motivo (RF-118).**
-- **Decisão:** as três funções de suspensão recusam data passada (90023). `usuario_papel` ganhou `motivo_suspensao` e `suspenso_por`, com `CK_USUARIO_PAPEL_SUSPENSAO` (data e motivo juntos ou nenhum). `suspender_papel_usuario()` passou a receber o motivo (90020 se vazio).
-- **Motivo:** a suspensão "até ontem" era aceita e ficava registrada sem efeito. O RF-118 pede motivo também para a suspensão de papel.
-- **Caso-limite aceito:** no Supabase, as suspensões de papel que já existiam ganharam o motivo "Suspensão registrada antes de o motivo ser obrigatório." (Grupo Y).
-
-📌 **Excluir a própria conta com campanhas (RF-016, decisão do Lucas em 29-09-2026).**
-- **Decisão:** `excluir_conta_usuario()` recusa com campanha `ativo` (91031). Com a exclusão, a campanha em rascunho e a que está aguardando aprovação sem nunca ter sido avaliada são apagadas. A que aguarda por reenvio de uma rejeitada volta a `rejeitado`, com uma linha em `historico_rejeicao` ("Reenvio cancelado: o pesquisador excluiu a própria conta.", `id_admin` vazio), e segue o caminho normal da rejeição. As outras ficam como estão. A transição aguardando para rejeitado ganhou o ramo 9 em `fn_valida_transicao_campanha()`, autoverificável: só vale com o dono já excluído (`fn_usuario_excluido()`).
-- **Motivo:** a campanha ativa continuava arrecadando com a dona excluída. O RF-016 não dizia o que fazer.
-- **Caso-limite aceito:** a linha nova no histórico conta como mais uma rejeição daquela campanha. Não há efeito prático, porque a dona não existe mais.
-
-📌 **Comentário: nem vazio, nem em campanha não publicada.**
-- **Decisão:** `CK_COMENTARIO_CONTEUDO_NAO_VAZIO` (texto só com espaços é recusado). `fn_valida_comentario_campanha_ativa()` também recusa `rascunho` e `aguardando_aprovacao` (91020).
-- **Motivo:** cada pesquisador comenta uma vez por campanha, e o texto vazio gastava a vaga. O rascunho e a campanha aguardando aprovação não são públicos.
-- **Caso-limite aceito:** no Supabase, a CHECK entra como `NOT VALID`: vale para todo comentário novo ou editado, e os antigos não são conferidos.
-
-📌 **Link acadêmico só de pesquisador.**
-- **Decisão:** `trg_valida_escopo_tipolink()` recusa `INSERT` em `link_academico` de conta sem `perfil_pesquisador` (92026).
-- **Motivo:** decisão do Lucas: a conta comum não ganha nada com link acadêmico.
-- **Caso-limite aceito:** os links que já existiam ficam. A regra vale só para link novo.
-
-📌 **E-mail em minúsculas.**
-- **Decisão:** `trg_usuario_normaliza_email` grava `lower(btrim(email))`. O Grupo Y normaliza os e-mails que já existem, e para antes de mudar qualquer coisa se achar e-mail repetido com maiúsculas diferentes.
-- **Motivo:** `UK_USUARIO_EMAIL` só barra texto igual. "Alice@" e "alice@" viravam duas contas.
-- **Caso-limite aceito:** nenhum.
-
-📌 **Seed com campanha ativa de verdade.**
-- **Decisão:** a campanha 10 do `07` tem datas relativas a hoje (começou há 20 dias, termina em 25). As 4 contribuições e a atualização dela também.
-- **Motivo:** com a data final em 2024, a rotina automática encerrava a campanha na primeira hora depois de recriar o banco, e o sistema ficava sem nenhuma campanha ativa para demonstração.
-- **Caso-limite aceito:** nenhum.
-
-📌 **Campanha ativa para testar comentário e endosso (03-10-2026).**
-- **Decisão:** a demonstração do `07` cria a campanha 11, "Campanha de Teste: Comentários e Endosso": ativa, sem comentário, da conta "Pesquisador Sistema" (que entra pelo login rápido de desenvolvimento). Começou 5 dias antes de o banco ser montado e termina 40 dias depois. No Supabase, entra pelo Grupo AL do `ATUALIZAR`.
-- **Motivo:** testar comentário e endosso sem antes criar, enviar e aprovar uma campanha. As 10 da demonstração ficam protegidas nas telas de teste, e a Ana é usada pelos roteiros (o limite de 2 campanhas simultâneas os faria falhar).
-- **Caso-limite aceito:** num banco montado há mais de 40 dias, a campanha já foi encerrada pela rotina automática; basta recriar o banco.
-
-📌 **Link acadêmico confere o endereço do tipo.**
-- **Decisão:** `trg_valida_escopo_tipolink()` usa as colunas `dominio` e `regex` de `tipo_link`, que existiam mas ninguém lia. Com domínio cadastrado, o endereço do link precisa ser dele ou de um subdomínio (um endereço com `www.` na frente também vale), senão 90024. Com regex cadastrada, a URL inteira precisa seguir o formato, senão 90025. Vale para link acadêmico, de atualização e de recompensa.
-- **Motivo:** um link do tipo "Lattes" aceitava qualquer endereço, até de outro site.
-- **Caso-limite aceito:** tipo sem domínio e sem regex (o "Outro", por exemplo) continua aceitando qualquer URL. Os links que já existiam não são conferidos de novo: a regra vale na gravação.
-
-📌 **Termo aceito é prova e não sai (RF-091).**
-- **Decisão:** `trg_termos_de_uso_protege_aceito` recusa excluir (91032) e alterar `conteudo`, `tipo` ou `versao` (91033) de uma versão que alguém já aceitou, no cadastro (`usuario_termo`) ou numa contribuição (`aceite_termo_contribuicao`). As chaves `FK_USUARIO_TERMO_TERMO` e `FK_ACEITE_TERMO_CONTRIBUICAO_TERMO` deixaram de ser `ON DELETE CASCADE`.
-- **Motivo:** o Nest tinha uma exclusão "forçada" que apagava a versão e, pelo cascade, todos os aceites dela, justamente a prova que o RF-091 manda guardar.
-- **Caso-limite aceito:** ativar e desativar continuam livres (a coluna `ativo` não está na trigger), porque trocar a vigente não muda o que foi aceito.
-
-📌 **Quem está devendo o aceite da versão nova (RF-015).**
-- **Decisão:** `fn_termo_uso_pendente(id)` devolve o id da versão vigente do Termo de Uso (`cadastro`) quando a conta ainda não a aceitou, ou NULL. O Nest pergunta isso no login e em cada renovação de sessão. O seed `07` registra o aceite da versão vigente para todas as contas, menos a 24 (Marina), que fica pendente para demonstrar a tela de aceite.
-- **Motivo:** o RF-015 pede o aceite da versão nova por quem já tem conta.
-- **Caso-limite aceito:** o Termo de upgrade de pesquisador fica de fora. Ao colar o Grupo Z no Supabase, toda conta vê a tela de aceite uma vez, porque ninguém lá aceitou a versão vigente atual pelo sistema.
-
-📌 **Suspender ou excluir a conta encerra as sessões dela.**
-- **Decisão:** `suspender_usuario()` e `excluir_conta_usuario()` preenchem `sessao.revogado_em` de todas as sessões abertas da conta.
-- **Motivo:** a sessão aberta continuava renovando sozinha, e a conta suspensa seguia usando o sistema por até 30 dias.
-- **Caso-limite aceito:** a suspensão de um papel só não encerra sessão: a conta continua podendo entrar, só perde o que aquele papel dava.
-
-
-## Correções da auditoria de Nielsen (29-09-2026)
-
-**Em palavras simples:** a auditoria das 10 heurísticas de Nielsen (o relatório fica na pasta de informações, fora do repositório) achou um defeito de datas e mensagens com palavra técnica. Estão nos arquivos 01 a 08, no Grupo AA do ATUALIZAR e na suíte PGlite 26 (correções da auditoria de Nielsen).
-
-📌 **Duração da campanha em dias de calendário.**
-- **Decisão:** `fn_valida_prazo_campanha_negocio()` conta a duração com `FLOOR` (dias inteiros entre o início e o fim).
-- **Motivo:** a tela passou a mandar o começo do dia de início (00:00) e o fim do dia de fim (23:59:59), no fuso de quem usa. Antes mandava meia-noite em UTC, que no Brasil é 21:00 do dia anterior: a campanha começava e terminava um dia antes, e perdia o último dia inteiro de arrecadação. Sem o `FLOOR`, 60 dias de calendário contariam 60,99 e seriam recusados.
-- **Caso-limite aceito:** as campanhas que já existem ficam como estão (com o horário antigo). O marco do cronograma não precisou mudar: a tela manda 00:00 do dia, o mesmo instante do início.
-
-📌 **Mensagens de erro sem palavra técnica.**
-- **Decisão:** 5 mensagens reescritas: a duração da campanha e a meta mínima não citam mais `configuracoes`; valores em dinheiro aparecem como "R$ 500,00"; o prazo vencido não mostra mais a data crua em UTC; o tipo de link não permitido diz o lugar ("no perfil do pesquisador"), e não o nome da tabela.
-- **Motivo:** essas mensagens chegam à tela como estão (faixa 90 a 93).
-- **Caso-limite aceito:** nenhum. Os códigos (ERRCODE) não mudaram.
-
-📌 **Descrição dos parâmetros para quem administra.**
-- **Decisão:** 22 descrições do `07` reescritas sem número de RF, sem nome de coluna e sem nome de outra chave. A tela de Parâmetros mostra a descrição como nome do parâmetro. O Grupo AA só troca a descrição que ainda é a original.
-- **Motivo:** a descrição virou o que o admin lê primeiro. Números de RF também mudam de uma versão dos requisitos para outra.
-- **Caso-limite aceito:** descrição que alguém já editou pelo painel fica como está.
-
-
-📌 **Contagem de aceites por versão do Termo (RF-091).**
-- **Decisão:** `contar_aceites_termo(id)` (`03`, `[03-E]`) soma os aceites do cadastro (`usuario_termo`) e das contribuições (`aceite_termo_contribuicao`) e devolve só o número. É `SECURITY DEFINER`, com `EXECUTE` só para `app_nestjs` (Grupo AB do ATUALIZAR).
-- **Motivo:** pela RLS, o aceite de contribuição só aparece para quem vê dado sensível de contribuição. O admin de Termos contaria "nenhum aceite" numa versão aceita. É o mesmo raciocínio das contagens de seguidores: número público, identidade privada.
-- **Caso-limite aceito:** nenhum.
-
-
-## Simulação do modo produção (30-09-2026)
-
-**Em palavras simples:** a suíte PGlite 27 monta o banco exatamente como ficará no dia do deploy (sem a leitura liberada de desenvolvimento e sem as ferramentas de teste no admin) e mostra, papel por papel, o que cada um consegue ler e fazer. A tabela sai num arquivo de resultado da pasta de testes, e o snapshot acusa qualquer mudança de permissão daqui para a frente.
-
-📌 **Excluir conta sem login era aceito pelo banco.**
-- **Decisão:** `excluir_conta_usuario()` compara com `COALESCE(p_id_usuario = id_usuario_atual(), FALSE)`.
-- **Motivo:** sem ninguém logado, `id_usuario_atual()` é NULL; "25 = NULL" é NULL, e `IF NOT (NULL OR FALSE)` também é NULL, então a recusa não disparava. A rota do Nest já exigia login, então ninguém chegava aqui sem login, mas o banco é a última barreira e não pode depender disso. Grupo AC do ATUALIZAR.
-- **Caso-limite aceito:** nenhum. Era a única comparação desse tipo dentro de um IF nos arquivos 01 a 08.
-
-📌 **O bloco "modo produção" do deploy, montado igual nos testes.**
-- **Decisão:** `SQL_REMOVER_LEITURA_DE_DESENVOLVIMENTO` e `SQL_REMOVER_FERRAMENTAS_DE_TESTE` (tira do admin `campanha_criar_para_outro`, `campanha_excluir_forcado` e `perfil_pesquisador_criar_para_outro`) ficam no apoio das suítes; `montarBancoDoDeploy()` aplica os dois. É o mesmo SQL que entra no deploy.
-- **Motivo:** conferir antes do deploy o que cada papel teria recusado, e não descobrir no ar.
-- **Caso-limite aceito:** `perfil_pesquisador_corrigir_cpf` e `perfil_pesquisador_alterar_de_outro` continuam com o admin: são funções reais de suporte (decisão do Lucas ainda em aberto).
-
-
-## Colunas com valor padrão não aceitam vazio (30-09-2026)
-
-**Em palavras simples:** 39 colunas (datas "quando aconteceu", sim/não como `ativo`, e `campanha.valor_bruto_arrecadado`) já se preenchiam sozinhas quando ninguém informava nada, mas aceitavam "vazio" se alguém mandasse de propósito. Agora o banco recusa o vazio. Nada muda para quem usa o sistema: nenhum código gravava vazio nelas.
-
-📌 **`NOT NULL` em toda coluna com `DEFAULT`, fora uma.**
-- **Decisão:** as 39 colunas ganharam `NOT NULL` no `CREATE TABLE` do 01; o Grupo AD do ATUALIZAR preenche qualquer linha vazia com o valor padrão e depois põe a trava. A suíte PGlite 28 falha se aparecer coluna nova com `DEFAULT` que aceite vazio.
-- **Motivo:** o padrão só vale quando a coluna não é informada; um `null` mandado por engano ficava gravado em silêncio (ex.: valor arrecadado vazio some das somas). É o padrão de mercado (Django e Rails já criam a coluna assim). O Nest devolve 400 "Falta preencher um campo obrigatório" com o campo marcado quando isso acontece.
-- **Caso-limite aceito:** `contribuicao.token_sessao` (chave do doador anônimo) continua aceitando vazio, para poder ficar sem chave quando a contribuição não é anônima ou ser apagada sem apagar a doação.
-
-
-## Excluir e bloquear comentário recebido (30-09-2026)
-
-**Em palavras simples:** comentário não é rede social: só o dono da campanha (e o autor e a moderação) vê o comentário, e o público só vê os que o dono endossa. O dono agora pode excluir um comentário que recebeu, de duas formas, num modal só: **Excluir** (apaga de vez; o autor pode comentar de novo) ou **Excluir e bloquear** (para ofensa, ameaça ou spam: o comentário fica guardado e o autor não comenta mais naquela campanha). Ninguém é avisado. Cabe no RF-093 ("gerenciar esses comentários sem que os autores sejam notificados"), sem mudança de requisito.
-
-📌 **Bloquear reaproveita o "um comentário por campanha", sem tabela nova.**
-- **Decisão:** "Excluir" é `DELETE` (`pol_comentario_delete`: só o dono da campanha, e só comentário ativo; `GRANT DELETE` no 06). "Excluir e bloquear" é o `UPDATE ativo = FALSE` que já existia: a linha guardada ocupa a vaga de `UK_COMENTARIO_CAMPANHA_PESQUISADOR`, e `fn_bloqueia_reversao_moderacao_comentario` impede o autor de reativar. A lista (`GET /comentario`) esconde do dono o comentário inativo; o autor e a moderação continuam vendo. Grupo AE do ATUALIZAR; suíte PGlite 29.
-- **Motivo:** decisão do Lucas: sem denúncia nem bloqueio, não guardar lixo; bloqueio só naquela campanha (o comentário é preso à campanha) e nunca automático, porque nem todo comentário excluído é ofensivo.
-- **Caso-limite aceito:** o comentário bloqueado não pode ser apagado depois (desfaria o bloqueio), e não existe "desbloquear" pela tela. Denunciar o comentário à moderação fica para o módulo `19-denuncia` (a denúncia contra o perfil do autor já está prevista no RF-107).
-
-
-## "Esperando há X dias" na fila de aprovação (02-10-2026)
-
-**Em palavras simples:** a tela Aprovar Campanhas mostrava "criada em", que engana: uma campanha criada em agosto e reenviada ontem parecia esperar há 2 meses. Agora cada campanha guarda o dia em que entrou na fila, e a tela mostra "esperando há 3 dias", com quem espera há mais tempo no topo. No mercado isso se chama **SLA** (*Service Level Agreement*, "acordo de nível de serviço"): o tempo que um pedido pode esperar até ser atendido. Toda fila de atendimento séria (Zendesk, Jira Service Management, a moderação de lojas de aplicativo) mostra "aberto há X" para nada ficar esquecido no fundo da lista.
-
-📌 **Uma coluna carimbada pelo banco, e não a data tirada do log de auditoria.**
-- **Decisão:** coluna `campanha.enviado_aprovacao_em` (01). `fn_carimba_envio_aprovacao` (05, `[05-K-2]`) grava `NOW()` toda vez que o status vira `aguardando_aprovacao` (envio de rascunho ou reenvio de rejeitada), pelas triggers `trg_campanha_carimba_envio_aprovacao` (INSERT) e `trg_campanha_carimba_envio_aprovacao_update` (UPDATE, só quando o status muda). Fica fora do `GRANT UPDATE` (06): nem o dono nem o admin escrevem a data à mão, e no INSERT o valor enviado é ignorado. O Nest devolve o campo como `enviadoAprovacaoEm`; a tela usa o formato de coluna `espera` ("hoje", "há 1 dia", "há 5 dias", em dias de calendário). Grupo AG do ATUALIZAR; suíte PGlite 30.
-- **Motivo:** o banco já guardava quando a campanha foi criada e quando foi aprovada, mas não quando foi enviada. Tirar a data do `log_auditoria` seria frágil: o log apaga o que passa de 365 dias e serve a outro propósito (dois mecanismos para a mesma coisa). Mesmo desenho de `encerrado_em`, que o banco também carimba sozinho.
-- **Caso-limite aceito:** cada reenvio zera a espera (conta a versão atual, que é a que o admin ainda não leu). Depois da aprovação ou da rejeição o valor fica, então `aprovado_em - enviado_aprovacao_em` mostra quanto a avaliação levou, se um dia isso virar número no Dashboard. Não existe prazo máximo nem destaque de "atrasada": se um dia existir, o limite em dias vai para `configuracoes`, nunca escrito no código. As campanhas que já esperavam antes da coluna recebem a data do log (a última entrada na fila); sem registro no log, a data de criação.
-
-## Campanha sempre nasce rascunho (02-10-2026)
-
-**Em palavras simples:** o banco aceitava criar uma campanha já "ativa" ou "aguardando aprovação", pulando a aprovação do admin e a conferência de orçamento e cronograma. O sistema nunca fez isso (o Nest não manda o status ao criar), mas o banco é a última barreira e agora recusa sozinho. Achado pela suíte PGlite 30, ao testar a data de entrada na fila.
-
-📌 **INSERT por coluna em `campanha`, igual ao UPDATE.**
-- **Decisão:** `app_nestjs` só tem `INSERT` nas colunas do formulário (`id_usuario`, `id_area_conhecimento`, `titulo`, `modelo`, `meta_financeira`, `descricao`, `data_inicio`, `data_fim`, `video_apresentacao_url`; 06). Status, aprovação, admin, taxa, valor arrecadado e as datas de carimbo nascem no valor padrão: toda campanha começa `rascunho` e só chega à fila ou ao ar pelas transições conferidas em 05. Grupo AH do ATUALIZAR; suíte PGlite 31.
-- **Motivo:** o `UPDATE` de `campanha` já era por coluna desde o começo; o `INSERT` tinha ficado na tabela inteira, e a transição (`fn_valida_transicao_campanha`) e a completude (`fn_valida_completude_campanha`) só olham `UPDATE`. Restringir a permissão fecha a porta sem mexer em nenhuma das duas funções.
-- **Caso-limite aceito:** quem tem privilégio de verdade (o seed rodado como dono do banco e as funções `SECURITY DEFINER`, como `criar_campanha_para_outro`) continua podendo inserir em qualquer coluna; é assim que o seed cria campanhas históricas já encerradas. `criar_campanha_para_outro` só preenche as mesmas colunas do formulário.
-
-## Sugestão de 30 dias no formulário de campanha (02-10-2026)
-
-**Em palavras simples:** o requisito RF-069 diz que o formulário de criação deve sugerir 30 dias de duração. Os 30 dias moram em Parâmetros do Sistema, como os outros prazos, e não no código.
-
-📌 **Uma chave nova em `configuracoes`, lida só pela tela.**
-- **Decisão:** `prazo_sugerido_campanha_dias` = 30 (`07`, pública, ativa). Nenhuma função do banco lê a chave; o React a usa para preencher a data de fim. Grupo AI do ATUALIZAR.
-- **Motivo:** é sugestão, não regra; a regra de verdade continua sendo o mínimo e o máximo (`fn_valida_prazo_campanha_negocio`).
-- **Caso-limite aceito:** a chave não entra no par mínimo/máximo conferido por `fn_valida_pares_min_max_configuracoes`. Se o admin puser uma sugestão fora do intervalo, a tela sugere uma data que o próprio aviso de prazo mostra em vermelho, e o banco recusa no envio.
+---
 
 ## Como conferir este inventário
 
-*(Adicionado 03-08-2026, sugestão de uma ferramenta de IA depois de auditar a documentação e achar 4 números desatualizados neste arquivo - tabelas, policies, triggers e funções não tinham sido atualizados nas últimas 3 rodadas, apesar de `log_auditoria`/`orcamento_campanha`/`marco_cronograma` terem sido adicionadas. Em vez de outra pessoa ter que contar `CREATE TABLE`/`CREATE POLICY`/`CREATE TRIGGER` na mão (ou confiar de olho num número escrito num comentário), estas 4 queries dizem a verdade direto do banco - rode no SQL Editor do Supabase sempre que for atualizar os números deste documento.)*
+**Contagem do inventário** (recontada nos `.sql` em 24-10-2026; evite repetir estes números em outros documentos, eles envelhecem): **43 tabelas**, **118 policies**, **108 triggers** no `05` (104 comuns e 4 `CONSTRAINT TRIGGER`), **182 funções** (143 no `05`, 37 no `03`, 1 no `08`, 1 no `01`), **65 índices** no `02` e **131 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
+
+Para recontar direto do banco (no SQL Editor do Supabase ou no banco local):
 
 ```sql
--- Tabelas (público, sem contar as internas do Postgres/extensões)
+-- Tabelas (do esquema public, sem as internas do Postgres e das extensões)
 SELECT count(*) FROM pg_tables WHERE schemaname = 'public';
 
 -- Policies de RLS
 SELECT count(*) FROM pg_policies WHERE schemaname = 'public';
 
--- Triggers (NOT tgisinternal exclui as triggers automáticas de FK -
--- senão o número vem inflado com coisa que ninguém escreveu à mão)
+-- Triggers (NOT tgisinternal tira as triggers automáticas das FKs)
 SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal;
 
--- Funções/procedures no schema public (soma tudo: 03 + 05 + 08)
+-- Funções do esquema public (03 + 05 + 08 + 01)
 SELECT count(*) FROM pg_proc WHERE pronamespace = 'public'::regnamespace;
 ```
 
-**Números confirmados em 03-08-2026** (contados também por fora, via `grep -c` nos `.sql`, batendo com as 4 queries acima): **42 tabelas**, **116 policies** (99 `TO app_nestjs`, 65 chamam `tem_permissao()`), **66 triggers** (todas em `05`), **65 funções** (51 em `05` + 13 em `03` + 1 em `08`, `atribuir_papel_padrao()`).
-
-**Reconferido em 09-08-2026** (rodando as 4 queries acima direto contra o Supabase, não só lendo os `.sql`): **42 tabelas** (sem mudança), **117 policies**, **72 triggers**, **66 funções**. Cresceu principalmente por causa das rodadas de 07 e 08-08-2026 (`trg_log_auditoria_papel`, `contar_metricas_dashboard()`, e o drop/recriação das 3 triggers de `campanha` durante a migração `TIMESTAMPTZ`) - não recontei manualmente cada `.sql` pra bater a composição exata (quantas `TO app_nestjs`, quantas chamam `tem_permissao()`) dessa vez, só os 4 totais.
+Ou nos arquivos: `grep -c "CREATE TABLE" 01_extensoes_enums_tabelas.sql`, `grep -c "^CREATE POLICY" 04_rls_policies.sql`, e assim por diante.

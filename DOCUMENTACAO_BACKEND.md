@@ -1004,7 +1004,7 @@ Módulos pequenos, mas reais e em uso pelo painel administrativo.
 
 ### `11-configuracoes`: a tela do score (3 endpoints)
 
-**Em palavras simples:** a tela Pontuação (Score) lê os pesos e as faixas e salva tudo de uma vez. O cálculo continua inteiro no banco ([05-K-2-I] do `DOCUMENTACAO_BD.md`); o Nest só lê e grava.
+**Em palavras simples:** a tela Pontuação (Score) lê os pesos e as faixas e salva tudo de uma vez. O cálculo continua inteiro no banco ([05-I-2] do `DOCUMENTACAO_BD.md`); o Nest só lê e grava.
 
 - **`GET /score-config`** - as dimensões (com os itens de cada uma) e as faixas ativas, em ordem.
 - **`PATCH /score-config/pesos`** - `itens: [{ idScoreConfig, peso, ativo }]`, todos num `UPDATE ... FROM (VALUES ...)` só, e `SET CONSTRAINTS ALL IMMEDIATE` logo depois: a soma 100 (90017), o peso negativo (90030) e a dimensão sem item ativo (90031) voltam como 400 na própria requisição. Devolve a configuração nova.

@@ -25,7 +25,7 @@
 --  [02-G] ARQUIVO
 --  [02-H] CONTRIBUIÇÃO
 --  [02-I] SCORE
---  [02-J] LOG DE AUDITORIA
+--  [02-L] LOG DE AUDITORIA
 -- ============================================================================
 -- [02-C] CONFIG
 -- ============================================================
@@ -166,7 +166,7 @@ CREATE INDEX idx_contribuicao_status_aberto ON contribuicao(status) WHERE status
 CREATE INDEX idx_score_config_pai           ON score_config(id_pai);
 
 -- ============================================================
--- [02-J] LOG DE AUDITORIA
+-- [02-L] LOG DE AUDITORIA
 -- ============================================================
 -- As duas consultas mais frequentes do log: "tudo que mudou neste registro" (tabela + identidade, o histórico de
 -- alterações de cada tela) e "tudo que este usuário mexeu" (índice seguinte). Sem eles, as duas varrem a tabela

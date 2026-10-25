@@ -11,7 +11,7 @@ import { PerfilPesquisadorRequestCreateForOther } from '../dto/perfil-pesquisado
 import { PerfilPesquisadorResponse } from '../../6-perfil-pesquisador/dto/response/perfil-pesquisador.response';
 import { PerfilPesquisadorServiceFindOne } from '../../6-perfil-pesquisador/service/perfil-pesquisador.service.findone';
 
-// criar_perfil_pesquisador_para_outro() (03_funcoes_seguranca.sql, [03-R]): o self-service
+// criar_perfil_pesquisador_para_outro() (03_funcoes_seguranca.sql, [03-P-2]): o self-service
 // (PerfilPesquisadorServiceCreate) sempre cria em nome de quem está logado (pol_perfil_insert, 04, exige
 // id_usuario = id_usuario_atual()), então Admin tentando criar perfil para OUTRA pessoa sempre colidiria com o
 // PRÓPRIO perfil do Admin (já existe), sem nunca criar nada de verdade para ninguém. Endpoint separado, gateado

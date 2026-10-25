@@ -10,7 +10,7 @@ import { TipoLinkServiceFindOne } from './service/tipo-link.service.findone';
 import { TipoLinkServiceRemove } from './service/tipo-link.service.remove';
 import { TipoLinkServiceUpdate } from './service/tipo-link.service.update';
 
-// O endpoint de remoção existe porque 06_grants.sql [06-C-2] e 04_rls_policies.sql (pol_tipolink_delete)
+// O endpoint de remoção existe porque 06_grants.sql [06-C-1] e 04_rls_policies.sql (pol_tipolink_delete)
 // concedem DELETE em tipo_link ao app_nestjs, gated pela mesma permissão do update (tipolink_gerenciar).
 // tipo_link pode ser referenciado por link_academico/link_atualizacao/link_recompensa (FK simples, sem
 // CASCADE): o service.remove traduz a violação de FK num 409 com mensagem própria; desativar via Alterar

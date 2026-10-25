@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 
-// forcar_exclusao_campanha() (03_funcoes_seguranca.sql, [03-T]): o Admin precisa poder excluir forçadamente uma
+// forcar_exclusao_campanha() (03_funcoes_seguranca.sql, [03-E-2]): o Admin precisa poder excluir forçadamente uma
 // campanha (senão os cenários de teste ficam sujos). Diferente de CampanhaServiceRemove (DELETE /campanha/:id), que
 // só funciona em 'rascunho' (pol_campanha_delete, 04: proteção correta para campanha real, com
 // contribuição/repasse em andamento), esta função ignora status de propósito, gateada por permissão própria
