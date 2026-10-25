@@ -49,7 +49,7 @@ export class TermoUsoServiceRemove {
       // existe acima, então 0 linhas apagadas só pode ser falta de
       // 'termos_uso_gerenciar' na pol_termos_delete.
       throw new ForbiddenException(
-        "Sem permissão 'termos_uso_gerenciar' para excluir esta versão.",
+        'Você não tem permissão para excluir esta versão.',
       );
     }
   }

@@ -39,7 +39,7 @@ export class TermoUsoServiceUpdate {
         'termos_de_uso',
         { id_termo: id },
         'Versão do Termo de Uso não encontrada.',
-        "Sem permissão 'termos_uso_gerenciar' para alterar esta versão.",
+        'Você não tem permissão para alterar esta versão.',
       );
     }
 

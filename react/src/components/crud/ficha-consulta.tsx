@@ -13,9 +13,10 @@ import type { ReactNode } from 'react';
 // em telas >=sm para os pares rótulo/valor, 1 coluna no mobile.
 //
 // `colunas={1}`: `sm:grid-cols-2` é baseado na largura da TELA, não do container; dentro de uma coluna lateral
-// estreita (1/3 de uma página larga, ex.: card "Metadados" do Alterar Usuário), o grid iria para 2 colunas
+// estreita (1/3 de uma página larga, ex.: os "Metadados" do Alterar Usuário), o grid iria para 2 colunas
 // mesmo sem espaço de verdade, cada metade ficando apertada (e-mail comprido esbarrava na borda do card). Sem
-// essa prop, comportamento igual ao padrão.
+// essa prop, comportamento igual ao padrão. `colunas={3}`: três campos curtos numa linha só (os Metadados do Alterar
+// Usuário: id, criado em, último login), uma coluna no celular.
 // `nivel`: dentro de modal (título h2) a seção é h3; numa página (Minha Conta, título h1) é h2, para os
 // títulos não pularem nível. Mesmo visual nos dois.
 // `centralizada`: uma linha só de números, de ponta a ponta (o primeiro campo encosta na borda esquerda, o último na
@@ -27,7 +28,7 @@ import type { ReactNode } from 'react';
 interface SecaoFichaProps {
   titulo: string;
   children?: ReactNode;
-  colunas?: 1 | 2;
+  colunas?: 1 | 2 | 3;
   nivel?: 2 | 3;
   destaque?: boolean;
   centralizada?: boolean;
@@ -41,7 +42,13 @@ export function SecaoFicha({ titulo, children, colunas = 2, nivel = 3, destaque 
       <div
         className={
           'grid gap-x-6 gap-y-4 ' +
-          (centralizada ? 'ficha-centralizada' : colunas === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2')
+          (centralizada
+            ? 'ficha-centralizada'
+            : colunas === 1
+              ? 'grid-cols-1'
+              : colunas === 3
+                ? 'grid-cols-1 sm:grid-cols-3'
+                : 'grid-cols-1 sm:grid-cols-2')
         }
       >
         {children}

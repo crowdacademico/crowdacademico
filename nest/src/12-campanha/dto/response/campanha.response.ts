@@ -44,4 +44,9 @@ export class CampanhaResponse {
   // Nome de quem aprovou (campanha.id_admin, carimbado na aprovação). Só em GET /campanha/:id e só para quem pode
   // aprovar campanha: o dono e, no futuro, a página pública não veem qual pessoa da equipe aprovou. Senão, null.
   nomeAprovador: string | null;
+  // Quem encerrou: o nome de quem mudou a campanha para a situação final, ou "Sistema" quando foi uma tarefa automática
+  // (o fim do prazo). Vem do log de auditoria, que guarda toda mudança de situação com quem fez (os 4 caminhos de
+  // encerramento gravam em lugares diferentes, o log é o único comum). Mesma restrição de nomeAprovador; null também
+  // quando o registro já saiu do log (retenção) ou a conta foi excluída.
+  nomeEncerrador: string | null;
 }

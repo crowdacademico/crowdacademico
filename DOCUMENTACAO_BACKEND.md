@@ -1190,6 +1190,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | POST | `/atualizacao-campanha` · `/link-atualizacao` · `/arquivo-atualizacao` |
 | AUTH | PATCH | `/atualizacao-campanha/:id` · `/link-atualizacao/:id` |
 | AUTH | DELETE | `/link-atualizacao/:id` |
+| AUTH | GET | `/anexo-atualizacao` *(só leitura; todos os arquivos e links das atualizações, o mais novo primeiro; exige `atualizacao_moderar`)* |
 | pub | GET | `/comentario` *(filtro `endossado`: só os endossados, na ordem do endosso)* |
 | AUTH | POST | `/comentario` |
 | AUTH | PATCH | `/comentario/:id` |
@@ -1641,6 +1642,7 @@ Testado com o backend rodando de verdade contra o Postgres real (não só compil
 - **`GET /contribuicao/minhas`** (RF-009, RF-085): o histórico da conta logada, com a recompensa escolhida; registrado antes de `GET /contribuicao/:id` no módulo.
 - **Líquido estimado (RF-087):** `GET /campanha/:id` traz `valorLiquidoEstimado` e `taxaAplicada`, pela mesma conta do repasse (`liquido_repasse`, taxa mínima incluída).
 - **Quem aprovou:** `GET /campanha/:id` traz `nomeAprovador`, o nome de `campanha.id_admin` numa campanha aprovada (o `id_admin` só é carimbado na aprovação ou na rejeição, e a rejeição só acontece antes de aprovar). Só para quem tem `campanha_aprovar`; para os outros, `null`. **Por quê:** o dono e a página pública não precisam saber qual pessoa da equipe aprovou.
+- **Quem encerrou:** `GET /campanha/:id` traz `nomeEncerrador`, com a mesma restrição: o nome de quem levou a campanha à situação final de hoje, pela última linha do log de auditoria dessa mudança (`trg_log_auditoria_campanha_status`), ou "Sistema" quando a linha não tem responsável (a tarefa do fim do prazo). **Por quê do log:** os quatro caminhos de encerramento (prazo, pedido aprovado, "Cancelar o projeto" do dono, moderação) gravam quem fez em lugares diferentes, ou em nenhum; o log é o único que registra todos. **Caso-limite:** depois da retenção do log (`log_auditoria_retencao_dias`), ou com a conta de quem encerrou excluída, vem `null`.
 
 ### 21.4 Como foi provado
 

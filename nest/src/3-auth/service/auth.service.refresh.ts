@@ -27,7 +27,7 @@ export class AuthServiceRefresh {
   ): Promise<AuthResponseLogin> {
     const parseado = parseRefreshToken(dto.refreshToken);
     if (!parseado) {
-      throw new UnauthorizedException('Refresh token mal formado.');
+      throw new UnauthorizedException('Sua sessão terminou. Entre de novo.');
     }
 
     const db = this.database.getDb();
@@ -59,7 +59,7 @@ export class AuthServiceRefresh {
       sessao.revogado_em !== null ||
       sessao.expira_em < new Date()
     ) {
-      throw new UnauthorizedException('Refresh token inválido ou expirado.');
+      throw new UnauthorizedException('Sua sessão terminou. Entre de novo.');
     }
 
     const segredoValido = await bcrypt.compare(
@@ -67,7 +67,7 @@ export class AuthServiceRefresh {
       sessao.refresh_token_hash,
     );
     if (!segredoValido) {
-      throw new UnauthorizedException('Refresh token inválido.');
+      throw new UnauthorizedException('Sua sessão terminou. Entre de novo.');
     }
 
     // A conta precisa continuar podendo entrar: excluída ou suspensa não renova (a suspensão e a exclusão já

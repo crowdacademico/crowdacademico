@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { BadgeStatusContribuicao } from '../../components/crud/badge-status-contribuicao';
-import { BarraProgresso } from '../../components/crud/barra-progresso';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
@@ -9,6 +8,7 @@ import { formatarDataHora, formatarMoeda } from '../../services/constant/util/fo
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import type { StatusContribuicao } from '../../services/constant/type/enums-do-banco.gerado';
+import { celulaArrecadado } from '../12-campanha/colunas-campanha';
 
 // O que o Consultar precisa de uma contribuição: serve à linha da T5 (bancada de pagamento) e à da Minha Conta.
 export interface ContribuicaoConsultada {
@@ -36,15 +36,8 @@ export function SecaoCampanhaDaContribuicao({ campanha, status, criadoEm, dicaPe
     <SecaoFicha titulo="Campanha">
       <CampoFicha rotulo="Campanha" largura="cheia" valor={`#${campanha.idCampanha} ${campanha.titulo}`} />
       <CampoFicha rotulo="Meta" valor={formatarMoeda(campanha.metaFinanceira)} />
-      <CampoFicha
-        rotulo="Arrecadado até agora"
-        valor={
-          <span className="block space-y-1.5">
-            <span className="block">{formatarMoeda(campanha.valorBrutoArrecadado)}</span>
-            <BarraProgresso valor={campanha.valorBrutoArrecadado} total={campanha.metaFinanceira} rotulo="Arrecadado em relação à meta" />
-          </span>
-        }
-      />
+      {/* A mesma célula da coluna "arrecadado" das tabelas (DS-105): a barra fina colada embaixo do número. */}
+      <CampoFicha rotulo="Arrecadado até agora" valor={celulaArrecadado(campanha.valorBrutoArrecadado, campanha.metaFinanceira)} />
       <CampoFicha
         rotulo="Situação da contribuição"
         largura="cheia"

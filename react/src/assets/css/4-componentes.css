@@ -191,15 +191,30 @@
   /* Input/select de formulário fora da tabela de CRUD (login, criar
      usuário) - mesma moldura em todo lugar: borda, fundo levemente cinza,
      foco em verde. */
+  /* As medidas do campo viram variáveis do próprio campo (espaço interno vertical, borda, altura da linha): a lista
+     (select, abaixo) calcula a altura com elas, e quem precisa de um campo mais baixo (a tabela editável) troca só
+     a variável. */
   .input-padrao {
+    --campo-espaco-vertical: 0.875rem;
+    --campo-borda: 2px;
+    --campo-altura-linha: 1.5;
     width: 100%;
     background-color: var(--cor-fundo-sutil);
-    border: 2px solid var(--cor-borda-campo);
+    border: var(--campo-borda) solid var(--cor-borda-campo);
     border-radius: var(--radius-lg);
-    padding: 0.875rem;
+    padding: var(--campo-espaco-vertical) 0.875rem;
     font-size: var(--font-size-sm);
+    line-height: var(--campo-altura-linha);
     font-weight: 500;
     transition: var(--transition-normal);
+  }
+
+  /* A lista com a mesma altura da caixa de texto vizinha. O Chrome ignora a altura da linha num <select> (usa a
+     "normal" da fonte), e a lista saía 2 px mais baixa que o campo de texto ao lado (Nome e Papel, no Alterar
+     Usuário). A altura mínima é a conta da caixa de texto: letra x altura da linha + espaço interno + borda, com as
+     variáveis acima; nenhum número escrito aqui. */
+  select.input-padrao {
+    min-height: calc(1em * var(--campo-altura-linha) + 2 * var(--campo-espaco-vertical) + 2 * var(--campo-borda));
   }
 
   /* Variações do campo (depois do .input-padrao, para vencer o tamanho e a fonte dele): texto de código
@@ -246,12 +261,20 @@
 
   /* Badge Sim/Não (GenericTable, coluna booleana) */
   .badge {
+    --badge-espaco-vertical: 0.125rem;
     display: inline-flex;
     align-items: center;
-    padding: 0.125rem 0.6rem;
+    padding: var(--badge-espaco-vertical) 0.6rem;
     border-radius: var(--radius-full);
     font-size: var(--font-size-xs);
     font-weight: 700;
+  }
+
+  /* Pílula dentro de um botão (o contador do filtro marcado, na barra das tabelas): com o espaço interno, ela ficava
+     1 px mais alta que a linha de texto do botão, e o botão crescia (e a barra pulava) ao marcar um filtro. A margem
+     negativa devolve o espaço interno vertical: a pílula continua igual por fora, mas não aumenta o botão. */
+  .btn .badge {
+    margin-block: calc(-1 * var(--badge-espaco-vertical));
   }
 
   .badge-sucesso {

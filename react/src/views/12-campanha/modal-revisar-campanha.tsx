@@ -116,11 +116,6 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
               <CampoFicha rotulo="Descrição" valor={campanha.descricao} largura="cheia" />
               <CampoFicha rotulo="Vídeo de apresentação" valor={campanha.videoApresentacaoUrl} largura="cheia" />
             </SecaoFicha>
-            <SecaoFicha titulo="Datas">
-              <CampoFicha rotulo="Início" valor={formatarData(campanha.dataInicio)} />
-              <CampoFicha rotulo="Fim (previsto)" valor={formatarData(campanha.dataFim)} />
-              <CampoFicha rotulo="Criada em" valor={formatarDataHora(campanha.criadoEm)} />
-            </SecaoFicha>
             <SecaoFicha titulo={`Orçamento (${orcamento.length} ${orcamento.length === 1 ? 'item' : 'itens'})`}>
               {orcamento.length === 0 && <CampoFicha rotulo="Itens" valor="Nenhum item cadastrado." largura="cheia" />}
               {orcamento.map((item) => (
@@ -148,6 +143,13 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
           </div>
 
           <div className="space-y-6">
+            {/* No topo da coluna da direita, onde as fichas deixam os metadados (como no Consultar Campanha). Hora sem
+                os segundos: a coluna é estreita. */}
+            <SecaoFicha titulo="Auditoria">
+              <CampoFicha rotulo="Início" valor={formatarData(campanha.dataInicio)} />
+              <CampoFicha rotulo="Fim (previsto)" valor={formatarData(campanha.dataFim)} />
+              <CampoFicha rotulo="Criada em" valor={formatarDataHora(campanha.criadoEm, true)} largura="cheia" />
+            </SecaoFicha>
             <SecaoFicha titulo="Financeiro">
               <CampoFicha rotulo="Meta" valor={formatarMoeda(campanha.metaFinanceira)} />
               <CampoFicha rotulo="Soma do orçamento" valor={formatarMoeda(somaOrcamento)} />

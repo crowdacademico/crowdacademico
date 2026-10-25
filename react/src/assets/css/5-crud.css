@@ -96,7 +96,7 @@
   /* Campo de formulário dentro da célula (tabelas editáveis): mesma letra e largura, só o espaço interno vertical
      menor, para caber na altura da linha. */
   .crud-tabela td .input-padrao {
-    padding-block: 0.25rem;
+    --campo-espaco-vertical: 0.25rem;
   }
 
   /* A caixa da tabela recebe foco para rolar pelo teclado (CaixaTabela): o contorno aparece só pelo teclado, não

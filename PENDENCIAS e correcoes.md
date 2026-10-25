@@ -180,7 +180,6 @@ Decidimos depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/todas as 
 
 #### 🟡 Achados da super auditoria ao vivo de 24-10-2026 (a decidir)
 
-- **Tela dos anexos das atualizações de campanha** (arquivos e links, levantamento de 24-10-2026): a API existe (`/arquivo-atualizacao`, `/link-atualizacao`), nenhuma tela mostra; o envio de arquivo passa pelo Storage. As telas Contribuições e Repasses, do mesmo levantamento, foram feitas em 25-10-2026.
 - **Aviso de erro: estudar antes de mexer (25-10-2026, sem pressa).** Hoje o painel faz de dois jeitos: quase toda tela com formulário mostra só o texto vermelho (o `useErroToast` com `mostraTexto` esconde o aviso flutuante quando o erro já está na tela), e as seções Encerrar a campanha (Alterar do dono) e chave Pix (`secao-recebimento.tsx`) mostram os dois com a mesma frase, porque o texto vermelho delas não tem a marca `data-mensagem-erro`. Gostamos dos dois avisos (retorno claro e imediato) e da ideia do meio-termo: o aviso flutuante só avisa ("Não foi possível..., veja o motivo abaixo") e o texto vermelho traz o motivo. Antes de aplicar, estudar as variáveis, sem valor escrito à mão:
   - **Tipo de erro:** de campo (o backend manda `campos`, o erro aparece embaixo do campo), recusa de regra (409, 422), sem permissão (403), falha de rede ou do servidor (500).
   - **Onde a tela mostra:** modal de Criar/Alterar (38 dos arquivos), página inteira (login, Minha Conta, cadastro), seção dentro de modal, janelinha de confirmação. O login já tem desenho próprio, decidido em 24-10-2026 (frase no topo e os campos em vermelho): o aviso flutuante ali seria repetido.
@@ -188,7 +187,6 @@ Decidimos depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/todas as 
   - **Leitor de tela:** o texto vermelho já é anunciado (`role="alert"`); um aviso flutuante com a mesma frase seria anunciado duas vezes.
   - **Quantas telas:** 46 arquivos usam `mostraTexto`, 16 usam o aviso flutuante sozinho (ações fora de formulário).
   Mercado (24-10-2026): o Primer, do GitHub, desaconselha o aviso flutuante para erro; o GOV.UK usa duas camadas, um resumo no topo mais o erro em cada campo, as duas na própria página.
-- **Mensagens técnicas na tela (25-10-2026):** o levantamento está feito, com a sugestão de texto e o porquê de cada uma, em `informacoes/MENSAGENS_TECNICAS_SUGESTOES.md`. Falta marcar o que aprovamos; depois, aplicar só o aprovado. O "Último motivo" do repasse já virou frase em 25-10-2026.
 
 #### 🟡 Auditoria de todos os status do sistema (25-10-2026)
 
@@ -196,7 +194,7 @@ Conferir cada status de cada tabela (campanha, contribuição, repasse, denúnci
 
 ### Visual e marca
 
-- **Seção "Auditoria" nas outras fichas (25-10-2026, depois de ver o Consultar Campanha):** no Consultar Campanha, a antiga seção "Datas" (início, fim, criada, aprovada e encerrada) virou "Auditoria", no topo da coluna da direita. Se ficar bom ao vivo, decidir se vale também em: (1) **Revisar Campanha**, que tem a mesma seção "Datas"; (2) **Alterar Campanha**, que hoje não mostra criada, aprovada e encerrada (entraria no topo da coluna da direita, acima do Resumo); (3) **Alterar Usuário**, que chama o mesmo tipo de bloco de "Metadados" (um nome só no sistema).
+- **Outros lugares que podem ganhar as mudanças do Consultar Campanha (25-10-2026), olhar tela por tela antes:** (1) **linhas alinhadas entre seções vizinhas** (`FichaLadoALado`, DS-115) no Consultar e no Alterar Usuário ("Dados da conta" ao lado de Auditoria e Papéis) e no Revisar Campanha: só vale onde os dois lados são campos pareados; (2) **data com hora sem os segundos** (`formatarDataHora(iso, true)`) onde a data fica em meia coluna e quebra: Julgar Denúncia, Decidir Encerramento, Consultar Contribuição, Consultar Notificação, Resolver Revisão; (3) **linha de números de ponta a ponta** (`SecaoFicha centralizada`, DS-116): a Consultar Contribuição (valor, taxa, total) é candidata. Já feitos em 25-10-2026: a barra colada no número no Alterar Campanha e na Consultar Contribuição, e o "Enviar" com cara de indisponível no Alterar Campanha.
 - **Branch `feat/novas-telas-teste` (02-10-2026):** tem o Dashboard em seções ("Precisa de você") e os links acadêmicos em cartões no celular, feitos antes das regras visuais novas. Decidir se entram no main, refeitos com as regras do `DESIGN_SYSTEM.md`, ou se a branch é descartada.
 
 - **Troca do logo e do ícone pelo painel** (aba Identidade Visual do Dashboard, hoje um espaço reservado). Desde 25-10-2026 a marca padrão está no projeto (`DOCUMENTACAO_FRONTEND.md`, seção 12); o envio pelo painel substitui a padrão, e o admin do futuro troca sem mexer no código nem no banco. A análise, os 4 problemas e as duas decisões em aberto estão no topo do `ACHADOS_PARA_DISCUTIR.md`. O envio passa pelo Storage pessoal do Lucas: nos testes, só ele envia.

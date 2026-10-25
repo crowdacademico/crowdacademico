@@ -2,7 +2,6 @@ import { useId, useState } from 'react';
 import { BadgeStatusCampanha } from '../../components/crud/badge-status-campanha';
 import { ROTULO_MODELO_CAMPANHA, STATUS_ACEITA_ATUALIZACAO, STATUS_PUBLICADA } from '../../services/12-campanha/constants/status-campanha.constants';
 import type { ReactNode } from 'react';
-import { BarraProgresso } from '../../components/crud/barra-progresso';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { CaixaAviso } from '../../components/crud/caixa-aviso';
@@ -34,6 +33,8 @@ import type {
 } from '../../services/12-campanha/type/campanha.type';
 import type { OrcamentoCampanhaResponse } from '../../services/13-orcamento-campanha/type/orcamento-campanha.type';
 import type { MarcoCronogramaResponse } from '../../services/14-marco-cronograma/type/marco-cronograma.type';
+import { celulaArrecadado } from './colunas-campanha';
+import { avaliarCriteriosEnvio } from '../../services/12-campanha/util/criterios-envio.util';
 
 // O que a Bancada da Campanha encaixa abaixo do orçamento/cronograma: checklist e Aprovar/Rejeitar, com as
 // contagens já carregadas pelo painel.
@@ -156,6 +157,18 @@ export function ModalAlterarCampanha({
   const podeEditarItens = !edicaoTravada && campanha !== null && STATUS_EDITAVEIS.has(campanha.status);
   const podeEnviar = !edicaoTravada && (campanha?.status === 'rascunho' || campanha?.status === 'rejeitado');
   const duracao = form ? duracaoEmDias(form.dataInicio, form.dataFim) : null;
+  // Orçamento e cronograma completos (os critérios do "Pronta para aprovar?" do Revisar). Só muda a aparência do Enviar
+  // (DS-113): incompleta, ele fica apagado mas clicável, e o banco diz o que falta. O prazo vencido não entra aqui: o
+  // clique no Enviar já oferece mudar as datas.
+  const prontaParaEnviar =
+    form !== null &&
+    avaliarCriteriosEnvio({
+      orcamento,
+      cronograma,
+      metaFinanceira: Number(form.metaFinanceira),
+      minimoItensOrcamento: regras.minimoItensOrcamento,
+      minimoMarcosCronograma: regras.minimoMarcosCronograma,
+    }).pronta;
 
   const corpo = (dados: FormCampanha): CampanhaRequestUpdate => ({
     titulo: dados.titulo.trim(),
@@ -248,6 +261,7 @@ export function ModalAlterarCampanha({
                     rotulo: campanha.status === 'rejeitado' ? 'Corrigir e reenviar' : 'Enviar para aprovação',
                     rotuloOcupado: 'Enviando...',
                     ocupado: trabalhando,
+                    aparenciaIndisponivel: !prontaParaEnviar,
                     aoClicar: () => void enviar(),
                   },
                 ]
@@ -438,35 +452,52 @@ export function ModalAlterarCampanha({
               {secaoAdmin?.({ campanha, orcamento, cronograma })}
             </div>
 
-            {/* Resumo: o que só se consulta aqui (arrecadado, taxa, status, id) e a meta, que só é campo enquanto a
-                campanha não foi aprovada. */}
-            <div className={'rounded-xl border borda-padrao fundo-sutil p-5 space-y-5' + (comResumo ? '' : ' hidden')}>
-              <h3 className="titulo-bloco titulo-bloco--linha mb-0">Resumo</h3>
-              <CampoFicha
-                rotulo="Status"
-                valor={
-                  <BadgeStatusCampanha campanha={campanha} />
-                }
-              />
-              {campoTexto('metaFinanceira', 'Meta (R$)', '', 'number')}
-              <CampoFicha
-                rotulo="Arrecadado"
-                valor={
-                  <span className="flex flex-col gap-1.5">
-                    <span>{formatarMoeda(campanha.valorBrutoArrecadado)}</span>
-                    <BarraProgresso
-                      valor={Number(campanha.valorBrutoArrecadado)}
-                      total={Number(form.metaFinanceira)}
-                      rotulo="Arrecadado em relação à meta"
-                    />
-                  </span>
-                }
-              />
-              <CampoFicha
-                rotulo="Taxa da plataforma"
-                valor={campanha.taxaPlataforma === null ? 'Definida na aprovação' : `${campanha.taxaPlataforma}%`}
-              />
-              <CampoFicha rotulo="id" valor={campanha.idCampanha} />
+            <div className={'space-y-6' + (comResumo ? '' : ' hidden')}>
+              {/* Auditoria no topo da coluna da direita, como no Consultar Campanha: quando cada coisa aconteceu. Início e
+                  fim não entram: aqui são campos de Período, à esquerda. "Por" só com o nome de quem aprovou (só vem
+                  para quem pode aprovar); antes da aprovação, os dois com "-". */}
+              <SecaoFicha titulo="Auditoria">
+                <CampoFicha rotulo="Criada em" valor={formatarDataHora(campanha.criadoEm, true)} largura="cheia" />
+                {!campanha.aprovadoEm || campanha.nomeAprovador !== null ? (
+                  <>
+                    <CampoFicha rotulo="Aprovada em" valor={formatarDataHora(campanha.aprovadoEm, true)} />
+                    <CampoFicha rotulo="Por" valor={campanha.nomeAprovador} />
+                  </>
+                ) : (
+                  <CampoFicha rotulo="Aprovada em" valor={formatarDataHora(campanha.aprovadoEm, true)} largura="cheia" />
+                )}
+                {!campanha.encerradoEm || campanha.nomeEncerrador !== null ? (
+                  <>
+                    <CampoFicha rotulo="Encerrada em" valor={formatarDataHora(campanha.encerradoEm, true)} />
+                    <CampoFicha rotulo="Por" valor={campanha.nomeEncerrador} />
+                  </>
+                ) : (
+                  <CampoFicha rotulo="Encerrada em" valor={formatarDataHora(campanha.encerradoEm, true)} largura="cheia" />
+                )}
+              </SecaoFicha>
+
+              {/* Resumo: o que só se consulta aqui (arrecadado, taxa, status, id) e a meta, que só é campo enquanto a
+                  campanha não foi aprovada. */}
+              <div className="rounded-xl border borda-padrao fundo-sutil p-5 space-y-5">
+                <h3 className="titulo-bloco titulo-bloco--linha mb-0">Resumo</h3>
+                <CampoFicha
+                  rotulo="Status"
+                  valor={
+                    <BadgeStatusCampanha campanha={campanha} />
+                  }
+                />
+                {campoTexto('metaFinanceira', 'Meta (R$)', '', 'number')}
+                {/* A mesma célula da coluna "arrecadado" das tabelas (DS-105), com a meta do formulário: muda junto. */}
+                <CampoFicha
+                  rotulo="Arrecadado"
+                  valor={celulaArrecadado(Number(campanha.valorBrutoArrecadado), Number(form.metaFinanceira))}
+                />
+                <CampoFicha
+                  rotulo="Taxa da plataforma"
+                  valor={campanha.taxaPlataforma === null ? 'Definida na aprovação' : `${campanha.taxaPlataforma}%`}
+                />
+                <CampoFicha rotulo="id" valor={campanha.idCampanha} />
+              </div>
             </div>
           </div>
         </>

@@ -53,7 +53,7 @@ export class TermoUsoServiceActivate {
       // pol_termos_update exige 'termos_uso_gerenciar': se o UPDATE não afetou nada apesar do SELECT acima ter
       // achado a linha (pol_termos_select é USING(true)), é falta de permissão, não inexistência.
       throw new ForbiddenException(
-        "Sem permissão 'termos_uso_gerenciar' para tornar esta versão vigente.",
+        'Você não tem permissão para tornar esta versão vigente.',
       );
     }
 

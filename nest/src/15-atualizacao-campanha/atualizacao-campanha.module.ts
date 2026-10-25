@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AnexoAtualizacaoControllerFindAll } from './controllers/anexo-atualizacao.controller.findall';
 import { ArquivoAtualizacaoControllerCreate } from './controllers/arquivo-atualizacao.controller.create';
 import { ArquivoAtualizacaoControllerFindAll } from './controllers/arquivo-atualizacao.controller.findall';
 import { AtualizacaoCampanhaControllerCreate } from './controllers/atualizacao-campanha.controller.create';
@@ -8,6 +9,7 @@ import { LinkAtualizacaoControllerCreate } from './controllers/link-atualizacao.
 import { LinkAtualizacaoControllerFindAll } from './controllers/link-atualizacao.controller.findall';
 import { LinkAtualizacaoControllerRemove } from './controllers/link-atualizacao.controller.remove';
 import { LinkAtualizacaoControllerUpdate } from './controllers/link-atualizacao.controller.update';
+import { AnexoAtualizacaoServiceFindAll } from './service/anexo-atualizacao.service.findall';
 import { ArquivoAtualizacaoServiceCreate } from './service/arquivo-atualizacao.service.create';
 import { ArquivoAtualizacaoServiceFindAll } from './service/arquivo-atualizacao.service.findall';
 import { AtualizacaoCampanhaServiceCreate } from './service/atualizacao-campanha.service.create';
@@ -23,6 +25,7 @@ import { LinkAtualizacaoServiceUpdate } from './service/link-atualizacao.service
 // de ganhar uma pasta nova sem numeração.
 @Module({
   controllers: [
+    AnexoAtualizacaoControllerFindAll,
     AtualizacaoCampanhaControllerCreate,
     AtualizacaoCampanhaControllerFindAll,
     AtualizacaoCampanhaControllerUpdate,
@@ -34,6 +37,7 @@ import { LinkAtualizacaoServiceUpdate } from './service/link-atualizacao.service
     ArquivoAtualizacaoControllerFindAll,
   ],
   providers: [
+    AnexoAtualizacaoServiceFindAll,
     AtualizacaoCampanhaServiceCreate,
     AtualizacaoCampanhaServiceFindAll,
     AtualizacaoCampanhaServiceUpdate,

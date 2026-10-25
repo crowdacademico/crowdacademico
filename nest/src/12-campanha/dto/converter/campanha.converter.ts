@@ -44,6 +44,7 @@ export class CampanhaConverter {
       camposBloqueados: [],
       valorLiquidoEstimado: null,
       nomeAprovador: null,
+      nomeEncerrador: null,
       taxaAplicada: null,
     };
   }

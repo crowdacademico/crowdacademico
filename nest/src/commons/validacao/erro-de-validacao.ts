@@ -2,15 +2,28 @@ import { BadRequestException, ValidationError } from '@nestjs/common';
 
 // Mensagem padrão do class-validator (em inglês) virando português, só quando o DTO não escreveu a própria: a
 // regra que o DTO escreveu fica como está. Os números e a lista de valores vêm da própria mensagem em inglês. O
-// campo aparece pelo nome técnico entre aspas (é o que o DTO conhece); a tela mostra o erro embaixo do campo.
+// campo aparece com o nome do DTO separado em palavras (`nomeLegivel`); a tela mostra o erro embaixo do campo.
 const EM_INGLES = /\b(must|should|is expected|has to)\b/;
+
+// "idCampanha" vira "campanha", "metaFinanceira" vira "meta financeira": as palavras do camelCase em minúsculas, sem o
+// "id" do começo. Genérico, sem lista de nomes, então vale para campo novo. Não põe acento ("dataInicio" vira "data
+// inicio"): a mensagem é rara (o formulário confere antes) e aparece embaixo do campo, que já tem o rótulo certo.
+function nomeLegivel(campo: string): string {
+  const palavras = campo
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .toLowerCase()
+    .split(' ');
+  return (
+    palavras.length > 1 && palavras[0] === 'id' ? palavras.slice(1) : palavras
+  ).join(' ');
+}
 function emPortugues(regra: string, mensagem: string, campo: string): string {
   if (!EM_INGLES.test(mensagem)) {
     return mensagem;
   }
   const numero = /(\d+)/.exec(mensagem)?.[1] ?? '';
   const valores = /following values: (.+)$/.exec(mensagem)?.[1] ?? '';
-  const c = `O campo "${campo}"`;
+  const c = `O campo "${nomeLegivel(campo)}"`;
   const traducoes: Record<string, string> = {
     whitelistValidation: `${c} não é aceito aqui.`,
     isString: `${c} precisa ser um texto.`,

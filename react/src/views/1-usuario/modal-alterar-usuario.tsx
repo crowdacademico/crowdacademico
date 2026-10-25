@@ -68,7 +68,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
   const { mostrar } = useToast();
   const errosDaTela = useErroToast({ mostraTexto: true });
   const { erro, reportarErro, limparErro } = errosDaTela;
-  // Aceites do Termo (último de cada tipo, na coluna de Metadados). Leitura auxiliar: falha aqui não trava o modal.
+  // Aceites do Termo (último de cada tipo, na coluna da direita). Leitura auxiliar: falha aqui não trava o modal.
   const { dado: termosAceitos } = useBuscar(
     () => usuarioApi.listarTermosAceitos(auth.authFetch, idUsuario).catch(() => []),
     [idUsuario],
@@ -310,9 +310,9 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
           <FiltroPartes partes={partes} atual={parte} aoEscolher={setParte} />
           <MensagemErro texto={erro} />
 
-          {/* Mesmas linhas do Consultar: "Dados da conta" (com os Metadados embaixo) ao lado de Papéis, e "Perfil de
-              Pesquisador" ao lado dos Aceites do Termo. Sem perfil de pesquisador, os Aceites continuam na coluna da
-              direita (col-start-3). Os papéis fazem parte de "Conta" no filtro. */}
+          {/* "Dados da conta" (com os Metadados embaixo) à esquerda; na coluna da direita, Papéis e, logo embaixo, os
+              Aceites do Termo. "Perfil de Pesquisador" vem depois, na largura de Dados. Os papéis fazem parte de
+              "Conta" no filtro. */}
           <div className={ve('conta') + ' grade-ficha gap-x-8 gap-y-10'}>
             <div className="lg:col-span-2 space-y-10">
               <SecaoFicha titulo="Dados da conta">
@@ -382,16 +382,15 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                 )}
               </SecaoFicha>
 
-              <SecaoFicha titulo="Metadados">
-                <div className="sm:col-span-2">
-                  <CampoSomenteLeitura rotulo="id" valor={idUsuario} />
-                </div>
+              {/* "Metadados", não "Auditoria": tem o id, que não é registro de quando algo aconteceu. Os três numa linha. */}
+              <SecaoFicha titulo="Metadados" colunas={3}>
+                <CampoSomenteLeitura rotulo="id" valor={idUsuario} />
                 <CampoSomenteLeitura rotulo="Criado em" valor={usuario.criadoEm && formatarData(usuario.criadoEm)} />
                 <CampoSomenteLeitura rotulo="Último login" valor={usuario.ultimoLoginEm ? formatarData(usuario.ultimoLoginEm) : 'Nunca'} />
               </SecaoFicha>
             </div>
 
-            <div>
+            <div className="space-y-10">
               <SecaoFicha titulo="Papéis" colunas={1}>
                 <PapeisDoUsuario
                   auth={auth}
@@ -401,6 +400,8 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                   aoAtualizado={aoAtualizado}
                 />
               </SecaoFicha>
+
+              <SecaoAceitesTermo auth={auth} termosAceitos={termosAceitos} aoErro={reportarErro} />
             </div>
 
             {formPerfil && perfilPesquisador && (
@@ -454,10 +455,6 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                 </SecaoFicha>
               </div>
             )}
-
-            <div className="lg:col-start-3">
-              <SecaoAceitesTermo auth={auth} termosAceitos={termosAceitos} aoErro={reportarErro} />
-            </div>
           </div>
 
           {parte === 'geral' && <div className="border-t borda-padrao"></div>}

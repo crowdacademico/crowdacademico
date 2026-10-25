@@ -24,6 +24,7 @@ import { ListarRepassesAtencao } from '../../views/25-pagamento-revisao/listar-r
 import { ListarAuditoriaFinanceira } from '../../views/25-pagamento-revisao/listar-auditoria-financeira';
 import { ListarContribuicoes } from '../../views/25-pagamento-revisao/listar-contribuicoes';
 import { ListarRepasses } from '../../views/25-pagamento-revisao/listar-repasses';
+import { ListarAnexosAtualizacoes } from '../../views/15-atualizacao-campanha/listar-anexos-atualizacoes';
 import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
 import { PontuacaoScore } from '../../views/11-configuracoes/pontuacao-score';
 import { campoTestes } from './campo-testes-opcional';
@@ -196,6 +197,17 @@ export const ROTAS_ADMIN: Rota[] = [
     rotuloBreadcrumb: 'Campanhas',
     grupoMenu: 'CAMPANHA',
     icone: 'fa-bullhorn',
+  },
+  // Só leitura: os arquivos e links das atualizações de campanha (atualizacao_moderar: admin e moderador). No menu,
+  // o nome curto (DS-112).
+  {
+    caminho: '/admin/anexos-atualizacoes',
+    caminhoRelativo: 'anexos-atualizacoes',
+    elemento: ListarAnexosAtualizacoes,
+    rotuloMenu: 'Anexos',
+    rotuloBreadcrumb: 'Anexos das Atualizações',
+    grupoMenu: 'CAMPANHA',
+    icone: 'fa-paperclip',
   },
 
   // Fila de aprovação: item do grupo MODERAÇÃO.

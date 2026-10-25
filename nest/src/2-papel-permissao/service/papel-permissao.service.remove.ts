@@ -13,7 +13,7 @@ export class PapelPermissaoServiceRemove {
       'papel_permissao',
       { id_papel: idPapel, id_permissao: idPermissao },
       'Este papel não tem esta permissão.',
-      "Sem permissão 'papel_gerenciar' para revogar permissões.",
+      'Você não tem permissão para revogar permissões.',
     );
   }
 }

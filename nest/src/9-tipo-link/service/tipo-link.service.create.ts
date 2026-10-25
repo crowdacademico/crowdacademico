@@ -62,7 +62,7 @@ export class TipoLinkServiceCreate {
       // Código ou nome duplicado seguem para o filtro global (mensagens-duplicidade.constants.ts).
       if (temCodigoPostgres(erro, CODIGO_PG_RLS_VIOLATION)) {
         throw new ForbiddenException(
-          "Sem permissão 'tipolink_gerenciar' para cadastrar tipo de link.",
+          'Você não tem permissão para cadastrar tipo de link.',
         );
       }
       throw erro;

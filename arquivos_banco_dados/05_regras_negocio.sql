@@ -774,7 +774,7 @@ BEGIN
     FROM score_rotulo WHERE ativo = TRUE;
 
     IF v_min IS DISTINCT FROM 0 OR v_max IS DISTINCT FROM 100 THEN
-        RAISE EXCEPTION 'As faixas ativas de score_rotulo precisam cobrir de 0 a 100 (hoje vão de % a %).', v_min, v_max
+        RAISE EXCEPTION 'As faixas ativas precisam cobrir de 0 a 100 (hoje vão de % a %).', v_min, v_max
             USING ERRCODE = '90018';
     END IF;
 
@@ -787,7 +787,7 @@ BEGIN
     ) INTO v_tem_buraco;
 
     IF v_tem_buraco THEN
-        RAISE EXCEPTION 'Existe um buraco (ou sobreposição) entre 2 faixas ativas de score_rotulo.'
+        RAISE EXCEPTION 'Existe um buraco ou uma sobreposição entre duas faixas ativas.'
             USING ERRCODE = '90018';
     END IF;
 

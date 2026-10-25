@@ -53,6 +53,8 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
   // "Por" ao lado de "Aprovada em": antes da aprovação (os dois com "-") ou com o nome de quem aprovou (só vem para
   // quem pode aprovar). Aprovada sem o nome: "Aprovada em" ocupa a linha sozinha.
   const mostrarAprovador = !campanha?.aprovadoEm || campanha.nomeAprovador !== null;
+  // O mesmo para "Encerrada em": "Por" com quem encerrou ("Sistema" no fim do prazo).
+  const mostrarEncerrador = !campanha?.encerradoEm || campanha.nomeEncerrador !== null;
   // Quantas contribuições estão pagas e quantas existem. null = sem permissão para ver (só o dono e quem tem a
   // permissão): o campo mostra "-".
   const [resumoContribuicoes, setResumoContribuicoes] = useState<ResumoContribuicoes | null>(null);
@@ -166,7 +168,12 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
                 },
                 {
                   esquerda: [<CampoFicha key="video" rotulo="Vídeo de apresentação" valor={campanha.videoApresentacaoUrl} />],
-                  direita: [<CampoFicha key="encerrada" rotulo="Encerrada em" valor={formatarDataHora(campanha.encerradoEm, true)} />],
+                  direita: mostrarEncerrador
+                    ? [
+                        <CampoFicha key="encerrada" rotulo="Encerrada em" valor={formatarDataHora(campanha.encerradoEm, true)} />,
+                        <CampoFicha key="por-encerrou" rotulo="Por" valor={campanha.nomeEncerrador} />,
+                      ]
+                    : [<CampoFicha key="encerrada" rotulo="Encerrada em" valor={formatarDataHora(campanha.encerradoEm, true)} />],
                 },
               ]}
             />

@@ -11,7 +11,7 @@ export class AuthServiceLogout {
   async executar(dto: AuthRequestRefreshToken): Promise<void> {
     const parseado = parseRefreshToken(dto.refreshToken);
     if (!parseado) {
-      throw new UnauthorizedException('Refresh token mal formado.');
+      throw new UnauthorizedException('Sua sessão terminou. Entre de novo.');
     }
 
     const db = this.database.getDb();
@@ -34,7 +34,7 @@ export class AuthServiceLogout {
       sessao.refresh_token_hash,
     );
     if (!segredoValido) {
-      throw new UnauthorizedException('Refresh token inválido.');
+      throw new UnauthorizedException('Sua sessão terminou. Entre de novo.');
     }
 
     await db

@@ -13,7 +13,7 @@ export class UsuarioPapelServiceRemove {
       'usuario_papel',
       { id_usuario: idUsuario, id_papel: idPapel },
       'Este usuário não tem este papel.',
-      "Sem permissão 'papel_gerenciar' para remover papéis de outros usuários.",
+      'Você não tem permissão para remover papéis de outros usuários.',
     );
   }
 }

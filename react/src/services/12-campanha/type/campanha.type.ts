@@ -43,6 +43,8 @@ export interface CampanhaResponse {
   taxaAplicada: number | null;
   // Só em GET /campanha/:id e só para quem pode aprovar campanha: quem aprovou. Para os outros, null.
   nomeAprovador: string | null;
+  // Idem, quem encerrou ("Sistema" quando foi o fim do prazo). Para os outros, ou sem registro no log, null.
+  nomeEncerrador: string | null;
 }
 
 // Espelha nest/src/21-historico-rejeicao/dto/response/historico-rejeicao.response.ts. "Onde fica registrado" o

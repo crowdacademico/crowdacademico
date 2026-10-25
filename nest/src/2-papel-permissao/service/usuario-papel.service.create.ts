@@ -20,7 +20,7 @@ export class UsuarioPapelServiceCreate {
       // Papel já atribuído segue para o filtro global (mensagens-duplicidade.constants.ts).
       if (temCodigoPostgres(erro, CODIGO_PG_RLS_VIOLATION)) {
         throw new ForbiddenException(
-          "Sem permissão 'papel_atribuir' para atribuir papéis.",
+          'Você não tem permissão para atribuir papéis.',
         );
       }
       throw erro;

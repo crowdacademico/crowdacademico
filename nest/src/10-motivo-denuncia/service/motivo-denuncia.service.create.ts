@@ -31,7 +31,7 @@ export class MotivoDenunciaServiceCreate {
       // que tem a mensagem certa (mensagens-duplicidade.constants.ts); aqui fica só a checagem de RLS.
       if (temCodigoPostgres(erro, CODIGO_PG_RLS_VIOLATION)) {
         throw new ForbiddenException(
-          "Sem permissão 'motivo_denuncia_gerenciar' para cadastrar motivo de denúncia.",
+          'Você não tem permissão para cadastrar motivo de denúncia.',
         );
       }
       throw erro;

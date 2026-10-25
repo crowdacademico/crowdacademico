@@ -60,7 +60,7 @@ export class AreaConhecimentoServiceCreate {
       // Código CNPq ou nome duplicado seguem para o filtro global (mensagens-duplicidade.constants.ts).
       if (temCodigoPostgres(erro, CODIGO_PG_RLS_VIOLATION)) {
         throw new ForbiddenException(
-          "Sem permissão 'area_conhecimento_gerenciar' para cadastrar área de conhecimento.",
+          'Você não tem permissão para cadastrar área de conhecimento.',
         );
       }
       throw erro;

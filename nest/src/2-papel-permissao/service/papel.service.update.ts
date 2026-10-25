@@ -40,7 +40,7 @@ export class PapelServiceUpdate {
           'papel',
           { id_papel: idPapel },
           `Papel ${idPapel} não encontrado.`,
-          "Sem permissão 'papel_gerenciar' para renomear papéis.",
+          'Você não tem permissão para renomear papéis.',
         );
       }
 
@@ -61,7 +61,7 @@ export class PapelServiceUpdate {
       // Nome duplicado segue para o filtro global (mensagens-duplicidade.constants.ts).
       if (temCodigoPostgres(erro, CODIGO_PG_RLS_VIOLATION)) {
         throw new ForbiddenException(
-          "Sem permissão 'papel_gerenciar' para renomear papéis.",
+          'Você não tem permissão para renomear papéis.',
         );
       }
       throw erro;

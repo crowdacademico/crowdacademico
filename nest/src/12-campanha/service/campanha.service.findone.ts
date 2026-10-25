@@ -31,6 +31,7 @@ export class CampanhaServiceFindOne {
     await this.preencherCamposBloqueados(resposta);
     await this.preencherLiquidoEstimado(resposta);
     await this.preencherAprovador(resposta);
+    await this.preencherEncerrador(resposta);
     return resposta;
   }
 
@@ -44,6 +45,32 @@ export class CampanhaServiceFindOne {
       WHERE c.id_campanha = ${resposta.idCampanha} AND c.aprovado_em IS NOT NULL
     `.execute(this.database.getDb());
     resposta.nomeAprovador = resultado.rows[0]?.nome ?? null;
+  }
+
+  // Quem encerrou: a última linha do log de auditoria que levou a campanha à situação final de hoje. Sem responsável
+  // = tarefa automática ("Sistema"). Só para quem pode aprovar (ver nomeEncerrador no DTO); a leitura do log ainda
+  // passa pela RLS (log_visualizar).
+  private async preencherEncerrador(resposta: CampanhaResponse): Promise<void> {
+    const resultado = await sql<{ nome: string | null }>`
+      SELECT CASE WHEN public.tem_permissao('campanha_aprovar') THEN
+               CASE WHEN l.id_log IS NULL THEN NULL
+                    WHEN l.id_usuario_responsavel IS NULL THEN 'Sistema'
+                    ELSE u.nome END
+             END AS nome
+      FROM campanha c
+      LEFT JOIN LATERAL (
+        SELECT la.id_log, la.id_usuario_responsavel
+        FROM log_auditoria la
+        WHERE la.tabela = 'campanha'
+          AND la.identidade_registro = c.id_campanha::text
+          AND la.dados_novos ->> 'status' = c.status::text
+        ORDER BY la.id_log DESC
+        LIMIT 1
+      ) l ON TRUE
+      LEFT JOIN usuario u ON u.id_usuario = l.id_usuario_responsavel
+      WHERE c.id_campanha = ${resposta.idCampanha} AND c.encerrado_em IS NOT NULL
+    `.execute(this.database.getDb());
+    resposta.nomeEncerrador = resultado.rows[0]?.nome ?? null;
   }
 
   // RF-087. A conta é a do repasse (liquido_repasse, 05 [05-K-2]): mesma taxa mínima, então a estimativa nunca

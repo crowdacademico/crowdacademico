@@ -44,7 +44,7 @@ export class ConfiguracoesServiceCreate {
       if (temCodigoPostgres(erro, CODIGO_PG_RLS_VIOLATION)) {
         throw new ForbiddenException(
           dto.global
-            ? "Sem permissão 'configuracao_gerenciar' para criar configuração global."
+            ? 'Você não tem permissão para criar configuração global.'
             : 'Sem permissão para criar esta configuração.',
         );
       }
