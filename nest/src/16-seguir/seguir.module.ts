@@ -5,6 +5,7 @@ import { SeguirCampanhaControllerRemove } from './controllers/seguir-campanha.co
 import { SeguirPesquisadorControllerCreate } from './controllers/seguir-pesquisador.controller.create';
 import { SeguirPesquisadorControllerFindAll } from './controllers/seguir-pesquisador.controller.findall';
 import { SeguirPesquisadorControllerRemove } from './controllers/seguir-pesquisador.controller.remove';
+import { SeguirCampanhaServiceCount } from './service/seguir-campanha.service.count';
 import { SeguirCampanhaServiceCreate } from './service/seguir-campanha.service.create';
 import { SeguirCampanhaServiceFindAll } from './service/seguir-campanha.service.findall';
 import { SeguirCampanhaServiceRemove } from './service/seguir-campanha.service.remove';
@@ -28,6 +29,7 @@ import { SeguirPesquisadorServiceRemove } from './service/seguir-pesquisador.ser
     SeguirCampanhaServiceCreate,
     SeguirCampanhaServiceFindAll,
     SeguirCampanhaServiceRemove,
+    SeguirCampanhaServiceCount,
     SeguirPesquisadorServiceCreate,
     SeguirPesquisadorServiceFindAll,
     SeguirPesquisadorServiceRemove,

@@ -23,13 +23,12 @@ import { PoolClient } from 'pg';
 // GlobalDbInterceptor faz o ROLLBACK de verdade da transação inteira.
 //
 // ATENÇÃO: um erro de Postgres deixa a TRANSAÇÃO INTEIRA "abortada" até um ROLLBACK de verdade: pegar a exceção
-// com try/catch NO LADO DO JAVASCRIPT e seguir chamando mais queries no MESMO `db` NÃO desfaz isso (ver
-// auth.service.login.ts/listarPapeis). As próximas queries até podem "funcionar" sem lançar erro (o driver não
+// com try/catch NO LADO DO JAVASCRIPT e seguir chamando mais queries no MESMO `db` NÃO desfaz isso. As próximas queries até podem "funcionar" sem lançar erro (o driver não
 // necessariamente recusa na hora), mas o COMMIT final do GlobalDbInterceptor vira silenciosamente um ROLLBACK
 // (é o que o próprio Postgres faz quando pede COMMIT numa transação já abortada): TUDO que a requisição gravou
 // antes do erro some junto, mesmo a resposta HTTP tendo voltado 200 com dado que parecia certo (lido de dentro
 // da transação, antes dela abortar). Se um service PRECISA tentar algo que pode falhar e continuar mesmo assim,
-// tem que envolver só aquele trecho com SAVEPOINT/ROLLBACK TO SAVEPOINT via `sql` cru (não db.transaction(),
+// tem que envolver só aquele trecho com `comPontoDeRetorno` (ponto-de-retorno.util.ts; não db.transaction(),
 // que não suporta isso aqui), nunca um try/catch pelado em volta de uma query.
 class SingleConnection implements DatabaseConnection {
   constructor(private readonly client: PoolClient) {}

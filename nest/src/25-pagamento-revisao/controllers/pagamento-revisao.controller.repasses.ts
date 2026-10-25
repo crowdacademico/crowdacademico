@@ -8,6 +8,9 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
+import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
+import { SemTransacaoGlobal } from '../../commons/database/sem-transacao-global.decorator';
 import { PagamentoRevisaoRequestLimite } from '../dto/request/pagamento-revisao.request-list';
 import { PagamentoRevisaoRequestObservacao } from '../dto/request/pagamento-revisao.request-observacao';
 import { RepasseAtencaoResponse } from '../dto/response/pagamento-revisao.response';
@@ -35,13 +38,16 @@ export class PagamentoRevisaoControllerRepasses {
     await this.service.reenfileirar(idRepasse, dto.observacao);
   }
 
-  // Exige pagamento_revisao_resolver. Só repasse em 'erro' (409 nos outros casos).
+  // Exige pagamento_revisao_resolver. Só repasse em 'erro' e com a transferência confirmada pelo provedor (409 nos
+  // outros casos). Sem a transação global: espera o provedor no meio.
   @Post(':idRepasse/marcar-pago')
   @HttpCode(204)
+  @SemTransacaoGlobal()
   async marcarPago(
     @Param('idRepasse', ParseIntPipe) idRepasse: number,
     @Body() dto: PagamentoRevisaoRequestObservacao,
+    @UsuarioAtual() usuario: UsuarioAutenticado,
   ): Promise<void> {
-    await this.service.marcarPago(idRepasse, dto.observacao);
+    await this.service.marcarPago(idRepasse, dto.observacao, usuario.idUsuario);
   }
 }

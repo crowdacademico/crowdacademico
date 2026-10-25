@@ -76,6 +76,11 @@
      Padrão 1 = 100% (nenhuma mudança): só existe para ControleFonte ter algo para ler/escrever; qualquer CSS
      aqui pode ignorá-la de propósito. */
   --escala-fonte: 1;
+  /* Altura do que fica preso no topo ao rolar (cabeçalho + trilha "Início > ..."), medida pelo navegador
+     (useAlturaTopoFixo, DS-109): nunca escrever o número à mão. 0 só até a primeira medida. */
+  --altura-topo-fixo: 0px;
+  /* Altura do menu lateral parado (DS-109): do fim do topo preso até o fim da tela. */
+  --altura-menu-lateral: calc(100dvh - var(--altura-topo-fixo));
 }
 
 /* ========= RESET =========

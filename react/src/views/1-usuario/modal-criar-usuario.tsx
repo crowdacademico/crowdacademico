@@ -13,6 +13,7 @@ import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
+import { SENHA_MINIMO_CARACTERES } from '../../services/3-auth/constants/senha.constants';
 
 interface ModalCriarUsuarioProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
@@ -49,7 +50,7 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
   const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
     nome: nome.trim().length < 2 && 'Nome precisa ter pelo menos 2 caracteres.',
     email: email.trim() === '' && 'Informe o e-mail.',
-    senha: senha.length < 8 && 'Senha precisa ter pelo menos 8 caracteres.',
+    senha: senha.length < SENHA_MINIMO_CARACTERES && `A senha precisa ter pelo menos ${SENHA_MINIMO_CARACTERES} caracteres.`,
   }));
 
   const aoCriar = async () => {

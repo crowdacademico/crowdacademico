@@ -1,4 +1,8 @@
 import { IsInt, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  MENSAGEM_SENHA_CURTA,
+  SENHA_MINIMO_CARACTERES,
+} from '../../../commons/seguranca/senha.constants';
 
 export class UsuarioRequestUpdate {
   // Só estes 3 campos existem no GRANT UPDATE de `usuario` (06_grants.sql,
@@ -20,7 +24,7 @@ export class UsuarioRequestUpdate {
 
   @IsOptional()
   @IsString()
-  @MinLength(8, { message: 'Senha precisa ter pelo menos 8 caracteres.' })
+  @MinLength(SENHA_MINIMO_CARACTERES, { message: MENSAGEM_SENHA_CURTA })
   novaSenha?: string;
 
   // Obrigatória para trocar a senha da PRÓPRIA conta (o service confere). Em conta de outra pessoa (reset

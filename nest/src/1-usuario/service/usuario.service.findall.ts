@@ -6,7 +6,10 @@ import {
 } from '../../commons/database/paginacao.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { AutorizacaoService } from '../../commons/seguranca/autorizacao.service';
-import { USUARIO_COLUNAS_SELECT } from '../constants/usuario.constants';
+import {
+  PERMISSOES_VER_USUARIOS,
+  USUARIO_COLUNAS_SELECT,
+} from '../constants/usuario.constants';
 import { UsuarioConverter } from '../dto/converter/usuario.converter';
 import { UsuarioResponse } from '../dto/response/usuario.response';
 
@@ -23,7 +26,7 @@ export class UsuarioServiceFindAll {
     // pol_usuario_select (04_rls_policies.sql) libera `deletado = FALSE` pra qualquer sessão (o login precisa achar
     // o usuário antes de existir alguém autenticado), então quem decide aqui é a permissão, não a RLS.
     await this.autorizacao.exigirPermissao(
-      'usuario_visualizar_sensivel',
+      PERMISSOES_VER_USUARIOS,
       'Você não tem permissão para listar os usuários.',
     );
     const query = this.database

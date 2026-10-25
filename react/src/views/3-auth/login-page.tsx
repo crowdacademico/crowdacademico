@@ -5,6 +5,7 @@ import { Link, useLocation, useNavigate } from 'react-router';
 import { IconeGoogle } from '../../components/auth/icone-google';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { Campo } from '../../components/input/campo';
+import { ErroHttp } from '../../services/constant/api/http.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { emailValido } from '../../services/constant/util/validacao.util';
@@ -42,24 +43,39 @@ export function LoginPage({ auth }: PropsPagina) {
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const idSenha = useId();
   const idErroSenha = useId();
+  // Login recusado (e-mail sem conta ou senha errada, a mesma resposta nos dois casos): a frase do servidor fica no
+  // topo e os dois campos ficam marcados, cada um com o texto que o servidor mandou em `campos`. Fica no topo mesmo
+  // com os campos marcados (useErroToast, sozinho, troca a frase do topo pelos erros de campo).
+  const [recusa, setRecusa] = useState('');
 
   // Mesma validação do cadastro: o erro aparece embaixo do campo, com o cursor nele, e não num aviso solto. O erro do
-  // servidor sobre um campo (validação do DTO) vai para o mesmo lugar. "E-mail ou senha incorretos" continua no topo,
-  // sem marcar campo: dizer qual dos dois está errado ajudaria quem tenta adivinhar contas.
+  // servidor sobre um campo (validação do DTO, login recusado) vai para o mesmo lugar.
   const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
     email: email.trim() === '' ? 'Informe o e-mail.' : !emailValido(email) && 'E-mail inválido.',
     senha: senha === '' && 'Informe a senha.',
   }));
-  const erroEmail = erroDe('email') ?? errosCampo.email;
-  const erroSenha = erroDe('senha') ?? errosCampo.senha;
+  // O texto do servidor vem primeiro e vale até a pessoa mexer no campo (onChange tira): sem isso, a senha apagada
+  // depois do login recusado mostraria "Informe a senha." no lugar de "Senha inválida.".
+  const erroEmail = errosCampo.email || erroDe('email');
+  const erroSenha = errosCampo.senha || erroDe('senha');
 
   const aoEntrar = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
     if (!tentarEnviar()) {
       return;
     }
+    setRecusa('');
     await executarEnviando(async () => {
-      await auth.login(email, senha);
+      try {
+        await auth.login(email, senha);
+      } catch (erroLogin) {
+        // Como a maioria dos sistemas: o e-mail digitado fica, a senha é apagada para a pessoa digitar de novo.
+        if (erroLogin instanceof ErroHttp && erroLogin.campos) {
+          setSenha('');
+          setRecusa(erroLogin.message);
+        }
+        throw erroLogin;
+      }
       void navigate(destinoDepoisDoLogin(local.state), { replace: true });
     });
   };
@@ -81,7 +97,7 @@ export function LoginPage({ auth }: PropsPagina) {
         </div>
 
         <form onSubmit={aoEntrar} noValidate className="p-10 space-y-6">
-          <MensagemErro texto={erro} className="paragrafo-destaque texto-erro text-center whitespace-pre-line" />
+          <MensagemErro texto={erro || recusa} className="paragrafo-destaque texto-erro text-center whitespace-pre-line" />
 
           <Campo rotulo="Seu E-mail" erro={erroEmail}>
             {({ atributos, classeErro }) => (

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { BadgeStatusEncerramento } from '../../components/crud/badge-status-encerramento';
-import { CaixaAviso } from '../../components/crud/caixa-aviso';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
+import { ModalConfirmacao } from '../../components/crud/modal-confirmacao';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { Campo } from '../../components/input/campo';
@@ -28,7 +28,7 @@ interface ModalDecidirEncerramentoProps {
 }
 
 // Decidir um pedido de encerramento antecipado (RF-065): o que o pesquisador pediu, com o modelo, o arrecadado e as
-// contribuições confirmadas. Aprovar encerra a campanha na hora (pede confirmação); rejeitar exige justificativa e a
+// contribuições confirmadas. Aprovar encerra a campanha na hora (pede confirmação com ciência); rejeitar exige justificativa e a
 // campanha segue ativa. Pedido já decidido ou cancelado só se consulta.
 export function ModalDecidirEncerramento({ authFetch, pedido, aoFechar, aoDecidido, somenteLeitura = false }: ModalDecidirEncerramentoProps) {
   const [justificativa, setJustificativa] = useState('');
@@ -53,16 +53,13 @@ export function ModalDecidirEncerramento({ authFetch, pedido, aoFechar, aoDecidi
       erros.tentarEnviar();
       return;
     }
-    if (aprovar && !confirmandoAprovar) {
-      setConfirmandoAprovar(true);
-      return;
-    }
     await executar(async () => {
       await solicitacaoEncerramentoApi.decidir(authFetch, pedido.idSolicitacao, aprovar, justificativa.trim() || undefined);
       mostrar(aprovar ? 'Pedido aprovado: campanha encerrada.' : 'Pedido rejeitado: a campanha segue ativa.', pedido.tituloCampanha ?? '');
       aoDecidido();
       aoFechar();
     });
+    setConfirmandoAprovar(false);
   };
 
   return (
@@ -80,13 +77,7 @@ export function ModalDecidirEncerramento({ authFetch, pedido, aoFechar, aoDecidi
             pendente
               ? [
                   { rotulo: 'Rejeitar', ocupado, aoClicar: () => void decidir(false) },
-                  {
-                    rotulo: confirmandoAprovar ? 'Confirmar: encerrar a campanha' : 'Aprovar',
-                    rotuloOcupado: 'Salvando...',
-                    ocupado,
-                    perigo: confirmandoAprovar,
-                    aoClicar: () => void decidir(true),
-                  },
+                  { rotulo: 'Aprovar', ocupado, aoClicar: () => setConfirmandoAprovar(true) },
                 ]
               : undefined
           }
@@ -120,12 +111,23 @@ export function ModalDecidirEncerramento({ authFetch, pedido, aoFechar, aoDecidi
               )}
             </Campo>
             {confirmandoAprovar && (
-              <CaixaAviso tom="erro" icone="fa-triangle-exclamation" titulo="Aprovar encerra a campanha agora">
-                {pedido.modeloCampanha === 'flexivel'
-                  ? 'No modelo flexível, o valor arrecadado até aqui vai para o pesquisador.'
-                  : 'No modelo tudo ou nada, todo o valor arrecadado volta para os apoiadores.'}{' '}
-                A campanha para de receber apoio e não dá para desfazer.
-              </CaixaAviso>
+              <ModalConfirmacao
+                titulo="Aprovar e encerrar a campanha?"
+                rotuloConfirmar="Aprovar e encerrar"
+                rotuloOcupado="Salvando..."
+                perigo
+                exigirCiencia
+                ocupado={ocupado}
+                aoConfirmar={() => void decidir(true)}
+                aoCancelar={() => setConfirmandoAprovar(false)}
+              >
+                <p>A campanha para de receber apoio na hora e não dá para desfazer.</p>
+                <p>
+                  {pedido.modeloCampanha === 'flexivel'
+                    ? 'No modelo flexível, o valor arrecadado até aqui vai para o pesquisador.'
+                    : 'No modelo tudo ou nada, todo o valor arrecadado volta para os apoiadores.'}
+                </p>
+              </ModalConfirmacao>
             )}
           </SecaoFicha>
         ) : (

@@ -8,7 +8,7 @@ import {
   papelPermissaoApi,
   permissaoApi,
 } from '../../services/2-papel-permissao/api/papel-permissao.api';
-import { ORDEM_PODER_PAPEL } from '../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
+import { compararPorPoder, ordemDoFiltroPapel } from '../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
 import { detalhePermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis.constants';
 import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { MatrizPapelPermissao } from './matriz-papel-permissao';
@@ -39,6 +39,7 @@ const ORDEM_IMPACTO = ['alto', 'médio', 'baixo', IMPACTO_NAO_CLASSIFICADO];
 // aba própria no menu. Atribuir/revogar papel de um usuário mora na seção "Papéis" de Alterar Usuário
 // (modal-alterar-usuario.tsx, seção Papéis do Alterar Usuário: etiquetas + menu suspenso só com o que falta atribuir), não aqui.
 export function ListarPapeis({ auth }: PropsPagina) {
+  const [ordemPapel, setOrdemPapel] = useState<string[]>([]);
   const {
     alterando,
     consultando,
@@ -67,9 +68,13 @@ export function ListarPapeis({ auth }: PropsPagina) {
         papelApi.listar(auth.authFetch),
         papelPermissaoApi.listar(auth.authFetch),
       ]).then(([permissoes, papeis, vinculos]) => {
+        // Papéis em ordem de poder, na coluna e no filtro.
+        setOrdemPapel(ordemDoFiltroPapel(papeis));
+        const papelPorId = new Map(papeis.map((papel) => [papel.idPapel, papel]));
         const nomePapelPorId = new Map(papeis.map((papel) => [papel.idPapel, papel.nome]));
         const papeisPorPermissao = new Map<number, string[]>();
-        vinculos.forEach((vinculo) => {
+        const poder = (idPapel: number) => papelPorId.get(idPapel) ?? { ordemExibicao: Number.MAX_SAFE_INTEGER };
+        [...vinculos].sort((a, b) => compararPorPoder(poder(a.idPapel), poder(b.idPapel))).forEach((vinculo) => {
           const nomePapel = nomePapelPorId.get(vinculo.idPapel);
           if (!nomePapel) {
             return;
@@ -162,7 +167,7 @@ export function ListarPapeis({ auth }: PropsPagina) {
           // 2 facetas lado a lado (papel e impacto): funcionam de forma independente (marcar um papel não mexe
           // no impacto e vice-versa) e se combinam com E entre si (GenericTable já cuida disso sozinho).
           filtrosFacetados={[
-            { chave: 'papeis', rotulo: 'Papel', ordem: ORDEM_PODER_PAPEL },
+            { chave: 'papeis', rotulo: 'Papel', ordem: ordemPapel },
             { chave: 'impacto', rotulo: 'Impacto', ordem: ORDEM_IMPACTO },
           ]}
         />

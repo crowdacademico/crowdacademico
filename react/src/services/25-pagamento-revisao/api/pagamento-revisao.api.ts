@@ -3,6 +3,7 @@ import { paraQueryString } from '../../constant/api/query-string.util';
 import { TAMANHO_PAGINA_MAXIMO_API } from '../../constant/type/paginacao.type';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type {
+  AuditoriaFinanceiraResponse,
   FiltroRevisaoPagamento,
   ReembolsoManualResponse,
   RepasseAtencaoResponse,
@@ -39,12 +40,12 @@ export const pagamentoRevisaoApi = {
   resolverRevisao: (authFetch: AuthFetch, idEvento: number, observacao: string): Promise<void> =>
     authFetch(`${BASE}/revisoes/${idEvento}/resolver`, corpo({ observacao })).then(tratarResposta<void>),
 
-  // Contribuições em `reembolso_manual`: o estorno automático desistiu e uma pessoa devolve por fora do sistema.
+  // Contribuições em `reembolso_manual`: o estorno automático desistiu e uma pessoa devolve pelo painel do provedor.
   listarReembolsosManuais: (authFetch: AuthFetch): Promise<ReembolsoManualResponse[]> =>
     authFetch(`${BASE}/reembolsos-manuais${paraQueryString({ limite: TAMANHO_PAGINA_MAXIMO_API })}`)
       .then(tratarResposta<ReembolsoManualResponse[]>)
       .then(avisarSeTruncada('reembolsos manuais')),
-  // reembolso_manual -> devolvido, sempre com o valor inteiro da contribuição (em reais; o banco confere o status e o valor).
+  // reembolso_manual -> devolvido, sempre com o valor inteiro, só se o provedor mostrar a devolução (409 sem ela).
   concluirReembolsoManual: (authFetch: AuthFetch, idContribuicao: number, valor: number, observacao: string): Promise<void> =>
     authFetch(`${BASE}/reembolsos-manuais/${idContribuicao}/concluir`, corpo({ valor, observacao })).then(tratarResposta<void>),
 
@@ -56,7 +57,13 @@ export const pagamentoRevisaoApi = {
   // erro -> pendente, depois de a causa ter sido corrigida (só repasse em erro; 409 nos outros casos).
   reenfileirarRepasse: (authFetch: AuthFetch, idRepasse: number, observacao: string): Promise<void> =>
     authFetch(`${BASE}/repasses/${idRepasse}/reenfileirar`, corpo({ observacao })).then(tratarResposta<void>),
-  // erro -> concluido quando o dinheiro já chegou ao pesquisador (só repasse em erro; 409 nos outros casos).
+  // erro -> concluido só com a confirmação do provedor, consultado pelo Nest na hora (409 sem ela).
   marcarRepassePago: (authFetch: AuthFetch, idRepasse: number, observacao: string): Promise<void> =>
     authFetch(`${BASE}/repasses/${idRepasse}/marcar-pago`, corpo({ observacao })).then(tratarResposta<void>),
+
+  // Auditoria financeira, só leitura, a mais nova primeiro. Exige `auditoria_financeira_visualizar` (403 sem ela).
+  listarAuditoria: (authFetch: AuthFetch): Promise<AuditoriaFinanceiraResponse[]> =>
+    authFetch(`${BASE}/auditoria-financeira${paraQueryString({ limite: TAMANHO_PAGINA_MAXIMO_API })}`)
+      .then(tratarResposta<AuditoriaFinanceiraResponse[]>)
+      .then(avisarSeTruncada('auditoria financeira')),
 };

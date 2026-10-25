@@ -5,6 +5,7 @@ import { Breadcrumb } from './breadcrumb';
 import { Footer } from './footer';
 import { Header } from './header';
 import { LimiteErro } from './limite-erro';
+import { useAlturaTopoFixo, useTopoAoTrocarDePagina } from './use-posicao-da-tela';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
 interface LayoutProps {
@@ -39,6 +40,8 @@ function PularParaConteudo() {
 }
 
 export function Layout({ auth }: LayoutProps) {
+  useTopoAoTrocarDePagina();
+  useAlturaTopoFixo();
   return (
     <>
       <PularParaConteudo />

@@ -63,7 +63,7 @@ export function ListarRevisoesPagamento({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable
         titulo="Eventos de Pagamento"
-        ajuda="Todos os avisos do provedor de pagamento, do mais novo para o mais antigo. Processado: o sistema aplicou o aviso. Em revisão manual: o provedor diz que o dinheiro se moveu e o sistema não aplicou de propósito, então uma pessoa precisa decidir. Tentar de novo: erro passageiro; o sistema tenta de novo sozinho e, se o aviso continuar sem dono depois do prazo do parâmetro webhook_reprocessar_horas, ele passa para revisão manual. Revisão resolvida: uma pessoa já deu baixa.. O que ainda pede algo vem primeiro, o mais antigo no topo."
+        ajuda="Todos os avisos do provedor de pagamento, do mais novo para o mais antigo. Processado: o sistema aplicou o aviso. Em revisão manual: o provedor diz que o dinheiro se moveu e o sistema não aplicou de propósito, então uma pessoa precisa decidir. Tentar de novo: erro passageiro; o sistema tenta de novo sozinho e, se o aviso continuar sem dono depois do prazo do parâmetro webhook_reprocessar_horas, ele passa para revisão manual. Revisão resolvida: uma pessoa já deu baixa. O que ainda pede algo vem primeiro, o mais antigo no topo."
         colunas={[
           { chave: 'idEvento', rotulo: 'id', tipo: 'id' },
           { chave: 'motivoTexto', rotulo: 'erro de processamento', tipo: 'nome', umaLinha: true },

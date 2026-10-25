@@ -1,4 +1,8 @@
 import { IsString, MinLength } from 'class-validator';
+import {
+  MENSAGEM_SENHA_CURTA,
+  SENHA_MINIMO_CARACTERES,
+} from '../../../commons/seguranca/senha.constants';
 
 // Mesma regra de senha do cadastro (AuthRequestRegister).
 export class AuthRequestResetPassword {
@@ -7,6 +11,6 @@ export class AuthRequestResetPassword {
   token: string;
 
   @IsString()
-  @MinLength(8, { message: 'Senha precisa ter pelo menos 8 caracteres.' })
+  @MinLength(SENHA_MINIMO_CARACTERES, { message: MENSAGEM_SENHA_CURTA })
   senha: string;
 }

@@ -6,6 +6,10 @@ import {
   MinLength,
 } from 'class-validator';
 import { EmailNormalizado } from '../../../commons/validacao/transformacoes.decorator';
+import {
+  MENSAGEM_SENHA_CURTA,
+  SENHA_MINIMO_CARACTERES,
+} from '../../../commons/seguranca/senha.constants';
 
 export class UsuarioRequestCreate {
   @IsString()
@@ -23,7 +27,7 @@ export class UsuarioRequestCreate {
   // etc., que vivem em `configuracoes`) - por isso é uma constante aqui,
   // não uma consulta ao banco.
   @IsString()
-  @MinLength(8, { message: 'Senha precisa ter pelo menos 8 caracteres.' })
+  @MinLength(SENHA_MINIMO_CARACTERES, { message: MENSAGEM_SENHA_CURTA })
   senha: string;
 
   // Opcional, para permitir escolher a foto de perfil já na tela de criação (o upload acontece ANTES, via POST

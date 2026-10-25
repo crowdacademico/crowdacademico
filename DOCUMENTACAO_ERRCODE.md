@@ -1,12 +1,21 @@
 # ERRCODE customizado - `05_regras_negocio.sql`
 
-> 📌 **Numeração de RF:** os requisitos têm 125 RFs. Citações de RF por número neste documento foram escritas em datas diferentes e podem estar numa numeração anterior (a numeração mudou em 06-09, 21-09 e 29-09-2026). A `MATRIZ-RASTREABILIDADE-RF.md` está inteira na numeração vigente e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
+> 📌 **Numeração de RF:** citações de RF por número podem estar numa numeração anterior. A `MATRIZ-RASTREABILIDADE-RF.md` está inteira na numeração vigente e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
 
-Referência rápida dos `RAISE EXCEPTION` com ERRCODE customizado dos arquivos `arquivos_banco_dados/05_regras_negocio.sql` (e de `deslizar_datas_campanha`/`suspender_pesquisador`, quando aplicável). Nasceu com 42 códigos em 03-08-2026 e hoje tem 55, todos com `USING ERRCODE = '<código>'`. Antes desta mudança, todas caíam no SQLSTATE genérico do Postgres para qualquer `RAISE EXCEPTION` sem código explícito (`P0001`) - o que impedia o Nest de diferenciar "sem permissão" de "dado inválido" de "estado conflitante".
+Referência rápida dos códigos de erro próprios do banco. Toda recusa de regra nos arquivos `arquivos_banco_dados/03_funcoes_seguranca.sql` e `05_regras_negocio.sql` sai com `RAISE EXCEPTION ... USING ERRCODE = '<código>'`, nunca com o SQLSTATE genérico do Postgres (`P0001`): é o código que deixa o Nest diferenciar "sem permissão" de "dado inválido" de "estado conflitante".
 
-**Nada foi alterado além disso**: nenhuma mensagem, nenhuma lógica, nenhuma trigger foi tocada - só a cláusula `USING ERRCODE` foi adicionada ao final de cada `RAISE EXCEPTION`. O diff é puramente aditivo (conferido linha a linha).
+Este documento traz a tabela de códigos e o **contrato do corpo de erro da API** (seção no fim): o Nest devolve `codigo` (o SQLSTATE) junto de `statusCode` e `message`, ver `postgres-exception.filter.ts`. Para saber quantos códigos existem, conte pelas tabelas abaixo.
 
-Este documento traz a tabela de códigos e o **contrato do corpo de erro da API** (seção no fim): o Nest devolve `codigo` (o SQLSTATE) junto de `statusCode` e `message`, ver `postgres-exception.filter.ts`. A contagem de códigos não é citada aqui (hoje são 87: 90001 a 90025, 91001 a 91033, 92001 a 92027, 93001 e 93002); conte pelas tabelas abaixo.
+---
+
+## 📑 Índice
+
+1. [Esquema de faixas](#esquema-de-faixas)
+2. [90xxx - Validação de dado/negócio (400)](#90xxx---validação-de-dadonegócio-400)
+3. [91xxx - Conflito de estado/regra de negócio (409)](#91xxx---conflito-de-estadoregra-de-negócio-409)
+4. [92xxx - Autorização negada / conflito de interesse (403)](#92xxx---autorização-negada--conflito-de-interesse-403)
+5. [93xxx - Limite de taxa (429)](#93xxx---limite-de-taxa-429)
+6. [Contrato do corpo de erro da API](#contrato-do-corpo-de-erro-da-api)
 
 ---
 
@@ -33,7 +42,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90004 | `fn_valida_area_conhecimento_nivel2` | `campanha` | Área de conhecimento precisa ser nível 2 (não a grande área raiz) |
 | 90005 | `trg_valida_tipo_motivo_denuncia` | `denuncia` | Motivo selecionado não é válido para denúncia de campanha |
 | 90006 | `trg_valida_tipo_motivo_denuncia` | `denuncia` | Motivo selecionado não é válido para denúncia de perfil |
-| 90007 | `validar_contribuicao_all_or_nothing` | `contribuicao` | Meio de pagamento não aceito: campanha all-or-nothing só aceita PIX, e quem contribui sem conta só usa PIX em qualquer modelo (24-10-2026) |
+| 90007 | `validar_contribuicao_all_or_nothing` | `contribuicao` | Meio de pagamento não aceito: campanha all-or-nothing só aceita PIX, e quem contribui sem conta só usa PIX em qualquer modelo |
 | 90008 | `fn_valida_data_marco_cronograma` | `marco_cronograma` | Data do marco anterior à data de início da campanha |
 | 90009 | `fn_valida_completude_campanha` | `campanha` | Faltam itens de orçamento mínimos para aprovar |
 | 90010 | `fn_valida_completude_campanha` | `campanha` | Faltam marcos de cronograma mínimos para aprovar |
@@ -41,31 +50,31 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90012 | `fn_valida_prazo_campanha_negocio` | `campanha` | Duração da campanha fora do intervalo mín/máx configurado |
 | 90013 | `fn_valida_meta_campanha_negocio` | `campanha` | Meta financeira abaixo do mínimo configurado |
 | 90014 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | Valor da contribuição abaixo do mínimo configurado |
-| 90015 | `fn_valida_completude_campanha` | `campanha` | Prazo da campanha já vencido no envio/aprovação (20-09-2026) - atualize as datas antes de enviar |
-| 90016 | `deslizar_datas_campanha` | `campanha` | Campanha sem data de início não pode ter as datas reagendadas (21-09-2026) |
-| 90017 | `fn_valida_soma_pesos_score_config` | `score_config` | Soma dos pesos das dimensões ativas precisa ser exatamente 100 (23-09-2026; mensagem nova em 03-10-2026) |
-| 90018 | `fn_valida_cobertura_score_rotulo` | `score_rotulo` | Faixas ativas precisam cobrir 0-100 sem buraco nem sobreposição (23-09-2026) |
+| 90015 | `fn_valida_completude_campanha` | `campanha` | Prazo da campanha já vencido no envio/aprovação - atualize as datas antes de enviar |
+| 90016 | `deslizar_datas_campanha` | `campanha` | Campanha sem data de início não pode ter as datas reagendadas |
+| 90017 | `fn_valida_soma_pesos_score_config` | `score_config` | Soma dos pesos das dimensões ativas precisa ser exatamente 100 |
+| 90018 | `fn_valida_cobertura_score_rotulo` | `score_rotulo` | Faixas ativas precisam cobrir 0-100 sem buraco nem sobreposição |
 | 90019 | `fn_valida_pares_min_max_configuracoes` | `configuracoes` | O mínimo de um par (prazo, orçamento, cronograma, tamanho de arquivo) não pode ser maior que o máximo (constraint trigger, roda no `COMMIT`). Leva `dados` no corpo: `chaveMinimo`, `valorMinimo`, `chaveMaximo`, `valorMaximo` |
-| 90020 | `suspender_usuario` / `suspender_pesquisador` | `usuario` / `perfil_pesquisador` | Motivo da suspensão é obrigatório (27-09-2026) |
-| 90021 | `criar_campanha_para_outro` | `campanha` | O usuário escolhido não é um pesquisador ativo (27-09-2026) |
-| 90022 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_anexo` | `usuario` / `arquivo_atualizacao`, `arquivo_recompensa` | O arquivo escolhido (foto ou anexo) não existe mais ou foi removido (28 e 29-09-2026) |
-| 90023 | `suspender_usuario` / `suspender_papel_usuario` / `suspender_pesquisador` | `usuario` / `usuario_papel` / `perfil_pesquisador` | A data final da suspensão precisa estar no futuro (29-09-2026) |
-| 90024 | `trg_valida_escopo_tipolink` | `link_academico` / `link_atualizacao` / `link_recompensa` | O endereço do link não é de nenhum dos domínios do tipo (ex.: Lattes fora de lattes.cnpq.br), RF-022 (29-09-2026) |
-| 90025 | `trg_valida_escopo_tipolink` | `link_academico` / `link_atualizacao` / `link_recompensa` | O link não segue o formato (`regex`) do tipo (29-09-2026) |
-| 90026 | `fn_valida_denuncia_alvo` | `denuncia` | O perfil denunciado não é de um pesquisador (03-10-2026) |
-| 90027 | `encerrar_campanha_por_denuncia` | `denuncia`, `campanha` | Justificativa obrigatória para encerrar campanha por moderação (03-10-2026) |
-| 90028 | `fn_valida_solicitacao_encerramento`, `encerrar_campanha_sem_contribuicao` | `solicitacao_encerramento` | Justificativa obrigatória para encerrar a campanha antes do prazo (03-10-2026) |
-| 90029 | `decidir_solicitacao_encerramento` | `solicitacao_encerramento` | Justificativa obrigatória para rejeitar um pedido de encerramento (03-10-2026) |
-| 90030 | `fn_valida_soma_pesos_score_config` | `score_config` | Peso não pode ser negativo (03-10-2026) |
-| 90031 | `fn_valida_soma_pesos_score_config` | `score_config` | Dimensão ativa precisa de pelo menos um item ativo com peso maior que zero (03-10-2026) |
-| 90032 | `contestar_denuncia` | `denuncia` | Contestação sem texto (03-10-2026) |
-| 90033 | `decidir_contestacao` | `denuncia` | Decidir contestação sem justificativa (03-10-2026) |
-| 90034 | `resolver_revisao_pagamento`, `concluir_reembolso_manual`, `reenfileirar_repasse`, `marcar_repasse_pago` | `evento_pagamento`, `contribuicao`, `repasse` | Toda ação manual sobre pagamento exige uma observação escrita do que foi feito (17-10-2026) |
-| 90035 | `listar_revisoes_pagamento`, `concluir_reembolso_manual` | `evento_pagamento`, `contribuicao` | Filtro de situação inválido, ou valor devolvido à mão diferente do valor inteiro da contribuição (21-10-2026) |
-| 90036 | `ajustar_tarifa_pagamento` | `contribuicao` | Tarifa real informada pelo provedor fora do esperado (negativa ou absurda): o ajuste automático não é feito (17-10-2026) |
-| 90037 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | No cartão, a contribuição está abaixo do mínimo (`valor_minimo_contribuicao_cartao`) (17-10-2026) |
-| 90038 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | No cartão, a contribuição está acima do máximo (`valor_maximo_contribuicao_cartao`): para mais, o Pix (17-10-2026) |
-| 90039 | `reenviar_notificacao`, `cancelar_notificacao` | `notificacao` | E-mail não encontrado (19-10-2026) |
+| 90020 | `suspender_usuario` / `suspender_pesquisador` | `usuario` / `perfil_pesquisador` | Motivo da suspensão é obrigatório |
+| 90021 | `criar_campanha_para_outro` | `campanha` | O usuário escolhido não é um pesquisador ativo |
+| 90022 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_anexo` | `usuario` / `arquivo_atualizacao`, `arquivo_recompensa` | O arquivo escolhido (foto ou anexo) não existe mais ou foi removido |
+| 90023 | `suspender_usuario` / `suspender_papel_usuario` / `suspender_pesquisador` | `usuario` / `usuario_papel` / `perfil_pesquisador` | A data final da suspensão precisa estar no futuro |
+| 90024 | `trg_valida_escopo_tipolink` | `link_academico` / `link_atualizacao` / `link_recompensa` | O endereço do link não é de nenhum dos domínios do tipo (ex.: Lattes fora de lattes.cnpq.br), RF-022 |
+| 90025 | `trg_valida_escopo_tipolink` | `link_academico` / `link_atualizacao` / `link_recompensa` | O link não segue o formato (`regex`) do tipo |
+| 90026 | `fn_valida_denuncia_alvo` | `denuncia` | O perfil denunciado não é de um pesquisador |
+| 90027 | `encerrar_campanha_por_denuncia` | `denuncia`, `campanha` | Justificativa obrigatória para encerrar campanha por moderação |
+| 90028 | `fn_valida_solicitacao_encerramento`, `encerrar_campanha_sem_contribuicao` | `solicitacao_encerramento` | Justificativa obrigatória para encerrar a campanha antes do prazo |
+| 90029 | `decidir_solicitacao_encerramento` | `solicitacao_encerramento` | Justificativa obrigatória para rejeitar um pedido de encerramento |
+| 90030 | `fn_valida_soma_pesos_score_config` | `score_config` | Peso não pode ser negativo |
+| 90031 | `fn_valida_soma_pesos_score_config` | `score_config` | Dimensão ativa precisa de pelo menos um item ativo com peso maior que zero |
+| 90032 | `contestar_denuncia` | `denuncia` | Contestação sem texto |
+| 90033 | `decidir_contestacao` | `denuncia` | Decidir contestação sem justificativa |
+| 90034 | `resolver_revisao_pagamento`, `concluir_reembolso_manual`, `reenfileirar_repasse`, `marcar_repasse_pago` | `evento_pagamento`, `contribuicao`, `repasse` | Toda ação manual sobre pagamento exige uma observação escrita do que foi feito |
+| 90035 | `listar_revisoes_pagamento`, `concluir_reembolso_manual` | `evento_pagamento`, `contribuicao` | Filtro de situação inválido, ou valor devolvido à mão diferente do valor inteiro da contribuição |
+| 90036 | `ajustar_tarifa_pagamento` | `contribuicao` | Tarifa real informada pelo provedor fora do esperado (negativa ou absurda): o ajuste automático não é feito |
+| 90037 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | No cartão, a contribuição está abaixo do mínimo (`valor_minimo_contribuicao_cartao`) |
+| 90038 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | No cartão, a contribuição está acima do máximo (`valor_maximo_contribuicao_cartao`): para mais, o Pix |
+| 90039 | `reenviar_notificacao`, `cancelar_notificacao` | `notificacao` | E-mail não encontrado |
 
 ## 91xxx - Conflito de estado/regra de negócio (409)
 
@@ -88,41 +97,41 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91015 | `fn_valida_contribuicao_campanha_ativa` | `contribuicao` | Campanha não está ativa no momento |
 | 91016 | `fn_valida_contribuicao_campanha_ativa` | `contribuicao` | Campanha ainda não começou ("Em breve") |
 | 91017 | `fn_valida_contribuicao_campanha_ativa` | `contribuicao` | Prazo da campanha já encerrado |
-| 91018 | `validar_limite_campanhas_pesquisador` | `campanha` | Limite de campanhas em andamento (ativas ou aguardando aprovação) atingido. Desde 21-09-2026 aparece no ENVIO para aprovação, não na criação: rascunho não conta |
+| 91018 | `validar_limite_campanhas_pesquisador` | `campanha` | Limite de campanhas em andamento (ativas ou aguardando aprovação) atingido. Aparece no ENVIO para aprovação, não na criação: rascunho não conta |
 | 91019 | `validar_atualizacao_campanha` | `atualizacao_campanha` | Atualização só permitida em campanhas ativas/sucesso/não atingidas |
 | 91020 | `fn_valida_comentario_campanha_ativa` | `comentario` | Não é possível comentar em campanha rejeitada/sob moderação |
 | 91021 | `validar_comentario_endosso` | `comentario` | Limite de endossos ativos atingido |
 | 91022 | `validar_comentario_edicao_conteudo` | `comentario` | Não é possível editar um comentário já endossado (RF-091) - remova o endosso antes |
-| 91023 | `fn_congela_regras_campanha` | `campanha` | Vídeo de apresentação não pode ser alterado após a aprovação (20-09-2026) |
-| 91024 | `fn_congela_regras_campanha` | `campanha` | Área do conhecimento não pode ser alterada após a aprovação (20-09-2026) |
+| 91023 | `fn_congela_regras_campanha` | `campanha` | Vídeo de apresentação não pode ser alterado após a aprovação |
+| 91024 | `fn_congela_regras_campanha` | `campanha` | Área do conhecimento não pode ser alterada após a aprovação |
 | 91025 | `fn_valida_transicao_campanha` | `campanha` | Campanha rejeitada já usou todos os reenvios permitidos e não pode ser reenviada, para qualquer perfil, inclusive quem tem `campanha_editar`  |
-| 91026 | `fn_valida_transicao_campanha` | `campanha` | Prazo para reenviar a campanha rejeitada já venceu (21-09-2026) |
-| 91027 | `fn_congela_regras_campanha` / `fn_congela_orcamento_campanha` / `fn_congela_marco_cronograma` | `campanha` / `orcamento_campanha` / `marco_cronograma` | Campanha rejeitada sem reenvios restantes é somente leitura (21-09-2026) |
+| 91026 | `fn_valida_transicao_campanha` | `campanha` | Prazo para reenviar a campanha rejeitada já venceu |
+| 91027 | `fn_congela_regras_campanha` / `fn_congela_orcamento_campanha` / `fn_congela_marco_cronograma` | `campanha` / `orcamento_campanha` / `marco_cronograma` | Campanha rejeitada sem reenvios restantes é somente leitura |
 | 91028 | `fn_exige_historico_rejeicao` | `campanha` | Rejeição sem registro em `historico_rejeicao` na mesma transação (constraint trigger, roda no `COMMIT`) |
-| 91029 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_anexo` | `usuario` / `arquivo_atualizacao`, `arquivo_recompensa` | O arquivo escolhido (foto ou anexo) já está em uso em outro lugar (28 e 29-09-2026) |
-| 91030 | `suspender_usuario` / `suspender_papel_usuario` / `excluir_conta_usuario` / `fn_protege_ultimo_admin` | `usuario` / `usuario_papel` | Não é possível suspender, excluir ou tirar o papel do último administrador ativo do sistema (29-09-2026) |
-| 91031 | `excluir_conta_usuario` | `usuario` | Não é possível excluir a conta enquanto houver campanha ativa (29-09-2026) |
-| 91032 | `fn_protege_termo_aceito` | `termos_de_uso` | Versão do Termo já aceita não pode ser excluída, RF-091 (29-09-2026) |
-| 91033 | `fn_protege_termo_aceito` | `termos_de_uso` | Versão do Termo já aceita não pode ter texto, tipo ou versão alterados, RF-091 (29-09-2026) |
-| 91034 | `fn_valida_seguir_campanha_publicada` | `seguir_campanha` | Só é possível seguir uma campanha publicada (03-10-2026) |
-| 91035 | `fn_valida_denuncia_alvo` | `denuncia` | Só é possível denunciar uma campanha ativa (RF-106, 03-10-2026) |
-| 91036 | `encerrar_campanha_por_denuncia` | `denuncia` | A denúncia não é contra uma campanha (03-10-2026) |
-| 91037 | `encerrar_campanha_por_denuncia` | `campanha` | Só campanha ativa pode ser encerrada por moderação (03-10-2026) |
-| 91038 | `fn_valida_solicitacao_encerramento`, `encerrar_campanha_sem_contribuicao` | `solicitacao_encerramento` | Só campanha ativa pode ser encerrada antecipadamente (RF-064, 03-10-2026) |
-| 91039 | `fn_valida_transicao_status_repasse`, `aplicar_evento_repasse` | `repasse` | Mudança de situação do repasse fora da máquina de estados (ex.: mexer num repasse já concluído) (17-10-2026) |
-| 91041 | `fn_valida_transicao_solicitacao`, `decidir_solicitacao_encerramento` | `solicitacao_encerramento` | Só um pedido pendente muda de situação (03-10-2026) |
-| 91042 | `decidir_solicitacao_encerramento` | `campanha` | A campanha já não está ativa: o pedido não pode ser aprovado (03-10-2026) |
-| 91043 | `encerrar_campanha_sem_contribuicao` | `contribuicao` | Há contribuição pendente ou confirmada: com dinheiro em jogo, o encerramento é só por pedido ao administrador (24-10-2026) |
-| 91044 | `contestar_denuncia` | `denuncia` | Só denúncia julgada procedente se contesta (03-10-2026) |
-| 91045 | `contestar_denuncia` | `denuncia` | Denúncia já contestada: uma contestação por denúncia (03-10-2026) |
-| 91046 | `contestar_denuncia` | `denuncia` | O pesquisador já tem uma contestação esperando análise (03-10-2026) |
-| 91047 | `decidir_contestacao` | `denuncia` | Só contestação esperando análise se decide (03-10-2026) |
-| 91048 | `fn_valida_contestacao_pendente` | `denuncia` | Com contestação esperando, a situação da denúncia só muda pela decisão dela (03-10-2026) |
-| 91049 | `resolver_revisao_pagamento`, `concluir_reembolso_manual`, `reenfileirar_repasse`, `marcar_repasse_pago` | `evento_pagamento`, `contribuicao`, `repasse` | A ação manual só vale para o item na situação certa: evento ainda não processado, contribuição em reembolso manual, repasse em erro (21-10-2026) |
-| 91050 | `fn_valida_transicao_status_contribuicao` | `contribuicao` | Mudança de situação da contribuição fora da máquina de estados (ex.: sair de "devolvido") (17-10-2026) |
-| 91052 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | Pagamento com cartão desligado pelo administrador (`cartao_habilitado`) (17-10-2026) |
-| 91053 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | Pagamento com boleto desligado (`boleto_habilitado`, desligado por padrão) (18-10-2026) |
-| 91054 | `reenviar_notificacao`, `cancelar_notificacao` | `notificacao` | Só um e-mail que falhou pode ser reenviado; só um na fila ou que falhou pode ser cancelado (19-10-2026) |
+| 91029 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_anexo` | `usuario` / `arquivo_atualizacao`, `arquivo_recompensa` | O arquivo escolhido (foto ou anexo) já está em uso em outro lugar |
+| 91030 | `suspender_usuario` / `suspender_papel_usuario` / `excluir_conta_usuario` / `fn_protege_ultimo_admin` | `usuario` / `usuario_papel` | Não é possível suspender, excluir ou tirar o papel do último administrador ativo do sistema |
+| 91031 | `excluir_conta_usuario` | `usuario` | Não é possível excluir a conta enquanto houver campanha ativa |
+| 91032 | `fn_protege_termo_aceito` | `termos_de_uso` | Versão do Termo já aceita não pode ser excluída, RF-091 |
+| 91033 | `fn_protege_termo_aceito` | `termos_de_uso` | Versão do Termo já aceita não pode ter texto, tipo ou versão alterados, RF-091 |
+| 91034 | `fn_valida_seguir_campanha_publicada` | `seguir_campanha` | Só é possível seguir uma campanha publicada |
+| 91035 | `fn_valida_denuncia_alvo` | `denuncia` | Só é possível denunciar uma campanha ativa (RF-106) |
+| 91036 | `encerrar_campanha_por_denuncia` | `denuncia` | A denúncia não é contra uma campanha |
+| 91037 | `encerrar_campanha_por_denuncia` | `campanha` | Só campanha ativa pode ser encerrada por moderação |
+| 91038 | `fn_valida_solicitacao_encerramento`, `encerrar_campanha_sem_contribuicao` | `solicitacao_encerramento` | Só campanha ativa pode ser encerrada antecipadamente (RF-064) |
+| 91039 | `fn_valida_transicao_status_repasse`, `aplicar_evento_repasse` | `repasse` | Mudança de situação do repasse fora da máquina de estados (ex.: mexer num repasse já concluído) |
+| 91041 | `fn_valida_transicao_solicitacao`, `decidir_solicitacao_encerramento` | `solicitacao_encerramento` | Só um pedido pendente muda de situação |
+| 91042 | `decidir_solicitacao_encerramento` | `campanha` | A campanha já não está ativa: o pedido não pode ser aprovado |
+| 91043 | `encerrar_campanha_sem_contribuicao` | `contribuicao` | Há contribuição pendente ou confirmada: com dinheiro em jogo, o encerramento é só por pedido ao administrador |
+| 91044 | `contestar_denuncia` | `denuncia` | Só denúncia julgada procedente se contesta |
+| 91045 | `contestar_denuncia` | `denuncia` | Denúncia já contestada: uma contestação por denúncia |
+| 91046 | `contestar_denuncia` | `denuncia` | O pesquisador já tem uma contestação esperando análise |
+| 91047 | `decidir_contestacao` | `denuncia` | Só contestação esperando análise se decide |
+| 91048 | `fn_valida_contestacao_pendente` | `denuncia` | Com contestação esperando, a situação da denúncia só muda pela decisão dela |
+| 91049 | `resolver_revisao_pagamento`, `concluir_reembolso_manual`, `reenfileirar_repasse`, `marcar_repasse_pago` | `evento_pagamento`, `contribuicao`, `repasse` | A ação manual só vale para o item na situação certa: evento ainda não processado, contribuição em reembolso manual, repasse em erro |
+| 91050 | `fn_valida_transicao_status_contribuicao` | `contribuicao` | Mudança de situação da contribuição fora da máquina de estados (ex.: sair de "devolvido") |
+| 91052 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | Pagamento com cartão desligado pelo administrador (`cartao_habilitado`) |
+| 91053 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | Pagamento com boleto desligado (`boleto_habilitado`, desligado por padrão) |
+| 91054 | `reenviar_notificacao`, `cancelar_notificacao` | `notificacao` | Só um e-mail que falhou pode ser reenviado; só um na fila ou que falhou pode ser cancelado |
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
 
@@ -136,49 +145,49 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92006 | `fn_valida_denuncia_sem_autojulgamento` | `denuncia` | Quem registrou a denúncia não pode julgar a própria denúncia |
 | 92007 | `validar_comentario_edicao_conteudo` | `comentario` | Só o autor do comentário pode editar o próprio texto (RF-091) |
 | 92008 | `validar_comentario_endosso_autor` | `comentario` | Só o dono da campanha (ou moderação) pode endossar/remover endosso (RF-089) |
-| 92009 | `fn_valida_transicao_campanha` | `campanha` | Pesquisador suspenso não pode enviar nem reenviar campanha para aprovação (21-09-2026) |
-| 92010 | `deslizar_datas_campanha` | `campanha` | Só o dono (ou quem tem `campanha_editar`) reagenda datas de campanha em rascunho ou rejeitada (21-09-2026) |
-| 92011 | `contar_metricas_dashboard` | `dashboard` (várias tabelas) | Só quem tem `relatorio_visualizar` recebe as métricas do painel (25-09-2026) |
-| 92012 | `liberar_bloqueio_login` | `usuario` | Sem permissão para desbloquear login (27-09-2026) |
-| 92013 | `excluir_conta_usuario` | `usuario` | Sem permissão para excluir a conta de outro usuário (27-09-2026) |
-| 92014 | `suspender_pesquisador` | `perfil_pesquisador` | Sem permissão para suspender pesquisador (27-09-2026) |
-| 92015 | `reativar_pesquisador` | `perfil_pesquisador` | Sem permissão para reativar pesquisador (27-09-2026) |
-| 92016 | `corrigir_cpf_pesquisador` | `perfil_pesquisador` | Sem permissão para corrigir CPF de pesquisador (27-09-2026) |
-| 92017 | `criar_perfil_pesquisador_para_outro` | `perfil_pesquisador` | Sem permissão para criar perfil de pesquisador em nome de outro usuário (27-09-2026) |
-| 92018 | `criar_campanha_para_outro` | `campanha` | Sem permissão para criar campanha em nome de outro pesquisador (27-09-2026) |
-| 92019 | `forcar_exclusao_campanha` | `campanha` | Sem permissão para excluir campanha à força (27-09-2026) |
-| 92020 | `suspender_usuario` | `usuario` | Sem permissão para suspender usuário (27-09-2026) |
-| 92021 | `revogar_suspensao_usuario` | `usuario` | Sem permissão para revogar suspensão de usuário (27-09-2026) |
-| 92022 | `suspender_papel_usuario` | `usuario_papel` | Sem permissão para suspender papel de usuário (27-09-2026) |
-| 92023 | `revogar_suspensao_papel_usuario` | `usuario_papel` | Sem permissão para revogar suspensão de papel de usuário (27-09-2026) |
-| 92024 | `alterar_perfil_pesquisador_de_outro` | `perfil_pesquisador` | Sem permissão para alterar perfil de pesquisador de outro usuário (27-09-2026) |
-| 92025 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_anexo` | `usuario` / `arquivo_atualizacao`, `arquivo_recompensa` | Só é possível usar como foto ou anexar um arquivo que você mesmo enviou (28 e 29-09-2026) |
-| 92026 | `trg_valida_escopo_tipolink` | `link_academico` | Só pesquisador tem links acadêmicos (29-09-2026) |
-| 92027 | `suspender_usuario` | `usuario` | Ninguém suspende a própria conta (29-09-2026) |
-| 92029 | `fn_valida_denuncia_alvo` | `denuncia` | Não é possível denunciar a própria campanha nem o próprio perfil (03-10-2026) |
-| 92030 | `encerrar_campanha_por_denuncia` | `denuncia`, `campanha` | Sem permissão para julgar a denúncia e encerrar a campanha por moderação (03-10-2026) |
-| 92031 | `encerrar_campanha_sem_contribuicao` | `campanha` | Só o dono da campanha pode encerrá-la antecipadamente (03-10-2026) |
-| 92032 | `decidir_solicitacao_encerramento` | `solicitacao_encerramento` | Sem permissão para decidir pedidos de encerramento (03-10-2026) |
-| 92033 | `fn_valida_transicao_solicitacao` | `solicitacao_encerramento` | Aprovar ou rejeitar só pela decisão do administrador, nunca por mudança direta de status (03-10-2026) |
-| 92034 | `contestar_denuncia` | `denuncia` | Só o pesquisador penalizado pela denúncia a contesta (03-10-2026) |
-| 92035 | `decidir_contestacao` | `denuncia` | Sem permissão (`denuncia_responder`) para decidir contestação (03-10-2026) |
-| 92036 | `decidir_contestacao` | `denuncia` | Quem julgou a denúncia não decide a contestação contra a própria decisão (10-10-2026) |
-| 92037 | `listar_revisoes_pagamento`, `resolver_revisao_pagamento`, `listar_reembolsos_manuais`, `concluir_reembolso_manual`, `listar_repasses_atencao`, `reenfileirar_repasse`, `marcar_repasse_pago` | `evento_pagamento`, `contribuicao`, `repasse` | Sem permissão para ver ou resolver as pendências de pagamento (17-10-2026) |
-| 92038 | `resumo_contribuicoes_campanha` | `contribuicao` | Só o dono da campanha ou quem tem `contribuicao_visualizar_sensivel` vê o resumo das contribuições dela (18-10-2026) |
-| 92039 | `reenviar_notificacao`, `cancelar_notificacao` | `notificacao` | Sem permissão (`notificacao_processar`) para reenviar ou cancelar e-mails (19-10-2026) |
+| 92009 | `fn_valida_transicao_campanha` | `campanha` | Pesquisador suspenso não pode enviar nem reenviar campanha para aprovação |
+| 92010 | `deslizar_datas_campanha` | `campanha` | Só o dono (ou quem tem `campanha_editar`) reagenda datas de campanha em rascunho ou rejeitada |
+| 92011 | `contar_metricas_dashboard` | `dashboard` (várias tabelas) | Só quem tem `relatorio_visualizar` recebe as métricas do painel |
+| 92012 | `liberar_bloqueio_login` | `usuario` | Sem permissão para desbloquear login |
+| 92013 | `excluir_conta_usuario` | `usuario` | Sem permissão para excluir a conta de outro usuário |
+| 92014 | `suspender_pesquisador` | `perfil_pesquisador` | Sem permissão para suspender pesquisador |
+| 92015 | `reativar_pesquisador` | `perfil_pesquisador` | Sem permissão para reativar pesquisador |
+| 92016 | `corrigir_cpf_pesquisador` | `perfil_pesquisador` | Sem permissão para corrigir CPF de pesquisador |
+| 92017 | `criar_perfil_pesquisador_para_outro` | `perfil_pesquisador` | Sem permissão para criar perfil de pesquisador em nome de outro usuário |
+| 92018 | `criar_campanha_para_outro` | `campanha` | Sem permissão para criar campanha em nome de outro pesquisador |
+| 92019 | `forcar_exclusao_campanha` | `campanha` | Sem permissão para excluir campanha à força |
+| 92020 | `suspender_usuario` | `usuario` | Sem permissão para suspender usuário |
+| 92021 | `revogar_suspensao_usuario` | `usuario` | Sem permissão para revogar suspensão de usuário |
+| 92022 | `suspender_papel_usuario` | `usuario_papel` | Sem permissão para suspender papel de usuário |
+| 92023 | `revogar_suspensao_papel_usuario` | `usuario_papel` | Sem permissão para revogar suspensão de papel de usuário |
+| 92024 | `alterar_perfil_pesquisador_de_outro` | `perfil_pesquisador` | Sem permissão para alterar perfil de pesquisador de outro usuário |
+| 92025 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_anexo` | `usuario` / `arquivo_atualizacao`, `arquivo_recompensa` | Só é possível usar como foto ou anexar um arquivo que você mesmo enviou |
+| 92026 | `trg_valida_escopo_tipolink` | `link_academico` | Só pesquisador tem links acadêmicos |
+| 92027 | `suspender_usuario` | `usuario` | Ninguém suspende a própria conta |
+| 92029 | `fn_valida_denuncia_alvo` | `denuncia` | Não é possível denunciar a própria campanha nem o próprio perfil |
+| 92030 | `encerrar_campanha_por_denuncia` | `denuncia`, `campanha` | Sem permissão para julgar a denúncia e encerrar a campanha por moderação |
+| 92031 | `encerrar_campanha_sem_contribuicao` | `campanha` | Só o dono da campanha pode encerrá-la antecipadamente |
+| 92032 | `decidir_solicitacao_encerramento` | `solicitacao_encerramento` | Sem permissão para decidir pedidos de encerramento |
+| 92033 | `fn_valida_transicao_solicitacao` | `solicitacao_encerramento` | Aprovar ou rejeitar só pela decisão do administrador, nunca por mudança direta de status |
+| 92034 | `contestar_denuncia` | `denuncia` | Só o pesquisador penalizado pela denúncia a contesta |
+| 92035 | `decidir_contestacao` | `denuncia` | Sem permissão (`denuncia_responder`) para decidir contestação |
+| 92036 | `decidir_contestacao` | `denuncia` | Quem julgou a denúncia não decide a contestação contra a própria decisão |
+| 92037 | `listar_revisoes_pagamento`, `resolver_revisao_pagamento`, `listar_reembolsos_manuais`, `concluir_reembolso_manual`, `listar_repasses_atencao`, `reenfileirar_repasse`, `marcar_repasse_pago` | `evento_pagamento`, `contribuicao`, `repasse` | Sem permissão para ver ou resolver as pendências de pagamento |
+| 92038 | `resumo_contribuicoes_campanha` | `contribuicao` | Só o dono da campanha ou quem tem `contribuicao_visualizar_sensivel` vê o resumo das contribuições dela |
+| 92039 | `reenviar_notificacao`, `cancelar_notificacao` | `notificacao` | Sem permissão (`notificacao_processar`) para reenviar ou cancelar e-mails |
 
 ## 93xxx - Limite de taxa (429)
 
 | Código | Função | Tabela | Mensagem |
 |---|---|---|---|
 | 93001 | `validar_denuncia_frequencia` | `denuncia` | Limite de denúncias nas últimas 24h atingido |
-| 93002 | `validar_comentario_frequencia` | `comentario` | Limite de comentários na última hora atingido (12-09-2026) |
+| 93002 | `validar_comentario_frequencia` | `comentario` | Limite de comentários na última hora atingido |
 
 ---
 
 ## Contrato do corpo de erro da API
 
-Antes o corpo de uma recusa do banco trazia só `statusCode` e `message`, e o front só conseguia distinguir uma regra pelo **texto** da mensagem (qualquer ajuste de redação quebraria a distinção). Agora `postgres-exception.filter.ts` devolve também o código:
+O corpo de uma recusa do banco traz o código junto da mensagem, para o front distinguir uma regra pelo **código**, e não pelo texto (um ajuste de redação não quebra nada). Quem monta é `postgres-exception.filter.ts`:
 
 ```json
 {
@@ -189,20 +198,13 @@ Antes o corpo de uma recusa do banco trazia só `statusCode` e `message`, e o fr
 }
 ```
 
-* `statusCode` e `message` **continuam exatamente como antes** (nada no React quebra).
+* `statusCode` e `message` têm o formato padrão do Nest.
 * `codigo` é o SQLSTATE do erro: `9xxxx` (regra de negócio, tabelas acima) ou os nativos que o filtro traduz (`23505`, `23503`, `23502`, `23514`, `42501`, `P0001`).
-* `dados` é **opcional** e só aparece se o `RAISE` mandou um `DETAIL` em JSON (`RAISE EXCEPTION '...' USING ERRCODE = '91018', DETAIL = json_build_object('limite', v_limite)::text`). Nenhum `RAISE` manda ainda; o gancho está pronto para os códigos que citam um limite (90003, 90009 a 90014, 91012, 91014, 91018, 91021, 93001, 93002).
+* `dados` é **opcional** e só aparece se o `RAISE` mandou um `DETAIL` em JSON (`RAISE EXCEPTION '...' USING ERRCODE = '90019', DETAIL = json_build_object(...)::text`), como o 90019 faz.
 * O **nome da constraint violada não vai no corpo** (é detalhe interno).
 * Erros que não são de Postgres continuam como o Nest já devolve (sem `codigo`).
 
-O front pode, aos poucos, montar texto próprio a partir do código (`MENSAGENS_ERRO[codigo]`), usando a mensagem do banco como reserva. Isso também resolve as mensagens que citam nome interno de chave de configuração.
+No Nest, um `catch` que precise decidir algo lê `erro.code` (pelo prefixo `90`, `91`, `92` ou `93`), nunca captura tudo como se fosse um único tipo de recusa.
 
 Observações: **91028** é a rejeição sem registro em `historico_rejeicao` (ver `[05-K-2-C]` em `DOCUMENTACAO_BD.md`); a mensagem do **92001** mostra `origem -> destino`; a do **90003** não cita o nome da chave de configuração.
 
----
-
-## Sobre o caso que motivou isso: `usuario.service.remove.ts`
-
-`excluir_conta_usuario()` (em `03_funcoes_seguranca.sql`, **fora do escopo desta mudança** - esse arquivo não faz parte dos 40/42 apontados) ainda lança seu `RAISE EXCEPTION` de permissão sem ERRCODE customizado. Hoje ela só faz um `UPDATE` direto em `usuario`, e nenhuma trigger de `05_regras_negocio.sql` está ligada à tabela `usuario` - então, no estado atual do banco, o catch genérico do `remove.ts` não tem como pegar um erro de validação por engano.
-
-Ainda assim, vale avisar seu colega: se algum dia uma trigger de `05_regras_negocio.sql` passar a existir em `usuario`, o `catch (erro) => ForbiddenException` do `remove.ts` voltaria a ficar impreciso, exatamente como ele descreveu - a essa altura, dá pra aplicar o mesmo padrão de `ERRCODE` também em `excluir_conta_usuario()` e trocar o catch por uma leitura de `erro.code` (por prefixo `90`/`91`/`92`/`93`), do mesmo jeito que este documento propõe para as regras de `05`.

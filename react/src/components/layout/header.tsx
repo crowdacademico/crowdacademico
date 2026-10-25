@@ -23,7 +23,7 @@ export function Header({ auth }: HeaderProps) {
   return (
     // `relative`: âncora para o DevLoginRapido absoluto lá embaixo, fora do fluxo do grupo da direita de
     // propósito (ver comentário completo perto dele).
-    <header className="fundo-cartao border-b borda-padrao sticky top-0 z-50 shadow-sm relative">
+    <header data-topo-fixo className="fundo-cartao border-b borda-padrao sticky top-0 z-50 shadow-sm relative">
       <div className="largura-site h-16 flex items-center justify-between">
         {/* Espelho da marca do <footer>: mesmo tamanho (w-10 h-10 / text-2xl) e mesma caixa (.largura-site),
             então as duas ficam na mesma linha vertical em qualquer tela. */}

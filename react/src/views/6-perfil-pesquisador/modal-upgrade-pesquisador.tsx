@@ -23,7 +23,7 @@ import type {
 import type { TermoUsoResponseActive } from '../../services/5-termo-uso/type/termo-uso.type';
 
 interface ModalUpgradePesquisadorProps {
-  auth: Pick<UseAuthReturn, 'authFetch' | 'usuario'>;
+  auth: Pick<UseAuthReturn, 'authFetch' | 'usuario' | 'renovarSessaoAgora' | 'atualizarUsuarioLocal'>;
   // Conta que vai virar pesquisadora: pode ser a própria conta logada OU a de outra pessoa (o cadeado da Bancada do Pesquisador,
   // Bancada do Pesquisador, precisa funcionar em qualquer linha, não só na própria). O Termo de Uso aparece
   // sempre, para qualquer conta: o aceite fica registrado em nome DESTE `idUsuarioAlvo`, nunca de quem está
@@ -130,6 +130,14 @@ export function ModalUpgradePesquisador({
             ...dadosPerfil,
             aceiteTermos: true,
           });
+      // A sessão guarda a conta do momento do login (ehPesquisador, papéis): sem renovar, as outras telas continuariam
+      // tratando a própria conta como não pesquisadora até a próxima renovação. Se a renovação falhar, corrige ao menos
+      // o ehPesquisador local; a renovação seguinte traz o resto.
+      if (ehContaPropria) {
+        await auth.renovarSessaoAgora().catch(() => {
+          auth.atualizarUsuarioLocal((atual) => (atual ? { ...atual, ehPesquisador: true } : atual));
+        });
+      }
       mostrar('Perfil de pesquisador criado com sucesso.', 'Agora já dá para adicionar os links acadêmicos.');
       aoConcluido(perfilCriado);
       setPerfilCriado(true);

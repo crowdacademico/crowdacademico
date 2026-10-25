@@ -6,6 +6,8 @@ export interface PapelResponse {
   nome: string;
   codigo: string;
   descricao: string | null;
+  // Posição nas listas (1 = maior cargo). Só exibição.
+  ordemExibicao: number;
 }
 
 // Espelha papel.request-update.ts.
@@ -33,5 +35,7 @@ export interface UsuarioPapelResponse {
   idUsuario: number;
   idPapel: number;
   nomePapel: string;
+  codigoPapel: string;
+  ordemExibicao: number;
   suspensoAte: string | null;
 }

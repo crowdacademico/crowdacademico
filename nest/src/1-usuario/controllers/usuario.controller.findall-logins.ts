@@ -4,7 +4,7 @@ import { UsuarioServiceFindAllLogins } from '../service/usuario.service.findall-
 // GET /usuario/:id/logins não conflita com GET /usuario/:id (usuario.controller.findone.ts): o Nest casa rota
 // por número de segmentos.
 //
-// Exige login e, no service, ser o próprio usuário ou ter usuario_visualizar_sensivel.
+// Exige login e, no service, ser o próprio usuário ou ter uma das PERMISSOES_VER_USUARIOS.
 @Controller('usuario')
 export class UsuarioControllerFindAllLogins {
   constructor(private readonly service: UsuarioServiceFindAllLogins) {}

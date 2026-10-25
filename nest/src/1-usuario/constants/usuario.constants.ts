@@ -21,3 +21,12 @@ export const USUARIO_COLUNAS_SELECT = [
 // Custo do bcrypt da SENHA do usuário (create e update). Parâmetro de segurança puro, fixo de propósito
 // (não é regra de produto); o do refresh token é outra constante (auth.constants.ts), mesmo valor.
 export const CUSTO_BCRYPT_SENHA = 10;
+
+// Quem pode ver a lista de usuários, a ficha e o histórico de login de outra pessoa: o admin
+// (usuario_visualizar_sensivel) ou o atendimento (usuario_visualizar_atendimento, papel Suporte). A de atendimento
+// não abre mais nada: a fila de e-mails (com os links de verificação e de nova senha) e os aceites de termo
+// continuam só com a sensível (04, pol_notificacao_select e pol_usuario_termo_select).
+export const PERMISSOES_VER_USUARIOS = [
+  'usuario_visualizar_sensivel',
+  'usuario_visualizar_atendimento',
+] as const;

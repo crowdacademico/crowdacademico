@@ -3,6 +3,7 @@ import { BadgeStatusRepasse } from '../../components/crud/badge-status-repasse';
 import { GenericTable } from '../../components/crud/generic-table';
 import { ROTULO_AGUARDANDO_CONTA, ROTULO_STATUS_REPASSE, rotuloSituacaoRepasse } from '../../services/23-pagamento/constants/status-repasse.constants';
 import { pagamentoRevisaoApi } from '../../services/25-pagamento-revisao/api/pagamento-revisao.api';
+import { fraseDoEventoFinanceiro } from '../../services/25-pagamento-revisao/util/evento-financeiro.util';
 import { ModalReenfileirarRepasse } from './modal-reenfileirar-repasse';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { RepasseAtencaoResponse } from '../../services/25-pagamento-revisao/type/pagamento-revisao.type';
@@ -28,7 +29,7 @@ export function ListarRepassesAtencao({ auth }: PropsPagina) {
     return repasses.map((repasse) => ({
       ...repasse,
       situacao: rotuloSituacaoRepasse(repasse.status, repasse.aguardandoConta),
-      motivo: repasse.ultimoMotivo ?? '-',
+      motivo: fraseDoEventoFinanceiro(repasse.ultimoMotivo),
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.authFetch, chaveRecarga]);
@@ -37,7 +38,7 @@ export function ListarRepassesAtencao({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable
         titulo="Repasses em Atenção"
-        ajuda="Repasses ao pesquisador que não andam sozinhos. Erro: a transferência falhou e alguém precisa corrigir a causa e reenfileirar, ou marcar como pago se o pesquisador já recebeu. Aguardando chave Pix: o pesquisador ainda não cadastrou (ou não verificou) a chave onde receber; não há o que fazer aqui até ele cadastrar."
+        ajuda="Repasses ao pesquisador que não andam sozinhos. Erro: a transferência falhou e alguém precisa corrigir a causa e reenfileirar, ou marcar como pago se o provedor confirmar que a transferência foi concluída depois do erro. Aguardando chave Pix: o pesquisador ainda não cadastrou (ou não verificou) a chave onde receber; não há o que fazer aqui até ele cadastrar."
         colunas={[
           { chave: 'idRepasse', rotulo: 'id', tipo: 'id' },
           { chave: 'titulo', rotulo: 'campanha', tipo: 'nome', umaLinha: true },

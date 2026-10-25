@@ -18,10 +18,9 @@ const TODAS_AS_ROTAS: Rota[] = [...ROTAS, ...ROTAS_ADMIN];
 export function Breadcrumb() {
   const location = useLocation();
 
-  // matchPath (não comparação exata de string) porque agora existem rotas
-  // com parâmetro (ex.: /admin/papeis/:id/alterar) - essa seria a única
-  // entrada nunca encontrada se comparássemos o pathname literal contra
-  // ":id" ao invés do número de verdade da URL.
+  // matchPath (não comparação exata de string) porque existem rotas com
+  // parâmetro (ex.: /admin/minha-conta/:aba): comparando o pathname literal,
+  // ":aba" nunca bateria com o valor de verdade da URL.
   const rota = TODAS_AS_ROTAS.find((r) => matchPath(r.caminho, location.pathname));
   if (!rota?.rotuloBreadcrumb) {
     return null;
@@ -43,7 +42,7 @@ export function Breadcrumb() {
     // sticky top-16: o breadcrumb acompanha o cabeçalho conforme a página rola; 16 = 4rem = a altura do
     // <Header> (h-16), que também é sticky top-0; z-40 (menor que o z-50 do Header) garante que o cabeçalho
     // sempre fica por cima quando os dois grudam juntos no topo.
-    <nav className="fundo-sutil border-b borda-padrao sticky top-16 z-40">
+    <nav data-topo-fixo className="fundo-sutil border-b borda-padrao sticky top-16 z-40">
       <div className="paragrafo largura-site py-3 flex items-center gap-2 flex-wrap texto-herdado">
         <Link to="/" className="texto-marca enfase hover:underline">
           Início

@@ -5,6 +5,16 @@
 // a troca de segurança que está fazendo.
 export const CUSTO_BCRYPT_REFRESH_TOKEN = 10;
 
+// Login recusado por e-mail sem conta, conta excluída ou senha errada: a mesma resposta nos três casos, para não
+// revelar quais e-mails têm conta (OWASP). A frase vai no topo e os DOIS campos ficam marcados, cada um com o seu
+// texto embaixo (formato `campos`, o mesmo da validação); a tela mantém o e-mail e limpa a senha.
+export const MENSAGEM_LOGIN_RECUSADO =
+  "E-mail ou senha inválidos. Tente novamente ou clique em 'Esqueceu a senha?'.";
+export const CAMPOS_LOGIN_RECUSADO = {
+  email: ['E-mail inválido.'],
+  senha: ['Senha inválida.'],
+};
+
 // Validade da sessão (dias): DEFAULT, usado só quando a chave correspondente não existir/estiver inativa em
 // `configuracoes` (ver ConfiguracaoValorService, commons/configuracao). Configurável pelo Painel Admin, mesmo
 // raciocínio de `arquivo`: é regra de produto (por quanto tempo alguém continua logado sem precisar entrar de

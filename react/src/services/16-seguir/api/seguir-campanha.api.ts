@@ -1,8 +1,9 @@
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
-import type { SeguirCampanhaResponse } from '../type/seguir-campanha.type';
+import type { SeguidoresCampanhaResponse, SeguirCampanhaResponse } from '../type/seguir-campanha.type';
 
-// Espelha nest/src/16-seguir. A lista é sempre a da conta logada (pol_seg_campanha_select, 04).
+// Espelha nest/src/16-seguir. A lista é sempre a da conta logada (pol_seg_campanha_select, 04); a contagem de
+// seguidores é pública (o número, nunca quem segue).
 export const seguirCampanhaApi = {
   listarMinhas: (authFetch: AuthFetch): Promise<SeguirCampanhaResponse[]> =>
     authFetch('/seguir-campanha').then(tratarResposta<SeguirCampanhaResponse[]>),
@@ -12,4 +13,6 @@ export const seguirCampanhaApi = {
     ),
   deixarDeSeguir: (authFetch: AuthFetch, idCampanha: number): Promise<void> =>
     authFetch(`/seguir-campanha/${idCampanha}`, { method: 'DELETE' }).then(tratarResposta<void>),
+  contarSeguidores: (authFetch: AuthFetch, idCampanha: number): Promise<SeguidoresCampanhaResponse> =>
+    authFetch(`/seguir-campanha/${idCampanha}/seguidores`).then(tratarResposta<SeguidoresCampanhaResponse>),
 };

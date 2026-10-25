@@ -20,7 +20,7 @@ export const ROTULO_SITUACAO_REVISAO: Record<SituacaoRevisao, string> = {
   processado: 'Processado',
 };
 
-// As que ainda pedem algo: a tela abre filtrada nelas.
+// As que ainda pedem algo: vêm primeiro na lista e são as únicas com Dar baixa.
 export const SITUACOES_PENDENTES: readonly SituacaoRevisao[] = ['em_revisao_manual', 'vale_tentar_de_novo'];
 
 // Em revisão manual pede decisão de uma pessoa (aviso); o que só falhou por motivo transitório costuma se resolver

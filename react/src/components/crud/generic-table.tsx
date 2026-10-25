@@ -121,15 +121,14 @@ function maiorTexto<T extends Linha>(coluna: Coluna<T>, linhas: T[]): number {
 //
 // TESTE PARA QUALQUER PROP NOVA que alguém for tentado a adicionar aqui: uma prop pertence a ESTE componente se
 // uma tela que não é "do tipo dele" (uma tela sem tabela nenhuma) conseguiria viver sem ela.
-// `filtrosFacetados` passa nesse teste: são configuração de TABELA. `buscarLog` não passava: é
-// outra funcionalidade (dados/paginação/visual próprios) que só por acaso costumava aparecer embaixo de uma
-// tabela. "Quantas telas já usam a prop" NÃO é o teste: era usada por 8 das 10 telas e ainda assim não
-// pertencia aqui.
+// `filtrosFacetados` passa nesse teste: são configuração de TABELA. Um bloco de log não passa: é
+// outra funcionalidade (dados/paginação/visual próprios) que só por acaso aparece embaixo de uma
+// tabela. "Quantas telas já usam a prop" NÃO é o teste.
 //
 // SEGUNDO TESTE, complementar (o teste acima só decide ENTRADA, não SAÍDA): se uma tela que NÃO PODE usar este
-// componente ainda assim precisa de algo que hoje mora aqui dentro, isto é um IRMÃO, não um miolo: foi esse
-// critério que fez o `BlocoLogAuditoria` nascer, e o mesmo que tirou o rodapé de paginação e a barra de filtros
-// de dentro daqui (ver `components/pagination/rodape-paginacao.tsx` e `components/search/barra-filtros.tsx`).
+// componente ainda assim precisa de algo que hoje mora aqui dentro, isto é um IRMÃO, não um miolo, como o
+// `BlocoLogAuditoria`, o rodapé de paginação e a barra de filtros
+// (ver `components/pagination/rodape-paginacao.tsx` e `components/search/barra-filtros.tsx`).
 
 export function GenericTable<T extends Linha>({
   titulo,
@@ -160,6 +159,14 @@ export function GenericTable<T extends Linha>({
   const emColuna = acoesEmColuna?.flatMap((coluna) => coluna.acoes) ?? [];
   const temAcoes = Object.keys(acoes ?? {}).some((acao) => !emColuna.some((a) => a === acao));
   const totalColunas = colunas.length + (acoesEmColuna?.length ?? 0) + (temAcoes ? 1 : 0);
+  // DS-45: toda tabela tem UMA coluna `nome` (a principal, que fica com a sobra de largura). Sem ela, a sobra vai
+  // para a coluna id. Só em desenvolvimento, como erro no console, para os roteiros de tela acusarem.
+  if (import.meta.env.DEV) {
+    const colunasNome = colunas.filter((coluna) => coluna.tipo === 'nome').length;
+    if (colunasNome !== 1) {
+      console.error(`[GenericTable] "${titulo}": a tabela precisa de exatamente 1 coluna do tipo 'nome' (tem ${colunasNome}). Ver DS-45.`);
+    }
+  }
   const { dado, carregando, erro } = useBuscar(listar, [listar, chaveRecarga], { mostraTexto: true });
   const linhas = useMemo(() => dado ?? [], [dado]);
   // Filtro/página/ordenação/faceta vivem na URL (query string), não em useState local: uma navegação que

@@ -11,21 +11,28 @@
 ## ⭐ Para discutir (anotado em 18-10-2026, no topo de propósito)
 
 - **Colunas das tabelas, passo seguinte (largura mínima por tipo e respiro maior).** Medido em 18-10-2026 (20 telas, 1400 e 1920 px): a dança entre páginas acabou (coluna id fixa e `textoExibido`, DS-104), mas **6 tabelas rolam de lado a 1400 px** (Campanhas, Parâmetros, Denúncias, Pedidos de Encerramento, T2 e T5) e o respiro entre colunas é de cerca de 27 px. Aumentar o respiro hoje faria mais tabelas rolarem. Opções: um token de largura mínima por tipo de coluna (`--largura-coluna-status`, `-dinheiro`, `-data`...), tirar colunas das listas mais largas (deixar no Consultar) ou aceitar a rolagem. Decidir antes de mexer.
-- **Rótulo longo que alarga a coluna da T5:** "Cartão (a liberar)" (coluna "meio"). Como a coluna reserva o maior rótulo da lista inteira (DS-104), um rótulo mais curto deixaria a tabela menos larga. (O "perdida (o Nest reiniciou)" já virou "Perdida" em 19-10-2026, com a explicação no ⓘ.)
 - **Reorganizar o `DESIGN_SYSTEM.md` (Lucas, 18-10-2026, para o futuro, não agora):** as regras principais (core), como linha e coluna das tabelas (DS-100, DS-104, DS-105), passam para os números de destaque, para serem achadas primeiro. Junto da reorganização numérica de pastas e arquivos (seção de Pagamento).
-- **Policy sem efeito em `contribuicao`:** decisão do Lucas, descrita uma vez só, na seção de Pagamento ("Ainda aberto no pagamento").
 
 **Financeiro comparado com o mercado (19-10-2026).** Feitos no mesmo dia: a contestação de cartão vai para revisão manual, e o repasse espera a carência de `repasse_carencia_dias` (15). Fica para decidir:
 - **Quem ressarce o dinheiro que volta depois do repasse.** Contestação de cartão e devolução por fraude do Pix (MED, até 80 dias) podem chegar depois da carência. O Catarse põe no termo que o criador ressarce, desconta do saldo dele e, se ele já sacou, cobra em 10 dias com multa de 10% (Termos de Uso, itens 7.9 e 7.10). Aqui: escrever a cláusula no Termo do Pesquisador (Lucas e Alexia) e decidir se o sistema registra a dívida e desconta do próximo repasse.
-- **Quem apoiou pode desistir?** O Catarse aceita o pedido enquanto faltarem pelo menos 2 dias úteis para a campanha acabar (Central de Ajuda, "Quando e como acontecem reembolsos"). Aqui não existe. Se sim: botão na área de quem apoia, devolução pelo mesmo caminho do estorno.
+  - **Rascunho para estudar (25-10-2026, sem pressa; Lucas e Alexia reescrevem).** Base: Termos de Uso do Catarse, itens 7.9 e 7.10 (atualizados em 31-05-2026, https://crowdfunding.catarse.com.br/legal/termos-de-uso). Texto sugerido para o Termo do Pesquisador:
+    - *Ressarcimento de valores contestados.* É responsabilidade do Pesquisador ressarcir à plataforma o valor de qualquer contribuição que, depois de repassada, seja contestada por quem pagou (contestação de cartão) ou devolvida pelo Mecanismo Especial de Devolução do Pix (MED), junto com as tarifas que o provedor de pagamento cobrar por essa contestação.
+    - A plataforma pode descontar esse valor de um repasse ainda não feito ao Pesquisador, da mesma campanha ou de outra.
+    - Sem repasse a descontar, o Pesquisador é avisado por e-mail e tem 10 (dez) dias, contados do aviso, para devolver o valor pela forma que a plataforma indicar.
+    - Antes de cobrar, a plataforma informa ao Pesquisador o motivo da contestação e, quando houver, o prazo para apresentar defesa ao provedor de pagamento.
+  - **O que decidir no estudo:** (1) multa e juros no atraso (o Catarse cobra 10% de multa, 1% de juros ao mês e correção pelo IPCA; num TCC gratuito talvez não faça sentido); (2) se o sistema registra a dívida e desconta sozinho do próximo repasse ou se fica só a cláusula; (3) a última frase (aviso e defesa) não está no Catarse, é sugestão para não cobrar sem explicar.
 - **Devolução que ninguém consegue receber** (boleto sem conta cadastrada, contribuição sem conta): fica em reembolso manual para sempre. O Catarse, depois de 120 dias sem dados bancários válidos, transfere o crédito para a plataforma (Termos de Uso, item 7.19). Decidir o prazo e escrever no Termo de Uso.
+  - **Estudo de 25-10-2026 (mais complicado do que parecia, sem pressa).** O Catarse (Termos de Uso, 7.19, atualizados em 31-05-2026) dá a quem apoiou 120 dias para cadastrar os dados de recebimento; depois o valor passa à plataforma (o 7.16 fala em 15 dias para o mesmo caso: o termo deles se contradiz). Aqui faltam quatro peças: (1) o e-mail "precisamos dos seus dados" (só existem "a devolução começou" e "foi concluída"); (2) um lugar para quem apoiou informar uma chave Pix (hoje só o pesquisador cadastra chave); (3) contribuição sem conta (visitante ou conta excluída) não guarda e-mail, então não há como avisar; (4) repetir o estorno depois do prazo do Pix (90 dias) não adianta, o provedor recusa sempre: o que funciona é transferir para a chave nova, como o repasse. O limite precisa existir: sem ele o dinheiro fica para sempre como dinheiro de terceiros.
+  - **Opções:** (A) só o prazo, e o admin encerra como "não reclamado"; (B) igual ao Catarse: e-mail, a pessoa informa a chave em Minha Conta, o sistema transfere sozinho com novas tentativas, lembretes e prazo; (C) a (B) sem a transferência automática: o admin devolve pelo painel do provedor e usa o "Registrar a devolução" que já existe. Recomendação: (C) agora e (B) se houver volume, porque transferir sozinho para uma chave recém-informada abre a porta para quem invadiu a conta (a chave do pesquisador passa por verificação de titularidade por esse motivo). O visitante sem conta fica só com o prazo até o checkout da área pública guardar o e-mail. Decidir também o prazo (120 dias, como o Catarse, ou outro) e confirmar o escopo antes.
 - **Conciliação de saldo** (conferir o saldo da conta no provedor com o que o sistema diz que deveria estar lá). Opções: (A) mostrar no painel, lado a lado, o saldo do provedor e o "dinheiro de terceiros" que a conta tem de ter (pago e ainda não repassado, a devolver, em reembolso manual), sem alerta; (B) o mesmo, conferido por uma tarefa diária que avisa quando o saldo fica abaixo do dinheiro de terceiros; (C) conciliação completa, linha a linha, do extrato do provedor com os eventos do sistema. Recomendada: (B), que pega dinheiro saindo sem aviso sem precisar contabilizar a receita da plataforma; a (C) é a das empresas grandes e pesada para o TCC.
 
 ---
 
 ## 0. 📌 Para a Alexia ler (conversar antes de fazer)
 
-Nada aberto (03-10-2026). O "Aguardando" (pagamento que chega depois do fim da campanha) foi decidido e feito; a explicação continua no topo do `ACHADOS_PARA_DISCUTIR.md`.
+- **Textos dos e-mails: no código ou em tabela? (aberto em 24-10-2026, ESTUDAR antes de decidir).** Hoje o assunto e o texto de cada e-mail moram no código (`nest/src/4-mail/modelos/modelos-email.ts`), decisão de 19-10-2026 para não aumentar o escopo. A Alexia é a favor de tabelas novas (o admin editaria os textos pelo painel); o Lucas, contra. Não é ajuste leve: mexe no envio, no escopo (o orientador já achou o banco grande) e no que o admin pode quebrar sem querer. Estudar com calma: como os sistemas de referência fazem, o que muda em cada caminho, o custo e o risco de cada um, e só então decidir. Antes, só lembrete: se virar tabela, uma `template_email` entraria sem mexer na fila.
+
+O "Aguardando" (pagamento que chega depois do fim da campanha) foi decidido e feito em 03-10-2026; a explicação continua no topo do `ACHADOS_PARA_DISCUTIR.md`.
 
 ---
 
@@ -56,12 +63,11 @@ A área pública não pode ser feita agora (primeiro termina a área restrita). 
 - **Checkout:** o aviso do modelo da campanha com a confirmação de ciência (RF-040; a API ainda não registra a ciência), o checkbox do termo de pagamento (RF-082; o aceite com IP já é gravado), a contagem regressiva do Pix (RF-081) e a tela de cada meio (RF-077).
 - **Painel "Projetos Criados" do pesquisador (RF-086, RF-087):** a lista com as métricas e o líquido estimado (o `GET /campanha/:id` já devolve `valorLiquidoEstimado`).
 - **Painel de quem apoia (RF-085):** o histórico já existe na Minha Conta, aba Contribuições; na área pública vira o painel do doador.
+- **Desistir do apoio (decidido em 24-10-2026: regra do Catarse, com o art. 49 do CDC como fundamento):** o botão na área de quem apoia. As condições, as fontes e o ponto a validar com o orientador (o CDC nos 7 dias depois de contribuir) estão no `DOCUMENTACAO_FINANCEIRO.md`. Antes do botão: o texto no Termo de Uso (Administrador) e o parâmetro do prazo.
 
 ### E-mail: o que ainda é decisão (19-10-2026; o módulo está pronto e testado no modo de teste)
 
 - **Serviço de envio de verdade:** recomendação Brevo pela API, com um domínio `.com.br` (cerca de R$ 40 por ano). Sem domínio, só o Gmail com senha de app. Passo a passo e comparação dos planos em `.Tutorial-email.md`. Fica para o fim, como o gateway.
-- **Textos dos e-mails no código** (`nest/src/4-mail/modelos/modelos-email.ts`), decidido para não aumentar o escopo; se o admin precisar editar, uma tabela `template_email` entra depois sem mexer na fila.
-- **"Reenviar o e-mail de verificação" pelo Suporte:** a descrição do papel Suporte cita, mas a ação ainda não existe (seria uma rota pequena que cria um token novo e põe na fila). A conta criada pelo admin no painel nasce sem verificação, como antes.
 - **Saber se o e-mail chegou (21-10-2026):** "Enviado" quer dizer que o provedor aceitou, não que chegou na caixa da pessoa. Falta o webhook de entrega do Brevo (entregue, devolvido, marcado como spam), o equivalente ao do Asaas; o Gmail por SMTP nem oferece. Só dá para fazer junto com o serviço de envio de verdade. Explicação em `.Tutorial-email.md`, Parte 0.
 
 ### Pagamento (feito em 17 e 18-10-2026; visão completa em `DOCUMENTACAO_FINANCEIRO.md`)
@@ -72,24 +78,17 @@ A área pública não pode ser feita agora (primeiro termina a área restrita). 
 - **Boleto:** ligar `boleto_habilitado` em Parâmetros; gerar, pagar ("Confirmar pagamento" no sandbox), repasse, e a devolução por link num cancelamento (vai para reembolso manual com o link).
 - **Tela "Registrar a devolução"** (Reembolsos Manuais) com as contribuições 56, 59, 60, 61 e 63 do Supabase, que chegam ao reembolso manual sozinhas depois das 8 tentativas (o banco simulado recusa devolver Pix de pagador fictício). Desde 21-10-2026 o valor é fixo (o inteiro da contribuição, só leitura) e o banco recusa outro (já no Supabase, recriado; conferido em 24-10-2026).
 - **Revisão manual da caixa de avisos:** os avisos parados de 17 e 18-10-2026 devem aparecer na tela de revisões do pagamento 24 horas depois de chegar, com o motivo.
-- **Mudanças de 21-10-2026, nunca clicadas ao vivo** (já no Supabase, recriado com 01 a 08; conferido em 24-10-2026): em Repasses em Atenção, os dois botões de um repasse em erro (Reenfileirar e Marcar como pago; no seed, o repasse da campanha 6 com o evento #70); em Eventos de Pagamento, Dar baixa num aviso em "tentar de novo"; e o Campo de Testes logado como usuário comum e como pesquisador (contribuir e pagar na T5, o próprio upgrade na T1, criar a própria campanha na T2, os próprios e-mails na T6).
 
 #### 🟡 Ainda aberto no pagamento
 
 - **Checkout e painel de quem apoia** (`views/22-contribuicao` e `views/29-dashboard/doador`, pastas vazias): a tela pública de apoiar. Hoje uma contribuição nasce pela T5 ou pela API. Junto vem o **aviso ao apoiador** sobre o modelo da campanha (tudo-ou-nada devolve, flexível não) com confirmação de ciência.
-- **Policy sem efeito em `contribuicao`** (`pol_contribuicao_update`, `USING (true)`, 04): o `app_nestjs` não tem `GRANT UPDATE` na tabela, então ela não faz nada e está "mantida só por documentação". Mesma situação das policies de escrita de `repasse` e `auditoria_financeira`, que saíram em 18-10-2026 (Grupo BN). Tirar também? Decisão do Lucas.
 
 ### Página pública da campanha (ainda não existe)
 
 - **Botões de compartilhar** (WhatsApp, Facebook, copiar link) e **prévia de link** (Open Graph, um endpoint pequeno no Nest que devolve as meta tags). Ideias do Atlas (P1 e P2 do roteiro).
-- **Quantas pessoas seguem a campanha:** hoje cada conta só enxerga o próprio "seguir" (regra de acesso de `seguir_campanha`). Mostrar o número no Consultar e na página pública pede uma contagem que o banco devolve sem expor quem segue.
+- **Quantas pessoas seguem a campanha, na página pública:** a contagem pública (`GET /seguir-campanha/:id/seguidores`, só o número) já aparece no Consultar da campanha desde 24-10-2026; falta mostrar na página pública.
 - Telas públicas de denúncia, recompensa, atualização, comentário e seguir (hoje atualização, comentário e seguir só existem nas telas de teste do painel). Painel do pesquisador (`views/29-dashboard/pesquisador`, pasta vazia).
 
-### Motor do score (fechado em 03-10-2026; ficaram estes pontos)
-
-#### 🟡 Gravidade por motivo de denúncia (03-10-2026, para discutir depois)
-
-- **Gravidade:** cada motivo de denúncia teria um peso de 1 a 3 (ex.: fraude pesa mais que conteúdo impróprio). O Lucas achou interessante, mas talvez um exagero: denúncia grave e verdadeira já encerra a campanha na hora. Detalhes em `ACHADOS_PARA_DISCUTIR.md`. O acúmulo foi resolvido em 12-10-2026 (histórico).
 
 
 ### Arquivos
@@ -125,8 +124,7 @@ O Lucas pediu detalhamento dessa ideia (citada de passagem pelo Lucas numa rodad
 - **Docker** do Nest e do React (F2 do roteiro do Atlas, com o `docker/` deles como referência).
 - **`react/.gitignore` não cobre `.env`:** inofensivo hoje (o `.env` só tem a URL da API); só volta à tona se o conteúdo do `.env` mudar ou no deploy.
 - **CORS por lista de endereços** (ver grupo 5, segurança): se não for feito antes, entra aqui.
-- **Roteiros de tela que esperam o modo produção** (hoje toda conta logada lê tudo, pela leitura liberada de desenvolvimento): `g10-permissoes-na-tela.mjs`, caso "Pesquisadora: /admin/usuarios mostra erro de permissão", e `g14-toast-e-busca.mjs`, caso "Conta sem permissão abre o dashboard: UM aviso de erro". Vistos em 28-09-2026.
-- **Roteiro de API `gapi-401-403-404.mjs` espera o modo produção:** hoje 2 casos falham porque toda conta logada vê tudo (Grupo O, leitura liberada de desenvolvimento). Rodar de novo num banco montado sem a parte de demonstração do `07`.
+- **Sessões sem regra de acesso por dono (anotado em 30-09-2026, decidido em 24-10-2026: só no deploy, junto do cookie e do CORS).** `sessao` tem regra de acesso aberta (`USING (true)`) de propósito: login e renovação acontecem antes de haver alguém logado. Quem decide de quem é a sessão é o Nest (confere o segredo do token e o dono). Na simulação, qualquer papel encerra a sessão de qualquer conta direto no banco. Não é brecha pela API hoje; é defesa em profundidade.
 
 ---
 
@@ -142,7 +140,7 @@ Toda banca de TCC de sistema hoje em dia costuma perguntar sobre segurança logo
 
 **Em palavras simples:** a WCAG é o guia internacional de acessibilidade para sites (o padrão que órgãos públicos e boas empresas seguem). O sistema já segue partes dela: contraste das cores conferido por teste (`npm run contraste`), nomes acessíveis nos botões, e, desde 13-10-2026, a regra 2.2.1 (tempo ajustável): o aviso que some sozinho pausa com o mouse em cima ou com o foco do teclado dentro.
 
-**A ideia:** com o sistema pronto, fazer uma auditoria inteira pelos critérios da WCAG 2.2 (nível AA), tela por tela: tempo e movimento (2.2.1 e 2.2.2), navegação só pelo teclado, ordem do foco, textos alternativos, mensagens de erro ligadas ao campo, zoom de 200% e tela de celular. Ferramenta: o axe (já usado em rodadas anteriores) mais conferência manual, porque a ferramenta automática pega só parte dos problemas. **Só começar quando todos os módulos estiverem prontos**, como os testes com Playwright abaixo.
+**A ideia:** com o sistema pronto, fazer uma auditoria inteira pelos critérios da WCAG 2.2 (nível AA), tela por tela: tempo e movimento (2.2.1 e 2.2.2), navegação só pelo teclado, ordem do foco, textos alternativos, mensagens de erro ligadas ao campo, zoom de 200% e tela de celular. Ferramenta: o axe (já usado em rodadas anteriores) mais conferência manual, porque a ferramenta automática pega só parte dos problemas. **Só começar quando todos os módulos estiverem prontos**, como os testes com Playwright abaixo. Já anotados para ela (24-10-2026): tabela vazia que rola de lado no celular não recebe foco do teclado (axe, `scrollable-region-focusable`; o padrão da `caixa-tabela`, região com `tabIndex=0`, resolve), e o cabeçalho de coluna que ordena a tabela responde ao clique, mas não ao teclado.
 
 #### 🔴 Pendência aberta: testes automatizados com Playwright no React
 
@@ -150,7 +148,7 @@ O `react/` não tem nenhum teste automatizado hoje (só `build`+`lint`). Um proj
 
 **Vamos usar eventualmente, mas ainda é cedo.** Só voltar a levantar este item quando o sistema estiver completo (todos os módulos prontos) - implementar teste agora, com o backend ainda mudando bastante módulo a módulo, geraria mais retrabalho de manutenção de teste do que benefício.
 
-> Até lá existem os roteiros avulsos de navegador em informacoes/testes-banco/resultados/scripts (g1 a g20, mais o `rotas-sem-login.mjs`, que chama todas as rotas sem login, 123 em 02-10-2026, e compara com a gravação anterior).
+> Até lá existem os roteiros avulsos de navegador em informacoes/testes-banco/resultados/scripts (g1 a g20, mais o `rotas-sem-login.mjs`, que chama todas as rotas sem login, 185 em 24-10-2026, e compara com a gravação anterior).
 
 ---
 
@@ -166,7 +164,7 @@ O requisito pede que o Termo de Pesquisador diga, de forma explícita, que a cor
 
 Achado revisando um projeto de referência da disciplina (04-09-2026): hoje o CrowdAcademico guarda o refresh token no `localStorage` do navegador (`use-auth.js`, decisão já documentada - "pra não precisar logar de novo a cada F5"). Um cookie `HttpOnly` com `SameSite=Strict` faz o mesmo papel, mas com uma vantagem real de segurança: o JavaScript da página nunca consegue ler o valor do cookie, então um ataque de XSS (injeção de script malicioso) não consegue roubar o refresh token, mesmo que consiga rodar código na página - com `localStorage`, qualquer script que rode na página consegue ler o token.
 
-**Não é decisão óbvia, nem copy-paste** - trocar exigiria mexer em como o `authFetch`/`use-auth.js` renovam sessão (hoje leem o token direto do `localStorage`; um cookie `HttpOnly` é enviado automaticamente pelo navegador em toda requisição, sem o JavaScript precisar ler nem anexar nada - muda o formato da chamada) e como o backend define/lê esse cookie. Vale uma rodada de análise mais aprofundada de IA antes de decidir - não é pra implementar agora, só registrado pra não esquecer que a opção existe.
+**Não é decisão óbvia, nem copy-paste** - trocar exigiria mexer em como o `authFetch`/`use-auth.js` renovam sessão (hoje leem o token direto do `localStorage`; um cookie `HttpOnly` é enviado automaticamente pelo navegador em toda requisição, sem o JavaScript precisar ler nem anexar nada - muda o formato da chamada) e como o backend define/lê esse cookie. Vale uma rodada de análise mais aprofundada de IA antes de decidir - não é pra implementar agora, só registrado pra não esquecer que a opção existe. **O estudo foi entregue em 24-10-2026** (o que muda no `use-auth` e no Nest, o risco, a dependência do CORS e o padrão de mercado); a decisão continua aberta.
 
 #### 🟡 Anotado para pensar com calma (27-09-2026): 3 ideias vindas do `.env` do sistema Atlas
 
@@ -177,6 +175,18 @@ Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/todas 
 
 - **Permissão por rota no painel:** a guarda do `/admin/*` só exige login, não confere o papel (quem vê o quê continua decidido pelo backend). "Fica para perto do fim".
 
+#### 🟡 Achados da super auditoria ao vivo de 24-10-2026 (decisão do Lucas)
+
+- **Telas que faltam no painel (levantamento de 24-10-2026; a Auditoria Financeira foi feita no mesmo dia):** (1) **Contribuições**, a lista de todas as contribuições do sistema para o admin (hoje só a T5, que não vai para produção, a da própria conta em Minha Conta e o resumo no Consultar da campanha; o Nest ainda não tem a listagem); (2) **Repasses**, o histórico de todos os repasses (hoje só os "em atenção" e os do próprio pesquisador); (3) **anexos das atualizações de campanha** (arquivos e links): a API existe (`/arquivo-atualizacao`, `/link-atualizacao`), nenhuma tela mostra; o envio de arquivo passa pelo Storage. Decisão do Lucas: quais fazer.
+- **Aviso de erro: estudar antes de mexer (25-10-2026, sem pressa).** Hoje o painel faz de dois jeitos: quase toda tela com formulário mostra só o texto vermelho (o `useErroToast` com `mostraTexto` esconde o aviso flutuante quando o erro já está na tela), e as seções Encerrar a campanha (Alterar do dono) e chave Pix (`secao-recebimento.tsx`) mostram os dois com a mesma frase, porque o texto vermelho delas não tem a marca `data-mensagem-erro`. O Lucas gosta dos dois avisos (retorno claro e imediato) e gostou da ideia do meio-termo: o aviso flutuante só avisa ("Não foi possível..., veja o motivo abaixo") e o texto vermelho traz o motivo. Antes de aplicar, estudar as variáveis, sem valor escrito à mão:
+  - **Tipo de erro:** de campo (o backend manda `campos`, o erro aparece embaixo do campo), recusa de regra (409, 422), sem permissão (403), falha de rede ou do servidor (500).
+  - **Onde a tela mostra:** modal de Criar/Alterar (38 dos arquivos), página inteira (login, Minha Conta, cadastro), seção dentro de modal, janelinha de confirmação. O login já tem desenho próprio, decidido em 24-10-2026 (frase no topo e os campos em vermelho): o aviso flutuante ali seria repetido.
+  - **O texto do aviso flutuante:** uma frase única num lugar só (constante), a frase com o nome da ação passado por quem chama ("Não foi possível salvar a campanha"), ou o próprio motivo, como hoje.
+  - **Leitor de tela:** o texto vermelho já é anunciado (`role="alert"`); um aviso flutuante com a mesma frase seria anunciado duas vezes.
+  - **Quantas telas:** 46 arquivos usam `mostraTexto`, 16 usam o aviso flutuante sozinho (ações fora de formulário).
+  Mercado (24-10-2026): o Primer, do GitHub, desaconselha o aviso flutuante para erro; o GOV.UK usa duas camadas, um resumo no topo mais o erro em cada campo, as duas na própria página.
+- **Levantamento das mensagens técnicas na tela (25-10-2026, sem pressa):** listar todo texto de programação que aparece para quem usa o painel (ex.: "APAGADO DO CÓDIGO", códigos de erro, nomes de coluna do banco), com a tela onde aparece e uma frase sugerida, para o Lucas decidir tudo de uma vez. O "Último motivo" do repasse já virou frase em 25-10-2026.
+
 ### Visual e marca
 
 - **Branch `feat/novas-telas-teste` (02-10-2026):** tem o Dashboard em seções ("Precisa de você") e os links acadêmicos em cartões no celular, feitos antes das regras visuais novas. Decidir se entram no main, refeitos com as regras do `DESIGN_SYSTEM.md`, ou se a branch é descartada.
@@ -185,25 +195,14 @@ Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/todas 
 
 ### Estrutura e ferramentas
 
-#### 🟡 Aberto da super auditoria de 29-09-2026
-
-- **RFs 🟡 "não conferido a fundo" na matriz:** os que ficam dependem de módulo que ainda não existe (e-mail, contribuição, repasse, página pública); conferir cada um quando o módulo nascer. **Regra:** o React de hoje é só o painel administrativo; tela do painel nunca prova que um RF do usuário ou do pesquisador está cumprido ou descumprido.
-
-#### 🟡 Anotado (30-09-2026): sessões sem regra de acesso por dono
-
-`sessao` tem regra de acesso aberta (`USING (true)`) de propósito: login e renovação acontecem antes de haver alguém logado. Quem decide de quem é a sessão é o Nest (confere o segredo do token e o dono). Na simulação, qualquer papel encerra a sessão de qualquer conta direto no banco. Não é brecha pela API hoje; fica anotado como defesa em profundidade a pensar no deploy.
-
 #### 🟡 Para o futuro (29-09-2026): super auditoria de padrões de mercado
 
 Pedido do Lucas: comparar o sistema inteiro com o que os sistemas de referência fazem (login e sessão, termos, moderação, campanha, pagamento, mensagens de erro, telas), para cada diferença dizer qual é o padrão de mercado, o que o projeto faz e se vale mudar. Motivo: citar o padrão de mercado ajuda muito a decidir. Não começar sem pedido; é "bem no futuro".
 
 #### 🟡 Anotado (29-09-2026): dispatcher de triggers
 
-Hoje `campanha` tem 17 triggers e `comentario` tem 8. Quando várias rodam no mesmo momento, o Postgres escolhe a ordem pela ordem alfabética do nome; o dispatcher seria uma trigger só por momento, chamando as regras numa ordem escrita. Ganho: ordem explícita e mensagem de erro previsível quando duas regras falhariam juntas. Custo: mexer nas regras mais críticas (aprovação, congelamento, prazo), com risco de regressão; as suítes de caracterização (1.050 casos) são a rede de proteção. Recomendação atual: não fazer. **O Lucas quer, mais para frente, uma documentação completa sobre isto para estudar pessoalmente** (como funciona a ordem hoje, o que mudaria, exemplos com as triggers reais), antes de decidir.
+Hoje `campanha` tem 23 triggers (17 funções; algumas são pares INSERT e UPDATE) e `comentario` tem 9 (contagem de 24-10-2026). Quando várias rodam no mesmo momento, o Postgres escolhe a ordem pela ordem alfabética do nome; o dispatcher seria uma trigger só por momento, chamando as regras numa ordem escrita. Ganho: ordem explícita e mensagem de erro previsível quando duas regras falhariam juntas. Custo: mexer nas regras mais críticas (aprovação, congelamento, prazo), com risco de regressão; as suítes de caracterização (1.050 casos) são a rede de proteção. Recomendação atual: não fazer. **O estudo completo para o Lucas ler foi entregue em 24-10-2026** (como funciona a ordem hoje, o que mudaria, exemplos com as triggers reais); a decisão continua aberta.
 
-#### 🟡 Anotado (12-10-2026): reorganizar o seed para a demonstração mostrar todas as situações
-
-Sem criar registro novo: reorganizar os dados que já existem para a demonstração ter pelo menos um pesquisador em cada faixa do score (inclusive "Atenção", que ficou vazia com o acúmulo de denúncias), score alto e baixo, denúncias em cada etapa para a moderação julgar, e assim por diante. Antes não dava (os módulos de denúncia, contestação e encerramento não existiam); agora dá. Provavelmente pede recriar o banco do zero, e o Lucas já conta com isso.
 
 ### Protótipo estático (sessão própria)
 
@@ -217,5 +216,6 @@ Sem criar registro novo: reorganizar os dados que já existem para a demonstraç
 
 
 - **Descartados de propósito do roteiro do Atlas** (escopo enxuto): Next.js, Tailwind no JSX, i18n, gerador de módulo, versão na URL, e a maiúscula automática nos nomes (ficou só a limpeza de espaços).
+- **Tela do painel não prova RF do usuário:** o React de hoje é só o painel administrativo; tela do painel nunca prova que um RF do usuário ou do pesquisador está cumprido ou descumprido. Os RFs que ficam 🟡 na matriz dependem da área pública (grupo 2) ou da cláusula do Termo de Pesquisador.
 - **Documentação contra o código:** as suítes PGlite 7 e 10 conferem a cada rodada; ficam verdes a cada módulo novo.
 - **Roteiro completo do Atlas:** `informacoes/todas as auditorias/ROTEIRO_INCORPORACAO_ATLAS.md` (Ondas 1 e 2 feitas).

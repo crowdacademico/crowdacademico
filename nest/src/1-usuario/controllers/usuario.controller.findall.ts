@@ -4,7 +4,7 @@ import { UsuarioServiceFindAll } from '../service/usuario.service.findall';
 
 // Exige login (guarda global, não é @Publico()): a resposta traz e-mail, e a RLS de `usuario` é permissiva de propósito (o login precisa
 // achar o usuário antes de existir alguém autenticado); sem guard, qualquer visitante anônimo listava os
-// e-mails de todos. O guard só impede o anônimo; a permissão usuario_visualizar_sensivel é exigida no service
+// e-mails de todos. O guard só impede o anônimo; uma das PERMISSOES_VER_USUARIOS é exigida no service
 // (AutorizacaoService).
 @Controller('usuario')
 export class UsuarioControllerFindAll {

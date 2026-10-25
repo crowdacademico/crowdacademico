@@ -45,8 +45,13 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
     () => usuarioApi.listarTermosAceitos(auth.authFetch, idUsuario).catch(() => []),
     [idUsuario],
   );
-  // Do pesquisador: o score (resumo ao lado do Perfil, dimensões embaixo) e os links acadêmicos.
-  const { dado: score } = useBuscar(() => perfilPesquisadorApi.buscarScore(auth.authFetch, idUsuario).catch(() => null), [idUsuario]);
+  // Do pesquisador: o score (resumo ao lado do Perfil, dimensões embaixo) e os links acadêmicos. Sem perfil, não há
+  // score para buscar.
+  const temPerfil = perfilPesquisador !== null;
+  const { dado: score } = useBuscar(
+    () => (temPerfil ? perfilPesquisadorApi.buscarScore(auth.authFetch, idUsuario).catch(() => null) : Promise.resolve(null)),
+    [idUsuario, temPerfil],
+  );
   const { dado: links } = useBuscar(() => linkAcademicoApi.listarDoUsuario(auth.authFetch, idUsuario), [idUsuario]);
   const { dado: tiposLink } = useBuscar(() => tipoLinkApi.listar(auth.authFetch, { escopo: 'perfil' }), []);
   const [logins, setLogins] = useState<UsuarioResponseLoginHistory[] | null>(null);

@@ -785,15 +785,10 @@ DROP POLICY IF EXISTS pol_contribuicao_insert ON contribuicao;
 CREATE POLICY pol_contribuicao_insert ON contribuicao FOR INSERT TO app_nestjs WITH CHECK (
     id_usuario IS NULL OR id_usuario = (SELECT public.id_usuario_atual())
 );
--- O webhook de pagamento precisa atualizar o status da contribuição sem depender do dono. Sem efeito
--- prático para o app_nestjs: o GRANT UPDATE saiu (06, [06-H]), porque USING(true) + GRANT de tabela
--- inteira deixava qualquer usuário confirmar a própria contribuição por UPDATE direto. O único caminho é
--- atualizar_status_contribuicao() (05, SECURITY DEFINER, [05-K-2]), que bypassa RLS. Mantida só por
--- documentação.
+-- contribuicao: sem policy de UPDATE, como repasse ([04-E-7]) e auditoria_financeira ([04-H-1]). Quem muda uma
+-- contribuição são só as funções SECURITY DEFINER de 05 (atualizar_status_contribuicao, [05-K-2]); o app_nestjs não
+-- tem UPDATE na tabela (06, [06-H]).
 DROP POLICY IF EXISTS pol_contribuicao_update ON contribuicao;
-CREATE POLICY pol_contribuicao_update ON contribuicao FOR UPDATE TO app_nestjs USING (
-    true
-);
 
 DROP POLICY IF EXISTS pol_auditoria_select ON auditoria_financeira;
 CREATE POLICY pol_auditoria_select ON auditoria_financeira FOR SELECT TO app_nestjs USING (

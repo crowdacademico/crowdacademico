@@ -21,6 +21,7 @@ import { ListarEncerramentos } from '../../views/20-solicitacao-encerramento/lis
 import { ListarRevisoesPagamento } from '../../views/25-pagamento-revisao/listar-revisoes-pagamento';
 import { ListarReembolsosManuais } from '../../views/25-pagamento-revisao/listar-reembolsos-manuais';
 import { ListarRepassesAtencao } from '../../views/25-pagamento-revisao/listar-repasses-atencao';
+import { ListarAuditoriaFinanceira } from '../../views/25-pagamento-revisao/listar-auditoria-financeira';
 import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
 import { PontuacaoScore } from '../../views/11-configuracoes/pontuacao-score';
 import { campoTestes } from './campo-testes-opcional';
@@ -226,9 +227,8 @@ export const ROTAS_ADMIN: Rota[] = [
 
   // Pagamentos (módulo 25-pagamento-revisao): as filas do que o sistema deliberadamente NÃO resolve sozinho no
   // dinheiro (webhook em revisão manual, estorno que desistiu, repasse em erro). Grupo próprio ('PAGAMENTOS'): não é
-  // fila de moderação de conteúdo, e é onde vão morar as próximas telas financeiras (contribuições, repasses,
-  // auditoria financeira) quando o Nest expuser as listagens. Quem vê e quem age é decidido pelo banco, por permissão
-  // (evento_pagamento_visualizar para ver, pagamento_revisao_resolver para agir).
+  // fila de moderação de conteúdo, e é onde moram as telas financeiras (as filas e a auditoria financeira). Quem vê e
+  // quem age é decidido pelo banco, por permissão (evento_pagamento_visualizar para ver, pagamento_revisao_resolver para agir).
   {
     caminho: '/admin/eventos-pagamento',
     caminhoRelativo: 'eventos-pagamento',
@@ -255,6 +255,16 @@ export const ROTAS_ADMIN: Rota[] = [
     rotuloBreadcrumb: 'Repasses em Atenção',
     grupoMenu: 'PAGAMENTOS',
     icone: 'fa-hand-holding-dollar',
+  },
+  // Só leitura: cada mudança de dinheiro com quem fez (auditoria_financeira_visualizar: admin e revisor).
+  {
+    caminho: '/admin/auditoria-financeira',
+    caminhoRelativo: 'auditoria-financeira',
+    elemento: ListarAuditoriaFinanceira,
+    rotuloMenu: 'Auditoria Financeira',
+    rotuloBreadcrumb: 'Auditoria Financeira',
+    grupoMenu: 'PAGAMENTOS',
+    icone: 'fa-scale-balanced',
   },
 
   // Minha Conta: dentro do painel (sidebar visível), mas sem rotuloMenu/grupoMenu: não é uma aba clicável

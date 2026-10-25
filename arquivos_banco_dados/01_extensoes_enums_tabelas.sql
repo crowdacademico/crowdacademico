@@ -150,10 +150,16 @@ CREATE TABLE papel (
     -- Para que serve o papel, em uma frase (lista de Papéis e atribuição de papel no Alterar Usuário). Editável pelo
     -- painel, como o nome; o que o papel pode de verdade continua sendo a matriz Papel x Permissão.
     descricao VARCHAR(500),
+    -- Posição do papel nas listas, do maior cargo (1) para o menor: a coluna e o filtro Papel e a matriz Papel x
+    -- Permissão ordenam por ela. Só EXIBIÇÃO: o que o papel pode fazer é a matriz Papel x Permissão e a RLS, nunca
+    -- este número. Papel novo entra com a posição escrita, sem depender da ordem em que foi criado (id_papel).
+    ordem_exibicao SMALLINT NOT NULL,
 
     CONSTRAINT "PK_PAPEL" PRIMARY KEY (id_papel),
     CONSTRAINT "UK_PAPEL_NOME" UNIQUE (nome),
-    CONSTRAINT "UK_PAPEL_CODIGO" UNIQUE (codigo)
+    CONSTRAINT "UK_PAPEL_CODIGO" UNIQUE (codigo),
+    CONSTRAINT "UK_PAPEL_ORDEM_EXIBICAO" UNIQUE (ordem_exibicao),
+    CONSTRAINT "CK_PAPEL_ORDEM_EXIBICAO_POSITIVA" CHECK (ordem_exibicao > 0)
 );
 
 CREATE TABLE permissao (
@@ -933,9 +939,14 @@ CREATE TABLE evento_pagamento (
     -- gateway diz que o dinheiro se moveu mas o sistema NÃO aplicou, e alguém precisa decidir) | PROCESSADO COM SUCESSO
     -- (processado_em preenchido, erro_processamento NULL). "Processado + erro" não existe: processado = sucesso.
     revisao_manual_em   TIMESTAMPTZ,
+    -- Baixa dada por uma pessoa (resolver_revisao_pagamento, marcar_repasse_pago): quando e quem. Fica aqui, e não só na
+    -- auditoria financeira, porque o aviso sem dono (ex.: contribuição não encontrada) não tem linha de auditoria.
+    resolvido_em        TIMESTAMPTZ,
+    resolvido_por       INT,
 
     CONSTRAINT "PK_EVENTO_PAGAMENTO" PRIMARY KEY (id_evento_pagamento),
-    CONSTRAINT "UK_EVENTO_PAGAMENTO_PROVEDOR_EVENTO_EXTERNO" UNIQUE (provedor, id_evento_externo)
+    CONSTRAINT "UK_EVENTO_PAGAMENTO_PROVEDOR_EVENTO_EXTERNO" UNIQUE (provedor, id_evento_externo),
+    CONSTRAINT "FK_EVENTO_PAGAMENTO_RESOLVIDO_POR" FOREIGN KEY (resolvido_por) REFERENCES usuario(id_usuario) ON DELETE SET NULL
 );
 
 CREATE TABLE auditoria_financeira (
@@ -1084,7 +1095,7 @@ CREATE TABLE log_auditoria (
 
     CONSTRAINT "PK_LOG_AUDITORIA" PRIMARY KEY (id_log),
     CONSTRAINT "FK_LOG_AUDITORIA_USUARIO" FOREIGN KEY (id_usuario_responsavel) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    -- 'EXPORT' acrescenta-se às 3 operações originais (INSERT/UPDATE/DELETE), que cobrem MUDANÇA de dado,
+    -- 'EXPORT' se soma a INSERT/UPDATE/DELETE, que cobrem MUDANÇA de dado,
     -- gravadas por trigger (fn_log_auditoria(), 05). Uma exportação de dados pessoais (RF-016, LGPD
     -- Art. 18) não muda nada, mas deve deixar rastro mesmo assim. dados_anteriores/dados_novos ficam NULL
     -- nesse caso (nada mudou); só tabela/identidade_registro/id_usuario_responsavel/ocorrido_em importam.

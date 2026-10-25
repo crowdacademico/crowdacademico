@@ -9,6 +9,7 @@ import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { redefinirSenha } from '../../services/3-auth/api/auth.api';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
+import { SENHA_MINIMO_CARACTERES } from '../../services/3-auth/constants/senha.constants';
 
 // "Esqueci minha senha", passo 2: a tela que o link abre (/redefinir-senha?token=...). Sem exigir sessão: o token
 // é a autorização. Depois de trocar, a conta sai de todos os aparelhos (o banco encerra as sessões), então a
@@ -24,9 +25,9 @@ export function RedefinirSenhaPage() {
   const [concluido, setConcluido] = useState(false);
   const senhasIguais = senha === confirmar;
 
-  // Mesma regra de senha do Cadastro (pelo menos 8 caracteres).
+  // Mesma regra de senha do Cadastro (pelo menos SENHA_MINIMO_CARACTERES).
   const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
-    senha: senha.length < 8 && 'A senha precisa ter pelo menos 8 caracteres.',
+    senha: senha.length < SENHA_MINIMO_CARACTERES && `A senha precisa ter pelo menos ${SENHA_MINIMO_CARACTERES} caracteres.`,
     confirmar: !senhasIguais && 'As senhas não são iguais.',
   }));
 

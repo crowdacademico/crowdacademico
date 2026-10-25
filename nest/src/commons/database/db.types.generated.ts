@@ -231,6 +231,8 @@ export interface EventoPagamento {
   processado_em: Timestamp | null;
   provedor: string;
   recebido_em: Generated<Timestamp>;
+  resolvido_em: Timestamp | null;
+  resolvido_por: number | null;
   revisao_manual_em: Timestamp | null;
   tipo_evento: string;
 }
@@ -331,6 +333,7 @@ export interface Papel {
   descricao: string | null;
   id_papel: Generated<number>;
   nome: string;
+  ordem_exibicao: number;
 }
 
 export interface PapelPermissao {

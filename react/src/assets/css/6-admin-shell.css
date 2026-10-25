@@ -2,7 +2,9 @@
    Inspirado no Projeto de Interface real (estilos.css:
    .admin-shell/.admin-sidebar/.admin-content-area/.admin-sidebar-nav-item), mas com visual próprio: em vez
    de cartão arredondado flutuando com margem, o menu é uma coluna quadrada que encosta no cabeçalho, na
-   parede esquerda e no rodapé (grid de 2 colunas, sem sticky: rola junto com a página).
+   parede esquerda e no rodapé (grid de 2 colunas). Na coluna fixa, o menu fica parado logo abaixo do topo preso
+   (sticky em --altura-topo-fixo, altura até o fim da tela) e rola sozinho; a rodinha sobre ele nunca passa para a
+   página (overscroll-contain, também na gaveta). DS-109, classes em admin-sidebar.tsx.
    Ver components/layout/painel-admin/admin-sidebar.tsx e components/layout/painel-admin/admin-layout.tsx. */
 
 /* O bug que a gente tinha: .admin-pagina levava max-width+margin:auto, o

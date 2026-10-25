@@ -161,22 +161,6 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
       'O Termo de Uso tem peso jurídico, só quem tem essa permissão pode "trocar o contrato" que todo mundo aceita.',
     impacto: 'alto',
   },
-  sessao_revogar: {
-    nome: 'Revogar Sessão',
-    resumo: 'Encerrar à força uma sessão de login ativa de outra pessoa.',
-    oQueFaz: 'Permite encerrar à força uma sessão de login ativa de outro usuário.',
-    porQueExiste:
-      'Em caso de conta comprometida (senha vazada, dispositivo roubado), alguém precisa poder desconectar a sessão de outra pessoa na hora.',
-    impacto: 'médio',
-  },
-  recuperacao_senha_revogar: {
-    nome: 'Revogar Recuperação de Senha',
-    resumo: 'Invalidar um pedido de "esqueci minha senha" em andamento.',
-    oQueFaz: 'Permite invalidar um pedido de recuperação de senha em andamento.',
-    porQueExiste:
-      'Se um pedido de recuperação for suspeito (não foi a própria pessoa que pediu), dá pra cancelar antes que alguém troque a senha de outra conta.',
-    impacto: 'médio',
-  },
   verificacao_email_reenviar: {
     nome: 'Reenviar Verificação de E-mail',
     resumo: 'Disparar de novo o e-mail de confirmação de conta.',
@@ -213,6 +197,15 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     oQueFaz: 'Permite zerar o bloqueio de login causado por excesso de tentativas erradas de senha.',
     porQueExiste:
       'Ação de suporte recorrente, a pessoa errou demais a senha e precisa de alguém pra liberar o acesso de novo.',
+    impacto: 'médio',
+  },
+  usuario_visualizar_atendimento: {
+    nome: 'Ver Contas para Atendimento',
+    resumo: 'Abrir a lista de usuários e a ficha de cada um, para atender.',
+    oQueFaz:
+      'Permite ver a lista de usuários, a ficha de cada um e o histórico de login. Não mostra os e-mails enviados (com os links de verificação e de nova senha) nem os aceites de termo.',
+    porQueExiste:
+      'O Suporte precisa achar a conta de quem pede ajuda para desbloquear o login ou reenviar a verificação, sem receber o acesso amplo do administrador.',
     impacto: 'médio',
   },
   // E - CAMPANHA
@@ -351,14 +344,6 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     porQueExiste:
       'O score é calculado automaticamente, mas os PARÂMETROS do cálculo (pesos, faixas) precisam de alguém que possa recalibrar o motor.',
     impacto: 'médio',
-  },
-  score_visualizar: {
-    nome: 'Ver Score de Terceiros',
-    resumo: 'Ver o score de reputação de qualquer pesquisador.',
-    oQueFaz: 'Permite ver o score de reputação de um pesquisador mesmo fora das regras padrão de visibilidade.',
-    porQueExiste:
-      'Hoje o score já é público pra qualquer sessão (decisão de produto, ver DOCUMENTACAO_BD.md), esta permissão fica como reforço, caso a visibilidade pública seja revista no futuro.',
-    impacto: 'baixo',
   },
   // L - LOG
   log_visualizar: {

@@ -10,9 +10,7 @@ import { SuspensaoResponseDto } from '../../commons/moderacao/dto/suspensao.resp
 // pelo filtro global.
 //
 // Aceita ate/motivo (mesmo padrão de UsuarioServiceSuspend) e tem buscarSuspensao(), espelhando
-// UsuarioServiceSuspend.buscarSuspensao, inclusive o mesmo SAVEPOINT de segurança (esta busca roda
-// automaticamente ao abrir a tela, antes de qualquer ação explícita, e não pode derrubar a tela se as colunas
-// novas ainda não tiverem sido aplicadas no banco de alguém).
+// UsuarioServiceSuspend.buscarSuspensao.
 @Injectable()
 export class PerfilPesquisadorServiceSuspend {
   constructor(
@@ -26,26 +24,18 @@ export class PerfilPesquisadorServiceSuspend {
       'usuario_suspender',
       'Você só pode ver a suspensão do seu próprio perfil.',
     );
-    const db = this.database.getDb();
-    await sql`SAVEPOINT sp_buscar_suspensao_pesquisador`.execute(db);
-    try {
-      const linha = await db
-        .selectFrom('perfil_pesquisador')
-        .select(['suspenso_ate', 'motivo_suspensao', 'suspenso_por'])
-        .where('id_usuario', '=', idUsuario)
-        .executeTakeFirst();
+    const linha = await this.database
+      .getDb()
+      .selectFrom('perfil_pesquisador')
+      .select(['suspenso_ate', 'motivo_suspensao', 'suspenso_por'])
+      .where('id_usuario', '=', idUsuario)
+      .executeTakeFirst();
 
-      return {
-        suspensoAte: linha?.suspenso_ate ?? null,
-        motivoSuspensao: linha?.motivo_suspensao ?? null,
-        suspensoPor: linha?.suspenso_por ?? null,
-      };
-    } catch {
-      await sql`ROLLBACK TO SAVEPOINT sp_buscar_suspensao_pesquisador`.execute(
-        db,
-      );
-      return { suspensoAte: null, motivoSuspensao: null, suspensoPor: null };
-    }
+    return {
+      suspensoAte: linha?.suspenso_ate ?? null,
+      motivoSuspensao: linha?.motivo_suspensao ?? null,
+      suspensoPor: linha?.suspenso_por ?? null,
+    };
   }
 
   async executar(

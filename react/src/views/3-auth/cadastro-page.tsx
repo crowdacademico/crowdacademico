@@ -14,6 +14,7 @@ import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TermoUsoResponseActive } from '../../services/5-termo-uso/type/termo-uso.type';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { emailValido } from '../../services/constant/util/validacao.util';
+import { SENHA_MINIMO_CARACTERES } from '../../services/3-auth/constants/senha.constants';
 
 
 type CampoTocado = 'nome' | 'email' | 'senha' | 'confirmar';
@@ -66,7 +67,7 @@ export function CadastroPage({ auth }: PropsPagina) {
   const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
     nome: nome.trim().length < 2 && 'Nome precisa ter pelo menos 2 caracteres.',
     email: email.trim() === '' ? 'Informe o e-mail.' : !emailEhValido && 'E-mail inválido.',
-    senha: senha.length < 8 && 'A senha precisa ter pelo menos 8 caracteres.',
+    senha: senha.length < SENHA_MINIMO_CARACTERES && `A senha precisa ter pelo menos ${SENHA_MINIMO_CARACTERES} caracteres.`,
     confirmar: confirmarSenha === '' ? 'Confirme a senha.' : !senhasIguais && 'As senhas não são iguais.',
     termos: !aceiteTermos && 'É preciso aceitar o Termo de Uso para criar a conta.',
   }));

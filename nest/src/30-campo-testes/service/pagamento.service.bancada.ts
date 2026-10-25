@@ -252,7 +252,11 @@ export class PagamentoServiceBancada implements OnModuleInit {
       SELECT id_transferencia_api FROM repasse WHERE id_repasse = ${idRepasse}`.execute(
       this.database.getDb(),
     );
-    const idTransferencia = resultado.rows[0]?.id_transferencia_api;
+    const linha = resultado.rows.at(0);
+    if (!linha) {
+      throw new NotFoundException('Repasse não encontrado.');
+    }
+    const idTransferencia = linha.id_transferencia_api;
     if (!idTransferencia) {
       throw new ConflictException(
         'Este repasse ainda não pediu transferência ao provedor (rode o repasse antes).',

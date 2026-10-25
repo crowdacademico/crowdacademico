@@ -49,6 +49,20 @@ const rotuloMeio = (linha: ContribuicaoBancada) =>
       ? 'Cartão (liberado)'
       : 'Cartão (a liberar)'
     : ROTULO_MEIO_PAGAMENTO[linha.meioPagamento];
+// Na coluna "meio", só o nome do meio (a coluna reserva o maior rótulo da lista, DS-104); se o dinheiro do cartão já
+// foi liberado vai no ⓘ ao lado. A ficha do Consultar continua com o rótulo inteiro (rotuloMeio).
+const DICA_CARTAO_LIBERADO = 'O provedor já liberou o dinheiro deste cartão.';
+const DICA_CARTAO_A_LIBERAR = 'O provedor ainda não liberou o dinheiro deste cartão.';
+const rotuloMeioCurto = (linha: ContribuicaoBancada) => ROTULO_MEIO_PAGAMENTO[linha.meioPagamento];
+const renderizarMeio = (linha: ContribuicaoBancada) =>
+  linha.meioPagamento === 'cartao_credito' ? (
+    <span className="inline-flex items-center gap-1">
+      {rotuloMeioCurto(linha)}
+      <Tooltip texto={linha.dinheiroLiberado ? DICA_CARTAO_LIBERADO : DICA_CARTAO_A_LIBERAR} />
+    </span>
+  ) : (
+    rotuloMeioCurto(linha)
+  );
 
 // Um ícone por meio de pagamento ao lado do título "Contribuições", cada um com a sua dica: as regras e a tarifa vêm
 // dos parâmetros (Parâmetros do Sistema, grupo Pagamentos), então a dica muda junto quando o admin muda um deles.
@@ -185,8 +199,8 @@ export function BancadaPagamento({ auth }: PropsPagina) {
               chave: 'meioPagamento',
               rotulo: 'meio',
               tipo: 'texto',
-              renderizar: rotuloMeio,
-              textoExibido: rotuloMeio,
+              renderizar: renderizarMeio,
+              textoExibido: rotuloMeioCurto,
             },
             {
               chave: 'status',

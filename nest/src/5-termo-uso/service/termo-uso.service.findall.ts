@@ -30,27 +30,19 @@ export class TermoUsoServiceFindAll {
       conteudo: linha.conteudo,
       ativo: linha.ativo,
       criadoEm: linha.criado_em,
-      aceites: aceites?.get(linha.id_termo),
+      aceites: aceites.get(linha.id_termo),
     }));
   }
 
-  // contar_aceites_termo() (03) só existe depois de colar o ATUALIZAR: sem ela, a lista sai sem a contagem (a tela
-  // deixa as ações como antes e o banco continua recusando). SAVEPOINT pelo mesmo motivo de listarPapeis
-  // (auth.service.login.ts): um erro de Postgres sem ele aborta a transação inteira da requisição.
-  private async contarAceites(): Promise<Map<number, number> | null> {
-    const db = this.database.getDb();
-    await sql`SAVEPOINT sp_contar_aceites`.execute(db);
-    try {
-      const resultado = await sql<{ id_termo: number; aceites: number }>`
-        SELECT id_termo, public.contar_aceites_termo(id_termo) AS aceites FROM termos_de_uso`.execute(
-        db,
-      );
-      return new Map(
-        resultado.rows.map((linha) => [linha.id_termo, linha.aceites]),
-      );
-    } catch {
-      await sql`ROLLBACK TO SAVEPOINT sp_contar_aceites`.execute(db);
-      return null;
-    }
+  // Quantos aceites cada versão tem (contar_aceites_termo, 03): a tela decide por ela se a versão ainda pode ser
+  // editada ou excluída.
+  private async contarAceites(): Promise<Map<number, number>> {
+    const resultado = await sql<{ id_termo: number; aceites: number }>`
+      SELECT id_termo, public.contar_aceites_termo(id_termo) AS aceites FROM termos_de_uso`.execute(
+      this.database.getDb(),
+    );
+    return new Map(
+      resultado.rows.map((linha) => [linha.id_termo, linha.aceites]),
+    );
   }
 }

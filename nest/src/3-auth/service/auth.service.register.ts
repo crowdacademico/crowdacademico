@@ -2,18 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { UsuarioServiceCreate } from '../../1-usuario/service/usuario.service.create';
 import { TermoUsoServiceFindActive } from '../../5-termo-uso/service/termo-uso.service.find-active';
-import { ConfiguracaoValorService } from '../../commons/configuracao/configuracao-valor.service';
 import { DatabaseService } from '../../commons/database/database.service';
-import { TIPO_NOTIFICACAO } from '../../27-notificacao/constants/notificacao.constants';
-import { NotificacaoServiceEnqueue } from '../../27-notificacao/service/notificacao.service.enqueue';
-import {
-  CHAVE_CONFIG_VERIFICACAO_EMAIL_HORAS_VALIDADE,
-  VERIFICACAO_EMAIL_HORAS_VALIDADE_PADRAO,
-} from '../constants/auth.constants';
 import { AuthRequestRegister } from '../dto/request/auth.request-register';
 import { AuthResponseRegister } from '../dto/response/auth.response-register';
+import { AuthServiceEmailVerification } from './auth.service.email-verification';
 import { AuthServiceLogin } from './auth.service.login';
-import { gerarTokenVerificacaoEmail } from '../util/auth.util.email-verification-token';
 
 // Cadastro público: reaproveita UsuarioServiceCreate (a MESMA criação que POST /usuario admin usa: hash de
 // senha + INSERT + atribuir_papel_padrao()) e soma o que só faz sentido aqui: gravar o aceite do termo ATIVO
@@ -27,8 +20,7 @@ export class AuthServiceRegister {
     private readonly usuarioServiceCreate: UsuarioServiceCreate,
     private readonly termoUsoServiceAtivo: TermoUsoServiceFindActive,
     private readonly authServiceLogin: AuthServiceLogin,
-    private readonly configuracaoValor: ConfiguracaoValorService,
-    private readonly notificacao: NotificacaoServiceEnqueue,
+    private readonly verificacaoEmail: AuthServiceEmailVerification,
   ) {}
 
   async executar(
@@ -52,34 +44,9 @@ export class AuthServiceRegister {
       db,
     );
 
-    // Token de verificação de e-mail: o banco guarda só o hash; o token vai no link do e-mail (fila de
-    // notificacao, enviada por 4-mail). tokenVerificacaoEmailDev continua na resposta fora de produção (ver
-    // controller), para testar sem abrir a caixa de entrada.
-    const { token, hash } = gerarTokenVerificacaoEmail();
-    // Configurável pelo Painel Admin: cai no padrão hardcoded (24h) se a chave não existir/estiver inativa (ver
-    // ConfiguracaoValorService).
-    const verificacaoEmailHorasValidade =
-      await this.configuracaoValor.buscarNumero(
-        CHAVE_CONFIG_VERIFICACAO_EMAIL_HORAS_VALIDADE,
-        VERIFICACAO_EMAIL_HORAS_VALIDADE_PADRAO,
-      );
-    const expiraEm = new Date(
-      Date.now() + verificacaoEmailHorasValidade * 60 * 60 * 1000,
-    );
-    await db
-      .insertInto('verificacao_email')
-      .values({
-        id_usuario: usuario.idUsuario,
-        token_hash: hash,
-        expira_em: expiraEm,
-      })
-      .execute();
-    await this.notificacao.executar(
-      usuario.idUsuario,
-      TIPO_NOTIFICACAO.verificacaoEmail,
-      {},
-      token,
-    );
+    // Link de confirmar a conta (AuthServiceEmailVerification). tokenVerificacaoEmailDev continua na resposta fora
+    // de produção (ver controller), para testar sem abrir a caixa de entrada.
+    const token = await this.verificacaoEmail.emitir(usuario.idUsuario);
 
     const { accessToken, refreshToken, aceitePendente } =
       await this.authServiceLogin.emitirTokens(

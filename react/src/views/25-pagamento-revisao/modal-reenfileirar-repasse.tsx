@@ -8,7 +8,9 @@ import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
+import { Tooltip } from '../../components/layout/tooltip';
 import { pagamentoRevisaoApi } from '../../services/25-pagamento-revisao/api/pagamento-revisao.api';
+import { fraseDoEventoFinanceiro } from '../../services/25-pagamento-revisao/util/evento-financeiro.util';
 import { erroObservacaoRevisao } from '../../services/25-pagamento-revisao/util/observacao-revisao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
@@ -29,8 +31,9 @@ interface ModalReenfileirarRepasseProps {
 // Repasse em erro, duas saídas, as duas auditadas com a observação e quem fez:
 //  - Reenfileirar: a causa (chave Pix errada, saldo na conta do provedor, etc.) foi corrigida FORA do sistema e o repasse
 //    volta para a fila (erro -> pendente, tentativas zeradas) para o sistema tentar a transferência de novo;
-//  - Marcar como pago: o dinheiro já chegou ao pesquisador (o provedor confirmou depois do erro, ou foi pago por fora).
-//    erro -> concluido, sem nova transferência; reenfileirar aqui pagaria duas vezes.
+//  - Marcar como pago: o provedor concluiu a transferência depois de o sistema marcar erro (o aviso chegou atrasado).
+//    erro -> concluido, sem nova transferência; reenfileirar aqui pagaria duas vezes. O Nest consulta o provedor na
+//    hora e recusa se ele não confirmar: não existe pagamento por fora do processador.
 // Repasse que só espera a chave Pix do pesquisador não tem ação (sai da lista sozinho quando a chave for verificada).
 type AcaoRepasse = 'reenfileirar' | 'marcarPago';
 
@@ -105,20 +108,22 @@ export function ModalReenfileirarRepasse({ authFetch, repasse, aoFechar, aoReenf
               valor={<BadgeBooleano valor={!repasse.aguardandoConta} />}
             />
             <CampoFicha rotulo="Transferência no provedor" valor={repasse.idTransferenciaApi} />
-            <CampoFicha rotulo="Último motivo" valor={repasse.ultimoMotivo} largura="cheia" />
+            <CampoFicha rotulo="Último motivo" valor={fraseDoEventoFinanceiro(repasse.ultimoMotivo)} largura="cheia" />
           </SecaoFicha>
 
           {podeReenfileirar && (
             <SecaoFicha titulo="Resolver o erro" colunas={1}>
-              <CaixaAviso titulo="Confira no painel do provedor antes de escolher" icone="fa-triangle-exclamation" tom="erro" espacado>
-                <p>
-                  <strong>Reenfileirar</strong>: a causa foi corrigida e o sistema tenta a transferência de novo. Se der certo, o dinheiro sai de verdade
-                  para o pesquisador.
-                </p>
-                <p>
-                  <strong>Marcar como pago</strong>: o pesquisador já recebeu (o provedor confirmou depois do erro, ou a transferência foi feita por fora).
-                  Conclui o repasse sem transferir de novo. Nesse caso, nunca reenfileire: ele receberia duas vezes.
-                </p>
+              <CaixaAviso
+                titulo={
+                  <>
+                    Confira no painel do provedor antes de escolher{' '}
+                    <Tooltip texto="Reenfileirar: a causa foi corrigida e o sistema tenta a transferência de novo; se der certo, o dinheiro sai de verdade para o pesquisador. Marcar como pago: o provedor concluiu a transferência depois de o sistema marcar erro (o aviso chegou atrasado); o sistema confere com o provedor na hora e só aceita se ele confirmar." />
+                  </>
+                }
+                icone="fa-triangle-exclamation"
+                tom="erro"
+              >
+                Se o provedor já concluiu a transferência, marque como pago e nunca reenfileire: o pesquisador receberia duas vezes.
               </CaixaAviso>
               {repasse.aguardandoConta && (
                 <CaixaAviso titulo="O pesquisador ainda não tem chave Pix verificada" icone="fa-circle-info" tom="aviso">
@@ -127,7 +132,7 @@ export function ModalReenfileirarRepasse({ authFetch, repasse, aoFechar, aoReenf
               )}
               <CampoObservacaoRevisao
                 rotulo="O que foi feito"
-                dica="Fica na auditoria financeira, com o seu nome. Ex.: chave Pix do pesquisador corrigida; ou transferência confirmada no painel do provedor em 21/10."
+                dica="Fica na auditoria financeira, com o seu nome. Ex.: chave Pix do pesquisador corrigida; ou aviso de transferência concluída que chegou atrasado."
                 valor={observacao}
                 aoMudar={setObservacao}
                 erro={erros.erroDe('observacao')}
@@ -161,7 +166,7 @@ export function ModalReenfileirarRepasse({ authFetch, repasse, aoFechar, aoReenf
                 O repasse #{repasse.idRepasse} ({formatarMoeda(repasse.valorLiquido)}) volta para a fila e o sistema tenta transferir de novo. Se der
                 certo, o dinheiro sai para o pesquisador.
               </p>
-              <p>Confirme só se a causa do erro foi corrigida e a transferência não foi feita por fora.</p>
+              <p>Confirme só se a causa do erro foi corrigida.</p>
             </>
           ) : (
             <>
@@ -169,7 +174,7 @@ export function ModalReenfileirarRepasse({ authFetch, repasse, aoFechar, aoReenf
                 O repasse #{repasse.idRepasse} ({formatarMoeda(repasse.valorLiquido)}) fica concluído, sem nova transferência, e as contribuições dele
                 passam para repassadas. Isso não dá para desfazer.
               </p>
-              <p>Confirme só se viu no painel do provedor, ou no comprovante, que o pesquisador recebeu.</p>
+              <p>O sistema confere com o provedor antes de concluir: se ele não confirmar a transferência, nada muda.</p>
             </>
           )}
         </ModalConfirmacao>

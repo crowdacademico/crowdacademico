@@ -1,12 +1,10 @@
 # ⚙️ Documentação Técnica do Backend (NestJS) - CrowdAcadêmico
 
-> 📌 **Numeração de RF:** os requisitos têm 125 RFs (numeração de 24-10-2026, ver a conversão no topo da `MATRIZ-RASTREABILIDADE-RF.md`). Citações de RF por número neste documento foram escritas em datas diferentes e podem estar numa numeração anterior (a numeração mudou em 06-09, 21-09 e 29-09-2026). A `MATRIZ-RASTREABILIDADE-RF.md` está inteira na numeração vigente e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
+> 📌 **Numeração de RF:** citações de RF por número podem estar numa numeração anterior. A `MATRIZ-RASTREABILIDADE-RF.md` está inteira na numeração vigente e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
 
 Este documento é o irmão do `DOCUMENTACAO_BD.md`. Ele cobre o backend em NestJS (`nest/`): como a aplicação conversa com o Postgres, como a autenticação funciona, onde mora a autorização, qual é o padrão que todo módulo segue, e como o módulo de upload de arquivo está montado hoje.
 
-> **Leia esta diferença antes de tudo.** `DOCUMENTACAO_BD.md` é um **log histórico narrativo** - ele registra, com data e autoria, cada decisão de modelagem tomada ao longo de semanas de auditoria do banco. **Este documento aqui não é isso.** Ele descreve o **estado atual** do código do backend: o que existe, como funciona e por quê. Datas e atribuições só aparecem quando estão escritas em comentário no próprio código-fonte (o backend é bem comentado, e vários comentários registram "era X, virou Y, motivo Z" - esses estão citados). Onde o código não conta uma história, este documento descreve o comportamento presente e para por aí, em vez de inventar uma cronologia que ninguém pode conferir.
->
-> Consequência prática: se você procura "por que o banco é assim", vá no `DOCUMENTACAO_BD.md`. Se você procura "como o Nest usa o banco e o que preciso saber pra escrever o próximo módulo", é aqui.
+> **Os dois documentos se completam.** O `DOCUMENTACAO_BD.md` explica por que o banco é assim (tabelas, regras de acesso, funções e triggers); este explica como o Nest usa o banco e o que é preciso saber para escrever o próximo módulo. Os dois descrevem o **estado atual**: o que existe, como funciona e por quê.
 
 ### Legenda dos símbolos
 
@@ -26,10 +24,10 @@ Este documento é o irmão do `DOCUMENTACAO_BD.md`. Ele cobre o backend em NestJ
 4. [Autorização: a RLS do Postgres é a única fonte de verdade](#4-autorização-a-rls-do-postgres-é-a-única-fonte-de-verdade)
 5. [Tratamento de erro: como erro de Postgres vira status HTTP](#5-tratamento-de-erro-como-erro-de-postgres-vira-status-http)
 6. [Validação e DTOs (`class-validator` + converters)](#6-validação-e-dtos-class-validator--converters)
-7. [O padrão de módulo - anatomia de `1-usuario` e `12-campanha`](#7-o-padrão-de-módulo--anatomia-de-1-usuario-e-12-campanha)
-8. [Armazenamento e upload de arquivo (`commons/storage` + `26-arquivo`)](#8-armazenamento-e-upload-de-arquivo-commonsstorage--25-arquivo)
+7. [O padrão de módulo - anatomia de `1-usuario` e `12-campanha`](#7-o-padrão-de-módulo---anatomia-de-1-usuario-e-12-campanha)
+8. [Armazenamento e upload de arquivo (`commons/storage` + `26-arquivo`)](#8-armazenamento-e-upload-de-arquivo-commonsstorage--26-arquivo)
 9. [Dado sensível no processo do Nest: CPF (`commons/seguranca`)](#9-dado-sensível-no-processo-do-nest-cpf-commonsseguranca)
-10. [Módulos de apoio do painel: `28-log-auditoria`, `29-dashboard`, `5-termo-uso`](#10-módulos-de-apoio-do-painel-27-log-auditoria-28-dashboard-5-termo-uso)
+10. [Módulos de apoio do painel: `28-log-auditoria`, `29-dashboard`, `5-termo-uso`](#10-módulos-de-apoio-do-painel-28-log-auditoria-29-dashboard-5-termo-uso)
 11. [Bootstrap, segurança HTTP e infraestrutura (`main.ts`, `app/`)](#11-bootstrap-segurança-http-e-infraestrutura-maints-app)
 12. [Migrations: `aplicar-migrations.script.ts`](#12-migrations-aplicar-migrationsscriptts)
 13. [Inventário de rotas HTTP](#13-inventário-de-rotas-http)
@@ -38,6 +36,9 @@ Este documento é o irmão do `DOCUMENTACAO_BD.md`. Ele cobre o backend em NestJ
 16. [Pontos de atenção consolidados](#16-pontos-de-atenção-consolidados)
 17. [Como conferir este inventário](#17-como-conferir-este-inventário)
 18. [Documentação interativa da API (Swagger/OpenAPI)](#18-documentação-interativa-da-api-swaggeropenapi)
+19. [Conta, login, sessão e senha](#19-conta-login-sessão-e-senha)
+20. [Respostas da API e regras pontuais](#20-respostas-da-api-e-regras-pontuais)
+21. [E-mail, notificações, recompensa e seguir pesquisador](#21-e-mail-notificações-recompensa-e-seguir-pesquisador)
 
 ---
 
@@ -50,7 +51,7 @@ Este documento é o irmão do `DOCUMENTACAO_BD.md`. Ele cobre o backend em NestJ
 | **NestJS 11** (TypeScript) | Framework HTTP + injeção de dependência. O pipeline dele (guards → interceptors → pipes → handler) é o que torna possível o desenho da seção 2. |
 | **Kysely 0.29** | *Query builder* tipado, **não um ORM**. Não há entidades gerenciadas, nem *unit of work*, nem migrations do lado do TypeScript - o schema é escrito à mão em `arquivos_banco_dados/*.sql`, e o Kysely só monta SQL com segurança de tipo em cima dele. |
 | **`pg` 8** | Driver Postgres. Usado **diretamente** em três lugares (o `Pool`, o `SET`/`BEGIN`/`COMMIT` do interceptor, e o script de migrations); em todo o resto do app ele fica escondido por baixo do Kysely. |
-| **`nestjs-cls`** | `AsyncLocalStorage` embrulhado. Carrega a conexão/transação da requisição atual "por fora", sem nenhum service precisar saber disso. Desde 05-09-2026, também gera o id de requisição usado no log (`RequestLoggerMiddleware`, §2.8). |
+| **`nestjs-cls`** | `AsyncLocalStorage` embrulhado. Carrega a conexão/transação da requisição atual "por fora", sem nenhum service precisar saber disso. Também gera o id de requisição usado no log (`RequestLoggerMiddleware`, §2.8). |
 | **Supabase** | Só como **host do Postgres** (e, desde então, também do bucket de arquivos - ver seção 8). O Supabase Auth/PostgREST **não** é usado: a autenticação é própria, em `3-auth`. |
 | **`@nestjs/jwt` + `bcrypt`** | Access token (JWT) e hash de senha/segredo de refresh token. |
 | **`class-validator` / `class-transformer`** | Validação de entrada, via `ValidationPipe` global. |
@@ -144,14 +145,14 @@ Para a RLS funcionar, então, **toda query precisa rodar numa conexão onde `app
 
 📌 **Rota anônima não pula o interceptor.** Quando não há `request.user`, o interceptor seta `''` (string vazia) em vez de pular o passo 3 - `id_usuario_atual()` então devolve `NULL`, que é exatamente o que "anônimo de verdade" significa para as policies. Pular o passo deixaria a variável com o valor da *requisição anterior* naquela conexão.
 
-📌 **Cada requisição segura uma conexão do começo ao fim (registrado em 04-10-2026).**
-- **Decisão:** o interceptor tira uma conexão do pool e só a devolve no fim da requisição, inclusive em `GET` anônimo e enquanto espera o Storage.
-- **Motivo:** o `SET LOCAL` da identidade e a transação só valem dentro de uma conexão; é o que faz a RLS saber quem pede.
-- **Caso-limite aceito:** o número de requisições ao mesmo tempo fica limitado ao tamanho do pool (com o pooler do Supabase, também ao dele). No volume do TCC não pesa. Se pesar, o caminho é não abrir transação em rota de leitura anônima.
+📌 **Cada requisição segura uma conexão do começo ao fim.**
+- O interceptor tira uma conexão do pool e só a devolve no fim da requisição, inclusive em `GET` anônimo e enquanto espera o Storage.
+- **Por quê:** o `SET LOCAL` da identidade e a transação só valem dentro de uma conexão; é o que faz a RLS saber quem pede.
+- **Caso-limite:** o número de requisições ao mesmo tempo fica limitado ao tamanho do pool (com o pooler do Supabase, também ao dele). No volume do TCC não pesa. Se pesar, o caminho é não abrir transação em rota de leitura anônima.
 
 📌 **Ordem no pipeline do Nest.** Guards rodam **antes** de interceptors. É por isso que o `AuthGuardJwt` (global, seção 3) consegue resolver `request.user` a tempo de o interceptor encontrá-lo já pronto no passo 3. Essa ordem não é acidente - é o que faz o desenho inteiro fechar.
 
-📌 **Por que `nestjs-cls` e não `Scope.REQUEST` do Nest.** `Scope.REQUEST` contaminaria toda a árvore de injeção que toca o banco: cada módulo novo teria que lembrar de marcar o escopo certo, e esquecer produziria um bug silencioso. Com `AsyncLocalStorage`, o contexto viaja por fora - nenhum service precisa saber que ele existe. (Registrado em `PENDENCIAS e correcoes.md`, item 5.)
+📌 **Por que `nestjs-cls` e não `Scope.REQUEST` do Nest.** `Scope.REQUEST` contaminaria toda a árvore de injeção que toca o banco: cada módulo novo teria que lembrar de marcar o escopo certo, e esquecer produziria um bug silencioso. Com `AsyncLocalStorage`, o contexto viaja por fora - nenhum service precisa saber que ele existe.
 
 ### 2.3 `DatabaseService` - o único ponto de acesso
 
@@ -171,19 +172,9 @@ const db = this.database.getDb();   // Kysely<DB> já amarrado à transação de
 
 🧩 **Armadilha 2 - `try/catch` em volta de uma query NÃO desfaz um erro de Postgres.** Esta é a mais perigosa, e já causou um bug real no projeto (documentado em comentário dentro de `auth.service.login.ts`). Um erro de Postgres deixa a **transação inteira em estado abortado** até um `ROLLBACK` de verdade. Pegar a exceção no lado do JavaScript e seguir chamando queries no mesmo `db` não desfaz isso: as próximas queries até parecem funcionar, mas o `COMMIT` final do interceptor vira silenciosamente um `ROLLBACK` (é o que o Postgres faz quando se pede `COMMIT` numa transação abortada). Resultado: **a resposta HTTP volta 200, com dado que parece certo - e nada foi gravado.**
 
-  O jeito certo, quando um trecho precisa poder falhar sem derrubar a requisição, é `SAVEPOINT` via `sql` cru. Há dois exemplos reais disso em `3-auth/service/auth.service.login.ts`:
+  O jeito certo, quando um trecho precisa poder falhar sem derrubar a requisição, é `comPontoDeRetorno` (`commons/database/ponto-de-retorno.util.ts`, um `SAVEPOINT`): se o comando falhar, a transação volta só até ali e continua usável, e o erro é sempre relançado. Exemplo real: `excluirComContagemDeUso`, que conta os registros em uso depois de um DELETE recusado.
 
-  ```ts
-  await sql`SAVEPOINT sp_listar_papeis`.execute(db);
-  try {
-    /* chamada que pode falhar se a migração ainda não rodou no banco */
-  } catch {
-    await sql`ROLLBACK TO SAVEPOINT sp_listar_papeis`.execute(db);
-    return [];
-  }
-  ```
-
-  Os dois casos (`listarPapeis` e `buscarSuspensao`) existem pelo mesmo motivo: eles tocam objetos de banco (`listar_papeis_usuario()`, colunas `suspenso_ate`/`motivo_suspensao`) que só existem depois de alguém colar `ATUALIZAR O SUPABASE.sql` no SQL Editor do Supabase - ver `PENDENCIAS e correcoes.md`, item 22. Sem o savepoint, num banco desatualizado, o **login inteiro** quebrava.
+  Consulta de regra de segurança nunca fica num `catch` que devolve um valor padrão ("ninguém suspenso", "sem papel", "sem termo pendente"): se a suspensão, os papéis ou o termo pendente não puderem ser lidos, o erro sobe e o login não passa. A regra falha fechada. Por isso um banco sem os arquivos 01 a 08 inteiros (ex.: o Supabase desatualizado) dá 500 no login, e recriar o banco resolve.
 
 ⚠️ **`.stream()` não é suportado.** O dialect lança erro explícito em `streamQuery`. Nenhum módulo usa hoje; se algum precisar, vai exigir um driver diferente.
 
@@ -191,7 +182,7 @@ const db = this.database.getDb();   // Kysely<DB> já amarrado à transação de
 
 O `Pool` é criado uma única vez, como provider (`PG_POOL`), a partir de `DATABASE_URL`. E `onModuleInit()` roda um `SELECT current_user` na subida: **se a conexão não for exatamente `app_nestjs`, a aplicação não sobe.**
 
-📌 **Por que isso é crítico.** RLS não se aplica a superusuário nem ao dono da tabela. Se alguém apontar o `.env` para o usuário `postgres` por engano, tudo continua funcionando perfeitamente - e a autorização inteira do sistema desaparece, sem um único erro. O health-check transforma uma falha silenciosa e catastrófica numa falha barulhenta no boot. (`PENDENCIAS e correcoes.md`, item 8.)
+📌 **Por que isso é crítico.** RLS não se aplica a superusuário nem ao dono da tabela. Se alguém apontar o `.env` para o usuário `postgres` por engano, tudo continua funcionando perfeitamente - e a autorização inteira do sistema desaparece, sem um único erro. O health-check transforma uma falha silenciosa e catastrófica numa falha barulhenta no boot.
 
 `DatabaseModule` é `@Global()`, então qualquer módulo injeta `DatabaseService` sem importá-lo. Ele também registra os dois provedores globais de infraestrutura: o `GlobalDbInterceptor` (`APP_INTERCEPTOR`) e o `PostgresExceptionFilter` (`APP_FILTER`, seção 5).
 
@@ -208,11 +199,11 @@ export type ModeloCampanha = (typeof MODELOS_CAMPANHA)[number];
 
 📌 **Uma fonte só para o ENUM.** O DTO valida contra a mesma constante que tipa a coluna. Adicionar um valor no ENUM do banco e esquecer de atualizar o DTO vira erro de compilação, não um 500 em produção.
 
-📌 **Conferido contra o banco de verdade (28-09-2026).**
-- **Em palavras simples:** o `db.types.ts` é a "planta" das tabelas que o Nest usa para não errar nome de coluna. Ela é desenhada à mão, então pode ficar diferente do banco real sem ninguém perceber. Agora uma ferramenta tira uma "foto" do banco de verdade, e um teste compara a planta com a foto: se alguém mudar uma coluna no banco e esquecer a planta, o teste fica vermelho.
-- **Decisão:** o `db.types.ts` manual continua sendo o que a aplicação usa. Ao lado dele fica `db.types.generated.ts`, gerado pelo kysely-codegen a partir dos arquivos `.sql` do banco, e uma suíte de teste do banco (a de conferência de tipos, na pasta local de testes do banco) compara os dois a cada rodada. Ela falha se o manual tiver coluna que não existe, tipo diferente ou lista de valores diferente da do banco. Para gerar de novo: o script de geração de tipos da pasta de testes do banco, ou `npm run db:codegen` no `nest/` com o `.env` apontando para um banco.
-- **Motivo:** trocar direto pelo gerado quebrava 61 pontos de compilação, quase todos pela mesma causa: colunas com `DEFAULT` e sem `NOT NULL` (`criado_em`, `ativo`...), que o banco aceita nulas e o manual declara "nunca nulo". A conferência dá a proteção que importa (coluna errada vira teste vermelho) sem mexer em 61 lugares nem no banco.
-- **Caso-limite aceito:** 34 colunas continuam com nulidade diferente, listadas como aviso pela suíte. Colunas de texto com `CHECK (col IN (...))` aparecem como texto livre no gerado (o gerador não lê `CHECK`); a suíte confere a lista do manual contra o `CHECK` do 01. O arquivo gerado fica fora do lint.
+📌 **Conferido contra o banco de verdade.**
+- **Em palavras simples:** o `db.types.ts` é a "planta" das tabelas que o Nest usa para não errar nome de coluna. Ela é desenhada à mão, então pode ficar diferente do banco real sem ninguém perceber. Uma ferramenta tira uma "foto" do banco de verdade, e um teste compara a planta com a foto: se alguém mudar uma coluna no banco e esquecer a planta, o teste fica vermelho.
+- O `db.types.ts` manual continua sendo o que a aplicação usa. Ao lado dele fica `db.types.generated.ts`, gerado pelo kysely-codegen a partir dos arquivos `.sql` do banco, e uma suíte de teste do banco (a de conferência de tipos, na pasta local de testes do banco) compara os dois a cada rodada. Ela falha se o manual tiver coluna que não existe, tipo diferente ou lista de valores diferente da do banco. Para gerar de novo: o script de geração de tipos da pasta de testes do banco, ou `npm run db:codegen` no `nest/` com o `.env` apontando para um banco.
+- **Por quê:** trocar direto pelo gerado quebraria dezenas de pontos de compilação, quase todos pela mesma causa: colunas com `DEFAULT` e sem `NOT NULL` (`criado_em`, `ativo`...), que o banco aceita nulas e o manual declara "nunca nulo". A conferência dá a proteção que importa (coluna errada vira teste vermelho) sem mexer nesses lugares nem no banco.
+- **Caso-limite:** 34 colunas continuam com nulidade diferente, listadas como aviso pela suíte. Colunas de texto com `CHECK (col IN (...))` aparecem como texto livre no gerado (o gerador não lê `CHECK`); a suíte confere a lista do manual contra o `CHECK` do 01. O arquivo gerado fica fora do lint.
 
 ### 2.7 `paginacao.util.ts` - teto de segurança, não paginação de tela
 
@@ -231,11 +222,11 @@ Monte a query normalmente (`select`/`where`/`orderBy`) e troque o `.execute()` f
 
 Usam `paginar()` hoje: `1-usuario`, `6-perfil-pesquisador`, `8-area-conhecimento`, `9-tipo-link`, `10-motivo-denuncia`, `11-configuracoes`, `12-campanha`, `15-atualizacao-campanha`, `17-comentario`, `28-log-auditoria`.
 
-### 2.8 `commons/logging` - log de requisição com ID (05-09-2026)
+### 2.8 `commons/logging` - log de requisição com ID
 
-Até esta data, **não existia nenhum log de requisição neste projeto** - só logs pontuais tipo "conectado ao banco" (`DatabaseModule.onModuleInit`). Um erro relatado como "deu erro às 14:32" não tinha como virar "achei os 8 logs daquela requisição específica" - item 6 de uma lista de pendências, resolvido no mesmo dia em que foi levantado.
+Cada requisição ganha um id, e todas as linhas de log dela levam esse id: um erro relatado como "deu erro às 14:32" vira "os logs daquela requisição específica".
 
-**De onde vem o ID.** Não é gerado num arquivo próprio - é o próprio `nestjs-cls` que já sustenta a seção 2.2 inteira. `ClsModule.forRoot()` (`database.module.ts`) ganhou duas opções novas dentro de `middleware`:
+**De onde vem o ID.** Não é gerado num arquivo próprio - é o próprio `nestjs-cls` que já sustenta a seção 2.2 inteira. `ClsModule.forRoot()` (`database.module.ts`) tem duas opções dentro de `middleware`:
 
 ```ts
 ClsModule.forRoot({
@@ -267,7 +258,7 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 | | Access token | Refresh token |
 |---|---|---|
 | Formato | JWT assinado (`JWT_SECRET`) | `"<id_sessao>.<segredo>"` - texto puro, não é JWT |
-| Validade | `JWT_ACCESS_EXPIRES_IN` (padrão `15m`) | `configuracoes.refresh_token_dias_validade` (padrão 30, configurável pelo Painel Admin desde 04-09-2026) |
+| Validade | `JWT_ACCESS_EXPIRES_IN` (padrão `15m`) | `configuracoes.refresh_token_dias_validade` (padrão 30, configurável pelo Painel Admin) |
 | Onde é validado | `AuthGuardJwt`, em memória - **nunca consultado contra o banco** | `bcrypt.compare` do segredo contra `sessao.refresh_token_hash` |
 | Claims | `sub` (id do usuário) e `sid` (id da sessão) | - |
 
@@ -279,7 +270,7 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 
 **`AuthGuardJwt`** - global (`APP_GUARD`), roda em toda rota. **Não bloqueia nada por conta própria.** Sem cabeçalho `Authorization`, deixa passar como anônimo (`request.user` fica `undefined`). Com um `Bearer` válido, preenche `request.user = { idUsuario, idSessao }`. Com um token **presente mas inválido/expirado**, lança 401 - porque isso é sempre erro: o cliente pensa que está autenticado e não está, o que é diferente de não mandar token nenhum.
 
-**`AuthGuardRequireAuth`** - global também (`APP_GUARD`, registrado depois da `AuthGuardJwt`, 27-09-2026): **toda rota exige login, menos as marcadas com `@Publico()`** (`commons/auth/publico.decorator.ts`). Só confere se existe sessão; devolve 401 *"Você precisa estar logado para fazer isso."* se não existir. Rota nova nasce fechada: esquecer a marcação deixa a rota fechada, nunca aberta. Antes era aplicado rota a rota com `@UseGuards(AuthGuardRequireAuth)` (84 repetições), e foi assim que o `POST /usuario` ficou aberto a anônimo sem ninguém notar. As 29 rotas `@Publico()` são login, cadastro, renovação e saída de sessão, verificação de e-mail, `health`, as listas e leituras públicas de catálogo, o termo vigente, as configurações públicas, o avatar e as leituras que a página pública vai usar (campanha, orçamento, cronograma, atualizações, comentários, perfil de pesquisador); nas de login opcional, a `AuthGuardJwt` continua reconhecendo quem mandou token. Na troca, as 119 rotas foram chamadas sem login antes e depois: nenhuma diferença de status nem de conteúdo (roteiro de teste que chama cada rota sem login e compara as respostas). O mesmo guard barra, com 403 e `codigo: "TERMO_PENDENTE"`, quem tem versão nova do Termo de Uso para aceitar (RF-015, ver seção 19); só passam as rotas `@Publico()` e as marcadas com `@LiberadoComTermoPendente()`.
+**`AuthGuardRequireAuth`** - global também (`APP_GUARD`, registrado depois da `AuthGuardJwt`): **toda rota exige login, menos as marcadas com `@Publico()`** (`commons/auth/publico.decorator.ts`). Só confere se existe sessão; devolve 401 *"Você precisa estar logado para fazer isso."* se não existir. Rota nova nasce fechada: esquecer a marcação deixa a rota fechada, nunca aberta. As 29 rotas `@Publico()` são login, cadastro, renovação e saída de sessão, verificação de e-mail, `health`, as listas e leituras públicas de catálogo, o termo vigente, as configurações públicas, o avatar e as leituras que a página pública vai usar (campanha, orçamento, cronograma, atualizações, comentários, perfil de pesquisador); nas de login opcional, a `AuthGuardJwt` continua reconhecendo quem mandou token. Um roteiro de teste chama cada rota sem login e compara as respostas com a gravação anterior. O mesmo guard barra, com 403 e `codigo: "TERMO_PENDENTE"`, quem tem versão nova do Termo de Uso para aceitar (RF-015, ver seção 19); só passam as rotas `@Publico()` e as marcadas com `@LiberadoComTermoPendente()`.
 
 📌 **Por que existe um guard que só confere login.** Sem ele, um anônimo tentando `PATCH /usuario/5` esperaria a RLS devolver 0 linhas e receberia um erro confuso lá no fim. O guard pega o caso mais comum - *nem logado* - cedo e com mensagem clara. O comentário no código deixa a fronteira explícita: **este guard não sabe nada sobre papel/permissão**; quem já está logado mas sem a permissão certa nunca cai aqui, cai num 403 vindo da RLS.
 
@@ -287,9 +278,9 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 
 **Login** (`POST /auth/login` → `auth.service.login.ts`), em ordem:
 1. Busca `id_usuario`, `senha_hash` e `bloqueado_ate` por e-mail. Esta é a **única query do projeto inteiro que lê `senha_hash`** - de propósito, e nunca via `USUARIO_COLUNAS_SELECT` (que exclui a coluna para todos os outros services).
-2. Usuário inexistente → `401 Credenciais inválidas.` Como `pol_usuario_select` já esconde `deletado = TRUE` até de anônimo, conta excluída cai no mesmo erro - não vaza se a conta existe.
+2. Usuário inexistente → `401 E-mail ou senha inválidos. Tente novamente ou clique em 'Esqueceu a senha?'.` com `campos` marcando o e-mail e a senha (`MENSAGEM_LOGIN_RECUSADO` e `CAMPOS_LOGIN_RECUSADO`, a mesma resposta da senha errada) Como `pol_usuario_select` já esconde `deletado = TRUE` até de anônimo, conta excluída cai no mesmo erro - não vaza se a conta existe.
 3. `bloqueado_ate` no futuro → 401 com a data formatada (bloqueio **automático**, por senha errada demais).
-4. Suspensão de **moderação** (`suspenso_ate`, manual, com motivo) → **403**, não 401: a pessoa não errou credencial nenhuma, a conta é que está impedida, e precisa saber por quê. (Consulta protegida por `SAVEPOINT`, ver §2.4.)
+4. Suspensão de **moderação** (`suspenso_ate`, manual, com motivo) → **403**, não 401: a pessoa não errou credencial nenhuma, a conta é que está impedida, e precisa saber por quê. (Um erro na consulta barra o login: a regra falha fechada, ver §2.4.)
 5. `bcrypt.compare`. Falhou → `SELECT public.registrar_falha_login(...)` (função `SECURITY DEFINER`, porque roda antes de existir sessão) e 401.
 6. Passou → `SELECT public.registrar_login_sucesso(...)`, emite o par de tokens com `origem = 'login'`, e devolve `{ accessToken, refreshToken, usuario, papeis }`.
 
@@ -303,9 +294,9 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 
 **Logout** (`POST /auth/logout`): confere o segredo e marca `revogado_em`. Sessão inexistente devolve sucesso, não erro - do ponto de vista do logout, o objetivo (a sessão não vale mais nada) já está satisfeito.
 
-**Cadastro público** (`POST /auth/cadastro` → `auth.service.register.ts`): reaproveita `UsuarioServiceCreate` (a mesmíssima criação que `POST /usuario` do admin usa) e soma o que só faz sentido no auto-cadastro - grava o aceite do termo **ativo** via `registrar_aceite_termo()` (o id do termo é resolvido pelo servidor, **nunca** aceito do corpo da requisição), gera o token de verificação de e-mail em `verificacao_email` (validade em `configuracoes.verificacao_email_horas_validade`, padrão 24h, também configurável pelo Painel Admin desde 04-09-2026), e já devolve tokens de sessão (quem se cadastra termina logado).
+**Cadastro público** (`POST /auth/cadastro` → `auth.service.register.ts`): reaproveita `UsuarioServiceCreate` (a mesmíssima criação que `POST /usuario` do admin usa) e soma o que só faz sentido no auto-cadastro - grava o aceite do termo **ativo** via `registrar_aceite_termo()` (o id do termo é resolvido pelo servidor, **nunca** aceito do corpo da requisição), gera o token de verificação de e-mail em `verificacao_email` (validade em `configuracoes.verificacao_email_horas_validade`, padrão 24h, também configurável pelo Painel Admin), e já devolve tokens de sessão (quem se cadastra termina logado).
 
-📌 **Por que estes dois viraram configuráveis, e o custo de bcrypt não.** `refresh_token_dias_validade` e `verificacao_email_horas_validade` eram constantes fixas em `auth.constants.ts` com um comentário dizendo "parâmetro técnico, não regra de negócio" - revisto em 04-09-2026: os dois são só **janelas de tempo de produto** (por quanto tempo alguém continua logado, por quanto tempo um link de verificação vale), mesmo tipo de número que `configuracoes.bloqueio_login_minutos` já era. Lidos via `ConfiguracaoValorService`, com fallback pro padrão hardcoded se a chave sumir/for desativada - mesmo padrão usado em `26-arquivo` (ver §8.6). `CUSTO_BCRYPT_REFRESH_TOKEN` continua fixo de propósito: é parâmetro de segurança (custo de hash), não regra de produto - baixar isso sem entender a troca enfraquece a defesa contra força bruta offline.
+📌 **Por que estes dois viraram configuráveis, e o custo de bcrypt não.** `refresh_token_dias_validade` e `verificacao_email_horas_validade` são só **janelas de tempo de produto** (por quanto tempo alguém continua logado, por quanto tempo um link de verificação vale), mesmo tipo de número que `configuracoes.bloqueio_login_minutos` já era. Lidos via `ConfiguracaoValorService`, com fallback pro padrão hardcoded se a chave sumir/for desativada - mesmo padrão usado em `26-arquivo` (ver §8.6). `CUSTO_BCRYPT_REFRESH_TOKEN` continua fixo de propósito: é parâmetro de segurança (custo de hash), não regra de produto - baixar isso sem entender a troca enfraquece a defesa contra força bruta offline.
 
 📌 **`tokenVerificacaoEmailDev`.** O token vai por e-mail (fila de `notificacao`, enviada pelo `4-mail`, seção 21); fora de produção ele também volta no corpo da resposta, para testar sem abrir a caixa de entrada. Em produção não é devolvido.
 
@@ -313,9 +304,9 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 
 ### 3.4 Rate limit
 
-`ThrottlerModule` é registrado uma vez só, em `app.module.ts` (é `@Global()`: um segundo `forRoot()` em outro módulo sobrescrevia o primeiro, já foi bug). O limite de verdade de cada rota vem do `@Throttle()` no próprio controller: `POST /auth/login`, `POST /auth/cadastro` e `GET /usuario/eu/exportar-dados` (este por conta, não por IP, ver `1-usuario`).
+`ThrottlerModule` é registrado uma vez só, em `app.module.ts` (é `@Global()`: um segundo `forRoot()` em outro módulo sobrescreveria o primeiro). O limite de verdade de cada rota vem do `@Throttle()` no próprio controller: `POST /auth/login`, `POST /auth/cadastro` e `GET /usuario/eu/exportar-dados` (este por conta, não por IP, ver `1-usuario`).
 
-📌 **A resposta 429 sai em português, com o tempo de espera** (27-09-2026): o `errorMessage` do `ThrottlerModule` aponta para `commons/seguranca/mensagem-limite-tentativas.util.ts`, que lê `timeToBlockExpire` (segundos, o mesmo número do cabeçalho `Retry-After`) e devolve "Muitas tentativas em sequência. Tente de novo em 40 segundos" (ou minutos, ou horas). Antes saía o padrão do pacote, em inglês. Vale para toda rota com `@Throttle()`.
+📌 **A resposta 429 sai em português, com o tempo de espera:** o `errorMessage` do `ThrottlerModule` aponta para `commons/seguranca/mensagem-limite-tentativas.util.ts`, que lê `timeToBlockExpire` (segundos, o mesmo número do cabeçalho `Retry-After`) e devolve "Muitas tentativas em sequência. Tente de novo em 40 segundos" (ou minutos, ou horas). Vale para toda rota com `@Throttle()`.
 
 📌 **Por que só nessas duas.** `bcrypt` é lento **de propósito** (~100ms por operação). Sem limite, derrubar o servidor por CPU é barato: basta mandar muitas requisições em paralelo, com senha errada e sem precisar de conta válida. Login é o endpoint público que dispara `bcrypt.compare` sem exigir login antes; cadastro dispara `bcrypt.hash` e, além do custo de CPU, é o tipo de endpoint público que atrai spam/automação sem exigir **nada** antes.
 
@@ -327,7 +318,7 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 
 ## 4. Autorização: a RLS do Postgres é a única fonte de verdade
 
-**Nenhum guard do NestJS verifica permissão por nome. Nem hardcoded, nem gerada.** Isto é uma decisão consciente, registrada em `PENDENCIAS e correcoes.md`, item 7 - e é **diferente** da sugestão original que estava naquele item (espelhar `tem_permissao()` no lado da aplicação).
+**Nenhum guard do NestJS verifica permissão por nome. Nem hardcoded, nem gerada.** É de propósito: espelhar `tem_permissao()` no lado da aplicação foi considerado e descartado (§4.2).
 
 ### 4.1 A divisão de responsabilidade
 
@@ -341,7 +332,7 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 
 ### 4.2 Por que não duplicar a autorização no Nest
 
-O raciocínio registrado no item 7 tem dois pontos, e o segundo é o mais forte:
+O raciocínio tem dois pontos, e o segundo é o mais forte:
 
 1. **Espelhar criaria exatamente a segunda fonte de verdade que se queria evitar.** Mesmo gerando a lista de permissões automaticamente na subida, existiriam **dois** pontos decidindo "pode ou não pode" - o guard *e* a policy - livres para divergir com o tempo.
 2. **A RLS quase nunca é só "tem a permissão X".** Ela é quase sempre *"tem a permissão X **OU** é o dono **OU** o status da campanha permite"*. Um guard roda **antes** de saber se a condição extra se aplica - ele não tem a linha em mãos. Reproduzir isso no Nest significaria reimplementar as condições de negócio de 100+ policies em TypeScript.
@@ -374,7 +365,7 @@ if (!linha) {
 
 📌 **`commons/database/distinguir-404-ou-403.util.ts`.** O bloco acima (UPDATE/DELETE que afetou 0 linhas: "não existe" ou "a RLS bloqueou") vive num helper, `return await distinguir404ou403(db, 'campanha', { id_campanha: id }, 'Campanha não encontrada.', 'Sem permissão para aprovar esta campanha.')`, usado em 26 services. O 3º argumento é um **objeto de filtro**: chave simples (`{ id_campanha: id }`), composta (`{ id_usuario, id_papel }`) ou chave mais condição (`{ id_usuario, deletado: false }`); todas as colunas entram com `AND`. A mensagem 403 é passada inteira (não um template), porque alguns chamadores misturam permissão com regra de negócio. Usa `sql.table`/`sql.ref` (`SELECT 1 ... LIMIT 1`) em vez do query builder tipado, cujos genéricos não resolvem com tabela abstrata. O `return` explícito é o que faz o TypeScript estreitar `linha` depois do `if`. Fica fora de propósito `campanha.service.submit` (lê `status` para escolher entre 2 mensagens 403). Os que já leem a linha antes do write (`comentario.update`, `termo-uso.ativar/excluir`) já discriminam sem SELECT extra.
 
-📌 **`excluirOu404ou403` (mesmo arquivo, 27-09-2026).** O "excluir" inteiro de um registro que nada mais referencia: DELETE pelo filtro e, se nada foi apagado, `distinguir404ou403`. Usado pelos serviços de remover de configuração, item de orçamento, marco, link de atualização, link acadêmico, papel × permissão e usuário × papel (cada um virou uma chamada só). Registro que outras tabelas podem estar usando vai por `excluirComContagemDeUso` (§5.1). "Deixar de seguir" fica de fora: responde sempre 404, de propósito.
+📌 **`excluirOu404ou403` (mesmo arquivo).** O "excluir" inteiro de um registro que nada mais referencia: DELETE pelo filtro e, se nada foi apagado, `distinguir404ou403`. Usado pelos serviços de remover de configuração, item de orçamento, marco, link de atualização, link acadêmico, papel × permissão e usuário × papel. Registro que outras tabelas podem estar usando vai por `excluirComContagemDeUso` (§5.1). "Deixar de seguir" fica de fora: responde sempre 404, de propósito.
 
 📌 **Por que o `SELECT` extra funciona como discriminador.** Só funciona quando a policy de `SELECT` daquela tabela é mais permissiva que a de escrita - o que é o caso geral aqui (`pol_arquivo_select` é `USING (TRUE)`, `pol_campanha_select` libera por status). Onde a policy de `SELECT` for tão restritiva quanto a de escrita, esse padrão devolve 404 para um caso que na verdade é 403; nesse cenário, 404 é a resposta mais honesta mesmo (a linha, para aquele usuário, de fato não existe).
 
@@ -428,25 +419,25 @@ O converter (`perfil-pesquisador.converter.ts`) recebe `cpfDecifrado` como **par
 
 📌 **A mensagem das faixas `90`-`93` é a mensagem original da função do banco**, repassada literalmente. Isso vale a pena porque essas mensagens foram escritas para o usuário final ("Duração da campanha fora do intervalo configurado"), não para o desenvolvedor.
 
-📌 **`P0001` vira 400, e o comentário justifica:** sem ERRCODE customizado não dá para saber se é permissão, validação ou conflito - 400 com a mensagem original é o mais honesto possível. Sobram nessa situação as funções fora de `05` que ainda não ganharam ERRCODE próprio (ex.: `excluir_conta_usuario()`, em `03_funcoes_seguranca.sql`).
+📌 **`P0001` vira 400, e o comentário justifica:** sem ERRCODE customizado não dá para saber se é permissão, validação ou conflito - 400 com a mensagem original é o mais honesto possível. Toda recusa de regra do `03` e do `05` tem código próprio; o `P0001` só aparece se uma função nova esquecer o `ERRCODE`.
 
 📌 **O corpo de erro traz `codigo`.** O filtro devolve `{ statusCode, codigo, message, dados?, campos? }`: `statusCode` e `message` como sempre, `codigo` é o SQLSTATE (`9xxxx` de regra de negócio ou os nativos `23505`, `23503`, `23502`, `23514`, `42501`, `P0001`), e `dados` só aparece se o `RAISE` mandou um `DETAIL` em JSON. `campos` (`{ <campo>: [mensagens] }`) aparece na duplicidade ligada a um campo e em todo 400 de validação de DTO (§6.1): é o que o React usa para mostrar o erro embaixo do campo certo. O nome da constraint violada não vai no corpo. O front distingue a regra pelo código estável em vez do texto da mensagem. Contrato completo em `DOCUMENTACAO_ERRCODE.md`, seção "Contrato do corpo de erro da API".
 
-📌 **Duplicidade com mensagem por índice (27-09-2026).** O Postgres informa em `erro.constraint` qual índice ou constraint único foi violado. O filtro procura esse nome em `DUPLICIDADE_POR_INDICE_UNICO` (`commons/database/mensagens-duplicidade.constants.ts`), que guarda a mensagem e, quando existe, o `campo` do formulário. É o **único** lugar do sistema que trata duplicidade: nenhum service tem `catch` de 23505 (os 7 que tinham foram limpos, só os ramos de 42501 ficaram). Estão no mapa os códigos e nomes dos catálogos (inclusive os três índices de nome normalizado do [02-C-1], com o aviso de que acentos, maiúsculas e espaços não contam como diferença), chave de configuração, versão de termo, nome de papel, e-mail, CPF e perfil repetido, e as repetições que um usuário comum pode provocar (seguir, denunciar, comentar duas vezes). Módulo novo com `UNIQUE` novo acrescenta uma linha no mapa.
+📌 **Duplicidade com mensagem por índice.** O Postgres informa em `erro.constraint` qual índice ou constraint único foi violado. O filtro procura esse nome em `DUPLICIDADE_POR_INDICE_UNICO` (`commons/database/mensagens-duplicidade.constants.ts`), que guarda a mensagem e, quando existe, o `campo` do formulário. É o **único** lugar do sistema que trata duplicidade: nenhum service tem `catch` de 23505 (só ramos de 42501, ver §5.2). Estão no mapa os códigos e nomes dos catálogos (inclusive os três índices de nome normalizado do [02-C-1], com o aviso de que acentos, maiúsculas e espaços não contam como diferença), chave de configuração, versão de termo, nome de papel, e-mail, CPF e perfil repetido, e as repetições que um usuário comum pode provocar (seguir, denunciar, comentar duas vezes). Módulo novo com `UNIQUE` novo acrescenta uma linha no mapa.
 
-📌 **Excluir item de catálogo em uso diz onde e quantas vezes (27-09-2026).** Área do conhecimento, tipo de link e motivo de denúncia não têm `CASCADE` de propósito: excluir um item em uso falha com 23503. Antes, cada serviço devolvia 409 com texto fixo; agora a mensagem traz a contagem ("em uso em 2 campanhas", "em 4 perfis e 1 recompensa"), montada por `commons/database/mensagem-exclusao-em-uso.util.ts`. Os três serviços de remover chamam o mesmo helper, `excluirComContagemDeUso` (`commons/database/excluir-com-contagem-de-uso.util.ts`): ele faz o DELETE, devolve 404 ou 403 quando nada foi apagado e, no 23503, descobre sozinho pelo catálogo do Postgres (`pg_constraint`) quais tabelas apontam para o item, conta cada uma e monta o 409. Nenhuma lista de tabelas escrita à mão: uma FK nova entra na contagem sem mexer em código. O nome amigável de cada tabela ("campanhas", "perfis") vem de `rotulos-de-uso.constants.ts`; tabela sem rótulo aparece como "registro(s) em <tabela>". Detalhe técnico: toda requisição roda numa transação só (`GlobalDbInterceptor`), e depois de um comando que falha o Postgres recusa qualquer outro. Por isso o DELETE roda dentro de `comPontoDeRetorno` (`commons/database/ponto-de-retorno.util.ts`, um `SAVEPOINT`): se ele falhar, a transação volta só até ali e ainda aceita as contagens. Contar **antes** do DELETE não servia, porque quem não tem permissão receberia "em uso em 3 campanhas" em vez de 403. As contagens passam pela RLS; se nada for contado, volta o texto genérico em vez de "em uso em 0". Conferido na API: 409 com contagem, 404 e 403 inalterados.
+📌 **Excluir item de catálogo em uso diz onde e quantas vezes.** Área do conhecimento, tipo de link e motivo de denúncia não têm `CASCADE` de propósito: excluir um item em uso falha com 23503, e a mensagem do 409 traz a contagem ("em uso em 2 campanhas", "em 4 perfis e 1 recompensa"), montada por `commons/database/mensagem-exclusao-em-uso.util.ts`. Os três serviços de remover chamam o mesmo helper, `excluirComContagemDeUso` (`commons/database/excluir-com-contagem-de-uso.util.ts`): ele faz o DELETE, devolve 404 ou 403 quando nada foi apagado e, no 23503, descobre sozinho pelo catálogo do Postgres (`pg_constraint`) quais tabelas apontam para o item, conta cada uma e monta o 409. Nenhuma lista de tabelas escrita à mão: uma FK nova entra na contagem sem mexer em código. O nome amigável de cada tabela ("campanhas", "perfis") vem de `rotulos-de-uso.constants.ts`; tabela sem rótulo aparece como "registro(s) em <tabela>". Detalhe técnico: toda requisição roda numa transação só (`GlobalDbInterceptor`), e depois de um comando que falha o Postgres recusa qualquer outro. Por isso o DELETE roda dentro de `comPontoDeRetorno` (`commons/database/ponto-de-retorno.util.ts`, um `SAVEPOINT`): se ele falhar, a transação volta só até ali e ainda aceita as contagens. Contar **antes** do DELETE não servia, porque quem não tem permissão receberia "em uso em 3 campanhas" em vez de 403. As contagens passam pela RLS; se nada for contado, volta o texto genérico em vez de "em uso em 0". Conferido na API: 409 com contagem, 404 e 403 inalterados.
 
-📌 **As funções de moderação do `03` recusam com código próprio (27-09-2026).** Suspender/revogar conta, suspender/reativar pesquisador, desbloquear login, excluir conta, corrigir CPF, criar perfil ou campanha para outro, excluir campanha à força, suspender papel e alterar perfil de outro davam `RAISE EXCEPTION` sem ERRCODE (P0001). Por isso 10 serviços tinham um `catch` próprio que devolvia 403 em **qualquer** erro, até "motivo é obrigatório" (que é 400) ou uma falha de banco. Agora as recusas têm código (92012 a 92024 = sem permissão, 90020/90021 = dado inválido, `DOCUMENTACAO_ERRCODE.md`) e os `catch` saíram: o filtro global responde com a mensagem da própria função. Suíte 20 do PGlite. No Supabase: Grupo S.
+📌 **As funções de moderação do `03` recusam com código próprio.** Suspender/revogar conta, suspender/reativar pesquisador, desbloquear login, excluir conta, corrigir CPF, criar perfil ou campanha para outro, excluir campanha à força, suspender papel e alterar perfil de outro recusam com código (92012 a 92024 = sem permissão, 90020/90021 = dado inválido, `DOCUMENTACAO_ERRCODE.md`), e nenhum serviço tem `catch` próprio para elas: o filtro global responde com a mensagem da própria função. Um `catch` que devolvesse 403 em qualquer erro transformaria "motivo é obrigatório" (400) ou uma falha de banco em "sem permissão".
 
 📌 **`@UsuarioAtual()` (`commons/auth/usuario-atual.decorator.ts`).** Quem está logado, direto no parâmetro do controller, em vez de receber o `request` inteiro só para ler `request.user!.idUsuario` (o `!` era uma afirmação sem garantia). Se `request.user` faltar, responde 401. Usado em 15 controllers; ficam com o `request` inteiro os que precisam dele (login, cadastro e renovação leem IP e cabeçalhos) e as rotas de login opcional (perfil de pesquisador visto por visitante).
 
-📌 **`POST /usuario` exige login e a permissão `usuario_criar` (28-09-2026, checada no controller porque o cadastro público reaproveita o mesmo service sem ninguém logado).** É o "Criar usuário" do painel; quem cria a própria conta usa o `POST /auth/cadastro`, que grava o aceite dos Termos de Uso. Antes, um anônimo criava conta por aqui pulando o aceite.
+📌 **`POST /usuario` exige login e a permissão `usuario_criar` (checada no controller porque o cadastro público reaproveita o mesmo service sem ninguém logado).** É o "Criar usuário" do painel; quem cria a própria conta usa o `POST /auth/cadastro`, que grava o aceite dos Termos de Uso. Sem a permissão, um anônimo criaria conta por aqui pulando o aceite.
 
-📌 **`temCodigoPostgres(erro, codigo)` (`commons/database/codigo-postgres.util.ts`).** "Este erro veio do Postgres com este SQLSTATE?" conferido de verdade, sem o `as { code?: string }` que se repetia em 9 lugares.
+📌 **`temCodigoPostgres(erro, codigo)` (`commons/database/codigo-postgres.util.ts`).** "Este erro veio do Postgres com este SQLSTATE?" conferido de verdade, sem um `as { code?: string }` repetido em cada `catch`.
 
 ### 5.2 Quando tratar localmente em vez de deixar cair no filtro
 
-O filtro nasceu como rede de segurança: `usuario.service.create` não tinha `try/catch` nenhum, e e-mail duplicado virava 500 cru em vez de 409. Hoje ele é o lugar de toda duplicidade (§5.1).
+O filtro é o lugar de toda duplicidade (§5.1): nenhum service precisa de `try/catch` para que um e-mail duplicado vire 409, e não 500.
 
 O service só trata localmente o que o filtro não tem como saber: o **contexto** de um 42501. `configuracoes.service.create.ts` é o exemplo:
 
@@ -477,9 +468,7 @@ new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: tru
 
 📌 **Transformações de entrada centralizadas** (`commons/validacao/transformacoes.decorator.ts`), rodam antes da validação:
 - `@TextoLimpo()` - tira espaço das pontas e junta espaços repetidos ("  Site   Pessoal " vira "Site Pessoal"); só-espaço vira vazio e cai no `@IsNotEmpty`. Não mexe em maiúscula/minúscula de propósito (ORCID, GitHub, frases de motivo). Aplicado em nome/descrição de tipo de link, área do conhecimento e motivo de denúncia (criar e alterar).
-- `@BooleanoDaQuery()` - "true"/"false" da query string viram booleano (`@Type(() => Boolean)` transformaria "false" em `true`). Era uma função copiada igual em três DTOs de listagem.
-
-📌 **Isso não existia no começo do projeto.** O comentário registra o achado: nenhum DTO tinha decorator de validação e não havia `ValidationPipe` nenhum - e-mail vazio e senha de 1 caractere passavam direto para o Postgres.
+- `@BooleanoDaQuery()` - "true"/"false" da query string viram booleano (`@Type(() => Boolean)` transformaria "false" em `true`).
 
 ### 6.2 As três camadas de DTO
 
@@ -502,7 +491,7 @@ Padrões de validação em uso: `@IsIn(CONSTANTE_DO_DB_TYPES)` para ENUMs; `@IsO
 - **`Pick<>` em vez da entity inteira** (`usuario.converter.ts`): os services nunca selecionam `senha_hash`, então exigir a entity completa quebraria a tipagem de toda query que usa `USUARIO_COLUNAS_SELECT`. O `Pick` aceita qualquer objeto que tenha *pelo menos* os campos usados.
 - **Converter que recebe uma dependência** (`arquivo.converter.ts`): recebe `armazenamento` como parâmetro porque montar a URL pública exige saber `STORAGE_PUBLIC_BASE_URL`. Continua sem estado próprio - só delega a montagem para quem já tem a configuração carregada. É o único converter assim.
 
-📌 **`CampanhaRequestCreate.modelo` aceita só `'all-or-nothing'`.** Os requisitos preveem os dois modelos, mas as regras do flexível (repasse independente da meta, aviso ao doador, encerramento) dependem do módulo de pagamento e do checkout; aceitar `'flexivel'` criaria uma campanha sem nenhuma dessas proteções. O valor continua no enum e no seed, e o DTO volta a aceitar os dois quando o módulo de pagamento existir.
+📌 **`CampanhaRequestCreate.modelo` aceita os dois modelos** (`all-or-nothing` e `flexivel`), opcional: sem ele, o banco aplica o padrão (tudo-ou-nada). O destino do dinheiro de cada modelo está em `DOCUMENTACAO_FINANCEIRO.md`.
 
 ### 6.3 Constante de colunas por módulo
 
@@ -535,13 +524,13 @@ Este é o "modelo" a copiar ao construir um módulo novo. Os dois exemplos abaix
 └── util/<nome>.util.<acao>.ts            ← só onde faz sentido (3-auth, 12-campanha, 26-arquivo)
 ```
 
-📌 **Nome de arquivo: `entidade.camada.ação`, ação em inglês (28-09-2026).**
+📌 **Nome de arquivo: `entidade.camada.ação`, ação em inglês.**
 - **Em palavras simples:** o nome do arquivo diz de qual tabela ele cuida, qual o papel dele e o que ele faz, sempre na mesma ordem. Assim, só pelo nome já se sabe onde procurar. Ex.: `usuario.controller.export-data.ts` é a "porta de entrada" (controller) da ação "exportar dados" do usuário.
-- **Decisão:** `<nome>` é a **tabela** que o arquivo trata, não o módulo (por isso `2-papel-permissao` tem arquivos `papel.`, `permissao.`, `papel-permissao.` e `usuario-papel.`). A ação é em inglês: o CRUD (`create`, `findall`, `findone`, `update`, `remove`) e o resto no mesmo idioma (`suspend`, `approve`, `reject`, `submit`, `export-data`, `create-for-other`...). Guardas e utilitários seguem a mesma ordem. 98 arquivos foram renomeados para isso, sem nenhuma rota mudar.
-- **Motivo:** a mistura de português e inglês no nome (`create-para-outro`, `termo-uso.service.criar` ao lado de `usuario.service.create`) deixava o padrão imprevisível.
-- **A classe segue o nome do arquivo (28-09-2026):** `usuario.service.suspend.ts` exporta `UsuarioServiceSuspend`; `auth.guard.jwt.ts`, `AuthGuardJwt`. 104 classes renomeadas, mais os 14 arquivos de `11-configuracoes`, que passaram para o plural da tabela (`configuracoes.*`, classes `Configuracoes...`).
+- `<nome>` é a **tabela** que o arquivo trata, não o módulo (por isso `2-papel-permissao` tem arquivos `papel.`, `permissao.`, `papel-permissao.` e `usuario-papel.`). A ação é em inglês: o CRUD (`create`, `findall`, `findone`, `update`, `remove`) e o resto no mesmo idioma (`suspend`, `approve`, `reject`, `submit`, `export-data`, `create-for-other`...). Guardas e utilitários seguem a mesma ordem.
+- **Por quê:** misturar português e inglês no nome (`create-para-outro` ao lado de `usuario.service.create`) deixaria o padrão imprevisível.
+- **A classe segue o nome do arquivo:** `usuario.service.suspend.ts` exporta `UsuarioServiceSuspend`; `auth.guard.jwt.ts`, `AuthGuardJwt`. Os arquivos de `11-configuracoes` usam o plural da tabela (`configuracoes.*`, classes `Configuracoes...`).
 - **Regra do idioma, em uma frase:** inglês para a **estrutura** (o papel do arquivo e a ação, no nome do arquivo e da classe); português para o **assunto** e todo o resto (`usuario`, `campanha`, métodos como `.suspender()` e `executar()`, variáveis, campos do JSON e os endereços da API, como `/usuario/:id/suspender`).
-- **Caso-limite aceito:** os endereços da API e os campos do JSON ficam em português porque o React depende deles; mudar custaria reescrever as 119 rotas e o React sem ganho de funcionamento. Os tipos do React que espelham os DTOs usam os mesmos nomes das classes do Nest (ver `DOCUMENTACAO_FRONTEND.md`).
+- **Caso-limite:** os endereços da API e os campos do JSON ficam em português porque o React depende deles; mudar custaria reescrever as 119 rotas e o React sem ganho de funcionamento. Os tipos do React que espelham os DTOs usam os mesmos nomes das classes do Nest (ver `DOCUMENTACAO_FRONTEND.md`).
 
 📌 **A regra mais visível do projeto: um arquivo por ação.** Não existe `UsuarioService` com 8 métodos - existem `UsuarioServiceCreate`, `UsuarioServiceUpdate`, `UsuarioServiceRemove`, `UsuarioServiceSuspend`, `UsuarioServiceUnlock`, `UsuarioServiceFindAllLogins`, `UsuarioServiceFindAll` e `UsuarioServiceFindOne`, cada um num arquivo, cada um com um único método público `executar()`. O mesmo vale para controllers.
 
@@ -555,11 +544,11 @@ Este é o "modelo" a copiar ao construir um módulo novo. Os dois exemplos abaix
 export type UsuarioEntity = Selectable<UsuarioTable>;
 ```
 
-📌 **Peças compartilhadas em `commons` em vez de repetidas por módulo (28-09-2026).**
-- **Em palavras simples:** quando dois módulos precisavam de um "formulário" ou "resposta" exatamente igual, cada um tinha a sua cópia. Agora existe uma só, na pasta de peças compartilhadas (`commons`), e os dois usam a mesma.
-- **Decisão:** os 11 arquivos `entity/<nome>.entity.ts` (uma linha cada) viraram 11 linhas no fim do `db.types.ts`, e as pastas `entity/` sumiram. `SuspensaoRequestDto` e `SuspensaoResponseDto` (`commons/moderacao/dto/`) servem à suspensão de conta e à de pesquisador. `PorCampanhaQueryDto` (`commons/database/dto/`) serve às listagens de atualizações e de comentários. A renovação de sessão devolve o mesmo `AuthResponseLogin` do login. Saíram 18 arquivos e entraram 3 em `commons`: 15 a menos.
-- **Motivo:** eram cópias idênticas; mudar uma e esquecer a outra seria questão de tempo.
-- **Caso-limite aceito:** a suspensão de um **papel** (arquivo `usuario-papel.request-suspend`, removido em 29-09-2026, ver "Correções da super auditoria") continuava separada, porque não pedia motivo. Se um dia uma das suspensões precisar de um campo que a outra não tem, ela volta a ter DTO próprio.
+📌 **Peças compartilhadas em `commons` em vez de repetidas por módulo.**
+- **Em palavras simples:** quando dois módulos precisam de um "formulário" ou "resposta" exatamente igual, existe uma peça só, na pasta de peças compartilhadas (`commons`), e os dois usam a mesma.
+- Cada entity é uma linha no fim do `db.types.ts` (não há pastas `entity/`). `SuspensaoRequestDto` e `SuspensaoResponseDto` (`commons/moderacao/dto/`) servem à suspensão de conta, de pesquisador e de papel. `PorCampanhaQueryDto` (`commons/database/dto/`) serve às listagens de atualizações e de comentários. A renovação de sessão devolve o mesmo `AuthResponseLogin` do login.
+- **Por quê:** com cópias idênticas, mudar uma e esquecer a outra seria questão de tempo.
+- **Caso-limite:** se um dia uma das suspensões precisar de um campo que as outras não têm, ela volta a ter DTO próprio.
 
 ### 7.2 Anatomia de um controller
 
@@ -606,9 +595,9 @@ export class CampanhaServiceCreate {
 
 📌 **Um detalhe de Kysely que vale saber:** `modelo` só entra no `INSERT` se vier no DTO (`...(dto.modelo ? { modelo: dto.modelo } : {})`), em vez do `?? null` usado nas colunas nullable. A coluna é `NOT NULL` com `DEFAULT` - mandar `null` explícito violaria a constraint; **omitir a chave** é o jeito de deixar o banco aplicar o próprio default.
 
-#### O DTO de "alterar" herda as regras do de "criar" (13-10-2026)
+#### O DTO de "alterar" herda as regras do de "criar"
 
-**Em palavras simples:** todo pedido que chega na API passa por uma "ficha de conferência" (o DTO), que diz quais campos podem vir e qual regra cada um segue: o título tem no máximo 255 caracteres, a meta precisa ser positiva, o CPF precisa ser válido, e assim por diante. Cada cadastro tem duas fichas: a do **criar** e a do **alterar**. Até 13-10-2026, a do alterar era uma cópia da do criar, com as mesmas regras escritas de novo. Se alguém mudasse uma regra num lado e esquecesse do outro, o sistema passava a aceitar ao alterar o que recusava ao criar (ou o contrário). Agora a ficha do alterar **não tem regra própria**: ela diz só "sou a ficha do criar, com estas diferenças", e as regras vêm de lá.
+**Em palavras simples:** todo pedido que chega na API passa por uma "ficha de conferência" (o DTO), que diz quais campos podem vir e qual regra cada um segue: o título tem no máximo 255 caracteres, a meta precisa ser positiva, o CPF precisa ser válido, e assim por diante. Cada cadastro tem duas fichas: a do **criar** e a do **alterar**. A do alterar **não tem regra própria**: ela diz só "sou a ficha do criar, com estas diferenças", e as regras vêm de lá. Com as regras escritas duas vezes, mudar um lado e esquecer o outro faria o sistema aceitar ao alterar o que recusa ao criar (ou o contrário).
 
 **Como se escreve:** o Nest tem quatro ferramentas para montar uma ficha a partir de outra (os "mapped types", importados de `@nestjs/swagger` para a documentação da API, o Swagger, acompanhar junto):
 
@@ -625,21 +614,21 @@ Os quatro casos de hoje:
 - `PerfilPesquisadorRequestUpdate` = `PickType(PerfilPesquisadorRequestCreate, ['tipoVinculo', 'vinculoInstitucional', 'tituloAcademico'])`.
 - `PerfilPesquisadorRequestCreateForOther` (Campo de Testes) = `OmitType(PerfilPesquisadorRequestCreate, ['aceiteTermos'])` mais o aceite como campo opcional: é o único campo com regra diferente (no upgrade de verdade o aceite é obrigatório).
 
-Junto, a lista dos títulos acadêmicos válidos deixou de ser copiada em cada ficha: vem de `db.types.ts` (`TITULOS_ACADEMICOS`, como `TIPOS_VINCULO`), que a suíte de tipos dos testes do banco confere contra o banco de verdade.
+A lista dos títulos acadêmicos válidos não é copiada em cada ficha: vem de `db.types.ts` (`TITULOS_ACADEMICOS`, como `TIPOS_VINCULO`), que a suíte de tipos dos testes do banco confere contra o banco de verdade.
 
-- **Decisão:** ficha de alterar (ou qualquer ficha "quase igual" a outra) se monta a partir da original com os mapped types; nunca se copia campo com as regras. Valor de enum do banco vem de `db.types.ts`.
-- **Motivo:** uma regra escrita num lugar só não fica diferente entre criar e alterar. Os mapped types são o recurso oficial do Nest para isso, e levam junto as regras do class-validator e a documentação do Swagger.
-- **Caso-limite aceito:** quando um campo do alterar precisa de uma regra diferente da do criar, ele é declarado de novo dentro da ficha derivada, como o `aceiteTermos` do Campo de Testes, e só ele. Conferido na troca: 16 pedidos de teste, certos e errados, tiveram o mesmo resultado de antes.
+- Ficha de alterar (ou qualquer ficha "quase igual" a outra) se monta a partir da original com os mapped types; nunca se copia campo com as regras. Valor de enum do banco vem de `db.types.ts`.
+- **Por quê:** uma regra escrita num lugar só não fica diferente entre criar e alterar. Os mapped types são o recurso oficial do Nest para isso, e levam junto as regras do class-validator e a documentação do Swagger.
+- **Caso-limite:** quando um campo do alterar precisa de uma regra diferente da do criar, ele é declarado de novo dentro da ficha derivada, como o `aceiteTermos` do Campo de Testes, e só ele.
 
 ### 7.4 Casos especiais que valem estudar
 
-**`campo-testes/` - as rotas que só o Campo de Testes usa (12-10-2026).**
+**`campo-testes/` - as rotas que só o Campo de Testes usa.**
 
 > **Em palavras simples:** três rotas existem só para o Campo de Testes do painel: criar perfil de pesquisador e criar campanha em nome de outra conta, e forçar a exclusão de uma campanha. Elas moram numa pasta própria, fora dos módulos do sistema, e em produção nem existem.
 
-- **Decisão:** `CampoTestesModule` (`src/30-campo-testes/`) reúne `POST /perfil-pesquisador/:id`, `POST /campanha/:idUsuario` e `POST /campanha/:id/forcar-exclusao`, com as mesmas URLs de antes. Usa o sistema (os serviços de leitura de campanha e de perfil, o `TermoUsoModule`); o sistema nunca importa dele, e a regra `no-restricted-imports` do ESLint acusa qualquer tentativa (a única exceção é o `app.module.ts`). O `app.module.ts` só o carrega com `NODE_ENV` diferente de `production`.
-- **Motivo:** dependência de mão única, a mesma regra do `react/src/30-campo-testes/`. E duas travas independentes para produção: sem o módulo, a rota responde 404; no banco do deploy, o bloco "modo produção" ainda tira do admin as permissões dessas ferramentas. Conferido com o Nest ligado ao banco local: fora de produção as três respondem (201, 201, 204); com `NODE_ENV=production`, as três dão 404.
-- **Caso-limite aceito:** apagar a pasta pede tirar 2 linhas do `app.module.ts` (o import e a entrada na lista), diferente do React, que usa um carregamento opcional. Um carregamento opcional no Nest pediria `require` dinâmico sem tipo, e não vale para 2 linhas. `PATCH /perfil-pesquisador/:id` e `POST /link-academico/:idUsuario` têm "for-other" no nome, mas são do sistema (o Alterar Usuário usa) e ficaram nos módulos deles.
+- `CampoTestesModule` (`src/30-campo-testes/`) reúne `POST /perfil-pesquisador/:id`, `POST /campanha/:idUsuario` e `POST /campanha/:id/forcar-exclusao`. Usa o sistema (os serviços de leitura de campanha e de perfil, o `TermoUsoModule`); o sistema nunca importa dele, e a regra `no-restricted-imports` do ESLint acusa qualquer tentativa (a única exceção é o `app.module.ts`). O `app.module.ts` só o carrega com `NODE_ENV` diferente de `production`.
+- **Por quê:** dependência de mão única, a mesma regra do `react/src/30-campo-testes/`. E duas travas independentes para produção: sem o módulo, a rota responde 404; no banco do deploy, o bloco "modo produção" ainda tira do admin as permissões dessas ferramentas. Conferido com o Nest ligado ao banco local: fora de produção as três respondem (201, 201, 204); com `NODE_ENV=production`, as três dão 404.
+- **Caso-limite:** apagar a pasta pede tirar 2 linhas do `app.module.ts` (o import e a entrada na lista), diferente do React, que usa um carregamento opcional. Um carregamento opcional no Nest pediria `require` dinâmico sem tipo, e não vale para 2 linhas. `PATCH /perfil-pesquisador/:id` e `POST /link-academico/:idUsuario` têm "for-other" no nome, mas são do sistema (o Alterar Usuário usa) e ficaram nos módulos deles.
 
 
 **`UsuarioServiceUpdate`** - o service mais denso do projeto, e o que mais ensina:
@@ -649,13 +638,13 @@ Junto, a lista dos títulos acadêmicos válidos deixou de ser copiada em cada f
 - **`best-effort` com log, nunca em silêncio.** A limpeza da foto antiga é `.catch()` com `logger.warn` - uma falha ali não pode travar a atualização de nome/senha. O comentário registra o achado que motivou o log: arquivo órfão apareceu no bucket sem **nenhum** rastro do motivo. *Best-effort não é o mesmo que invisível.*
 - **`UPDATE` sem coluna nenhuma é SQL inválido** - o service devolve 400 claro em vez de deixar o Postgres estourar erro de sintaxe.
 
-**`ComentarioServiceUpdate`** - não calcula mais `ordem_endosso` (26-09-2026). Ao endossar, a trigger `validar_comentario_endosso_autor` calcula `MAX(ordem_endosso) + 1` da campanha sob `pg_advisory_xact_lock` (dois endossos ao mesmo tempo na mesma campanha ficam em fila e não repetem o número nem passam do limite), e ao remover o endosso zera a ordem; o service só manda `endossado`. Como o `UPDATE` que não afeta linha nenhuma pode ser "não existe" ou "a RLS barrou", o service usa `distinguir404ou403` (sem o `SELECT` prévio que existia só para achar a campanha). A trigger de limite (`validar_comentario_endosso`) confere `NEW.endossado`, para não depender de a ordem já estar calculada.
+**`ComentarioServiceUpdate`** - não calcula `ordem_endosso`. Ao endossar, a trigger `validar_comentario_endosso_autor` calcula `MAX(ordem_endosso) + 1` da campanha sob `pg_advisory_xact_lock` (dois endossos ao mesmo tempo na mesma campanha ficam em fila e não repetem o número nem passam do limite), e ao remover o endosso zera a ordem; o service só manda `endossado`. Como o `UPDATE` que não afeta linha nenhuma pode ser "não existe" ou "a RLS barrou", o service usa `distinguir404ou403`. A trigger de limite (`validar_comentario_endosso`) confere `NEW.endossado`, para não depender de a ordem já estar calculada.
 
-**`CampanhaServiceCloseExpired`** (05-09-2026, RF-057) - o único service do projeto que roda **fora** do pipeline HTTP, e por isso o único que não usa `DatabaseService.getDb()`:
+**`CampanhaServiceCloseExpired`** (RF-057) - o único service do projeto que roda **fora** do pipeline HTTP, e por isso o único que não usa `DatabaseService.getDb()`:
 
-> Achado numa revisão de sistema completa: `encerrar_campanhas_vencidas()` (Postgres, `[05-K-2]`) sempre existiu e sempre esteve correta, mas nada nunca a chamava - nenhum `@nestjs/schedule` instalado, nenhum `@Cron`, nenhum `pg_cron`. Na prática, uma campanha vencida continuava `'ativo'` para sempre.
+> Sem ele, nada chamaria `encerrar_campanhas_vencidas()` (Postgres, `[05-K-2]`), e uma campanha vencida continuaria `'ativo'` para sempre.
 
-- **`@Cron('*/15 * * * *')`** (`@nestjs/schedule`, registrado uma vez em `AppModule` via `ScheduleModule.forRoot()`) chama `SELECT public.encerrar_campanhas_vencidas()` a cada 15 minutos. Antes dela, no mesmo ciclo, chama `expirar_contribuicoes_pendentes()` (desde 03-10-2026): o Pix pendente que passou de `pix_validade_horas` vence, e a campanha vencida só é encerrada quando não sobra Pix pendente válido (ver `DOCUMENTACAO_BD.md`, [05-K-2-F]).
+- **`@Cron('*/15 * * * *')`** (`@nestjs/schedule`, registrado uma vez em `AppModule` via `ScheduleModule.forRoot()`) chama `SELECT public.encerrar_campanhas_vencidas()` a cada 15 minutos. Antes dela, no mesmo ciclo, chama `expirar_contribuicoes_pendentes()`: o Pix pendente que passou de `pix_validade_horas` vence, e a campanha vencida só é encerrada quando não sobra Pix pendente válido (ver `DOCUMENTACAO_BD.md`, [05-K-2-F]).
 - **Não precisa de `app.id_usuario_atual` setado** porque a função é `SECURITY DEFINER` - o mesmo motivo por trás dela existir: bypassa a RLS por desenho (dono da função, não a sessão de quem chama), então não importa que o job não tenha "usuário logado" nenhum. Mesma categoria de `registrar_falha_login`/`registrar_login_sucesso` (`[03-O]`), que também rodam sem sessão.
 - **`@Cron` sozinho não faz nada** sem `ScheduleModule.forRoot()` registrado uma vez em algum módulo raiz (`AppModule`, neste projeto) - é o agendador de verdade rodando por trás; o decorator só registra o handler nele.
 
@@ -700,13 +689,13 @@ Os 6 têm `try/catch` com `logger.error` (incluindo o nome do job). Motivo: o `@
 **Ciclo de vida da campanha no Nest** (ver `DOCUMENTACAO_BD.md`, [05-K-2-B], para as regras; o Nest só expõe os endpoints e deixa o banco decidir):
 - `POST /campanha/:id/enviar` (`CampanhaServiceSubmit`): `rascunho -> aguardando_aprovacao` e o reenvio `rejeitado -> aguardando_aprovacao`, no mesmo endpoint. Não repete nenhuma validação: completude, prazo, reenvios, suspensão e limite de simultâneas saem do banco com ERRCODE próprio (90009 a 90011, 90015, 91025, 91026, 92009, 91018).
 - `POST /campanha/:id/deslizar-datas` (`CampanhaServiceShiftDates`, corpo `{ novaDataInicio }`): chama `deslizar_datas_campanha()`, que move início, fim e marcos do cronograma mantendo a duração.
-- `GET /campanha/:id` (`CampanhaServiceFindOne`) também devolve `camposBloqueados` (26-09-2026): a lista, com os nomes do DTO, que `fn_campanha_campos_bloqueados` (`[05-K-2-D]`) diz estar travada naquele momento, a mesma que a trigger de congelamento usa. O React trava exatamente esses campos, sem lista própria. Vem vazia nas outras respostas (listagem inclusive). Preenche também `reenviosRestantes`, `prazoReenvioAte` e `somenteLeitura` só para campanha `rejeitado`, para a tela e o futuro e-mail de rejeição. Não refaz a conta em TypeScript: faz um único `SELECT * FROM public.fn_campanha_situacao_reenvio(id)`, a mesma função que a trigger de transição e o job de expirar rejeitadas usam (`DOCUMENTACAO_BD.md`, `[05-K-2-B]`). Por ser `SECURITY DEFINER`, os números saem exatos para quem já enxerga a campanha, mesmo sem acesso à tabela de histórico.
+- `GET /campanha/:id` (`CampanhaServiceFindOne`) também devolve `camposBloqueados`: a lista, com os nomes do DTO, que `fn_campanha_campos_bloqueados` (`[05-K-2-D]`) diz estar travada naquele momento, a mesma que a trigger de congelamento usa. O React trava exatamente esses campos, sem lista própria. Vem vazia nas outras respostas (listagem inclusive). Preenche também `reenviosRestantes`, `prazoReenvioAte` e `somenteLeitura` só para campanha `rejeitado`, para a tela e o futuro e-mail de rejeição. Não refaz a conta em TypeScript: faz um único `SELECT * FROM public.fn_campanha_situacao_reenvio(id)`, a mesma função que a trigger de transição e o job de expirar rejeitadas usam (`DOCUMENTACAO_BD.md`, `[05-K-2-B]`). Por ser `SECURITY DEFINER`, os números saem exatos para quem já enxerga a campanha, mesmo sem acesso à tabela de histórico.
 - `DELETE /campanha/:id` só funciona em `rascunho` (a RLS decide).
-- **Aprovar e rejeitar só valem para campanha "aguardando aprovação" (28-09-2026).**
-  - **Em palavras simples:** antes, o admin conseguia rejeitar de novo uma campanha já rejeitada, o que gastava um reenvio do pesquisador à toa, e rejeitar sem escrever o motivo. Agora a API responde "não dá" nesses casos, com a razão.
-  - **Decisão:** `CampanhaServiceApprove` e `CampanhaServiceReject` filtram o UPDATE por `status = 'aguardando_aprovacao'`; se não acham a linha, `exigirAguardandoAprovacao()` (`12-campanha/util/campanha.util.require-pending.ts`) responde 409 com o status atual, antes do 404/403 de sempre. A justificativa da rejeição é obrigatória (`CampanhaRequestReject`, pelo menos 3 caracteres), como manda o RF de aprovar/rejeitar campanha.
-  - **Motivo:** `trg_campanha_valida_transicao` (05) libera qualquer transição para quem tem `campanha_aprovar`/`campanha_rejeitar`, então o banco não barrava a repetição. Achado na revisão de 28-09-2026, testando pela API.
-  - **Caso-limite aceito:** a trava está no Nest, não na trigger; quem escrever direto no banco com essas permissões ainda consegue repetir. Mexer na trigger crítica de transição só por isso não compensou.
+- **Aprovar e rejeitar só valem para campanha "aguardando aprovação".**
+  - **Em palavras simples:** a API responde "não dá", com a razão, quando alguém tenta aprovar ou rejeitar uma campanha que não está esperando aprovação, ou rejeitar sem escrever o motivo. Rejeitar de novo uma campanha já rejeitada gastaria um reenvio do pesquisador à toa.
+  - `CampanhaServiceApprove` e `CampanhaServiceReject` filtram o UPDATE por `status = 'aguardando_aprovacao'`; se não acham a linha, `exigirAguardandoAprovacao()` (`12-campanha/util/campanha.util.require-pending.ts`) responde 409 com o status atual, antes do 404/403 de sempre. A justificativa da rejeição é obrigatória (`CampanhaRequestReject`, pelo menos 3 caracteres), como manda o RF de aprovar/rejeitar campanha.
+  - **Por quê:** `trg_campanha_valida_transicao` (05) libera qualquer transição para quem tem `campanha_aprovar`/`campanha_rejeitar`, então o banco sozinho não barra a repetição.
+  - **Caso-limite:** a trava está no Nest, não na trigger; quem escrever direto no banco com essas permissões ainda consegue repetir. Mexer na trigger crítica de transição só por isso não compensou.
 - `GET /historico-rejeicao?idCampanha=` devolve também `idUsuarioDono` e `tituloCampanha`, e continua funcionando para campanha já excluída (o histórico não tem FK para `campanha`).
 - `GET /usuario/eu/exportar-dados` inclui `historicoRejeicoes` das campanhas do titular, sem `id_admin` (quem rejeitou é dado do administrador).
 
@@ -715,18 +704,17 @@ Os 6 têm `try/catch` com `logger.error` (incluindo o nome do job). Motivo: o `@
 **`CampanhaServiceFindAll`** - filtros que **não** são autorização:
 > *"`pol_campanha_select` já decide QUAIS linhas aparecem (status público, ou dono, ou `relatorio_visualizar`) - os filtros abaixo são só conveniência de navegação por cima do que a RLS já deixou visível, nunca uma segunda camada de autorização."*
 
-Também registra uma mudança concreta: era `orderBy('criado_em','desc')`, virou `orderBy('id_campanha')` a pedido do Lucas, porque `criado_em` do seed nem sempre bate com a ordem de inserção real (algumas linhas foram seedadas com timestamp retroativo).
+Ordena por `id_campanha`, e não por `criado_em`: o `criado_em` do seed nem sempre bate com a ordem de inserção (algumas linhas têm data retroativa).
 
-**`UsuarioServiceExportData`** (05-09-2026, RF-016, exportação de dados (LGPD Art. 18), LGPD Art. 18, formalizado como **RF-016** nos Requisitos Funcionais, atualizados em 06-09-2026 - o requisito nasceu como "RF-015A" e foi promovido a RF-016 de verdade, empurrando +1 todo requisito daquele ponto em diante) - o endpoint mais sensível do sistema, e o que mais junta decisão de segurança num lugar só:
+**`UsuarioServiceExportData`** (RF-016, exportação de dados, LGPD Art. 18) - o endpoint mais sensível do sistema, e o que mais junta decisão de segurança num lugar só:
 
-- **`GET /usuario/eu/exportar-dados`, sem `:id`, de propósito.** Todo outro endpoint deste módulo aceita um id de rota (`GET /usuario/:id`, etc.); este não - o ator é sempre `request.user!.idUsuario` (quem está autenticado), nunca um parâmetro. Decisão de uma IA, confirmada em conversa: aceitar um id aqui abriria a porta pro erro clássico de trocar o número e baixar dado de outra conta (a RLS provavelmente barraria, mas a boa prática é nem deixar o parâmetro existir num endereço deste tamanho de sensibilidade). Sem colisão de rota com `GET /usuario/:id` - `:id` do Express só casa um segmento, `eu/exportar-dados` tem dois.
+- **`GET /usuario/eu/exportar-dados`, sem `:id`, de propósito.** Todo outro endpoint deste módulo aceita um id de rota (`GET /usuario/:id`, etc.); este não - o ator é sempre `request.user!.idUsuario` (quem está autenticado), nunca um parâmetro. Aceitar um id aqui abriria a porta pro erro clássico de trocar o número e baixar dado de outra conta (a RLS provavelmente barraria, mas a boa prática é nem deixar o parâmetro existir num endereço deste tamanho de sensibilidade). Sem colisão de rota com `GET /usuario/:id` - `:id` do Express só casa um segmento, `eu/exportar-dados` tem dois.
 - **Três proteções, nenhuma opcional:**
-  1. **Rate limit de 1x/hora POR CONTA, não por IP.** O `ThrottlerGuard` padrão do projeto (usado em `/auth/login`) rastreia por IP - errado aqui, porque o objetivo não é proteger o servidor de tráfego, é impedir que uma conta comprometida seja raspada repetidamente (um IP compartilhado - escritório, faculdade - não pode travar todo mundo por causa da exportação de uma pessoa só). `UsuarioGuardExportDataThrottler` (novo, `guards/`) sobrescreve `getTracker()` pra usar `req.user.idUsuario` - só funciona porque `AuthGuardRequireAuth` roda antes dele no mesmo `@UseGuards()` (a ordem do array é a ordem de execução), garantindo que `req.user` já existe. `ThrottlerModule.forRoot([{ ttl: 3_600_000, limit: 1 }])` precisou ser registrado de novo dentro de `UsuarioModule` (`AuthModule` já registra o dele, mas `1-usuario` não importa `3-auth`) - duas instâncias independentes, cada uma só visível no módulo que a registrou, protegendo rotas diferentes com limites diferentes.
+  1. **Rate limit de 1x/hora POR CONTA, não por IP.** O `ThrottlerGuard` padrão do projeto (usado em `/auth/login`) rastreia por IP - errado aqui, porque o objetivo não é proteger o servidor de tráfego, é impedir que uma conta comprometida seja raspada repetidamente (um IP compartilhado - escritório, faculdade - não pode travar todo mundo por causa da exportação de uma pessoa só). `UsuarioGuardExportDataThrottler` (`guards/`) sobrescreve `getTracker()` pra usar `req.user.idUsuario` - só funciona porque `AuthGuardRequireAuth` roda antes dele no mesmo `@UseGuards()` (a ordem do array é a ordem de execução), garantindo que `req.user` já existe. `ThrottlerModule.forRoot([{ ttl: 3_600_000, limit: 1 }])` precisou ser registrado de novo dentro de `UsuarioModule` (`AuthModule` já registra o dele, mas `1-usuario` não importa `3-auth`) - duas instâncias independentes, cada uma só visível no módulo que a registrou, protegendo rotas diferentes com limites diferentes.
   2. **Rastro em `log_auditoria` a cada chamada**, via `registrar_exportacao_dados()` (`SECURITY DEFINER`, `DOCUMENTACAO_BD.md` `[03-O]`) - não um `.insertInto()` direto, porque `app_nestjs` só tem `GRANT SELECT` em `log_auditoria` (mesma restrição de sempre; só a trigger normalmente escreve lá).
   3. **`@Header('Cache-Control', 'no-store')`** - o tipo de conteúdo que não pode ficar guardado em proxy, CDN ou navegador.
-- **CPF mascarado, nunca em texto puro.** O serviço reaproveita `decifrarCpf()` (o mesmo helper reversível usado em outros lugares do sistema) só pra mascarar em seguida (3 primeiros + 2 últimos dígitos) - decisão que passou por uma reversão em conversa com apoio de IA: a 1ª recomendação era exigir reautenticação por senha antes de exportar o CPF em texto puro, mas nenhum mecanismo de reautenticação existe em nenhum outro lugar do sistema (a exclusão de conta usa confirmação por e-mail digitado, não senha) - construir isso do zero só pra este caso de uso não se pagava, e mascarar preserva a mesma propriedade que o projeto já mantém em todo outro caminho HTTP: o CPF nunca sai do banco em texto puro.
+- **CPF mascarado, nunca em texto puro.** O serviço reaproveita `decifrarCpf()` (o mesmo helper reversível usado em outros lugares do sistema) só para mascarar em seguida (3 primeiros + 2 últimos dígitos). Exportar o CPF em texto puro pediria uma reautenticação por senha que não existe em nenhum outro lugar do sistema (a exclusão de conta usa confirmação por e-mail digitado); mascarar mantém a propriedade de todo caminho HTTP: o CPF nunca sai do banco em texto puro.
 - **O que fica de fora, e por quê:** denúncias feitas CONTRA o usuário, comentários de outras pessoas nas campanhas dele, e qualquer log de auditoria administrativo - são dados de TERCEIROS ou de moderação, não "dados pessoais do titular" no sentido do Art. 18. Contribuição **anônima** também não entra (nunca é ligada a nenhuma conta no banco, não existe "minha contribuição anônima" pra exportar).
-- **Duas tabelas sem módulo Nest ainda (`seguir_pesquisador`, `contribuicao`) precisaram de tipos novos em `db.types.ts`** só pra esta query - nenhuma das duas tinha entrada na interface `DB` porque nenhum CRUD completo foi construído pra elas ainda; a exportação só precisa de `SELECT`, então ganhou os tipos sem precisar do módulo inteiro.
 
 ### 7.5 Exportação entre módulos
 
@@ -746,7 +734,7 @@ Módulos exportam services quando outro precisa reaproveitar a regra em vez de d
 
 ## 8. Armazenamento e upload de arquivo (`commons/storage` + `26-arquivo`)
 
-> ⚠️ **Este módulo foi alterado em 01-09-2026** (processamento com `sharp`, cota por usuário, novos tetos de tamanho). O que segue descreve o estado **atual**. Vários números aqui são recentes; confira as constantes no código antes de citá-los em outro lugar.
+> ⚠️ Vários números deste módulo são parâmetros: confira as constantes e `configuracoes` antes de citar um número daqui em outro lugar.
 
 ### 8.1 A premissa que simplifica tudo: nenhum arquivo é secreto
 
@@ -774,7 +762,7 @@ Métodos do contrato: `gerarUploadPreAssinado`, `obterInfoObjeto`, `lerPrimeiros
 
 📌 **Uma implementação cobre todos os provedores viáveis.** Supabase Storage, Cloudflare R2, Backblaze B2, AWS S3 e MinIO falam o **mesmo protocolo** (S3). Trocar de provedor é trocar variáveis de ambiente - `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, `STORAGE_BUCKET`, `STORAGE_PUBLIC_BASE_URL`, `STORAGE_REGION`, `STORAGE_FORCE_PATH_STYLE` - **sem tocar em uma linha de TypeScript**. Só um provedor com API genuinamente não-S3 exigiria uma classe nova; nesse caso, muda-se o `useExisting` no `storage.module.ts` e nada em `26-arquivo` muda.
 
-📌 **O comentário do código registra a correção de si mesmo:** *"CORRIGIDO 01-09-2026: este comentário dizia 'Backblaze B2 (provedor atual)' - estava desatualizado, o `.env` real nunca apontou pra B2 nesta fase do projeto."* Também registra a avaliação do R2 feita na mesma data (free tier maior) e a decisão de **ficar no Supabase por enquanto**, já que está funcionando.
+📌 **O armazenamento é o Supabase Storage.** O Cloudflare R2 (cota gratuita maior) foi avaliado e não adotado, porque o Supabase atende ao volume do projeto.
 
 📌 **`region: 'auto'` como padrão** - B2 e R2 não têm região de verdade, mas a lib exige o campo; `STORAGE_REGION` continua configurável para quem apontar para AWS S3 real. **`forcePathStyle: true` como padrão** (`endpoint/bucket/chave`) - funciona sem configuração extra na maioria dos endpoints.
 
@@ -876,7 +864,7 @@ sharp(bytesOriginais)
 
 ### 8.6 Tetos de tamanho, cota e rate limit - todos configuráveis pelo Painel Admin
 
-📌 **Desde 04-09-2026, nenhum destes números é mais fixo no código.** Pedido do Lucas: *"arquivo não é configurável pelo Painel Admin... o administrador deve poder estabelecer o limite mínimo e máximo do tamanho dos arquivos de upload... a quantidade upload por usuário, e o tempo de respiro entre um upload e outro"* - o mesmo princípio já aplicado a `prazo_campanha_dias`, `limite_denuncias_24h` etc.: nada de regra de negócio hardcoded quando pode morar em `configuracoes` e ser editado sem deploy.
+📌 **Nenhum destes números é fixo no código.** Os tamanhos mínimo e máximo, a cota por usuário e o tempo de respiro entre um upload e outro moram em `configuracoes` e o admin os edita sem deploy: o mesmo princípio de `prazo_campanha_dias`, `limite_denuncias_24h` etc., nada de regra de negócio hardcoded quando pode morar em `configuracoes`.
 
 **A peça nova que torna isso possível: `ConfiguracaoValorService`** (`commons/configuracao/configuracao-valor.service.ts`), um módulo `@Global()` com um único método, `buscarNumero(chave, valorPadrao)`. Ele lê `configuracoes` (`id_usuario IS NULL`, `ativo = true`), converte para `Number`, e cai no `valorPadrao` se a chave não existir, estiver inativa, ou vier um valor que não converte para número finito. Esta é a primeira vez que a camada Nest lê `configuracoes` diretamente para uma regra de negócio (antes, quem lia era só a `05_regras_negocio.sql` via trigger de Postgres) - o padrão existe para ser reaproveitado por qualquer módulo futuro que precise do mesmo tipo de "valor configurável com fallback seguro".
 
@@ -892,9 +880,9 @@ sharp(bytesOriginais)
 | `arquivo_janela_limite_uploads_minutos` | Tamanho da janela do limite acima | 1440 (24h) |
 | `arquivo_intervalo_minimo_segundos` | Intervalo mínimo entre um upload e o próximo | 5 |
 
-📌 **Os valores acima são só o ponto de partida, herdado da decisão de 01-09-2026** (baixados de 10MB/20MB para 8MB/5MB - o projeto roda no plano grátis do Supabase Storage, **1 GB de espaço total** e **50 MB de teto por arquivo individual** no próprio plano; números conferidos direto na documentação oficial: [Limits | Supabase Docs](https://supabase.com/docs/guides/storage/uploads/file-limits) e [Pricing | Supabase Docs](https://supabase.com/docs/guides/storage/pricing)). O valor de **verdade**, em produção, é sempre o que estiver em `configuracoes` - o admin pode alterar qualquer um destes 7 números pelo Painel Admin (tela Configurações, já genérica, zero código novo no front) a qualquer momento, sem deploy.
+📌 **Os valores acima são só o ponto de partida** (o projeto roda no plano grátis do Supabase Storage, **1 GB de espaço total** e **50 MB de teto por arquivo individual** no próprio plano; números conferidos direto na documentação oficial: [Limits | Supabase Docs](https://supabase.com/docs/guides/storage/uploads/file-limits) e [Pricing | Supabase Docs](https://supabase.com/docs/guides/storage/pricing)). O valor de **verdade**, em produção, é sempre o que estiver em `configuracoes` - o admin pode alterar qualquer um destes 7 números pelo Painel Admin (tela Configurações, já genérica, zero código novo no front) a qualquer momento, sem deploy.
 
-**`TAMANHO_MAXIMO_BYTES_ABSOLUTO` continua fixo no código, de propósito - não virou configurável.** É usado só como `@Max()` no DTO de `iniciar-upload`: uma validação **síncrona**, de forma, que roda antes de qualquer acesso a banco e não tem como ler `configuracoes`. Por isso ele é propositalmente **bem mais folgado** (100 MB) que qualquer teto real por tipo: se o admin configurar um teto maior que o padrão, a validação do DTO não pode ser o que barra isso antes mesmo do service conferir o valor de `configuracoes` de verdade. O teto de verdade, por tipo, é sempre o do service (`chaveConfigTamanhoMaximo(tipoMime)`).
+**`TAMANHO_MAXIMO_BYTES_ABSOLUTO` é fixo no código, de propósito.** É usado só como `@Max()` no DTO de `iniciar-upload`: uma validação **síncrona**, de forma, que roda antes de qualquer acesso a banco e não tem como ler `configuracoes`. Por isso ele é propositalmente **bem mais folgado** (100 MB) que qualquer teto real por tipo: se o admin configurar um teto maior que o padrão, a validação do DTO não pode ser o que barra isso antes mesmo do service conferir o valor de `configuracoes` de verdade. O teto de verdade, por tipo, é sempre o do service (`chaveConfigTamanhoMaximo(tipoMime)`).
 
 **A cota é checada em DOIS pontos, com propósitos diferentes** (ambos agora lendo `arquivo_cota_bytes_por_usuario` via `ConfiguracaoValorService`):
 
@@ -907,7 +895,7 @@ sharp(bytesOriginais)
 
 🧩 **`Number()` obrigatório no resultado do `SUM`.** `SUM` de coluna `integer` volta `bigint` do Postgres, e o driver `pg` devolve `bigint` como **string** (para evitar perda de precisão silenciosa). Sem o `Number()`, `usoAtual + tamanhoFinal` **concatenaria texto** em vez de somar.
 
-**Rate limit de upload - novo em 04-09-2026, duas proteções complementares** (checadas em `iniciar-upload`, contra a coluna `arquivo.criado_em` que já existia - nenhuma migração de schema foi necessária):
+**Rate limit de upload, duas proteções complementares** (checadas em `iniciar-upload`, contra a coluna `arquivo.criado_em`):
 
 1. **Quantidade máxima de uploads dentro de uma janela de tempo** (`arquivo_limite_uploads_janela` a cada `arquivo_janela_limite_uploads_minutos`) - evita um usuário legítimo mas descuidado, ou um script, enchendo a conta de arquivos rápido demais. Complementar à cota de bytes, que sozinha não impede *muitos* arquivos pequenos.
 2. **Intervalo mínimo entre um upload confirmado e o próximo início de upload** (`arquivo_intervalo_minimo_segundos`) - barra rajada (ex.: um script chamando `iniciar-upload` em loop) sem incomodar uso humano normal.
@@ -920,21 +908,20 @@ sharp(bytesOriginais)
 
 📌 **Mas os bytes no bucket são apagados de verdade.** O comentário explica por que isso é seguro: ninguém serve o arquivo pela chave sem antes passar pela checagem de `ativo` no banco; uma vez `ativo = false`, o dado já parou de aparecer em qualquer lugar do sistema. Falha ao apagar do bucket **não** desfaz o soft delete (a linha já ficou inativa, que é o que importa para a correção do sistema) - só vira um objeto órfão, e agora **com `logger.warn`**, não em silêncio.
 
-**`ArquivoServiceResolveAvatar`** - 🗑️➡️✅ **SIMPLIFICADO (commit da Alexia, 05-09-2026):** antes tinha uma cadeia de 4 passos com um "avatar padrão do sistema" configurável (`configuracoes.avatar_padrao_chave`, editável pelo painel Admin) como fallback, e a resposta carregava um campo `padrao: boolean` distinguindo foto real de substituta. Removido de propósito - `AvatarUsuario` (front) já desenha iniciais com fundo colorido quando não há foto, então manter os dois mecanismos resolvendo o mesmo problema era complexidade duplicada (primeiro caso concreto validando a regra "apontar duplicidade de mecanismo" que o Lucas pediu pra adotar em toda auditoria). Hoje é só:
+**`ArquivoServiceResolveAvatar`** - sem foto, o front (`AvatarUsuario`) desenha as iniciais com fundo colorido; por isso não existe "avatar padrão do sistema" (seriam dois mecanismos para o mesmo problema). O serviço é só:
 1. `id_imagem_perfil` aponta para um arquivo `ativo` → `{ url: <URL pública> }`.
 2. `null`, ou aponta pra um arquivo removido/desativado → `{ url: null }` - o front resolve com iniciais, sem round-trip nenhum pra saber disso.
 
-📌 **A chave `avatar_padrao_chave` foi removida do seed (05-09-2026) e do banco de produção (`DELETE`, 06-09-2026)** - não é mais um parâmetro válido em `configuracoes`, não confundir com nenhuma chave ativa.
 
 📌 **`GET /arquivo/avatar/:idUsuario` é pública de propósito** (`@Publico()`): um visitante anônimo olhando um perfil ou os comentários de uma campanha precisa ver o avatar.
 
 📌 **`UsuarioServiceUpdate` devolve `avatarUrl` já resolvida** na resposta do `PATCH`, para que o front só repasse o objeto e o cabeçalho reflita a troca na hora, sem recalcular nada.
 
-📌 **Arquivo só fica se tiver dono (28-09-2026).**
+📌 **Arquivo só fica se tiver dono.**
 - **Em palavras simples:** quando alguém escolhe uma foto, ela é enviada na hora, antes de clicar em Salvar. Se a pessoa desiste, a foto fica "largada" no armazenamento (um arquivo órfão, sem dono). Agora uma faxina diária apaga o que ficou largado por mais de 24 horas. E o banco confere, na hora de salvar, se a foto é mesmo de quem está salvando: antes, dava para "pegar emprestado" o arquivo de outra pessoa e depois apagá-lo.
-- **Decisão:** o upload continua sendo confirmado antes de salvar (`POST /arquivo/upload/confirmar`), e o banco cuida das duas pontas: ao salvar a foto de perfil, a trigger `trg_valida_posse_imagem_perfil` (05, `[05-G]`) exige que o arquivo esteja ativo (90022), tenha sido enviado por quem está logado (92025) e não esteja em uso em outro lugar (91029). E o job `ArquivoServiceCleanOrphans` (4h) desativa e apaga do armazenamento o arquivo que ninguém adotou em 24h.
-- **Motivo:** confirmar o arquivo na mesma operação que salva a conta tiraria a prévia instantânea da foto (ela só existe depois de processada e publicada). O prazo para adoção resolve o órfão sem mudar a tela. A trava de posse fecha um buraco real: antes, qualquer conta podia apontar a própria foto para o arquivo de outra pessoa e, pela posse que a foto de perfil dá em `pol_arquivo_update`, apagá-lo.
-- **Caso-limite aceito:** um arquivo fica até 24h ocupando espaço (e contando na cota) antes de sumir. O admin que troca a foto de outra pessoa envia o arquivo ele mesmo, então passa na regra. Desde 29-09-2026 os anexos de atualização e de recompensa seguem a mesma regra de posse, e cada arquivo mora num lugar só (`fn_valida_posse_anexo`, ver `DOCUMENTACAO_BD.md` [05-G]): `POST /arquivo-atualizacao` com o arquivo de outra pessoa responde 403 (92025), e com um arquivo já usado em outro lugar, 409 (91029). Um dono novo de arquivo (tabela nova que aponte para `arquivo`) precisa entrar na função de órfãos e nas duas regras de posse.
+- O upload continua sendo confirmado antes de salvar (`POST /arquivo/upload/confirmar`), e o banco cuida das duas pontas: ao salvar a foto de perfil, a trigger `trg_valida_posse_imagem_perfil` (05, `[05-G]`) exige que o arquivo esteja ativo (90022), tenha sido enviado por quem está logado (92025) e não esteja em uso em outro lugar (91029). E o job `ArquivoServiceCleanOrphans` (4h) desativa e apaga do armazenamento o arquivo que ninguém adotou em 24h.
+- **Por quê:** confirmar o arquivo na mesma operação que salva a conta tiraria a prévia instantânea da foto (ela só existe depois de processada e publicada). O prazo para adoção resolve o órfão sem mudar a tela. A trava de posse fecha um buraco real: antes, qualquer conta podia apontar a própria foto para o arquivo de outra pessoa e, pela posse que a foto de perfil dá em `pol_arquivo_update`, apagá-lo.
+- **Caso-limite:** um arquivo fica até 24h ocupando espaço (e contando na cota) antes de sumir. O admin que troca a foto de outra pessoa envia o arquivo ele mesmo, então passa na regra. Os anexos de atualização e de recompensa seguem a mesma regra de posse, e cada arquivo mora num lugar só (`fn_valida_posse_anexo`, ver `DOCUMENTACAO_BD.md` [05-G]): `POST /arquivo-atualizacao` com o arquivo de outra pessoa responde 403 (92025), e com um arquivo já usado em outro lugar, 409 (91029). Um dono novo de arquivo (tabela nova que aponte para `arquivo`) precisa entrar na função de órfãos e nas duas regras de posse.
 
 ### 8.8 Lembretes de infraestrutura (configurados no painel, não em código)
 
@@ -943,7 +930,7 @@ De `nest/.env.example` (bloco `STORAGE_*`):
 2. **Regra de ciclo de vida** apagando tudo em `pendente/` com mais de 24h.
 3. A lista de tipos aceitos é fechada no código; SVG nunca entra.
 
-📌 **`nest/.env.example` existe (26-09-2026).** Lista todas as variáveis do `nest/.env` (banco, JWT, chaves do CPF, `STORAGE_*`) com o que cada uma faz e onde achar o valor, sem nenhum segredo. É o arquivo que a mensagem de erro do storage (*"Ver .env.example"*) cita. Copie para `nest/.env` e preencha; o `.env` continua fora do git.
+📌 **`nest/.env.example`.** Lista todas as variáveis do `nest/.env` (banco, JWT, chaves do CPF, `STORAGE_*`) com o que cada uma faz e onde achar o valor, sem nenhum segredo. É o arquivo que a mensagem de erro do storage (*"Ver .env.example"*) cita. Copie para `nest/.env` e preencha; o `.env` continua fora do git.
 
 ---
 
@@ -987,12 +974,12 @@ Módulos pequenos, mas reais e em uso pelo painel administrativo.
 - **`PATCH /denuncia/:id`** - julga (RF-111): `status` e, ao decidir (procedente ou improcedente), a `justificativa` obrigatória. Quem denunciou não julga a própria (92006, RF-112). O banco só deixa mudar essas duas colunas.
 - **`POST /denuncia/:id/encerrar-campanha`** - chama `encerrar_campanha_por_denuncia()` (03): a denúncia vira procedente com a justificativa e a campanha vira `encerrado_moderacao`, juntas (RF-114). A campanha some da página pública pela própria RLS. Quem decidiu, quando e por quê ficam no log de auditoria (RF-115).
 
-📌 **Decisão: encerrar por moderação sai da denúncia (03-10-2026).**
-- **Decisão:** o encerramento por moderação não é uma rota de campanha solta: acontece a partir de uma denúncia de campanha, numa função do banco que resolve a denúncia e encerra a campanha na mesma transação.
-- **Motivo:** o RF-114 fala em encerrar "após averiguação" de uma denúncia; amarrar as duas coisas garante que todo encerramento por moderação tem uma denúncia procedente e uma justificativa por trás. A função é `SECURITY DEFINER` porque a regra de acesso de `campanha` não abre a campanha ao moderador.
-- **Caso-limite aceito:** as outras denúncias pendentes da mesma campanha continuam pendentes; a moderação decide cada uma. A devolução do dinheiro (RF-114) entra com o módulo de contribuição.
+📌 **encerrar por moderação sai da denúncia.**
+- O encerramento por moderação não é uma rota de campanha solta: acontece a partir de uma denúncia de campanha, numa função do banco que resolve a denúncia e encerra a campanha na mesma transação.
+- **Por quê:** o RF-114 fala em encerrar "após averiguação" de uma denúncia; amarrar as duas coisas garante que todo encerramento por moderação tem uma denúncia procedente e uma justificativa por trás. A função é `SECURITY DEFINER` porque a regra de acesso de `campanha` não abre a campanha ao moderador.
+- **Caso-limite:** as outras denúncias pendentes da mesma campanha continuam pendentes; a moderação decide cada uma. A devolução do dinheiro (RF-114) entra com o módulo de contribuição.
 
-#### Contestação do score (RF-033, 3 endpoints, 03-10-2026)
+#### Contestação do score (RF-033, 3 endpoints)
 
 **Em palavras simples:** o pesquisador pede revisão de uma denúncia procedente contra ele; a moderação aceita (a denúncia vira improcedente e a nota se recalcula) ou recusa. Tudo mora na própria denúncia ([05-K-2-J] do `DOCUMENTACAO_BD.md`).
 
@@ -1010,12 +997,12 @@ Módulos pequenos, mas reais e em uso pelo painel administrativo.
 - **`POST /solicitacao-encerramento/:id/cancelar`** - o dono desiste enquanto está pendente (92002 fora disso).
 - **`POST /solicitacao-encerramento/:id/decidir`** - `decidir_solicitacao_encerramento()` (03): `aprovar` e, para rejeitar, `justificativa` obrigatória (90029). Só pedido pendente (91041); aprovar exige campanha ainda ativa (91042) e encerra a campanha. Grava quem decidiu e quando.
 
-📌 **Decisão: aprovar, rejeitar e encerrar direto são funções do banco (03-10-2026).**
-- **Decisão:** o app só cria o pedido (campanha e justificativa) e só muda o status para cancelar (GRANT por coluna); decidir e encerrar direto passam por funções `SECURITY DEFINER`, que gravam quem decidiu e quando e encerram a campanha na mesma operação. Uma mudança direta de status para aprovado ou rejeitado é recusada (92033).
-- **Motivo:** o pedido aprovado e a campanha encerrada são uma coisa só; feitos em passos separados, um podia acontecer sem o outro. E o dono não pode gravar um pedido já "aprovado" para fugir do administrador.
-- **Caso-limite aceito:** a devolução (Tudo ou Nada) ou o repasse (Flexível) do dinheiro na aprovação entram com o módulo de contribuição; os e-mails, com o `4-mail`.
+📌 **aprovar, rejeitar e encerrar direto são funções do banco.**
+- O app só cria o pedido (campanha e justificativa) e só muda o status para cancelar (GRANT por coluna); decidir e encerrar direto passam por funções `SECURITY DEFINER`, que gravam quem decidiu e quando e encerram a campanha na mesma operação. Uma mudança direta de status para aprovado ou rejeitado é recusada (92033).
+- **Por quê:** o pedido aprovado e a campanha encerrada são uma coisa só; feitos em passos separados, um podia acontecer sem o outro. E o dono não pode gravar um pedido já "aprovado" para fugir do administrador.
+- **Caso-limite:** a devolução (Tudo ou Nada) ou o repasse (Flexível) do dinheiro na aprovação entram com o módulo de contribuição; os e-mails, com o `4-mail`.
 
-### `11-configuracoes`: a tela do score (3 endpoints, 03-10-2026)
+### `11-configuracoes`: a tela do score (3 endpoints)
 
 **Em palavras simples:** a tela Pontuação (Score) lê os pesos e as faixas e salva tudo de uma vez. O cálculo continua inteiro no banco ([05-K-2-I] do `DOCUMENTACAO_BD.md`); o Nest só lê e grava.
 
@@ -1024,10 +1011,10 @@ Módulos pequenos, mas reais e em uso pelo painel administrativo.
 - **`PATCH /score-config/faixas`** - `faixas: [{ idRotulo, rotulo, descricao, scoreMinimo, scoreMaximo }]`, do mesmo jeito: buraco (90018) e sobreposição (23P01, vira 400 com mensagem própria) são conferidos no estado final.
 - Sem a permissão `score_editar`, a RLS não deixa alterar nenhuma linha: o serviço responde 403. Id repetido no corpo: 400; id que não existe: 404.
 
-📌 **Decisão: um comando só para todos os pesos (03-10-2026).**
-- **Decisão:** a tela manda todos os pesos (ou todas as faixas) juntos, e o serviço grava num único `UPDATE`.
-- **Motivo:** a trigger de recálculo roda uma vez por comando; item por item, salvar 13 pesos recalcularia todos os pesquisadores 13 vezes. E as regras de soma só fazem sentido no estado final.
-- **Caso-limite aceito:** a requisição do administrador espera o recálculo de todos os pesquisadores terminar.
+📌 **um comando só para todos os pesos.**
+- A tela manda todos os pesos (ou todas as faixas) juntos, e o serviço grava num único `UPDATE`.
+- **Por quê:** a trigger de recálculo roda uma vez por comando; item por item, salvar 13 pesos recalcularia todos os pesquisadores 13 vezes. E as regras de soma só fazem sentido no estado final.
+- **Caso-limite:** a requisição do administrador espera o recálculo de todos os pesquisadores terminar.
 
 ### `28-log-auditoria` (9 arquivos, 2 endpoints)
 
@@ -1047,7 +1034,7 @@ Somente leitura - a escrita em `log_auditoria` é feita por trigger genérica no
 
 Devolve `totalUsuarios`, `totalPesquisadores`, `totalPapeis`, `totalPermissoes`, `totalConfiguracoes`, `totalCampanhas`, `sessoesAtivas` e `notificacoesPendentes`.
 
-📌 **`notificacoesPendentes` e `notificacoesComFalha` (19-10-2026)** vêm de uma contagem direta de `notificacao` no próprio service do Dashboard, pela RLS da sessão: para quem não pode ver os e-mails do sistema, dão 0. `contar_metricas_dashboard()` não mudou.
+📌 **`notificacoesPendentes` e `notificacoesComFalha`** vêm de uma contagem direta de `notificacao` no próprio service do Dashboard, pela RLS da sessão: para quem não pode ver os e-mails do sistema, dão 0. Não passam por `contar_metricas_dashboard()`.
 
 ### `5-termo-uso` (19 arquivos, 7 endpoints)
 
@@ -1059,8 +1046,8 @@ Versões dos termos de uso, de 2 tipos: `cadastro` (o termo da conta, que cobre 
 - **`PATCH /termos-uso/:id/ativar`** torna a versão a vigente do seu tipo e, na mesma transação, desativa a vigente anterior do mesmo tipo (idempotente se o alvo já é a vigente). Serve tanto para promover um rascunho quanto para voltar a uma versão antiga.
 - **`PATCH /termos-uso/:id` (Alterar)** só edita `conteudo`, e só enquanto **ninguém aceitou** aquela versão; depois do primeiro aceite a versão fica somente leitura, para preservar o valor probatório do que foi aceito. Quem recusa é o banco (`trg_termos_de_uso_protege_aceito`, 409 `91033`). `versao` e `tipo` são imutáveis.
 - **`DELETE /termos-uso/:id`**: nunca apaga a versão vigente (sempre precisa existir uma por tipo) nem versão com aceite registrado (409 `91032`, RF-091). Não existe exclusão forçada.
-- **`GET /termos-uso/pendente`** (RF-015, liberada com termo pendente): o termo que a tela de aceite mostra, decidido por `fn_termo_uso_pendente()`: o da conta primeiro e, para quem é pesquisador, o de pesquisador (03-10-2026). 404 sem nada pendente.
-- **`POST /termos-uso/:id/aceitar`** (RF-015): quem já tem conta aceita a versão vigente nova do Termo de Uso. **Desde 03-10-2026** aceita o id que está pendente para a conta (o da conta ou o de pesquisador); o texto abaixo descreve a versão anterior. Só aceita o id da vigente de `cadastro` (outro id responde 409, a versão mudou enquanto a pessoa lia); aceitar de novo não é erro.
+- **`GET /termos-uso/pendente`** (RF-015, liberada com termo pendente): o termo que a tela de aceite mostra, decidido por `fn_termo_uso_pendente()`: o da conta primeiro e, para quem é pesquisador, o de pesquisador. 404 sem nada pendente.
+- **`POST /termos-uso/:id/aceitar`** (RF-015): quem já tem conta aceita a versão vigente nova do Termo de Uso. Aceita o id que está pendente para a conta (o da conta ou o de pesquisador); outro id responde 409 (a versão mudou enquanto a pessoa lia); aceitar de novo não é erro.
 
 ---
 
@@ -1114,12 +1101,12 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 ⚠️ **`--adotar` não confere se o banco de verdade tem tudo** que os arquivos descrevem - só estabelece a linha de base. O próprio script avisa isso na saída.
 
-🐛➡️✅ **Bug real, achado pelo Lucas rodando `--adotar` de verdade contra o Supabase (05-09-2026), corrigido no mesmo dia.** `listarArquivosSqlEmOrdem()` filtrava só "termina em `.sql`" - como `arquivos_banco_dados/ATUALIZAR O SUPABASE.sql` mora na mesma pasta dos 8 numerados, ele também foi listado, hasheado e "adotado" como se fosse um 9º arquivo rastreado. O problema de fundo: `ATUALIZAR O SUPABASE.sql` é um rascunho **vivo** (cresce a cada ajuste pequeno - RF-108, limites de upload, validade de sessão configurável, etc.), nunca um bloco fechado como os 8 numerados - tratá-lo como um deles faria o hash mudar a cada adição, disparando pra sempre o aviso de "conteúdo mudou, não reaplicado" só por causa dele, mesmo sem nenhum problema real. **Corrigido:** o filtro agora exige exatamente dois dígitos no início do nome (`/^\d{2}_.*\.sql$/`) - só `01_...` a `08_...` passam; `ATUALIZAR O SUPABASE.sql` nunca mais entra na lista. A linha órfã que o `--adotar` já tinha gravado pra ele em `schema_migrations` (antes da correção) fica inofensiva, sem efeito - o script simplesmente não procura mais por esse nome de arquivo.
+📌 **Só os arquivos numerados entram.** `listarArquivosSqlEmOrdem()` aceita só nome com dois dígitos no início (`/^\d{2}_.*\.sql$/`): `01_...` a `08_...` (e os `09_...` em diante, depois do deploy). O `ATUALIZAR O SUPABASE.sql` mora na mesma pasta e fica de fora: é um rascunho vivo, que cresce a cada ajuste; tratado como um arquivo rastreado, o hash dele mudaria a cada adição e o aviso "conteúdo mudou, não reaplicado" dispararia para sempre.
 
-📌 **Fica, e cada arquivo vai numa transação (03-10-2026).**
-- **Decisão:** a Alexia decidiu manter o executor: depois do deploy, toda mudança no banco de produção entra como arquivo novo numerado (começando em 09, depois 10, e assim por diante), nunca editando o `01` a `08`, e o executor aplica só o que é novo. Cada arquivo roda numa transação, junto com o registro em `schema_migrations`, na mesma conexão.
-- **Motivo:** sem a transação, um arquivo que falhasse no meio ficava pela metade e sem registro, e a rodada seguinte quebrava em "já existe". Testado num Postgres vazio e descartável, 8 casos: aplicar do zero, pular os já aplicados, avisar arquivo alterado, `--adotar`, e falha no meio sem deixar nada aplicado.
-- **Caso-limite aceito:** um arquivo novo não pode ter `BEGIN`/`COMMIT` próprio nem comando que o Postgres não aceita dentro de transação (`CREATE INDEX CONCURRENTLY`, `VACUUM`). Os `BEGIN` de dentro das funções (corpo PL/pgSQL) não contam.
+📌 **Fica, e cada arquivo vai numa transação.**
+- Depois do deploy, toda mudança no banco de produção entra como arquivo novo numerado (começando em 09, depois 10, e assim por diante), nunca editando o `01` a `08`, e o executor aplica só o que é novo. Cada arquivo roda numa transação, junto com o registro em `schema_migrations`, na mesma conexão.
+- **Por quê:** sem a transação, um arquivo que falhasse no meio ficava pela metade e sem registro, e a rodada seguinte quebrava em "já existe". Testado num Postgres vazio e descartável, 8 casos: aplicar do zero, pular os já aplicados, avisar arquivo alterado, `--adotar`, e falha no meio sem deixar nada aplicado.
+- **Caso-limite:** um arquivo novo não pode ter `BEGIN`/`COMMIT` próprio nem comando que o Postgres não aceita dentro de transação (`CREATE INDEX CONCURRENTLY`, `VACUUM`). Os `BEGIN` de dentro das funções (corpo PL/pgSQL) não contam.
 
 ---
 
@@ -1140,6 +1127,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | pub | POST | `/auth/redefinir-senha` *(throttled)* |
 | AUTH | GET · DELETE | `/auth/sessoes` |
 | AUTH | DELETE | `/auth/sessoes/:id` |
+| AUTH | POST | `/auth/reenviar-verificacao/:idUsuario` *(Suporte: link novo de confirmar o e-mail de outra pessoa; exige `verificacao_email_reenviar`)* |
 | **Usuário e RBAC** | | |
 | AUTH | POST | `/usuario` |
 | AUTH | GET | `/usuario` |
@@ -1163,8 +1151,8 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | POST · PATCH | `/perfil-pesquisador` |
 | AUTH | POST | `/perfil-pesquisador/:id` *(criar em nome de outro, distinta do `POST /perfil-pesquisador` self-service acima; Campo de Testes, só fora de produção)* |
 | AUTH | PATCH | `/perfil-pesquisador/:id` *(alterar o perfil de outro pesquisador; o `PATCH /perfil-pesquisador` sem id é o self-service)* |
-| AUTH | PATCH | `/perfil-pesquisador/:id/cpf` *(ADICIONADA 07-09-2026, RF-017 - correção de CPF, ação de suporte/admin)* |
-| AUTH | GET · POST | `/perfil-pesquisador/:id/suspensao` · `/perfil-pesquisador/:id/suspender` · `/perfil-pesquisador/:id/reativar` *(ADICIONADAS 07-09-2026 - suspende só o PODER de pesquisador, não bloqueia login; `suspender` exige corpo `{ate, motivo}`)* |
+| AUTH | PATCH | `/perfil-pesquisador/:id/cpf` *(RF-017, correção de CPF, ação de suporte/admin)* |
+| AUTH | GET · POST | `/perfil-pesquisador/:id/suspensao` · `/perfil-pesquisador/:id/suspender` · `/perfil-pesquisador/:id/reativar` *(suspende só o PODER de pesquisador, não bloqueia login; `suspender` exige corpo `{ate, motivo}`)* |
 | pub | GET | `/link-academico` |
 | AUTH | POST | `/link-academico` · `/link-academico/:idUsuario` |
 | AUTH | PATCH · DELETE | `/link-academico/:id` |
@@ -1192,7 +1180,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | pub | GET | `/campanha` · `/campanha/:id` |
 | AUTH | POST | `/campanha` · `/campanha/:idUsuario` *(criar em nome de outro: Campo de Testes, só fora de produção)* |
 | AUTH | PATCH · DELETE | `/campanha/:id` |
-| AUTH | POST | `/campanha/:id/enviar` · `/campanha/:id/deslizar-datas` *(21-09-2026, ciclo de vida da campanha)* |
+| AUTH | POST | `/campanha/:id/enviar` · `/campanha/:id/deslizar-datas` *(ciclo de vida da campanha)* |
 | AUTH | POST | `/campanha/:id/aprovar` · `/campanha/:id/rejeitar` · `/campanha/:id/forcar-exclusao` *(a última: Campo de Testes, só fora de produção)* |
 | AUTH | GET | `/historico-rejeicao` |
 | pub | GET | `/orcamento-campanha` · `/marco-cronograma` |
@@ -1208,6 +1196,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | DELETE | `/comentario/:id` |
 | AUTH | GET · POST | `/seguir-campanha` |
 | AUTH | DELETE | `/seguir-campanha/:idCampanha` |
+| pub | GET | `/seguir-campanha/:idCampanha/seguidores` *(só o número, para a página da campanha)* |
 | AUTH | GET · POST | `/seguir-pesquisador` *(RF-028: a lista é sempre a da conta logada)* |
 | AUTH | DELETE | `/seguir-pesquisador/:idPesquisador` |
 | pub | GET | `/seguir-pesquisador/:idPesquisador/seguidores` *(só o número, para a página do perfil)* |
@@ -1237,6 +1226,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | GET · POST · DELETE | `/conta-recebimento` *(a chave Pix do próprio pesquisador, conferida no provedor)* |
 | AUTH | GET | `/conta-recebimento/repasses` · `/conta-recebimento/cartao-a-liberar` |
 | AUTH | GET | `/pagamento-admin/revisoes` · `/pagamento-admin/reembolsos-manuais` · `/pagamento-admin/repasses/atencao` |
+| AUTH | GET | `/pagamento-admin/auditoria-financeira` *(só leitura; exige `auditoria_financeira_visualizar`)* |
 | AUTH | POST | `/pagamento-admin/revisoes/:id/resolver` · `/pagamento-admin/reembolsos-manuais/:id/concluir` · `/pagamento-admin/repasses/:id/reenfileirar` · `/pagamento-admin/repasses/:id/marcar-pago` |
 | AUTH | GET | `/campo-testes/pagamento` *(T5, bancada de pagamento: qualquer conta logada, cada uma alcançando o que a RLS dela deixa; só fora de produção, como todo o Campo de Testes)* |
 | AUTH | POST | `/campo-testes/pagamento/contribuicoes/:id/pagar` · `/campo-testes/pagamento/contribuicoes/:id/vencer` · `/campo-testes/pagamento/contribuicoes/:id/liberar` · `/campo-testes/pagamento/contribuicoes/:id/repetir-aviso` |
@@ -1251,21 +1241,20 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 📌 **Rotas administrativas exigem login (não são `@Publico()`).** `GET /usuario`, `GET /usuario/:id`, `GET /usuario-papel`, `GET /usuario-papel/:idUsuario` e `GET /dashboard/resumo` exigem login. Não vale o argumento "só o admin chega na tela": a API não sabe de tela nenhuma, qualquer requisição direta (um `curl`) chega na rota sem passar pelo `/admin`, e o `AuthGuardJwt` global deixa passar como anônima a requisição sem cabeçalho `Authorization` (comportamento documentado nele). Sobra a RLS, e a RLS de `usuario` é permissiva de propósito (o login precisa achar o usuário pelo e-mail antes de existir alguém autenticado); sem o guard, um visitante anônimo obteria os e-mails de todos os usuários, quem é administrador e as métricas internas.
 
-📌 **Permissão além do login (25-09-2026).** O guard só impede o anônimo, e `pol_usuario_select` é permissiva de propósito, então a permissão é checada no Nest por `AutorizacaoService` (`commons/seguranca/autorizacao.service.ts`, global, usa `tem_permissao()` e `id_usuario_atual()` da própria sessão): `GET /usuario` exige `usuario_visualizar_sensivel`; `GET /usuario/:id` e `GET /usuario/:id/logins` exigem ser o próprio usuário ou ter `usuario_visualizar_sensivel`; `GET /usuario/:id/suspensao` e `GET /perfil-pesquisador/:id/suspensao` exigem ser o próprio ou `usuario_suspender`. Sem isso: 403 com mensagem em português. A checagem de `GET /usuario/:id` fica no controller, e não no service, porque login e refresh reaproveitam `UsuarioServiceFindOne` antes de existir alguém autenticado. `GET /usuario-papel` e `GET /usuario-papel/:idUsuario` são decididos pela RLS (`pol_usuariopapel_select`, ver `[04-D-4b]`) e `GET /dashboard/resumo` por `contar_metricas_dashboard()` (`relatorio_visualizar`, ERRCODE 92011). `GET /usuario/:id/logins` deixou de ser público: a tabela `sessao` é lida por qualquer sessão (o refresh precisa achar o token antes de existir usuário atual), então a RLS não protegia o histórico de login. `GET /usuario/:id/termos-aceitos` também exige login (a RLS de `usuario_termo` já limitava as linhas ao próprio ou a quem tem a permissão). Continuam públicos os catálogos (área, motivo, tipo de link). A solução maior, para depois: o login passa a usar uma função `SECURITY DEFINER` que devolve só o necessário para autenticar a partir do e-mail, e `pol_usuario_select` pode então ser fechada para anônimo no próprio banco.
+📌 **Permissão além do login.** O guard só impede o anônimo, e `pol_usuario_select` é permissiva de propósito, então a permissão é checada no Nest por `AutorizacaoService` (`commons/seguranca/autorizacao.service.ts`, global, usa `tem_permissao()` e `id_usuario_atual()` da própria sessão): `GET /usuario` exige `usuario_visualizar_sensivel` ou `usuario_visualizar_atendimento` (a do Suporte); `GET /usuario/:id` e `GET /usuario/:id/logins` exigem ser o próprio usuário ou ter uma das duas; `GET /usuario/:id/suspensao` e `GET /perfil-pesquisador/:id/suspensao` exigem ser o próprio ou `usuario_suspender`. Sem isso: 403 com mensagem em português. A checagem de `GET /usuario/:id` fica no controller, e não no service, porque login e refresh reaproveitam `UsuarioServiceFindOne` antes de existir alguém autenticado. `GET /usuario-papel` e `GET /usuario-papel/:idUsuario` são decididos pela RLS (`pol_usuariopapel_select`, ver `[04-D-4b]`) e `GET /dashboard/resumo` por `contar_metricas_dashboard()` (`relatorio_visualizar`, ERRCODE 92011). `GET /usuario/:id/logins` não é público: a tabela `sessao` é lida por qualquer sessão (o refresh precisa achar o token antes de existir usuário atual), então a RLS não protegia o histórico de login. `GET /usuario/:id/termos-aceitos` também exige login (a RLS de `usuario_termo` já limitava as linhas ao próprio ou a quem tem a permissão). Continuam públicos os catálogos (área, motivo, tipo de link). A solução maior, para depois: o login passa a usar uma função `SECURITY DEFINER` que devolve só o necessário para autenticar a partir do e-mail, e `pol_usuario_select` pode então ser fechada para anônimo no próprio banco.
 
 ---
 
 ## 14. O que ainda não existe (pastas vazias)
 
-Conferido em 19-10-2026: **nenhuma pasta de módulo vazia.** `4-mail`, `18-recompensa` e `27-notificacao` ganharam código nesse dia (seção 21); `23-repasse` e `24-auditoria-financeira`, vazias, saíram na reorganização numérica (o repasse vive em `23-pagamento`, `24-conta-recebimento` e `25-pagamento-revisao`; a auditoria financeira é gravada pelo banco).
+Nenhuma pasta de módulo está vazia. O repasse vive em `23-pagamento`, `24-conta-recebimento` e `25-pagamento-revisao`; a auditoria financeira é gravada pelo banco.
 
-🗑️ **`27-resources` não está mais na lista - removido em 04-09-2026.** Era sobra do esqueleto de pastas herdado do modelo da disciplina (Programação para Web 2): lá, `resources` é um catálogo estático de metadados de rota (`GET /rest/resources`, uma lista hardcoded de endpoint/verbo por entidade, consumida pelo React pra montar URL sem hardcode) - só faz sentido porque aquele sistema segue uma convenção rígida e uniforme (toda entidade com exatamente 5 endpoints: listar/criar/buscar/alterar/excluir). O CrowdAcadêmico já resolve o mesmo problema de origem (não hardcodar URL no React) de outro jeito - um arquivo `<modulo>.api.js` por módulo, com funções nomeadas - e as rotas daqui não são uniformes o bastante pra caber no molde do `resources` (upload em 2 passos, `/dashboard/resumo` sem entidade, sub-rotas como `/usuario/:id/desbloquear`). Pasta vazia (só `.gitkeep`) desde sempre, sem nenhum código ou decisão ligando ela ao produto - removida, não é lacuna.
 
 📌 **Este documento descreve o que EXISTE.** O que falta, a ordem sugerida e o porquê de cada adiamento estão em **`PROXIMOS_MODULOS.md`**, que é o dono desse assunto e está atualizado. Não duplicar aqui.
 
 O que ficou registrado sobre o que faltava:
 
-- **Pagamento (feito em 17-10-2026):** contribuição (`22-contribuicao`), provedor e tarefas automáticas (`23-pagamento`), chave Pix e repasses do pesquisador (`24-conta-recebimento`) e pendências do admin (`25-pagamento-revisao`). Sobre a antiga pendência de `auditoria_financeira` e `repasse` terem policy de escrita `WITH CHECK (true)`: o Nest nunca grava nessas tabelas direto; toda escrita passa por funções `SECURITY DEFINER` do banco. ⚠️ Mas o `GRANT INSERT` do `app_nestjs` nas duas continua em `06_grants.sql` sem uso (conferido em 18-10-2026): tirá-lo fecharia de vez a porta, decisão em aberto no PENDENCIAS. O fluxo do dinheiro inteiro está em `DOCUMENTACAO_FINANCEIRO.md`.
+- **Pagamento:** contribuição (`22-contribuicao`), provedor e tarefas automáticas (`23-pagamento`), chave Pix e repasses do pesquisador (`24-conta-recebimento`) e pendências do admin (`25-pagamento-revisao`). O Nest nunca grava em `auditoria_financeira` nem em `repasse`: não há regra de acesso nem `GRANT` de escrita nelas, e toda escrita passa por funções `SECURITY DEFINER` do banco. O fluxo do dinheiro inteiro está em `DOCUMENTACAO_FINANCEIRO.md`.
 
 ---
 
@@ -1275,7 +1264,7 @@ A tabela da seção 1.1 já dá o resumo de uma linha por peça. Este capítulo 
 
 ### 15.1 Núcleo do framework - exigido pelo NestJS, não é escolha do projeto
 
-`@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `reflect-metadata`, `rxjs`. Essas cinco não representam uma decisão de arquitetura - são o próprio NestJS. `@nestjs/platform-express` escolhe **Express** como servidor HTTP por baixo (a alternativa seria `@nestjs/platform-fastify`); nada neste projeto depende de recurso exclusivo de Express, então a escolha é a opção padrão/mais documentada, não uma necessidade técnica específica. `reflect-metadata` existe porque o Nest usa decorators (`@Controller`, `@Injectable`, `@Body`) para descrever metadado de tipo em tempo de execução - sem ele, a injeção de dependência do framework simplesmente não funciona. `rxjs` é a base dos `Observable` que interceptors/pipes do Nest usam internamente; o código deste projeto quase não usa RxJS diretamente (não há stream de evento nem programação reativa de propósito aqui), é consumido pela infraestrutura do framework. ⚠️ `nest/package.json` tem `"overrides": { "multer": "^2.4.0" }` (21-09-2026): `@nestjs/platform-express` fixa `multer` em versão exata e vulnerável (4 avisos de negação de serviço). O sistema nunca executa o `multer` (o upload é por URL pré-assinada e não passa pelo Nest), então o override é higiene de `npm audit` (de 6 vulnerabilidades altas para 0). No dia em que alguma rota usar `FileInterceptor`, ele deixa de ser cosmético. Não remover. Todas as substituições e o que fazer quando o `npm audit` reclamar: §15.10.
+`@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `reflect-metadata`, `rxjs`. Essas cinco não representam uma decisão de arquitetura - são o próprio NestJS. `@nestjs/platform-express` escolhe **Express** como servidor HTTP por baixo (a alternativa seria `@nestjs/platform-fastify`); nada neste projeto depende de recurso exclusivo de Express, então a escolha é a opção padrão/mais documentada, não uma necessidade técnica específica. `reflect-metadata` existe porque o Nest usa decorators (`@Controller`, `@Injectable`, `@Body`) para descrever metadado de tipo em tempo de execução - sem ele, a injeção de dependência do framework simplesmente não funciona. `rxjs` é a base dos `Observable` que interceptors/pipes do Nest usam internamente; o código deste projeto quase não usa RxJS diretamente (não há stream de evento nem programação reativa de propósito aqui), é consumido pela infraestrutura do framework. ⚠️ `nest/package.json` tem `"overrides": { "multer": "^2.4.0" }`: `@nestjs/platform-express` fixa `multer` em versão exata e vulnerável (4 avisos de negação de serviço). O sistema nunca executa o `multer` (o upload é por URL pré-assinada e não passa pelo Nest), então o override é higiene de `npm audit` (de 6 vulnerabilidades altas para 0). No dia em que alguma rota usar `FileInterceptor`, ele deixa de ser cosmético. Não remover. Todas as substituições e o que fazer quando o `npm audit` reclamar: §15.10.
 
 ### 15.2 Banco de dados - `kysely` + `pg`
 
@@ -1303,7 +1292,7 @@ Carrega variáveis de ambiente (`.env`) através do `ConfigService`, injetável 
 
 ### 15.7b Agendamento - `@nestjs/schedule`
 
-Adicionado em 05-09-2026 pra fechar o RF-057 (encerramento automático de campanha vencida) - até então a função de banco existia, mas nada a chamava (ver §7.4, `CampanhaServiceCloseExpired`). É o pacote oficial do NestJS pra `@Cron`/`@Interval`/`@Timeout` - registra um agendador de verdade por trás do decorator via `ScheduleModule.forRoot()` (uma vez, em `AppModule`). Consumidores hoje: os 4 jobs listados em §7.4 (`CampanhaServiceCloseExpired` e `PerfilPesquisadorServiceReactivateExpired` a cada 15 minutos, `CampanhaServiceExpireDrafts` e `CampanhaServiceExpireRejected` de hora em hora).
+Fecha o RF-057 (encerramento automático de campanha vencida, ver §7.4, `CampanhaServiceCloseExpired`). É o pacote oficial do NestJS para `@Cron`/`@Interval`/`@Timeout` - registra um agendador de verdade por trás do decorator via `ScheduleModule.forRoot()` (uma vez, em `AppModule`). Usam: os 6 jobs de §7.4, as tarefas automáticas do pagamento (`DOCUMENTACAO_FINANCEIRO.md`, seção 2.2) e o envio de e-mail (seção 21).
 
 ### 15.8 Armazenamento de arquivo - `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` + `sharp`
 
@@ -1335,15 +1324,15 @@ Nenhuma delas roda em produção - ficam de fora do processo que o Render execut
 
 **O que está substituído hoje** (`nest/package.json`, chave `"overrides"`):
 
-| Peça | Quem usa por dentro | Por que | Desde |
-|---|---|---|---|
-| `multer` → `^2.4.0` | `@nestjs/platform-express`, que trava o `multer` numa versão exata e vulnerável (4 avisos de negação de serviço) | O sistema nunca executa o `multer` (o upload vai direto ao armazenamento por URL pré-assinada, sem passar pelo Nest), então é só higiene do `npm audit`. No dia em que alguma rota usar `FileInterceptor`, a substituição deixa de ser só cosmética. | 21-09-2026 |
-| `js-yaml` → `^5.4.2`, só dentro de `@nestjs/swagger` | `@nestjs/swagger` 11.4.7, que trava o `js-yaml` em 5.3.0 (aviso moderado: `maxTotalMergeKeys` não limita o uso de CPU, GHSA-r3ph-w7gj-g6xm) | O `npm audit fix --force` "resolveria" subindo o `@nestjs/swagger` para a versão 12, que é uma mudança grande e podia quebrar a documentação da API (`/api`, §18). A substituição corrige só o `js-yaml` e deixa o swagger na 11. É escrita aninhada (`"@nestjs/swagger": { "js-yaml": ... }`) de propósito: outras bibliotecas usam o `js-yaml` 4, que não tem o problema, e uma substituição global as forçaria para a 5. Conferido em 02-10-2026: compila, o Nest sobe e a página `/api` abre. | 02-10-2026 |
+| Peça | Quem usa por dentro | Por que |
+|---|---|---|
+| `multer` → `^2.4.0` | `@nestjs/platform-express`, que trava o `multer` numa versão exata e vulnerável (4 avisos de negação de serviço) | O sistema nunca executa o `multer` (o upload vai direto ao armazenamento por URL pré-assinada, sem passar pelo Nest), então é só higiene do `npm audit`. No dia em que alguma rota usar `FileInterceptor`, a substituição deixa de ser só cosmética. |
+| `js-yaml` → `^5.4.2`, só dentro de `@nestjs/swagger` | `@nestjs/swagger` 11.4.7, que trava o `js-yaml` em 5.3.0 (aviso moderado: `maxTotalMergeKeys` não limita o uso de CPU, GHSA-r3ph-w7gj-g6xm) | O `npm audit fix --force` "resolveria" subindo o `@nestjs/swagger` para a versão 12, que é uma mudança grande e podia quebrar a documentação da API (`/api`, §18). A substituição corrige só o `js-yaml` e deixa o swagger na 11. É escrita aninhada (`"@nestjs/swagger": { "js-yaml": ... }`) de propósito: outras bibliotecas usam o `js-yaml` 4, que não tem o problema, e uma substituição global as forçaria para a 5. Conferido: compila, o Nest sobe e a página `/api` abre. |
 
 📌 **Substituir a peça de dentro em vez de `npm audit fix --force`.**
-- **Decisão:** quando o `npm audit` só oferece correção com `--force` (que sobe a biblioteca principal de versão "grande"), a correção é uma entrada em `"overrides"` apontando a peça de dentro para a versão corrigida, e a linha entra na tabela acima.
-- **Motivo:** `--force` troca a versão principal (ex.: `@nestjs/swagger` 11 → 12) sem ninguém revisar o que mudou; a substituição mexe só no que tem a falha. Mesmo jeito do `multer`.
-- **Caso-limite aceito:** a peça de dentro passa a usar uma versão que a biblioteca principal não testou. Por isso, depois de cada substituição: compilar, subir o Nest e abrir a tela que usa a biblioteca (no caso do swagger, `/api`). Quando a biblioteca principal lançar uma versão que já traga a peça corrigida, a substituição pode sair.
+- Quando o `npm audit` só oferece correção com `--force` (que sobe a biblioteca principal de versão "grande"), a correção é uma entrada em `"overrides"` apontando a peça de dentro para a versão corrigida, e a linha entra na tabela acima.
+- **Por quê:** `--force` troca a versão principal (ex.: `@nestjs/swagger` 11 → 12) sem ninguém revisar o que mudou; a substituição mexe só no que tem a falha. Mesmo jeito do `multer`.
+- **Caso-limite:** a peça de dentro passa a usar uma versão que a biblioteca principal não testou. Por isso, depois de cada substituição: compilar, subir o Nest e abrir a tela que usa a biblioteca (no caso do swagger, `/api`). Quando a biblioteca principal lançar uma versão que já traga a peça corrigida, a substituição pode sair.
 
 **Quando o `npm audit` reclamar de novo (passo a passo):**
 1. Rodar `npm audit` e ler, para cada aviso, se a correção vem com `npm audit fix` ou só com `--force`.
@@ -1352,7 +1341,6 @@ Nenhuma delas roda em produção - ficam de fora do processo que o Render execut
 4. Conferir: `npm audit` dando 0, `npm run build`, o Nest subindo, e a tela da biblioteca afetada funcionando.
 5. Commitar o `package.json` e o `package-lock.json` juntos. Em outro computador, depois do `git pull`, basta `npm install` (ele segue o `package-lock.json`); não precisa repetir o `npm audit fix`.
 
-**Histórico:** 21-09-2026, `multer` (6 vulnerabilidades altas para 0). 02-10-2026, relatado nos computadores da escola em 30-09-2026: Nest com 4 (`brace-expansion` alto e `fast-uri` moderado, resolvidos por `npm audit fix`; `js-yaml` moderado, resolvido pela substituição) e React com 1 (`brace-expansion` alto, `npm audit fix`). Resultado: 0 nos dois.
 
 ## 16. Pontos de atenção consolidados
 
@@ -1360,7 +1348,7 @@ Reunidos de todas as seções, para servir de checklist.
 
 ### Armadilhas do código (podem morder amanhã)
 
-1. 🧩 **`try/catch` em volta de query não desfaz o aborto da transação** - o `COMMIT` vira `ROLLBACK` silencioso e a requisição devolve 200 sem ter gravado nada. Use `SAVEPOINT` via `sql` cru. (§2.4)
+1. 🧩 **`try/catch` em volta de query não desfaz o aborto da transação** - o `COMMIT` vira `ROLLBACK` silencioso e a requisição devolve 200 sem ter gravado nada. Use `comPontoDeRetorno`. (§2.4)
 2. 🧩 **Nunca `db.transaction()`** - sem savepoint implementado, não faz nada. (§2.4)
 3. 🧩 **`SUM` volta string do driver `pg`** - sem `Number()`, a soma vira concatenação. (§8.6)
 4. 🧩 **Ordem importa quando a RLS depende do vínculo de posse** - desativar o arquivo antigo **antes** de trocar `id_imagem_perfil`. (§7.4)
@@ -1371,17 +1359,17 @@ Reunidos de todas as seções, para servir de checklist.
 
 7. ⚠️ **`db.types.ts` é escrito à mão**, com `npm run db:codegen` disponível e nunca rodado. Divergência com o `.sql` só aparece em runtime. (§2.6)
 8. ✅ **`perfil-pesquisador.service.create` diferencia as duas `UNIQUE`** pelo mapa central de duplicidade (perfil repetido e CPF repetido têm mensagens próprias). (§5.1)
-9. ✅ **`ordem_endosso` é calculada no banco** (trigger `validar_comentario_endosso_autor`, sob lock por campanha, desde 26-09-2026); a corrida teórica acabou. (§7.4)
-10. ✅ **`GET /dashboard/resumo` exige login e a permissão `relatorio_visualizar`** (checada dentro de `contar_metricas_dashboard()`, ERRCODE 92011, desde 25-09-2026). (§13)
-11. ✅ **`notificacoesPendentes` funciona** desde 19-10-2026, por contagem direta no service do Dashboard. (§10)
-12. ✅ **`nest/.env.example` existe** (26-09-2026). (§8.8)
+9. ✅ **`ordem_endosso` é calculada no banco** (trigger `validar_comentario_endosso_autor`, sob lock por campanha): dois endossos ao mesmo tempo não repetem o número. (§7.4)
+10. ✅ **`GET /dashboard/resumo` exige login e a permissão `relatorio_visualizar`** (checada dentro de `contar_metricas_dashboard()`, ERRCODE 92011). (§13)
+11. ✅ **`notificacoesPendentes` funciona**, por contagem direta no service do Dashboard. (§10)
+12. ✅ **`nest/.env.example` existe.** (§8.8)
 13. ⚠️ **`ARQUIVO - Dica de Arquitetura.md` (em `informacoes/arquivo morto/`) cita Cloudflare R2** como provedor; o atual é Supabase Storage. O desenho continua válido, só o nome mudou. (§8.1)
 14. ⚠️ **`paginacao.util` com padrão 500** é teto de segurança, não paginação real - precisa baixar quando o primeiro módulo de alto volume existir. (§2.7)
 15. ⚠️ **`.stream()` não é suportado** pelo dialect. (§2.4)
 
 ### Dependências externas ao código (não resolvem com deploy)
 
-16. ⚠️ **Funções `SECURITY DEFINER` precisam ser criadas pelo SQL Editor do Supabase**, nunca pela `DATABASE_URL` de `app_nestjs` - criar por ali "funciona" sem erro e produz uma função que **não bypassa RLS nenhuma**, porque quem bypassa é o **dono** da função. O erro só aparece na hora de usar. (`PENDENCIAS e correcoes.md`, item 22 - e é a causa raiz dos dois `SAVEPOINT` em `auth.service.login.ts`.)
+16. ⚠️ **Funções `SECURITY DEFINER` precisam ser criadas pelo SQL Editor do Supabase**, nunca pela `DATABASE_URL` de `app_nestjs` - criar por ali "funciona" sem erro e produz uma função que **não bypassa RLS nenhuma**, porque quem bypassa é o **dono** da função. O erro só aparece na hora de usar.
 17. ⚠️ **A regra de ciclo de vida do bucket** (apagar `pendente/` com mais de 24h) é configuração de painel, não código. Se ninguém configurou, os órfãos ficam para sempre. (§8.8)
 18. ⚠️ **O bucket precisa estar em domínio separado do site.** (§8.8)
 19. ⚠️ **`auditoria_financeira`/`repasse` com escrita `USING (true)`** - o furo aberto no caminho do dinheiro. (§14, item 9)
@@ -1433,7 +1421,7 @@ console.log('total de rotas:', out.length);
 |---|---|
 | `DOCUMENTACAO_BD.md` | O banco: schema, RLS, triggers, funções - e o log histórico das decisões |
 | `DOCUMENTACAO_ERRCODE.md` | Tabela completa código → função → mensagem dos `RAISE EXCEPTION` com ERRCODE customizado |
-| `PENDENCIAS e correcoes.md` | Decisões em aberto e o log dos últimos dias; o histórico antigo (itens e partes resolvidos até 22-09-2026) está em `informacoes/HISTORICO/HISTORICO_PENDENCIAS_E_CORRECOES.md`, e os itens 5, 6, 7, 8, 9, 11 e 22 citados neste documento estão lá |
+| `PENDENCIAS e correcoes.md` | Decisões em aberto |
 | `PROXIMOS_MODULOS.md` | O que falta construir, em ordem sugerida |
 | `ARQUIVO - Dica de Arquitetura.md` (em `informacoes/arquivo morto/`) | O "doc de arquitetura" citado nos comentários de `commons/storage` e `26-arquivo`; a substância está na seção 8 deste documento |
 | `nest/.env.example` | Todas as variáveis do `.env` do Nest, com o passo a passo do bucket do Supabase (`STORAGE_*`) |
@@ -1443,7 +1431,7 @@ console.log('total de rotas:', out.length);
 
 ## 18. Documentação interativa da API (Swagger/OpenAPI)
 
-Adicionado em 04-09-2026. Esta seção é propositalmente mais didática que o resto do documento - escrita pra quem não é programador conseguir entender o que isso é e pra que serve, não só o que mudou no código.
+Esta seção é propositalmente mais didática que o resto do documento - escrita pra quem não é programador conseguir entender o que isso é e pra que serve.
 
 ### 18.1 O que é isto, em termos simples
 
@@ -1479,10 +1467,10 @@ Mesmo raciocínio já aplicado ao `DevLoginRapido` no React (protegido por `impo
 
 Existem duas formas de fazer o Swagger funcionar num projeto NestJS:
 
-1. **Decorar cada campo de cada DTO manualmente** (`@ApiProperty({ description: '...', example: '...' })` em cima de cada propriedade de cada classe) - é o que o repositório de referência da disciplina fazia (`swagger.decorators.ts`, achado nos dois projetos de exemplo revisados em 04-09-2026). Funciona, mas exigiria adicionar isso à mão em ~79 DTOs já existentes (48 de request + 31 de response, `§1.2`), e lembrar de repetir isso em todo DTO novo dali pra frente.
+1. **Decorar cada campo de cada DTO manualmente** (`@ApiProperty({ description: '...', example: '...' })` em cima de cada propriedade de cada classe) - é o que o repositório de referência da disciplina fazia (`swagger.decorators.ts`, nos projetos de exemplo da disciplina). Funciona, mas exigiria adicionar isso à mão em ~79 DTOs já existentes (48 de request + 31 de response, `§1.2`), e lembrar de repetir isso em todo DTO novo dali pra frente.
 2. **Deixar o compilador do NestJS inferir tudo sozinho** - a opção escolhida aqui. Configurado em `nest-cli.json`, no plugin `@nestjs/swagger/plugin`.
 
-**Como a opção 2 funciona, tecnicamente:** o NestJS tem seu próprio compilador (`nest build`/`nest start`, não o `tsc` puro), e esse compilador aceita plugins que reescrevem o código durante a compilação. O plugin do Swagger, com a opção `classValidatorShim: true`, **lê os decorators de validação que já existem** nos DTOs (`@IsEmail()`, `@MinLength(8)`, `@IsOptional()` etc. - a mesma validação da `§6` deste documento) e gera a partir deles a informação que o Swagger precisa (tipo do campo, se é obrigatório, tamanho mínimo...), **sem precisar de nenhum decorator novo**. Testado ao vivo (04-09-2026): o DTO `UsuarioRequestCreate` (`nome`/`email`/`senha`/`idImagemPerfil`, com `@MinLength`/`@IsEmail` de sempre) apareceu no `/api-json` gerado com o schema certo, exatamente como esperado, sem eu ter tocado no arquivo do DTO.
+**Como a opção 2 funciona, tecnicamente:** o NestJS tem seu próprio compilador (`nest build`/`nest start`, não o `tsc` puro), e esse compilador aceita plugins que reescrevem o código durante a compilação. O plugin do Swagger, com a opção `classValidatorShim: true`, **lê os decorators de validação que já existem** nos DTOs (`@IsEmail()`, `@MinLength(8)`, `@IsOptional()` etc. - a mesma validação da `§6` deste documento) e gera a partir deles a informação que o Swagger precisa (tipo do campo, se é obrigatório, tamanho mínimo...), **sem precisar de nenhum decorator novo**. Testado ao vivo: o DTO `UsuarioRequestCreate` (`nome`/`email`/`senha`/`idImagemPerfil`, com `@MinLength`/`@IsEmail` de sempre) apareceu no `/api-json` gerado com o schema certo, exatamente como esperado, sem eu ter tocado no arquivo do DTO.
 
 A opção `introspectComments: true`, complementar, faz o plugin usar um comentário JSDoc (`/** como este */`) escrito acima de um campo ou de uma rota como a descrição que aparece no Swagger - pra quem quiser deixar uma rota mais explicada, é só escrever um comentário desse tipo ali, não precisa aprender sintaxe de decorator nenhuma.
 
@@ -1490,7 +1478,7 @@ A opção `introspectComments: true`, complementar, faz o plugin usar um coment�
 
 Esse "ler sozinho" só funciona pro plugin **conseguir achar o arquivo do DTO em primeiro lugar** - e ele decide se um arquivo é um DTO só pelo **nome do arquivo** (não pelo conteúdo). O padrão de nomenclatura oficial do plugin é terminar em `.dto.ts` - mas este projeto nunca seguiu esse padrão (os arquivos são `usuario.request-create.ts`, `campanha.response.ts` etc., não `usuario-create.dto.ts`).
 
-**Solução aplicada:** o `nest-cli.json` lista, explicitamente, todos os sufixos de nome de arquivo já usados no projeto (`.dto.ts` e mais 24, um por padrão de nome existente, como `.request-create.ts`). Isso foi levantado programaticamente (listando todo arquivo dentro de uma pasta `dto/` e conferindo o padrão do nome), não digitado de memória. **Regerada em 28-09-2026:** a renomeação dos arquivos para ação em inglês deixou a lista velha, e o Swagger parou de mostrar os campos de vários DTOs sem nenhum erro. Uma suíte de teste do banco (a de referências da documentação) agora acusa todo DTO cujo nome não bate com a lista. Depois de mexer no `nest-cli.json`, é preciso reiniciar o `npm run start:dev`: a lista só é lida quando o Nest liga.
+**Solução aplicada:** o `nest-cli.json` lista, explicitamente, todos os sufixos de nome de arquivo já usados no projeto (`.dto.ts` e mais 24, um por padrão de nome existente, como `.request-create.ts`). Isso foi levantado programaticamente (listando todo arquivo dentro de uma pasta `dto/` e conferindo o padrão do nome), não digitado de memória. Se um arquivo de DTO for renomeado para um sufixo fora da lista, o Swagger para de mostrar os campos dele sem nenhum erro; por isso uma suíte de teste do banco (a de referências da documentação) acusa todo DTO cujo nome não bate com a lista. Depois de mexer no `nest-cli.json`, é preciso reiniciar o `npm run start:dev`: a lista só é lida quando o Nest liga.
 
 **O que isso significa na prática, pra sempre lembrar:** se um dia um módulo novo criar um DTO com um sufixo de nome **que ainda não existe** nessa lista (ex.: um dia surgir `campanha.request-aprovar.ts`, com um sufixo `request-aprovar` que hoje não está na lista), o Swagger **não vai dar erro nenhum** - a rota continua aparecendo normalmente em `/api`, só que o corpo esperado apareceria vazio/genérico, sem os campos de verdade. **Sempre que um DTO novo usar um sufixo de nome que essa lista ainda não tem, é preciso adicionar o sufixo novo em `nest-cli.json` → `compilerOptions.plugins[0].options.dtoFileNameSuffix`.** Fica registrado aqui exatamente por ser o tipo de coisa fácil de esquecer, porque o sintoma (documentação incompleta) não é um erro que trava nada.
 
@@ -1500,114 +1488,110 @@ Esse "ler sozinho" só funciona pro plugin **conseguir achar o arquivo do DTO em
 - **Nenhum `@ApiProperty`/`@ApiOperation` foi adicionado a nenhum DTO ou controller** - tudo vem do `classValidatorShim`/`introspectComments`, como explicado em `§18.4`. Se um dia uma rota específica merecer uma descrição melhor que a inferida automaticamente, dá pra escrever um comentário JSDoc nela (não precisa decorator) - opcional, não obrigatório.
 - **O padrão de decorators do repositório de referência da disciplina (`ApiPostDoc`/`ApiPutDoc`/etc., achado em `Programa-o-para-WEB-2---Completo-main`) não foi adotado.** Ele resolve um problema real (documentar sem repetir 5-6 linhas de decorator por rota), mas exigiria aplicar manualmente em cada um dos ~94 controllers existentes - mais trabalho de retrofit do que a abordagem escolhida, pro mesmo resultado final.
 
-### 18.7 Confirmação de que está funcionando (04-09-2026)
+### 18.7 Confirmação de que está funcionando
 
 Testado com o backend rodando de verdade contra o Postgres real (não só compilado): `npm run build` limpo (sem aviso do plugin), `/api` devolvendo `200`, `/api-json` com o schema do `UsuarioRequestCreate` batendo exatamente com os decorators de `class-validator` já existentes no arquivo, e `security`/`securitySchemes` do documento confirmando que o cadeado de "exige login" aparece certo em toda rota por padrão.
 
-## 19. Correções da super auditoria (29-09-2026)
+## 19. Conta, login, sessão e senha
 
-**Em palavras simples:** a super auditoria (o relatório dela fica na pasta de informações, fora do repositório) usou o sistema de verdade e achou regras que não funcionavam como o requisito pede. Esta seção registra o que mudou no Nest por causa disso. As regras do banco estão na seção equivalente do `DOCUMENTACAO_BD.md`.
+**Em palavras simples:** as regras do Nest que protegem a conta de cada pessoa: o bloqueio por senha errada, a troca de senha, o e-mail, o Termo de Uso pendente, a renovação da sessão e a recuperação de senha. As regras do banco que sustentam cada uma estão no `DOCUMENTACAO_BD.md`.
 
 📌 **Bloqueio por senha errada (RF-005) gravado fora da transação.**
-- **Decisão:** `auth.service.login.ts` chama `registrar_falha_login()` por uma conexão própria do pool (`PG_POOL`), e não pelo `db` da requisição.
-- **Motivo:** o login com senha errada termina em 401. Qualquer exceção faz o `GlobalDbInterceptor` dar `ROLLBACK`, e isso levava junto a anotação da falha. O contador nunca passava de zero, então o bloqueio depois de 5 tentativas nunca acontecia.
-- **Caso-limite aceito:** a anotação é gravada mesmo que algo depois dela falhe na mesma requisição. É o comportamento certo para uma trava de segurança.
+- `auth.service.login.ts` chama `registrar_falha_login()` por uma conexão própria do pool (`PG_POOL`), e não pelo `db` da requisição.
+- **Por quê:** o login com senha errada termina em 401, e qualquer exceção faz o `GlobalDbInterceptor` dar `ROLLBACK`. Pelo `db` da requisição, a anotação da falha iria junto, o contador nunca passaria de zero e o bloqueio depois de 5 tentativas nunca aconteceria.
+- **Caso-limite:** a anotação é gravada mesmo que algo depois dela falhe na mesma requisição. É o comportamento certo para uma trava de segurança.
 
 📌 **Trocar a própria senha exige a senha atual (RF-008).**
-- **Decisão:** em `usuario.service.update.ts`, `novaSenha` na própria conta sem `senhaAtual` responde 400, com o erro embaixo do campo (`erroNoCampo`). A senha nova igual à atual também responde 400. Depois da troca, as outras sessões da conta são encerradas: na própria conta fica só a sessão de quem trocou; no reset feito pelo admin caem todas.
-- **Motivo:** antes, a ausência de `senhaAtual` era tratada como reset administrativo sem conferir quem pedia. Quem pegasse uma sessão aberta tomava a conta.
-- **Caso-limite aceito:** o botão "Redefinir senha dev" do painel continua funcionando para outras contas. Na conta do próprio admin, ele passa a pedir a senha atual.
+- Em `usuario.service.update.ts`, `novaSenha` na própria conta sem `senhaAtual` responde 400, com o erro embaixo do campo (`erroNoCampo`). A senha nova igual à atual também responde 400. Depois da troca, as outras sessões da conta são encerradas: na própria conta fica só a sessão de quem trocou; no reset feito pelo admin caem todas.
+- **Por quê:** sem conferir a senha atual, quem pegasse uma sessão aberta tomaria a conta.
+- **Caso-limite:** o botão "Redefinir senha dev" do painel funciona para outras contas; na conta do próprio admin, ele pede a senha atual.
 
 📌 **E-mail sempre em minúsculas.**
-- **Decisão:** a transformação `EmailNormalizado()` (`commons/validacao/transformacoes.decorator.ts`) entra no cadastro, no login e na criação de usuário. O banco normaliza de novo, com a trigger `trg_usuario_normaliza_email`.
-- **Motivo:** `ALICE@X.COM` e `alice@x.com` viravam duas contas, e o login com maiúsculas falhava.
-- **Caso-limite aceito:** nenhum.
-
-📌 **Alteração sem nenhum campo responde 400, não 500.**
-- **Decisão:** campanha, comentário, atualização de campanha, Termo de Uso e link acadêmico conferem "Nenhum campo para atualizar." antes do `UPDATE`, como os outros módulos já faziam. O link acadêmico passou a alterar só o que vier (`url`, `rotulo` e `ordem` opcionais; `rotulo: null` apaga o rótulo).
-- **Motivo:** `UPDATE ... SET WHERE` sem coluna é SQL inválido e virava "Internal server error". No link, a URL era obrigatória até para reordenar, e editar o link apagava a ordem dele sem aviso.
-- **Caso-limite aceito:** nenhum.
-
-📌 **Ação sobre registro que não existe responde 404.**
-- **Decisão:** `exigirQueExista()` (`distinguir-404-ou-403.util.ts`) roda **depois** da função do banco em desbloquear, revogar suspensão (de conta e de papel) e reativar pesquisador. A exclusão de conta confere a mesma coisa pela leitura que já fazia antes.
-- **Motivo:** essas funções do banco devolvem VOID e não dizem se acharam a linha, então um id inexistente respondia 204 ("deu certo").
-- **Caso-limite aceito:** chamar depois da função mantém o 403 para quem não tem permissão. Por isso, um registro inexistente só vira 404 para quem pode fazer a ação.
-
-📌 **Mensagens de validação em português.**
-- **Decisão:** `errosPorCampo()` traduz a mensagem padrão do class-validator quando ela vem em inglês. A mensagem escrita no DTO fica como está. O filtro global traduz a mensagem dos pipes de parâmetro ("Validation failed (numeric string is expected)").
-- **Motivo:** a maioria dos formulários respondia "must be a string", "should not be empty" etc.
-- **Caso-limite aceito:** a mensagem traduzida usa o nome técnico do campo (`idCampanha precisa ser um número inteiro.`). A tela mostra o erro embaixo do campo certo, então o nome serve de referência.
-
-📌 **`emSequencia` no lugar de `Promise.all`.**
-- **Decisão:** a exportação de dados e a exclusão de Termo de Uso usam `emSequencia()` (`commons/database/em-sequencia.util.ts`). A alteração de Termo de Uso faz as duas consultas uma depois da outra.
-- **Motivo:** é uma conexão só por requisição (`paginacao.util.ts`). O `Promise.all` nunca rodava em paralelo de verdade e dependia de um enfileiramento que o driver `pg` já avisa que vai remover.
-- **Caso-limite aceito:** nenhum.
-
-📌 **Suspensão de papel com motivo (RF-118).**
-- **Decisão:** `POST /usuario-papel/:idUsuario/:idPapel/suspender` recebe o mesmo `SuspensaoRequestDto` (data e motivo) da suspensão de conta e de pesquisador. O DTO próprio, que só tinha a data, saiu.
-- **Motivo:** o RF-118 pede motivo obrigatório também para a suspensão de um papel.
-- **Caso-limite aceito:** nenhum.
-
-📌 **Códigos de resposta.**
-- **Decisão:** link de verificação de e-mail inválido responde 400 (era 401). Enviar para aprovação uma campanha que não está em rascunho nem rejeitada responde 409 (era 403).
-- **Motivo:** 401 é "não está logado" e faria a tela tentar renovar a sessão. O envio repetido é conflito de estado, o mesmo 409 do aprovar e do rejeitar.
-- **Caso-limite aceito:** nenhum.
+- A transformação `EmailNormalizado()` (`commons/validacao/transformacoes.decorator.ts`) entra no cadastro, no login e na criação de usuário. O banco normaliza de novo, com a trigger `trg_usuario_normaliza_email`.
+- **Por quê:** sem isso, `ALICE@X.COM` e `alice@x.com` virariam duas contas, e o login com maiúsculas falharia.
 
 📌 **Versão nova do Termo de Uso precisa ser aceita (RF-015).**
 - **Em palavras simples:** quando o admin publica uma versão nova do Termo de Uso, quem já tem conta só volta a usar a plataforma depois de ler e aceitar.
-- **Decisão:** o login e a renovação de sessão perguntam ao banco (`fn_termo_uso_pendente`) se a conta aceitou a versão vigente de `cadastro`. A resposta vai no token (`tp`) e no corpo (`aceitePendente`). Com pendência, o `AuthGuardRequireAuth` responde 403 `TERMO_PENDENTE` em toda rota, menos nas públicas e em `POST /termos-uso/:id/aceitar` (`@LiberadoComTermoPendente()`). Depois do aceite, a tela renova a sessão e o token novo vem sem a pendência.
-- **Motivo:** o RF-015 pede o aceite da versão nova. Guardar a resposta no token evita uma consulta ao banco a cada clique.
-- **Caso-limite aceito:** quem já está logado quando a versão nova é publicada só é parado na próxima renovação (até 15 minutos). O Termo de upgrade de pesquisador fica de fora: é aceito uma vez, no upgrade. Até o banco ter `fn_termo_uso_pendente`, ninguém fica pendente (a consulta é protegida por SAVEPOINT, como `listarPapeis`).
-
-📌 **Termo aceito não é excluído nem alterado (RF-091).**
-- **Decisão:** a exclusão forçada (`forcar`) saiu. `termo-uso.service.remove.ts` e `termo-uso.service.update.ts` não conferem mais o aceite por conta própria: quem recusa é a trigger do banco (409 `91032` e `91033`).
-- **Motivo:** o aceite é a prova do que a pessoa aceitou. Apagar a versão apagava junto essa prova (as chaves estrangeiras eram `ON DELETE CASCADE`).
-- **Caso-limite aceito:** um rascunho aceito por engano não sai mais da lista. Ele fica inativo, e uma versão nova toma o lugar.
+- O login e a renovação de sessão perguntam ao banco (`fn_termo_uso_pendente`) se a conta aceitou a versão vigente. A resposta vai no token (`tp`) e no corpo (`aceitePendente`). Com pendência, o `AuthGuardRequireAuth` responde 403 `TERMO_PENDENTE` em toda rota, menos nas públicas e em `POST /termos-uso/:id/aceitar` (`@LiberadoComTermoPendente()`). Depois do aceite, a tela renova a sessão e o token novo vem sem a pendência.
+- **Por quê:** o RF-015 pede o aceite da versão nova. Guardar a resposta no token evita uma consulta ao banco a cada clique.
+- **Caso-limite:** quem já está logado quando a versão nova é publicada só é parado na próxima renovação (até 15 minutos). Se a consulta falhar, o login não passa (a regra falha fechada, §2.4).
 
 📌 **Renovar a sessão confere se a conta ainda pode entrar.**
-- **Decisão:** `auth.service.refresh.ts` recusa a renovação de conta excluída (401 "Sessão encerrada: esta conta não existe mais.") e de conta suspensa (403 com a data e o motivo, a mesma mensagem do login). Suspender e excluir a conta também encerram as sessões dela no banco.
-- **Motivo:** a renovação só conferia o refresh token. Uma conta suspensa continuava usando o sistema por até 30 dias (a validade do refresh token), renovando sozinha a cada 15 minutos.
-- **Caso-limite aceito:** nenhum.
+- `auth.service.refresh.ts` recusa a renovação de conta excluída (401 "Sessão encerrada: esta conta não existe mais.") e de conta suspensa (403 com a data e o motivo, a mesma mensagem do login). Suspender e excluir a conta também encerram as sessões dela no banco.
+- **Por quê:** conferindo só o refresh token, uma conta suspensa continuaria usando o sistema por até 30 dias (a validade do refresh token), renovando sozinha a cada 15 minutos.
 
 📌 **O usuário diz se é pesquisador.**
-- **Decisão:** `UsuarioResponse` ganhou `ehPesquisador` (`1-usuario/util/usuario.util.is-researcher.ts`), preenchido na consulta e na alteração do usuário.
-- **Motivo:** a tela buscava o perfil de pesquisador de toda conta, e a conta comum respondia 404 em toda abertura da Minha Conta.
-- **Caso-limite aceito:** nas listagens o campo não vem (fica `undefined`), e a tela trata isso como "não sei" e busca o perfil como antes.
+- `UsuarioResponse` traz `ehPesquisador` (`1-usuario/util/usuario.util.is-researcher.ts`), preenchido na consulta e na alteração do usuário. A sessão do React guarda esse valor junto do login e de cada renovação; quando a própria conta faz o upgrade, a tela renova a sessão na hora.
+- **Por quê:** sem ele, a tela buscaria o perfil de pesquisador de toda conta, e a conta comum responderia 404 em toda abertura da Minha Conta.
+- **Caso-limite:** nas listagens o campo não vem (fica `undefined`), e a tela trata isso como "não sei" e busca o perfil.
 
-## 20. Correções da auditoria de Nielsen (29-09-2026)
+📌 **"Esqueci minha senha" (RF-006).**
+- `POST /auth/esqueci-senha` grava um token em `recuperacao_senha` (um ativo por pessoa: pedir de novo apaga o anterior) com a validade de `recuperacao_senha_minutos_validade` (30, Parâmetros do Sistema) e responde igual exista ou não a conta. O link vai por e-mail (seção 21). `POST /auth/redefinir-senha` chama `redefinir_senha_por_token` (03, [03-O], SECURITY DEFINER): usa o token uma vez, troca a senha, zera o bloqueio por senha errada e encerra as sessões do dono. Os dois são públicos e com limite de pedidos. Fora de produção o link volta também em `tokenRecuperacaoSenhaDev` (botão <dev> na tela), igual ao token de verificar e-mail.
+- **Por quê:** não revelar se o e-mail tem conta e derrubar as sessões ao trocar a senha são padrão de mercado.
 
-**Em palavras simples:** a auditoria das 10 heurísticas de Nielsen (o relatório fica na pasta de informações, fora do repositório) conferiu se as telas são fáceis de usar. No Nest, o que mudou foram as mensagens de erro que vêm do banco. As telas estão no `DOCUMENTACAO_FRONTEND.md` e as regras do banco no `DOCUMENTACAO_BD.md`.
-
-📌 **Regra do banco violada diz qual é e onde.**
-- **Decisão:** `commons/database/mensagens-regra-violada.constants.ts` tem uma mensagem e um campo para cada regra (`CHECK`) que uma tela consegue atingir, no mesmo formato do dicionário de duplicidade. O filtro global usa o nome da regra (`erro.constraint`) para escolher a mensagem e manda `campos`, para o erro aparecer embaixo do campo certo. Campo obrigatório vazio (`23502`) usa a coluna que o Postgres informa. Referência que sumiu (`23503`) passou a dizer o que fazer: recarregar a página.
-- **Motivo:** as mensagens eram "Dado inválido para este campo.", "Campo obrigatório ausente." e "Referência inválida". Não diziam qual campo, nem o que fazer. Exemplo real: parâmetro inteiro com "abc".
-- **Caso-limite aceito:** as regras internas (sessão, notificação, log, tokens) ficam fora do dicionário. Se uma delas falhar, é defeito do sistema, e a mensagem genérica basta.
-
-📌 **A lista de Termos diz quantos aceites cada versão tem.**
-- **Decisão:** `GET /termos-uso` devolve `aceites` em cada versão, pela função `contar_aceites_termo()` do banco. Se a função ainda não existe no banco, a lista sai sem o campo (SAVEPOINT, mesmo jeito de `listarPapeis`).
-- **Motivo:** a tela apagava a lixeira só da versão vigente; a versão já aceita só era recusada depois do clique.
-- **Caso-limite aceito:** só a listagem traz o número. Criar, alterar, ativar e consultar uma versão não trazem.
-
-📌 **Papel com `codigo` na resposta.**
-- **Decisão:** `PapelResponse` ganhou `codigo` (listagem e alteração).
-- **Motivo:** a tela acha a descrição de cada papel pelo código, que é fixo. O nome pode ser renomeado pelo painel. O código não é segredo: o login já devolve os papéis da conta por código.
-- **Caso-limite aceito:** nenhum.
-
-📌 **Imagem corrompida no upload responde 400 e sai do armazenamento.**
-- **Decisão:** em `arquivo.service.confirm-upload.ts`, se o `sharp` não conseguir ler a imagem, o arquivo é apagado de `pendente/` na hora e a resposta é 400 ("Não foi possível ler esta imagem...").
-- **Motivo:** achado no teste da tela de Alterar Usuário: um PNG com a assinatura certa, mas quebrado por dentro, dava 500 e deixava o arquivo em `pendente/`. A assinatura errada já tinha essa limpeza; a imagem ilegível não.
-- **Caso-limite aceito:** nenhum.
-
-📌 **"Esqueci minha senha" (RF-006) pronto antes do e-mail (01-10-2026).**
-- **Decisão:** `POST /auth/esqueci-senha` grava um token em `recuperacao_senha` (um ativo por pessoa: pedir de novo apaga o anterior) com a validade de `recuperacao_senha_minutos_validade` (30, Parâmetros do Sistema) e responde igual exista ou não a conta. `POST /auth/redefinir-senha` chama `redefinir_senha_por_token` (03, [03-O], SECURITY DEFINER): usa o token uma vez, troca a senha, zera o bloqueio por senha errada e encerra as sessões do dono. Os dois são públicos e com limite de pedidos. Fora de produção o link volta em `tokenRecuperacaoSenhaDev` (botão <dev> na tela), igual ao token de verificar e-mail.
-- **Motivo:** a tabela, os índices, a RLS e as permissões já existiam; faltavam a função e as telas. Não revelar se o e-mail tem conta e derrubar as sessões ao trocar a senha são padrão de mercado.
-- **Caso-limite aceito:** em produção, até o módulo de e-mail existir, o link é gravado e ninguém o recebe.
+📌 **"Reenviar verificação" pelo Suporte.**
+- `POST /auth/reenviar-verificacao/:idUsuario` exige `verificacao_email_reenviar` (Suporte e Admin), recusa conta já confirmada (409) ou que não existe (404), apaga os links ainda não usados da conta e manda um novo, pela mesma emissão do cadastro (`AuthServiceEmailVerification`). O botão fica no Alterar Usuário, parte Moderação, só enquanto o e-mail não foi confirmado; o Suporte chega lá pela permissão `usuario_visualizar_atendimento` (lista, ficha e histórico de login, sem a fila de e-mails).
+- **Por quê:** o código antigo não dá para reenviar (o banco guarda só o hash), então sai um link novo; só o último vale, como no reenvio de link dos serviços de mercado.
 
 ---
 
-## 21. E-mail, notificações, recompensa e seguir pesquisador (19-10-2026)
+## 20. Respostas da API e regras pontuais
 
-**Em palavras simples:** todo e-mail do sistema entra primeiro numa fila no banco, na mesma hora do evento que o causou; um "carteiro" do Nest entrega um por um, tenta de novo quando falha, e o painel mostra tudo. Junto, entraram a recompensa simbólica, o seguir pesquisador, a lista "minhas contribuições" e o valor líquido estimado da campanha. Passo a passo do e-mail para quem vai configurar: `.Tutorial-email.md`.
+**Em palavras simples:** como a API responde quando algo não pode ser feito (o código HTTP certo, a mensagem em português, o campo marcado) e algumas regras pequenas de módulos diferentes. As telas estão no `DOCUMENTACAO_FRONTEND.md` e as regras do banco no `DOCUMENTACAO_BD.md`.
+
+📌 **Alteração sem nenhum campo responde 400, não 500.**
+- Campanha, comentário, atualização de campanha, Termo de Uso e link acadêmico conferem "Nenhum campo para atualizar." antes do `UPDATE`, como os outros módulos. O link acadêmico altera só o que vier (`url`, `rotulo` e `ordem` opcionais; `rotulo: null` apaga o rótulo).
+- **Por quê:** `UPDATE ... SET WHERE` sem coluna é SQL inválido e viraria "Internal server error". No link, exigir a URL até para reordenar apagaria a ordem dele sem aviso.
+
+📌 **Ação sobre registro que não existe responde 404.**
+- `exigirQueExista()` (`distinguir-404-ou-403.util.ts`) roda **depois** da função do banco em desbloquear, revogar suspensão (de conta e de papel) e reativar pesquisador. A exclusão de conta confere a mesma coisa pela leitura que já faz antes.
+- **Por quê:** essas funções do banco devolvem VOID e não dizem se acharam a linha; sem a conferência, um id inexistente responderia 204 ("deu certo").
+- **Caso-limite:** chamar depois da função mantém o 403 para quem não tem permissão. Por isso, um registro inexistente só vira 404 para quem pode fazer a ação.
+
+📌 **Mensagens de validação em português.**
+- `errosPorCampo()` traduz a mensagem padrão do class-validator quando ela vem em inglês ("must be a string", "should not be empty"). A mensagem escrita no DTO fica como está. O filtro global traduz a mensagem dos pipes de parâmetro ("Validation failed (numeric string is expected)").
+- **Caso-limite:** a mensagem traduzida usa o nome técnico do campo (`idCampanha precisa ser um número inteiro.`). A tela mostra o erro embaixo do campo certo, então o nome serve de referência.
+
+📌 **Regra do banco violada diz qual é e onde.**
+- `commons/database/mensagens-regra-violada.constants.ts` tem uma mensagem e um campo para cada regra (`CHECK`) que uma tela consegue atingir, no mesmo formato do dicionário de duplicidade. O filtro global usa o nome da regra (`erro.constraint`) para escolher a mensagem e manda `campos`, para o erro aparecer embaixo do campo certo. Campo obrigatório vazio (`23502`) usa a coluna que o Postgres informa. Referência que sumiu (`23503`) diz o que fazer: recarregar a página.
+- **Por quê:** mensagens como "Dado inválido para este campo." não dizem qual campo, nem o que fazer.
+- **Caso-limite:** as regras internas (sessão, notificação, log, tokens) ficam fora do dicionário. Se uma delas falhar, é defeito do sistema, e a mensagem genérica basta.
+
+📌 **Códigos de resposta.**
+- Link de verificação de e-mail inválido responde 400. Enviar para aprovação uma campanha que não está em rascunho nem rejeitada responde 409.
+- **Por quê:** 401 é "não está logado" e faria a tela tentar renovar a sessão. O envio repetido é conflito de estado, o mesmo 409 do aprovar e do rejeitar.
+
+📌 **`emSequencia` no lugar de `Promise.all`.**
+- A exportação de dados e a exclusão de Termo de Uso usam `emSequencia()` (`commons/database/em-sequencia.util.ts`). A alteração de Termo de Uso faz as duas consultas uma depois da outra.
+- **Por quê:** é uma conexão só por requisição (§2.7). O `Promise.all` nunca rodaria em paralelo de verdade e dependeria de um enfileiramento que o driver `pg` já avisa que vai remover.
+
+📌 **Suspensão de papel com motivo (RF-118).**
+- `POST /usuario-papel/:idUsuario/:idPapel/suspender` recebe o mesmo `SuspensaoRequestDto` (data e motivo) da suspensão de conta e de pesquisador.
+- **Por quê:** o RF-118 pede motivo obrigatório também para a suspensão de um papel.
+
+📌 **Termo aceito não é excluído nem alterado (RF-091).**
+- `termo-uso.service.remove.ts` e `termo-uso.service.update.ts` não conferem o aceite por conta própria: quem recusa é a trigger do banco (409 `91032` e `91033`). Não existe exclusão forçada.
+- **Por quê:** o aceite é a prova do que a pessoa aceitou; apagar a versão apagaria junto essa prova.
+- **Caso-limite:** um rascunho aceito por engano não sai mais da lista. Ele fica inativo, e uma versão nova toma o lugar.
+
+📌 **A lista de Termos diz quantos aceites cada versão tem.**
+- `GET /termos-uso` devolve `aceites` em cada versão, pela função `contar_aceites_termo()` do banco.
+- **Por quê:** é por esse número que a tela decide se a versão ainda pode ser editada ou excluída, antes do clique.
+- **Caso-limite:** só a listagem traz o número. Criar, alterar, ativar e consultar uma versão não trazem.
+
+📌 **Papel com `codigo` na resposta.**
+- `PapelResponse` traz `codigo` (listagem e alteração).
+- **Por quê:** a tela acha a descrição de cada papel pelo código, que é fixo; o nome pode ser renomeado pelo painel. O código não é segredo: o login já devolve os papéis da conta por código.
+
+📌 **Imagem corrompida no upload responde 400 e sai do armazenamento.**
+- Em `arquivo.service.confirm-upload.ts`, se o `sharp` não conseguir ler a imagem, o arquivo é apagado de `pendente/` na hora e a resposta é 400 ("Não foi possível ler esta imagem...").
+- **Por quê:** um PNG com a assinatura certa, mas quebrado por dentro, daria 500 e deixaria o arquivo em `pendente/`. A assinatura errada tem a mesma limpeza.
+
+---
+
+## 21. E-mail, notificações, recompensa e seguir pesquisador
+
+**Em palavras simples:** todo e-mail do sistema entra primeiro numa fila no banco, na mesma hora do evento que o causou; um "carteiro" do Nest entrega um por um, tenta de novo quando falha, e o painel mostra tudo. A seção também cobre a recompensa simbólica, o seguir pesquisador, a lista "minhas contribuições" e o valor líquido estimado da campanha. Passo a passo do e-mail para quem vai configurar: `.Tutorial-email.md`.
 
 ### 21.1 `4-mail` (o carteiro) e `27-notificacao` (o registro)
 
@@ -1623,31 +1607,31 @@ Testado com o backend rodando de verdade contra o Postgres real (não só compil
 | Painel | `27-notificacao` | `GET /notificacao`, `/notificacao/resumo`, `POST /notificacao/:id/reenviar`, `/cancelar` |
 | Campo de Testes | `30-campo-testes/service/email.service.caixa.ts` | A T6 lê `notificacao` pela sessão de quem chamou (os próprios e-mails, ou todos com `notificacao_processar`, desde `teste_caixa_email_limpa_ate_id`; só o "Limpar a caixa" avança esse número), e o Consultar monta o e-mail com `4-mail/modelos/montar-mensagem.ts`, o mesmo do envio; o "Rodar agora" do card da T6 chama a tarefa `email` (`POST /campo-testes/pagamento/tarefas/:tarefa`, com `email`), que manda também o que espera uma nova tentativa (`reservar_proxima_notificacao(TRUE)`) |
 
-- **Decisão:** os e-mails nascem nos gatilhos do banco (`[05-Q]`), não espalhados pelos services do Nest; o Nest só enfileira o que só ele sabe (o token do link).
-- **Motivo:** qualquer caminho que aprove, rejeite, encerre, suspenda ou devolva (tela, tarefa agendada, função de moderação, webhook) gera o aviso, na mesma transação. É o padrão "caixa de saída" (outbox), o mesmo do repasse.
-- **Caso-limite aceito:** o texto é montado na hora de enviar, com os dados gravados na hora do evento; um título de campanha alterado depois sai com o título antigo.
+- Os e-mails nascem nos gatilhos do banco (`[05-Q]`), não espalhados pelos services do Nest; o Nest só enfileira o que só ele sabe (o token do link).
+- **Por quê:** qualquer caminho que aprove, rejeite, encerre, suspenda ou devolva (tela, tarefa agendada, função de moderação, webhook) gera o aviso, na mesma transação. É o padrão "caixa de saída" (outbox), o mesmo do repasse.
+- **Caso-limite:** o texto é montado na hora de enviar, com os dados gravados na hora do evento; um título de campanha alterado depois sai com o título antigo.
 
-- **Decisão:** o token do link (verificar conta, nova senha) espera na fila cifrado em `dados.segredo` (`commons/seguranca/segredo-email-cifra.util.ts`, a receita do CPF) e é apagado quando o e-mail sai ou é cancelado; a API nunca devolve `segredo`.
-- **Motivo:** o banco guarda esses tokens só como hash; deixá-los em texto puro na fila desfaria essa proteção.
-- **Caso-limite aceito:** reenviar um e-mail que falhou manda o mesmo link, que pode já ter vencido (a pessoa pede outro pela tela).
+- O token do link (verificar conta, nova senha) espera na fila cifrado em `dados.segredo` (`commons/seguranca/segredo-email-cifra.util.ts`, a receita do CPF) e é apagado quando o e-mail sai ou é cancelado; a API nunca devolve `segredo`.
+- **Por quê:** o banco guarda esses tokens só como hash; deixá-los em texto puro na fila desfaria essa proteção.
+- **Caso-limite:** reenviar um e-mail que falhou manda o mesmo link, que pode já ter vencido (a pessoa pede outro pela tela).
 
-- **Decisão:** fora de produção, provedor de verdade (`brevo`, `smtp`) exige `EMAIL_REDIRECIONAR_PARA`, e todo e-mail vai para esse endereço com o destinatário original no assunto.
-- **Motivo:** o seed tem endereços com domínio real; um teste no computador não pode escrever para pessoas que podem existir. Padrão de mercado em homologação ("mail redirect").
-- **Caso-limite aceito:** em produção a trava não existe; o banco de produção nasce sem os dados de demonstração.
+- Fora de produção, provedor de verdade (`brevo`, `smtp`) exige `EMAIL_REDIRECIONAR_PARA`, e todo e-mail vai para esse endereço com o destinatário original no assunto.
+- **Por quê:** o seed tem endereços com domínio real; um teste no computador não pode escrever para pessoas que podem existir. Padrão de mercado em homologação ("mail redirect").
+- **Caso-limite:** em produção a trava não existe; o banco de produção nasce sem os dados de demonstração.
 
-- **Decisão:** os textos ficam no código (`4-mail/modelos/modelos-email.ts`), não numa tabela editável.
-- **Motivo:** nenhuma regra do sistema depende do texto; uma tabela `template_email` mais a tela dela aumentariam o escopo do TCC.
-- **Caso-limite aceito:** mudar um texto pede uma alteração de código. Se fizer falta, a tabela entra depois sem mudar a fila.
+- Os textos ficam no código (`4-mail/modelos/modelos-email.ts`), não numa tabela editável.
+- **Por quê:** nenhuma regra do sistema depende do texto; uma tabela `template_email` mais a tela dela aumentariam o escopo do TCC.
+- **Caso-limite:** mudar um texto pede uma alteração de código. Se fizer falta, a tabela entra depois sem mudar a fila.
 
 ### 21.2 `18-recompensa`
 
-- **Decisão:** recompensa simbólica: título, tipo (`reconhecimento`, `acesso_antecipado`, `digital`), valor mínimo, descrição e um link especial opcional (`link_recompensa`). Sem estoque (`quantidade_disponivel` sempre vazia) e sem excluir (desativa, `ativo = false`).
-- **Motivo:** decisão do Lucas (19-10-2026): "o mais simples possível". A RLS de `link_recompensa` já mostrava o link só ao dono, ao admin e a quem ganhou: é o "link especial" sem nenhuma regra nova.
-- **Caso-limite aceito:** o RF-100 cita quantidade disponível; o sistema não controla (ponto para a revisão externa). O link só aceita tipos de link com `permite_recompensa` (hoje só GitHub); para outro site, o admin cadastra um tipo em Tipos de Link.
+- Recompensa simbólica: título, tipo (`reconhecimento`, `acesso_antecipado`, `digital`), valor mínimo, descrição e um link especial opcional (`link_recompensa`). Sem estoque (`quantidade_disponivel` sempre vazia) e sem excluir (desativa, `ativo = false`).
+- **Por quê:** o mais simples possível. A RLS de `link_recompensa` mostra o link só ao dono, ao admin e a quem ganhou: é o "link especial" sem nenhuma regra nova.
+- **Caso-limite:** o RF-100 cita quantidade disponível; o sistema não controla (ponto para a revisão externa). O link só aceita tipos de link com `permite_recompensa` (hoje só GitHub); para outro site, o admin cadastra um tipo em Tipos de Link.
 
-- **Decisão:** escolher a recompensa é um campo opcional de `POST /contribuicao` (`idRecompensa`): exige conta, recompensa ativa da mesma campanha e valor igual ou acima do mínimo; grava `contribuicao_recompensa` na mesma transação. A recompensa só conta como ganha quando a contribuição é paga.
-- **Motivo:** a política `pol_contrib_recompensa_insert` já exigia o dono da contribuição; quem contribui sem conta não tem nome para o reconhecimento.
-- **Caso-limite aceito:** a contribuição que vence ou falha guarda a escolha, mas `/recompensa/minhas` e a contagem só olham as pagas.
+- Escolher a recompensa é um campo opcional de `POST /contribuicao` (`idRecompensa`): exige conta, recompensa ativa da mesma campanha e valor igual ou acima do mínimo; grava `contribuicao_recompensa` na mesma transação. A recompensa só conta como ganha quando a contribuição é paga.
+- **Por quê:** a política `pol_contrib_recompensa_insert` já exigia o dono da contribuição; quem contribui sem conta não tem nome para o reconhecimento.
+- **Caso-limite:** a contribuição que vence ou falha guarda a escolha, mas `/recompensa/minhas` e a contagem só olham as pagas.
 
 ### 21.3 Seguir pesquisador, minhas contribuições e líquido estimado
 

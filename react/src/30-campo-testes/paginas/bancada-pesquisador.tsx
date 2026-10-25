@@ -4,7 +4,12 @@ import { GenericTable } from '../../components/crud/generic-table';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import { listarUsuariosVisiveis } from '../servicos/util/usuarios-visiveis.util';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
-import { ORDEM_PODER_PAPEL, PAPEL_SEM_EXTRA } from '../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
+import {
+  CODIGO_PAPEL_PADRAO,
+  compararPorPoder,
+  ordemDoFiltroPapel,
+  PAPEL_SEM_EXTRA,
+} from '../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
 import {
   ROTULO_STATUS_PESQUISADOR,
   ROTULO_TITULO_ACADEMICO,
@@ -44,6 +49,7 @@ interface PesquisadorLinha extends Partial<PerfilPesquisadorResponse> {
 // Os modais são os de Usuário (`views/1-usuario/`, o CRUD real), não duplicados aqui. O Upgrade abre o mesmo
 // ModalUpgradePesquisador de qualquer conta, que decide sozinho entre o endpoint self-service e o "para outro".
 export function BancadaPesquisador({ auth }: PropsPagina) {
+  const [ordemPapel, setOrdemPapel] = useState<string[]>([PAPEL_SEM_EXTRA]);
   // Os modais de Usuário não sabem que o Registro de Chamadas existe: recebem uma `auth` cujo `authFetch` registra
   // cada chamada.
   const authRegistrado = { authFetch: useAuthFetchRegistrado(auth) };
@@ -91,6 +97,13 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
       perfilPesquisadorApi.listar(auth.authFetch).catch(() => []),
       usuarioPapelApi.listarTudo(auth.authFetch).catch(() => []),
     ]);
+    setOrdemPapel(
+      ordemDoFiltroPapel(
+        vinculos
+          .filter((v) => v.codigoPapel !== CODIGO_PAPEL_PADRAO)
+          .map((v) => ({ nome: v.nomePapel, ordemExibicao: v.ordemExibicao })),
+      ),
+    );
     const usuarioPorId = new Map(usuarios.map((usuario) => [usuario.idUsuario, usuario]));
     const perfilPorId = new Map(perfis.map((perfil) => [perfil.idUsuario, perfil]));
     // Contas visíveis e perfis de pesquisador (a RLS mostra todos): sem a lista de usuários, o pesquisador ainda
@@ -99,13 +112,17 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
     return ids.map((idUsuario) => {
       const usuario = usuarioPorId.get(idUsuario) ?? null;
       const perfil = perfilPorId.get(idUsuario);
-      const papeis = vinculos.filter((v) => v.idUsuario === idUsuario && v.nomePapel !== 'usuario');
+      // Toda conta tem ao menos o vínculo 'usuario': nenhum vínculo visível quer dizer que a sessão não lê os papéis
+      // dessa pessoa, e então o perfil de pesquisador é o que se sabe do papel.
+      const vinculosDaPessoa = vinculos.filter((v) => v.idUsuario === idUsuario);
+      const papeis = vinculosDaPessoa.filter((v) => v.codigoPapel !== CODIGO_PAPEL_PADRAO).sort(compararPorPoder);
+      const papelSemVinculos = vinculosDaPessoa.length === 0 && perfil ? 'pesquisador' : PAPEL_SEM_EXTRA;
       return {
         ...perfil,
         idUsuario,
         usuario,
         nome: usuario?.nome ?? `Pesquisador #${idUsuario}`,
-        papel: papeis.map((v) => v.nomePapel).join(', ') || PAPEL_SEM_EXTRA,
+        papel: papeis.map((v) => v.nomePapel).join(', ') || papelSemVinculos,
         titulo: perfil?.tituloAcademico ? ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico] : '',
         status: perfil?.statusPesquisador ? ROTULO_STATUS_PESQUISADOR[perfil.statusPesquisador] : '',
         origem: origemUsuario(idUsuario),
@@ -159,7 +176,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
           return linha.idUsuario === auth.usuario?.idUsuario ? 'Não dá para denunciar o próprio perfil.' : undefined;
         }}
         filtrosFacetados={[
-          { chave: 'papel', rotulo: 'Papel', ordem: ORDEM_PODER_PAPEL },
+          { chave: 'papel', rotulo: 'Papel', ordem: ordemPapel },
           { chave: 'origem', rotulo: 'Origem' },
         ]}
       />

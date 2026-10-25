@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 import { UsuarioPapelResponse } from '../dto/response/usuario-papel.response';
 
@@ -13,52 +12,28 @@ export class UsuarioPapelServiceFindAll {
     // devolve 0 linhas (RLS filtra, sem erro) - não dá pra saber se o
     // usuário não tem papel nenhum ou se só não tinha permissão de ver.
     const db = this.database.getDb();
+    const linhas = await db
+      .selectFrom('usuario_papel')
+      .innerJoin('papel', 'papel.id_papel', 'usuario_papel.id_papel')
+      .select([
+        'usuario_papel.id_usuario',
+        'usuario_papel.id_papel',
+        'papel.nome as nomePapel',
+        'papel.codigo as codigoPapel',
+        'papel.ordem_exibicao as ordemExibicao',
+        'usuario_papel.suspenso_ate',
+      ])
+      .where('usuario_papel.id_usuario', '=', idUsuario)
+      .orderBy('papel.ordem_exibicao')
+      .execute();
 
-    // SAVEPOINT: usuario_papel.suspenso_ate só existe de verdade depois de alguém colar ATUALIZAR O
-    // SUPABASE.sql no SQL Editor. Sem isso, esta query quebraria a listagem inteira de papéis de um usuário com
-    // 500. Mesmo padrão de auth.service.login.ts/listarPapeis: tenta com a coluna nova, ROLLBACK TO SAVEPOINT +
-    // repete sem ela se a coluna não existir.
-    await sql`SAVEPOINT sp_usuario_papel_suspenso`.execute(db);
-    try {
-      const linhas = await db
-        .selectFrom('usuario_papel')
-        .innerJoin('papel', 'papel.id_papel', 'usuario_papel.id_papel')
-        .select([
-          'usuario_papel.id_usuario',
-          'usuario_papel.id_papel',
-          'papel.nome as nomePapel',
-          'usuario_papel.suspenso_ate',
-        ])
-        .where('usuario_papel.id_usuario', '=', idUsuario)
-        .orderBy('papel.nome')
-        .execute();
-
-      return linhas.map((l) => ({
-        idUsuario: l.id_usuario,
-        idPapel: l.id_papel,
-        nomePapel: l.nomePapel,
-        suspensoAte: l.suspenso_ate,
-      }));
-    } catch {
-      await sql`ROLLBACK TO SAVEPOINT sp_usuario_papel_suspenso`.execute(db);
-      const linhas = await db
-        .selectFrom('usuario_papel')
-        .innerJoin('papel', 'papel.id_papel', 'usuario_papel.id_papel')
-        .select([
-          'usuario_papel.id_usuario',
-          'usuario_papel.id_papel',
-          'papel.nome as nomePapel',
-        ])
-        .where('usuario_papel.id_usuario', '=', idUsuario)
-        .orderBy('papel.nome')
-        .execute();
-
-      return linhas.map((l) => ({
-        idUsuario: l.id_usuario,
-        idPapel: l.id_papel,
-        nomePapel: l.nomePapel,
-        suspensoAte: null,
-      }));
-    }
+    return linhas.map((l) => ({
+      idUsuario: l.id_usuario,
+      idPapel: l.id_papel,
+      nomePapel: l.nomePapel,
+      codigoPapel: l.codigoPapel,
+      ordemExibicao: l.ordemExibicao,
+      suspensoAte: l.suspenso_ate,
+    }));
   }
 }

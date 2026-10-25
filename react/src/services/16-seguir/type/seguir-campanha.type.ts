@@ -5,3 +5,8 @@ export interface SeguirCampanhaResponse {
   idCampanha: number;
   seguidoEm: string;
 }
+
+export interface SeguidoresCampanhaResponse {
+  idCampanha: number;
+  seguidores: number;
+}

@@ -1,7 +1,8 @@
+import { SENHA_MINIMO_CARACTERES } from '../../services/3-auth/constants/senha.constants';
 // Medidor de força da senha nova: barra + requisitos marcados conforme cumpridos, enquanto a pessoa digita (não uma
 // mensagem de erro só depois de enviar). Usado no Cadastro e na troca de senha de Minha Conta.
 //
-// Os requisitos são só GUIA visual: o piso de verdade continua sendo o backend (@MinLength(8) nos DTOs de cadastro e
+// Os requisitos são só GUIA visual: o piso de verdade continua sendo o backend (SENHA_MINIMO_CARACTERES nos DTOs de cadastro e
 // de alteração de usuário). Não faz sentido bloquear o clique por maiúscula, número ou símbolo se o servidor aceitaria
 // com menos.
 interface RequisitoSenha {
@@ -11,7 +12,7 @@ interface RequisitoSenha {
 }
 
 const REQUISITOS_SENHA: RequisitoSenha[] = [
-  { chave: 'tamanho', rotulo: 'Pelo menos 8 caracteres', testar: (s) => s.length >= 8 },
+  { chave: 'tamanho', rotulo: `Pelo menos ${SENHA_MINIMO_CARACTERES} caracteres`, testar: (s) => s.length >= SENHA_MINIMO_CARACTERES },
   { chave: 'maiuscula', rotulo: 'Uma letra maiúscula', testar: (s) => /[A-Z]/.test(s) },
   { chave: 'numero', rotulo: 'Um número', testar: (s) => /[0-9]/.test(s) },
   {

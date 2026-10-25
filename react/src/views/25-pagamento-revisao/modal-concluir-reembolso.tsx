@@ -7,8 +7,10 @@ import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
+import { Tooltip } from '../../components/layout/tooltip';
 import { ROTULO_MEIO_PAGAMENTO } from '../../services/22-contribuicao/constants/contribuicao.constants';
 import { pagamentoRevisaoApi } from '../../services/25-pagamento-revisao/api/pagamento-revisao.api';
+import { fraseDoEventoFinanceiro } from '../../services/25-pagamento-revisao/util/evento-financeiro.util';
 import { erroObservacaoRevisao } from '../../services/25-pagamento-revisao/util/observacao-revisao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
@@ -28,7 +30,8 @@ interface ModalConcluirReembolsoProps {
 }
 
 // Registrar que uma contribuição em reembolso manual foi devolvida. O estorno automático desistiu, então uma pessoa
-// devolve o dinheiro FORA do sistema (painel do provedor ou Pix) e só depois registra aqui como fez. O valor é sempre
+// devolve o dinheiro pelo painel do provedor e só depois registra aqui como fez; o Nest confere com o provedor e
+// recusa se ele não mostrar a devolução (não existe devolução por fora do processador). O valor é sempre
 // o inteiro da contribuição (só leitura, o banco recusa outro). A contribuição passa para "devolvida" e a ação fica na
 // auditoria financeira, com quem registrou. Este registro NÃO move dinheiro.
 export function ModalConcluirReembolso({ authFetch, reembolso, tituloCampanha, aoFechar, aoConcluido, somenteLeitura = false }: ModalConcluirReembolsoProps) {
@@ -84,21 +87,26 @@ export function ModalConcluirReembolso({ authFetch, reembolso, tituloCampanha, a
             <CampoFicha rotulo="Valor a devolver" valor={formatarMoeda(reembolso.valorADevolver)} />
             <CampoFicha rotulo="Tentativas de estorno automático" valor={reembolso.tentativas} />
             <CampoFicha rotulo="Tem chave Pix verificada" valor={<BadgeBooleano valor={reembolso.contribuinteTemContaVerificada} />} />
-            <CampoFicha rotulo="Último motivo" valor={reembolso.ultimoMotivo} largura="cheia" />
+            <CampoFicha rotulo="Último motivo" valor={fraseDoEventoFinanceiro(reembolso.ultimoMotivo)} largura="cheia" />
           </SecaoFicha>
 
           {!somenteLeitura && (
             <SecaoFicha titulo="Registrar a devolução" colunas={1}>
-              <CaixaAviso titulo="O sistema não devolve o dinheiro" icone="fa-triangle-exclamation" tom="aviso" espacado>
-                <p>
-                  Devolva por fora (painel do provedor ou Pix) e só então registre aqui. O valor a devolver é o valor inteiro da contribuição; a tarifa de
-                  pagamento não volta. A chave Pix da pessoa não é mostrada neste painel.
-                </p>
-                <p>Ao registrar, a contribuição passa para &quot;devolvida&quot; e isso não dá para desfazer.</p>
+              <CaixaAviso
+                titulo={
+                  <>
+                    O sistema não devolve o dinheiro{' '}
+                    <Tooltip texto="O sistema confere com o provedor e só aceita se ele mostrar a devolução. O valor a devolver é o valor inteiro da contribuição; a tarifa de pagamento não volta." />
+                  </>
+                }
+                icone="fa-triangle-exclamation"
+                tom="aviso"
+              >
+                Devolva pelo painel do provedor de pagamento e só então registre aqui.
               </CaixaAviso>
               <CampoObservacaoRevisao
                 rotulo="Como a devolução foi feita"
-                dica="Data, meio e comprovante. Fica na auditoria financeira, com o seu nome."
+                dica="Quando e como foi feita no painel do provedor. Fica na auditoria financeira, com o seu nome."
                 valor={observacao}
                 aoMudar={setObservacao}
                 erro={erros.erroDe('observacao')}
@@ -122,7 +130,7 @@ export function ModalConcluirReembolso({ authFetch, reembolso, tituloCampanha, a
             A contribuição #{reembolso.idContribuicao} passa para &quot;devolvida&quot;, com {formatarMoeda(valor)} registrados como devolvidos. Isso não
             dá para desfazer.
           </p>
-          <p>Este registro não devolve dinheiro: confirme só se a devolução já foi feita por fora.</p>
+          <p>Este registro não devolve dinheiro. O sistema confere com o provedor antes: se ele não mostrar a devolução, nada muda.</p>
         </ModalConfirmacao>
       )}
     </>

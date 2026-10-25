@@ -10,6 +10,7 @@ import {
   papelPermissaoApi,
   permissaoApi,
 } from '../../services/2-papel-permissao/api/papel-permissao.api';
+import { compararPorPoder } from '../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
 import { nomeAmigavelPermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis.constants';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
@@ -35,14 +36,7 @@ const TEXTO_TOOLTIP_MATRIZ =
   'próprio dado, não por permissão, mas nada impede conceder uma se ' +
   'precisar). Clique numa célula pra conceder ou revogar.';
 
-// Colunas em ordem de poder (maior para o menor), não alfabética. A ordenação usa `id_papel`, não o NOME contra
-// uma lista fixa de nomes esperados: assim que o admin renomeia um papel (alterar-papel), o nome novo não
-// bateria com nada da lista e a coluna cairia para o fim. `id_papel` nunca muda (só `nome` é editável) e, desde
-// a ordem do seed (07_seed_dados.sql [07-B-1]), já nasce na ordem de poder certa num banco novo: ordenar por
-// ele resolve os dois problemas de uma vez, sem lista nenhuma para manter sincronizada.
-function ordenarPapeisPorPoder(a: PapelResponse, b: PapelResponse): number {
-  return a.idPapel - b.idPapel;
-}
+// Colunas em ordem de poder (maior para o menor), pela posição do papel no banco (compararPorPoder), não alfabética.
 
 interface MatrizPapelPermissaoProps {
   authFetch: AuthFetch;
@@ -53,13 +47,13 @@ export function MatrizPapelPermissao({ authFetch }: MatrizPapelPermissaoProps) {
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const [celulaAlterando, setCelulaAlterando] = useState<string | null>(null);
 
-  // Papéis do menor para o maior poder; permissões pelo nome AMIGÁVEL (é o que aparece na tela, então é o que
+  // Papéis do maior cargo para o menor; permissões pelo nome AMIGÁVEL (é o que aparece na tela, então é o que
   // precisa estar em ordem alfabética visível para quem lê).
   const { dado, carregando, recarregar } = useBuscar(
     () =>
       Promise.all([papelApi.listar(authFetch), permissaoApi.listar(authFetch), papelPermissaoApi.listar(authFetch)]).then(
         ([listaPapeis, listaPermissoes, vinculos]) => ({
-          papeis: [...listaPapeis].sort(ordenarPapeisPorPoder),
+          papeis: [...listaPapeis].sort(compararPorPoder),
           permissoes: [...listaPermissoes].sort((a, b) =>
             nomeAmigavelPermissao(a.nome).localeCompare(nomeAmigavelPermissao(b.nome)),
           ),

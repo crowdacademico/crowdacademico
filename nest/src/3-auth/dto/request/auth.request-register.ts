@@ -1,5 +1,9 @@
 import { Equals, IsEmail, IsString, MinLength } from 'class-validator';
 import { EmailNormalizado } from '../../../commons/validacao/transformacoes.decorator';
+import {
+  MENSAGEM_SENHA_CURTA,
+  SENHA_MINIMO_CARACTERES,
+} from '../../../commons/seguranca/senha.constants';
 
 // Mesmas regras de UsuarioRequestCreate (1-usuario) - o cadastro público
 // cria a mesma linha em `usuario`, só que auto-serviço, com um passo a
@@ -14,7 +18,7 @@ export class AuthRequestRegister {
   email: string;
 
   @IsString()
-  @MinLength(8, { message: 'Senha precisa ter pelo menos 8 caracteres.' })
+  @MinLength(SENHA_MINIMO_CARACTERES, { message: MENSAGEM_SENHA_CURTA })
   senha: string;
 
   // @Equals(true), não @IsBoolean() - precisa ser EXATAMENTE true; `false`

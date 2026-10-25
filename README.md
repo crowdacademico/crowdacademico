@@ -150,15 +150,15 @@ crowdacademico/                          (repo único na Organization)
 - **Motivo:** até 29-09-2026 o `.gitignore` da raiz tinha uma linha ignorando "`.gitignore`", e ela valia para todas as pastas. Nenhum dos três ia para o git, então no computador de quem clonasse o projeto nada mandava ignorar `node_modules`, `dist` ou o `.env` do Nest.
 - **Caso-limite aceito:** o `react/.env` continua no git de propósito (só tem o endereço da API); ver PENDENCIAS, grupo do deploy.
 
-# Como registrar uma decisão na documentação
+# Como escrever na documentação
 
-Desde 28-09-2026, toda decisão nova nos documentos `DOCUMENTACAO_*.md` vem em três linhas:
+Os documentos `DOCUMENTACAO_*.md` descrevem o sistema como ele é hoje, não a história de como chegou lá: sem "Decisão" e sem data de quando algo mudou. Uma regra entra como texto do estado atual, dizendo:
 
-- **Decisão:** o que foi decidido.
-- **Motivo:** por que foi assim, e não de outro jeito.
-- **Caso-limite aceito:** o que fica de fora ou pode falhar, e por que aceitamos.
+- o que o sistema faz;
+- por que é assim, e não de outro jeito;
+- quando houver, o que fica de fora ou pode falhar, e por que aceitamos.
 
-O que já estava escrito antes continua no formato antigo; não precisa reescrever.
+A história (o que era antes e quando mudou) fica fora do repositório. Cada documento começa com um índice.
 
 # Nomenclatura do DDL (`arquivos_banco_dados/*.sql`)
 

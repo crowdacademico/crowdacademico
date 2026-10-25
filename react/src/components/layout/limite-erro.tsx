@@ -5,8 +5,12 @@ import { useLocation } from 'react-router';
 // Limite de erro (o "ErrorBoundary" do React): um erro de renderização dentro de `children` mostra um aviso no
 // lugar só daquele trecho, em vez de desmontar a aplicação inteira e deixar a tela em branco. Precisa ser
 // componente de classe: o React só oferece `getDerivedStateFromError`/`componentDidCatch` em classe.
-interface LimiteErroInternoProps {
+interface LimiteErroProps {
   children: ReactNode;
+}
+
+interface LimiteErroInternoProps extends LimiteErroProps {
+  pathname: string;
 }
 
 interface LimiteErroInternoState {
@@ -22,6 +26,12 @@ class LimiteErroInterno extends Component<LimiteErroInternoProps, LimiteErroInte
 
   componentDidCatch(erro: Error, info: ErrorInfo) {
     console.error('[LimiteErro]', erro, info.componentStack);
+  }
+
+  componentDidUpdate(anterior: LimiteErroInternoProps) {
+    if (anterior.pathname !== this.props.pathname && this.state.erro) {
+      this.setState({ erro: null });
+    }
   }
 
   render() {
@@ -45,9 +55,10 @@ class LimiteErroInterno extends Component<LimiteErroInternoProps, LimiteErroInte
   }
 }
 
-// `key` pelo caminho: ao trocar de tela, o limite começa de novo, senão o aviso de erro de uma tela ficaria
-// preso ao navegar para outra.
-export function LimiteErro({ children }: LimiteErroInternoProps) {
+// Ao trocar de tela, o aviso de erro some (senão ficaria preso ao navegar para outra), mas o que está dentro NÃO é
+// recriado: o limite de fora envolve o painel inteiro, e recriar desmontaria o menu lateral (que perderia a própria
+// rolagem, DS-109) e tudo o mais a cada clique.
+export function LimiteErro({ children }: LimiteErroProps) {
   const { pathname } = useLocation();
-  return <LimiteErroInterno key={pathname}>{children}</LimiteErroInterno>;
+  return <LimiteErroInterno pathname={pathname}>{children}</LimiteErroInterno>;
 }

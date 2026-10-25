@@ -84,6 +84,15 @@ export function ModalResolverRevisao({ authFetch, revisao, aoFechar, aoResolvido
             <CampoFicha rotulo="Contribuição" valor={revisao.idContribuicao === null ? null : `#${revisao.idContribuicao}`} />
             <CampoFicha rotulo="Repasse" valor={revisao.idRepasse === null ? null : `#${revisao.idRepasse}`} />
             <CampoFicha rotulo="Erro de processamento" valor={revisao.motivo} largura="cheia" />
+            {revisao.resolvidoEm !== null && (
+              <>
+                <CampoFicha
+                  rotulo="Baixa dada por"
+                  valor={revisao.nomeResolvidoPor ?? (revisao.idResolvidoPor === null ? 'Conta excluída' : `Usuário #${revisao.idResolvidoPor}`)}
+                />
+                <CampoFicha rotulo="Baixa em" valor={formatarDataHora(revisao.resolvidoEm)} />
+              </>
+            )}
           </SecaoFicha>
 
           {podeResolver && (

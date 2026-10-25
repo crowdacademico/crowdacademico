@@ -3,6 +3,7 @@ import { GenericTable } from '../../components/crud/generic-table';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { ROTULO_MEIO_PAGAMENTO } from '../../services/22-contribuicao/constants/contribuicao.constants';
 import { pagamentoRevisaoApi } from '../../services/25-pagamento-revisao/api/pagamento-revisao.api';
+import { fraseDoEventoFinanceiro } from '../../services/25-pagamento-revisao/util/evento-financeiro.util';
 import { ModalConcluirReembolso } from './modal-concluir-reembolso';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -11,6 +12,7 @@ import type { ReembolsoManualResponse } from '../../services/25-pagamento-revisa
 interface ReembolsoLinha extends ReembolsoManualResponse {
   campanha: string;
   meio: string;
+  motivo: string;
 }
 
 // A fila não traz o título da campanha (só o id). Busca uma vez junto da lista; se falhar (ex.: sem permissão de ver
@@ -26,8 +28,8 @@ async function titulosDasCampanhas(authFetch: AuthFetch): Promise<Map<number, st
 
 // Reembolsos Manuais (moderação financeira): contribuições em "reembolso manual", ou seja, o estorno automático
 // desistiu (falha definitiva, tentativas esgotadas ou prazo do Pix vencido) e uma pessoa precisa devolver o dinheiro
-// POR FORA do sistema (no painel do provedor ou por Pix). A tela só lista e REGISTRA que a devolução foi feita; nada
-// move dinheiro. Alterar abre o registro da devolução; Consultar abre a ficha só para ler.
+// pelo painel do provedor. A tela só lista e REGISTRA a devolução, depois de o Nest conferir com o provedor; nada move
+// dinheiro. Alterar abre o registro da devolução; Consultar abre a ficha só para ler.
 export function ListarReembolsosManuais({ auth }: PropsPagina) {
   const [aberto, setAberto] = useState<{ reembolso: ReembolsoLinha; somenteLeitura: boolean } | null>(null);
   const [chaveRecarga, setChaveRecarga] = useState(0);
@@ -38,6 +40,7 @@ export function ListarReembolsosManuais({ auth }: PropsPagina) {
       ...reembolso,
       campanha: titulos.get(reembolso.idCampanha) ?? `Campanha #${reembolso.idCampanha}`,
       meio: ROTULO_MEIO_PAGAMENTO[reembolso.meioPagamento],
+      motivo: fraseDoEventoFinanceiro(reembolso.ultimoMotivo),
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.authFetch, chaveRecarga]);
@@ -46,7 +49,7 @@ export function ListarReembolsosManuais({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable
         titulo="Reembolsos Manuais"
-        ajuda="Contribuições que o estorno automático não conseguiu devolver. Uma pessoa devolve o dinheiro fora do sistema (painel do provedor ou Pix) e registra aqui o que foi feito. O valor a devolver é o valor inteiro da contribuição (a tarifa de pagamento, paga por cima, não volta)."
+        ajuda="Contribuições que o estorno automático não conseguiu devolver. Uma pessoa devolve o dinheiro pelo painel do provedor de pagamento e registra aqui o que foi feito; o sistema confere com o provedor antes de aceitar. O valor a devolver é o valor inteiro da contribuição (a tarifa de pagamento, paga por cima, não volta)."
         colunas={[
           { chave: 'idContribuicao', rotulo: 'id', tipo: 'id' },
           { chave: 'campanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
@@ -54,7 +57,7 @@ export function ListarReembolsosManuais({ auth }: PropsPagina) {
           { chave: 'valorADevolver', rotulo: 'a devolver', tipo: 'dinheiro' },
           { chave: 'meio', rotulo: 'meio', tipo: 'status' },
           { chave: 'contribuinteTemContaVerificada', rotulo: 'chave Pix', tipo: 'simNao' },
-          { chave: 'ultimoMotivo', rotulo: 'último motivo', tipo: 'texto', umaLinha: true },
+          { chave: 'motivo', rotulo: 'último motivo', tipo: 'texto', umaLinha: true },
         ]}
         vazio={{
           icone: 'fa-circle-check',

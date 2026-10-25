@@ -17,6 +17,10 @@ export class RevisaoPagamentoResponse {
   sentido: 'entrada' | 'saida' | null;
   // Arrecadado ATUAL da campanha da contribuição ou do repasse.
   arrecadado: number | null;
+  // Baixa dada por uma pessoa: quando e quem (null quando ninguém deu baixa; nome null se a conta foi excluída).
+  resolvidoEm: Date | null;
+  idResolvidoPor: number | null;
+  nomeResolvidoPor: string | null;
 }
 
 export class ReembolsoManualResponse {
@@ -45,4 +49,24 @@ export class RepasseAtencaoResponse {
   ultimoMotivo: string | null;
   // true = o dono da campanha ainda não cadastrou/verificou a chave Pix: o repasse espera na fila, sem erro.
   aguardandoConta: boolean;
+}
+
+// Uma linha da auditoria financeira: cada mudança de dinheiro (contribuição ou repasse), com quem fez.
+export class AuditoriaFinanceiraResponse {
+  idAuditoria: number;
+  // Uma linha é de UMA contribuição OU de UM repasse (CK_AUDITORIA_FINANCEIRA_ALVO, 01).
+  idContribuicao: number | null;
+  idRepasse: number | null;
+  // O aviso do provedor que causou a mudança; null quando não veio de aviso.
+  idEventoPagamento: number | null;
+  valor: number;
+  meioPagamento: string | null;
+  statusAnterior: string | null;
+  statusNovo: string;
+  // O código do que aconteceu, como o banco grava (ex.: "status_contribuicao: confirmado -> repassado").
+  evento: string | null;
+  // null = o próprio sistema (tarefa automática ou aviso do provedor).
+  idResponsavel: number | null;
+  nomeResponsavel: string | null;
+  ocorridoEm: Date;
 }

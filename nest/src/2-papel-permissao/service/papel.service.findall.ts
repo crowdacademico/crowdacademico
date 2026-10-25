@@ -12,14 +12,12 @@ export class PapelServiceFindAll {
     // (só UPDATE de `nome`, ver pol_papel_update/PapelServiceUpdate): RBAC
     // continua sendo gerenciado direto no banco, nunca pela API, de
     // propósito (evita escalar privilégio criando papel/permissão pela
-    // aplicação). Ordenado por id_papel (não por nome) porque o seed
-    // (07_seed_dados.sql [07-B-1]) insere os papéis já em ordem de poder -
-    // ordenar por nome esconderia isso.
+    // aplicação). Do maior cargo para o menor (ordem_exibicao, 01 [01-B]).
     const papeis = await this.database
       .getDb()
       .selectFrom('papel')
-      .select(['id_papel', 'nome', 'codigo', 'descricao'])
-      .orderBy('id_papel')
+      .select(['id_papel', 'nome', 'codigo', 'descricao', 'ordem_exibicao'])
+      .orderBy('ordem_exibicao')
       .execute();
 
     return papeis.map((p) => ({
@@ -27,6 +25,7 @@ export class PapelServiceFindAll {
       nome: p.nome,
       codigo: p.codigo,
       descricao: p.descricao,
+      ordemExibicao: p.ordem_exibicao,
     }));
   }
 }

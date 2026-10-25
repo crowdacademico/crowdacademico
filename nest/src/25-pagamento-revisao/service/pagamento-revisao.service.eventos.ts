@@ -17,6 +17,9 @@ interface LinhaRevisao {
   valor: string | null;
   sentido: RevisaoPagamentoResponse['sentido'];
   arrecadado: string | null;
+  resolvido_em: Date | null;
+  id_resolvido_por: number | null;
+  nome_resolvido_por: string | null;
 }
 
 // Todos os avisos do provedor, do mais novo para o mais antigo (a tela Eventos de Pagamento). A permissão é conferida DENTRO das funções do banco (listar exige
@@ -46,6 +49,9 @@ export class PagamentoRevisaoServiceEventos {
       valor: linha.valor === null ? null : Number(linha.valor),
       sentido: linha.sentido,
       arrecadado: linha.arrecadado === null ? null : Number(linha.arrecadado),
+      resolvidoEm: linha.resolvido_em,
+      idResolvidoPor: linha.id_resolvido_por,
+      nomeResolvidoPor: linha.nome_resolvido_por,
     }));
   }
 

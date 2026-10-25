@@ -39,6 +39,7 @@ import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { UsuarioPapelResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
 import type { TipoVinculo, TituloAcademico } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { EstadoVazio } from '../../components/crud/estado-vazio';
+import { SENHA_MINIMO_CARACTERES } from '../../services/3-auth/constants/senha.constants';
 
 interface ModalAlterarUsuarioProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
@@ -77,6 +78,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
   // a recalcula e esta é a nova.
   const [scoreNovo, setScoreNovo] = useState<number | null>(null);
   const { ocupado: desbloqueando, executar: executarDesbloqueando } = useEnvio(reportarErro, limparErro);
+  const { ocupado: reenviandoVerificacao, executar: executarReenviandoVerificacao } = useEnvio(reportarErro, limparErro);
   const { ocupado: redefinindoSenhaDev, executar: executarRedefinindoSenhaDev } = useEnvio(reportarErro, limparErro);
   const [parte, setParte] = useState<Parte>('geral');
   const ve = (alvo: Parte) => (parte === 'geral' || parte === alvo ? '' : 'hidden');
@@ -142,7 +144,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
   // Salvar e as ações ficam sempre clicáveis: faltando algo, o erro aparece embaixo do campo.
   const conta = useErrosFormulario(() => ({
     nome: nome.trim().length < 2 && 'Nome precisa ter pelo menos 2 caracteres.',
-    senha: novaSenha !== '' && novaSenha.length < 8 && 'A nova senha precisa ter pelo menos 8 caracteres.',
+    senha: novaSenha !== '' && novaSenha.length < SENHA_MINIMO_CARACTERES && `A nova senha precisa ter pelo menos ${SENHA_MINIMO_CARACTERES} caracteres.`,
   }));
   const perfil = useErrosFormulario(() => ({
     vinculoInstitucional:
@@ -217,6 +219,12 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
     void executarDesbloqueando(async () => {
       await usuarioApi.desbloquear(auth.authFetch, idUsuario);
       mostrar('Login desbloqueado com sucesso.', `ID: ${idUsuario} pode tentar logar novamente`);
+    });
+
+  const aoReenviarVerificacao = () =>
+    void executarReenviandoVerificacao(async () => {
+      await usuarioApi.reenviarVerificacao(auth.authFetch, idUsuario);
+      mostrar('E-mail de verificação reenviado.', 'O link anterior deixou de valer.');
     });
 
   const aoRedefinirSenhaDev = () =>
@@ -464,7 +472,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
             {/* Moderação: o título do grupo; dentro, o acesso (desbloquear login) e as duas suspensões. */}
             <h3 className="subtitulo">Moderação</h3>
             <SecaoFicha titulo="Acesso" colunas={1}>
-              <div className="flex items-center justify-between gap-3 rounded-lg border borda-forte p-3">
+              <div className="flex flex-col items-start gap-3 rounded-lg border borda-forte p-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="legenda texto-fraco">
                   Zera o contador de tentativas de login falhas e libera a conta, caso esteja bloqueada temporariamente.
                 </p>
@@ -472,6 +480,14 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                   {desbloqueando ? 'Desbloqueando...' : 'Desbloquear login'}
                 </button>
               </div>
+              {!usuario.emailVerificado && (
+                <div className="flex flex-col items-start gap-3 rounded-lg border borda-forte p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="legenda texto-fraco">Manda um link novo para confirmar o e-mail. O link anterior deixa de valer.</p>
+                  <button type="button" onClick={aoReenviarVerificacao} disabled={reenviandoVerificacao} className="btn btn-secondary shrink-0">
+                    {reenviandoVerificacao ? 'Reenviando...' : 'Reenviar verificação'}
+                  </button>
+                </div>
+              )}
             </SecaoFicha>
 
             <SecaoModeracao auth={auth} idUsuario={idUsuario} aoMudar={setSuspensaoConta} />

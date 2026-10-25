@@ -42,6 +42,9 @@ export const usuarioApi = {
   // o único jeito de desbloquear, pelo painel, uma conta bloqueada por excesso de tentativas de login.
   desbloquear: (authFetch: AuthFetch, id: number | string): Promise<void> =>
     authFetch(`/usuario/${id}/desbloquear`, { method: 'POST' }).then(tratarResposta<void>),
+  // Suporte: link novo de confirmar a conta (os antigos deixam de valer). Só conta com e-mail ainda não confirmado.
+  reenviarVerificacao: (authFetch: AuthFetch, id: number | string): Promise<void> =>
+    authFetch(`/auth/reenviar-verificacao/${id}`, { method: 'POST' }).then(tratarResposta<void>),
   // Histórico de login: cada linha de `sessao` já É um login, mais recente primeiro.
   listarLogins: (authFetch: AuthFetch, id: number | string): Promise<UsuarioResponseLoginHistory[]> =>
     authFetch(`/usuario/${id}/logins`).then(tratarResposta<UsuarioResponseLoginHistory[]>),

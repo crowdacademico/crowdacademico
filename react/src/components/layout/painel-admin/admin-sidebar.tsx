@@ -52,8 +52,9 @@ export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
         aria-label={aberto ? 'Menu do painel' : undefined}
         tabIndex={aberto ? -1 : undefined}
         className={
-          'admin-sidebar fixed top-16 bottom-0 left-0 z-40 w-(--largura-sidebar) overflow-y-auto ' +
-          'transition-transform duration-200 painel:relative painel:top-auto painel:bottom-auto painel:z-auto ' +
+          'admin-sidebar fixed top-16 bottom-0 left-0 z-40 w-(--largura-sidebar) overflow-y-auto overscroll-contain ' +
+          'transition-transform duration-200 painel:sticky painel:top-(--altura-topo-fixo) painel:bottom-auto painel:z-auto ' +
+          'painel:self-start painel:h-(--altura-menu-lateral) ' +
           'painel:w-auto painel:translate-x-0 ' +
           (aberto ? 'translate-x-0 outline-none' : '-translate-x-full max-painel:invisible')
         }

@@ -4,3 +4,8 @@ export class SeguirCampanhaResponse {
   idCampanha: number;
   seguidoEm: Date;
 }
+
+export class SeguidoresCampanhaResponse {
+  idCampanha: number;
+  seguidores: number;
+}

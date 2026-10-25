@@ -16,12 +16,23 @@ import { DatabaseService } from '../../commons/database/database.service';
 import {
   CHAVE_CONFIG_REFRESH_TOKEN_DIAS_VALIDADE,
   CUSTO_BCRYPT_REFRESH_TOKEN,
+  CAMPOS_LOGIN_RECUSADO,
+  MENSAGEM_LOGIN_RECUSADO,
   REFRESH_TOKEN_DIAS_VALIDADE_PADRAO,
   REFRESH_TOKEN_SEPARADOR,
 } from '../constants/auth.constants';
 import { AuthRequestLogin } from '../dto/request/auth.request-login';
 import { AuthResponseLogin } from '../dto/response/auth.response-login';
 import { formatarDataHoraBr } from '../util/auth.util.format-date-time';
+
+// A mesma resposta para e-mail sem conta e senha errada (ver MENSAGEM_LOGIN_RECUSADO).
+const loginRecusado = () =>
+  new UnauthorizedException({
+    statusCode: 401,
+    error: 'Unauthorized',
+    message: MENSAGEM_LOGIN_RECUSADO,
+    campos: CAMPOS_LOGIN_RECUSADO,
+  });
 
 @Injectable()
 export class AuthServiceLogin {
@@ -43,7 +54,7 @@ export class AuthServiceLogin {
     // Só esta query, no módulo inteiro, lê senha_hash - de propósito, nunca
     // via USUARIO_COLUNAS_SELECT (que exclui a coluna pra qualquer outro
     // service). pol_usuario_select (04) já esconde deletado=TRUE mesmo pra
-    // anônimo, então conta excluída cai no mesmo "Credenciais inválidas"
+    // anônimo, então conta excluída cai no mesmo MENSAGEM_LOGIN_RECUSADO
     // de e-mail errado - não vaza se a conta existe ou não.
     const usuario = await db
       .selectFrom('usuario')
@@ -52,7 +63,7 @@ export class AuthServiceLogin {
       .executeTakeFirst();
 
     if (!usuario) {
-      throw new UnauthorizedException('Credenciais inválidas.');
+      throw loginRecusado();
     }
 
     if (usuario.bloqueado_ate && usuario.bloqueado_ate > new Date()) {
@@ -63,13 +74,8 @@ export class AuthServiceLogin {
 
     // Suspensão de MODERAÇÃO: conceito diferente de bloqueado_ate acima (ver comentário completo em
     // usuario.suspenso_ate, 01_extensoes_enums_tabelas.sql [01-D]). 403, não 401: a pessoa não errou credencial
-    // nenhuma, a CONTA é que está impedida, e precisa saber por quê (diferente do "Credenciais inválidas"
+    // nenhuma, a CONTA é que está impedida, e precisa saber por quê (diferente do MENSAGEM_LOGIN_RECUSADO
     // deliberadamente vago).
-    //
-    // Consulta separada (não junto do SELECT acima) e protegida por SAVEPOINT de propósito (mesmo bug já
-    // corrigido em listarPapeis, embaixo): as colunas suspenso_ate/motivo_suspensao só existem depois de alguém
-    // colar ATUALIZAR O SUPABASE.sql no SQL Editor; até lá, um SELECT direto nelas quebraria o LOGIN INTEIRO
-    // com 500. Falha graciosamente: sem as colunas, ninguém está suspenso.
     const suspensao = await this.buscarSuspensao(usuario.id_usuario);
     if (suspensao.suspensoAte && suspensao.suspensoAte > new Date()) {
       throw new ForbiddenException(
@@ -86,7 +92,7 @@ export class AuthServiceLogin {
       await this.pool.query('SELECT public.registrar_falha_login($1)', [
         usuario.id_usuario,
       ]);
-      throw new UnauthorizedException('Credenciais inválidas.');
+      throw loginRecusado();
     }
 
     await sql`SELECT public.registrar_login_sucesso(${usuario.id_usuario}, ${ip ?? null})`.execute(
@@ -110,75 +116,43 @@ export class AuthServiceLogin {
     };
   }
 
-  // Ver comentário de chamada em executar() acima - SAVEPOINT protege o
-  // resto da transação (tokens, sessao) de um erro "coluna não existe"
-  // enquanto a migração das colunas de suspensão não rodou no banco.
+  // Reaproveitado por AuthServiceRefresh: a suspensão barra o login e também a renovação silenciosa. Um erro
+  // aqui sobe (500) e o login não passa: uma regra de segurança falha fechada, nunca "ninguém está suspenso".
   async buscarSuspensao(
     idUsuario: number,
   ): Promise<{ suspensoAte: Date | null; motivoSuspensao: string | null }> {
-    const db = this.database.getDb();
-    await sql`SAVEPOINT sp_buscar_suspensao`.execute(db);
-    try {
-      const linha = await sql<{
-        suspenso_ate: Date | null;
-        motivo_suspensao: string | null;
-      }>`SELECT suspenso_ate, motivo_suspensao FROM usuario WHERE id_usuario = ${idUsuario}`.execute(
-        db,
-      );
-      return {
-        suspensoAte: linha.rows[0]?.suspenso_ate ?? null,
-        motivoSuspensao: linha.rows[0]?.motivo_suspensao ?? null,
-      };
-    } catch {
-      await sql`ROLLBACK TO SAVEPOINT sp_buscar_suspensao`.execute(db);
-      return { suspensoAte: null, motivoSuspensao: null };
-    }
+    const linha = await this.database
+      .getDb()
+      .selectFrom('usuario')
+      .select(['suspenso_ate', 'motivo_suspensao'])
+      .where('id_usuario', '=', idUsuario)
+      .executeTakeFirst();
+    return {
+      suspensoAte: linha?.suspenso_ate ?? null,
+      motivoSuspensao: linha?.motivo_suspensao ?? null,
+    };
   }
 
   // Reaproveitado por AuthServiceRefresh (mesmo raciocínio de emitirTokens logo abaixo): um lugar só para essa
   // consulta, chamada tanto no login quanto na renovação silenciosa.
-  //
-  // SAVEPOINT ao redor SÓ desta chamada arriscada (a função listar_papeis_usuario() só existe depois de alguém
-  // colar ATUALIZAR O SUPABASE.sql no SQL Editor). Um try/catch simples devolvendo [] parece funcionar (login
-  // volta 200 com papeis: []) mas FAZ O LOGIN INTEIRO NÃO PERSISTIR NADA: um erro de Postgres deixa a TRANSAÇÃO
-  // inteira "abortada" até um ROLLBACK de verdade, pegar a exceção em JavaScript não desfaz isso. O
-  // client.query('COMMIT') do GlobalDbInterceptor, chamado depois, vira silenciosamente um ROLLBACK (o Postgres
-  // troca COMMIT por ROLLBACK sozinho numa transação abortada): sessao/ultimo_login_em, tudo que a mesma
-  // requisição gravou antes, some, mesmo a resposta HTTP voltando 200 com dado que parece certo. Com o
-  // SAVEPOINT, se listar_papeis_usuario() falhar, ROLLBACK TO SAVEPOINT desfaz só ela, sem abortar a transação
-  // inteira (KyselySingleConnectionDialect não tem db.transaction() com savepoint, por isso é SQL cru aqui, não
-  // o Kysely .transaction()).
   async listarPapeis(idUsuario: number): Promise<string[]> {
-    const db = this.database.getDb();
-    await sql`SAVEPOINT sp_listar_papeis`.execute(db);
-    try {
-      const resultado = await sql<{
-        listar_papeis_usuario: string;
-      }>`SELECT * FROM listar_papeis_usuario(${idUsuario})`.execute(db);
-      return resultado.rows.map((linha) => linha.listar_papeis_usuario);
-    } catch {
-      await sql`ROLLBACK TO SAVEPOINT sp_listar_papeis`.execute(db);
-      return [];
-    }
+    const resultado = await sql<{
+      listar_papeis_usuario: string;
+    }>`SELECT * FROM listar_papeis_usuario(${idUsuario})`.execute(
+      this.database.getDb(),
+    );
+    return resultado.rows.map((linha) => linha.listar_papeis_usuario);
   }
 
-  // RF-015: a conta ainda não aceitou a versão vigente do Termo de Uso. SAVEPOINT pelo mesmo motivo de
-  // listarPapeis: fn_termo_uso_pendente() só existe depois de colar ATUALIZAR O SUPABASE.sql; sem ela, ninguém
-  // fica pendente.
+  // RF-015: a conta ainda não aceitou a versão vigente do Termo de Uso. Um erro aqui sobe: a pessoa nunca pula o
+  // aceite porque a consulta falhou.
   async termoPendente(idUsuario: number): Promise<boolean> {
-    const db = this.database.getDb();
-    await sql`SAVEPOINT sp_termo_pendente`.execute(db);
-    try {
-      const resultado = await sql<{
-        id_termo: number | null;
-      }>`SELECT public.fn_termo_uso_pendente(${idUsuario}) AS id_termo`.execute(
-        db,
-      );
-      return resultado.rows[0]?.id_termo != null;
-    } catch {
-      await sql`ROLLBACK TO SAVEPOINT sp_termo_pendente`.execute(db);
-      return false;
-    }
+    const resultado = await sql<{
+      id_termo: number | null;
+    }>`SELECT public.fn_termo_uso_pendente(${idUsuario}) AS id_termo`.execute(
+      this.database.getDb(),
+    );
+    return resultado.rows[0]?.id_termo != null;
   }
 
   // Reaproveitado por AuthServiceRefresh (rotação de refresh token): mesma lógica de emitir o par

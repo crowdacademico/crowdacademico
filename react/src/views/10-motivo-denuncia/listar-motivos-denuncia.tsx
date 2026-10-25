@@ -15,8 +15,8 @@ import type { PropsPagina } from '../../services/router/pagina.type';
 import type { MotivoDenunciaResponse } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
 
 // Ordem fixa do filtro por faceta abaixo (campanha antes de perfil) - os
-// 2 únicos valores de tipo_motivo_denuncia (01_extensoes_enums_tabelas.sql),
-// mesma ideia de ORDEM_PODER_PAPEL em listar-usuarios.tsx.
+// 2 únicos valores de tipo_motivo_denuncia (01_extensoes_enums_tabelas.sql):
+// ENUM do banco, que não se renomeia pelo painel, então a lista fixa é segura.
 const ORDEM_TIPO = ['campanha', 'perfil'];
 
 // Aba "Motivos de Denúncia" do painel admin: rota /admin/motivos-denuncia. Criar/Alterar/Consultar/Excluir são

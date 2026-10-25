@@ -246,9 +246,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON verificacao_email, recuperacao_senha, se
 --  [06-E] CAMPANHA
 -- ============================================================================
 -- Só seguir_campanha e comentario têm policy de DELETE nesse bloco; as demais não têm DELETE concedido (ver [06-E] no
--- DOCUMENTACAO_BD.md). repasse não tem UPDATE aqui: é dinheiro saindo (mesmo raciocínio de contribuicao,
--- [06-H]) e pol_repasse_update (04) é USING(true); status/repassado_em só mudam via
--- atualizar_status_repasse() (05, SECURITY DEFINER, [05-K-2]).
+-- DOCUMENTACAO_BD.md). repasse não tem UPDATE aqui nem policy de UPDATE (04): é dinheiro saindo (mesmo raciocínio
+-- de contribuicao, [06-H]); status/repassado_em só mudam via atualizar_status_repasse() (05, SECURITY DEFINER, [05-K-2]).
 GRANT INSERT, UPDATE ON
     atualizacao_campanha,
     comentario,
@@ -420,11 +419,10 @@ TO app_nestjs;
 -- ============================================================================
 --  [06-H] CONTRIBUIÇÃO
 -- ============================================================================
--- Nenhuma das quatro tem policy de DELETE (ver [06-H] no DOCUMENTACAO_BD.md). contribuicao não tem UPDATE aqui:
--- GRANT UPDATE de tabela inteira + pol_contribuicao_update USING(true) (04) deixava qualquer usuário confirmar a
--- própria doação (ou a de qualquer um) direto por UPDATE, e a página pública passaria a exibir arrecadação sem
--- pagamento real. status/id_transacao_api só mudam via atualizar_status_contribuicao() (05, SECURITY DEFINER,
--- [05-K-2]); ver GRANT EXECUTE mais abaixo.
+-- Nenhuma das quatro tem policy de DELETE (ver [06-H] no DOCUMENTACAO_BD.md). contribuicao não tem UPDATE aqui nem
+-- policy de UPDATE (04): com UPDATE direto, qualquer usuário confirmaria a própria doação (ou a de qualquer um), e a
+-- página pública exibiria arrecadação sem pagamento real. status/id_transacao_api só mudam via
+-- atualizar_status_contribuicao() (05, SECURITY DEFINER, [05-K-2]); ver GRANT EXECUTE mais abaixo.
 GRANT INSERT ON contribuicao TO app_nestjs;
 
 REVOKE EXECUTE ON FUNCTION public.atualizar_status_contribuicao(INT, status_contribuicao, VARCHAR, INT, DECIMAL) FROM PUBLIC;

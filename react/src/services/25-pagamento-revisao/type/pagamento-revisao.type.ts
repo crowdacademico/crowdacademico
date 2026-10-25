@@ -25,6 +25,10 @@ export interface RevisaoPagamentoResponse {
   sentido: 'entrada' | 'saida' | null;
   // Arrecadado ATUAL da campanha da contribuição ou do repasse.
   arrecadado: number | null;
+  // Baixa dada por uma pessoa: quando e quem (null quando ninguém deu baixa; nome null se a conta foi excluída).
+  resolvidoEm: string | null;
+  idResolvidoPor: number | null;
+  nomeResolvidoPor: string | null;
 }
 
 export interface ReembolsoManualResponse {
@@ -53,6 +57,23 @@ export interface RepasseAtencaoResponse {
   ultimoMotivo: string | null;
   // true = o dono da campanha ainda não cadastrou/verificou a chave Pix: o repasse espera na fila, sem erro.
   aguardandoConta: boolean;
+}
+
+// Espelha AuditoriaFinanceiraResponse (nest/src/25-pagamento-revisao/dto/response). Uma linha é de UMA contribuição OU
+// de UM repasse; idResponsavel null = o próprio sistema (tarefa automática ou aviso do provedor).
+export interface AuditoriaFinanceiraResponse {
+  idAuditoria: number;
+  idContribuicao: number | null;
+  idRepasse: number | null;
+  idEventoPagamento: number | null;
+  valor: number;
+  meioPagamento: string | null;
+  statusAnterior: string | null;
+  statusNovo: string;
+  evento: string | null;
+  idResponsavel: number | null;
+  nomeResponsavel: string | null;
+  ocorridoEm: string;
 }
 
 export interface FiltroRevisaoPagamento {

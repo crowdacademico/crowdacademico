@@ -1,6 +1,6 @@
 # ⚛️ Documentação Técnica do Frontend React - CrowdAcadêmico
 
-> **Em palavras simples:** este documento explica como o app React (`react/`) está organizado hoje e por quê, para quem for criar uma tela nova (os módulos que faltam e a área pública) encontrar o padrão pronto e não reinventar nada. Ele descreve o **estado atual**: a história das decisões antigas foi guardada na pasta de informações, fora do repositório, em 03-10-2026. As regras visuais (cores, tipografia, larguras, componentes de interface) ficam no documento de design system da mesma pasta.
+> **Em palavras simples:** este documento explica como o app React (`react/`) está organizado hoje e por quê, para quem for criar uma tela nova (os módulos que faltam e a área pública) encontrar o padrão pronto e não reinventar nada. Ele descreve o **estado atual**; a história de como cada coisa chegou aqui fica fora do repositório. As regras visuais (cores, tipografia, larguras, componentes de interface) ficam no documento de design system da mesma pasta.
 
 > 📌 **Requisitos:** 125 RFs desde 24-10-2026, quando a numeração mudou. Citação de RF escrita antes dessa data está na numeração antiga; a `MATRIZ-RASTREABILIDADE-RF.md` traz a conversão.
 
@@ -17,7 +17,7 @@
 4. [Roteamento e menu](#4-roteamento-e-menu)
 5. [Autenticação (`use-auth.ts`)](#5-autenticação-use-authts)
 6. [Padrão de service e API](#6-padrão-de-service-e-api)
-7. [Upload de arquivo (`26-arquivo`)](#7-upload-de-arquivo-25-arquivo)
+7. [Upload de arquivo (`26-arquivo`)](#7-upload-de-arquivo-26-arquivo)
 8. [`GenericTable`](#8-generictable)
 9. [Componentes e hooks reutilizáveis](#9-componentes-e-hooks-reutilizáveis)
 10. [Estado global: os providers](#10-estado-global-os-providers)
@@ -35,7 +35,7 @@ O `react/` é hoje **o painel administrativo**: listar, criar, alterar, consulta
 
 **O que NÃO existe:** a área pública do site (página da campanha, home pública, checkout, painel do doador). As pastas `views/22-contribuicao/` (checkout), `views/29-dashboard/doador/` e `views/29-dashboard/pesquisador/` estão reservadas, só com `.gitkeep`. O pesquisador também não usa o painel: a área dele nasce junto com a área pública.
 
-📌 **O painel não é descartável.** A primeira versão (`views/dev/`, sem roteador) era ferramenta de desenvolvimento; desde 01-08-2026 ela é o admin de verdade. Por isso a pasta se chama `components/crud/` e o CSS, `5-crud.css`.
+📌 **O painel não é descartável.** Ele é o admin de verdade, não uma ferramenta de desenvolvimento. Por isso a pasta se chama `components/crud/` e o CSS, `5-crud.css`.
 
 ---
 
@@ -93,16 +93,16 @@ react/
 
 ### Nomes de arquivo
 
-- **Decisão:** em `services/`, `<assunto>.<papel>.ts` (`api`, `type`, `constants`, `util`); hooks começam com `use-`. Em `views/` e `components/`, o arquivo tem o nome do componente em português (`modal-criar-usuario.tsx` exporta `ModalCriarUsuario`). Os tipos que espelham DTOs têm o mesmo nome da classe do Nest (`CampanhaResponse`, `TermoUsoRequestCreate`). Toda chamada à API passa por um `<assunto>.api.ts`, nunca direto da tela.
-- **Motivo:** mesma regra do Nest: inglês para o papel do arquivo (padrão de mercado), português para o assunto.
-- **Caso-limite aceito:** o sufixo `-page` existe só nas telas de `3-auth`.
+- Em `services/`, `<assunto>.<papel>.ts` (`api`, `type`, `constants`, `util`); hooks começam com `use-`. Em `views/` e `components/`, o arquivo tem o nome do componente em português (`modal-criar-usuario.tsx` exporta `ModalCriarUsuario`). Os tipos que espelham DTOs têm o mesmo nome da classe do Nest (`CampanhaResponse`, `TermoUsoRequestCreate`). Toda chamada à API passa por um `<assunto>.api.ts`, nunca direto da tela.
+- **Por quê:** mesma regra do Nest: inglês para o papel do arquivo (padrão de mercado), português para o assunto.
+- **Caso-limite:** o sufixo `-page` existe só nas telas de `3-auth`.
 
 ### ENUMs do banco gerados para o React
 
 - **Em palavras simples:** listas fechadas do banco (o status de uma campanha, a fase de uma atualização) não são copiadas à mão: o React lê um arquivo gerado a partir do banco. O que fica escrito à mão é só o que é de tela: a ordem de exibição, o rótulo e a cor.
-- **Decisão:** o caminho é banco (`01_extensoes_enums_tabelas.sql`) → Nest (`db.types.generated.ts`, kysely-codegen) → React (`npm run gerar:enums` escreve `services/constant/type/enums-do-banco.gerado.ts`, que vai para o Git). Os rótulos são `Record<Tipo, string>` (o compilador acusa rótulo faltando) e as listas de ordem passam por `listaCompleta<Tipo>()` (acusa valor faltando, com o nome dele).
-- **Motivo:** fechar o erro silencioso de valor novo no banco que a tela não conhece.
-- **Caso-limite aceito:** esquecer de rodar `npm run gerar:enums` não quebra na hora; `npm run gerar:enums -- --conferir` e a suíte de testes de tipos acusam. Tipos que são regra do Nest, e não ENUM do banco (`EscopoTipoLink`, `ContextoArquivo`), continuam escritos à mão.
+- O caminho é banco (`01_extensoes_enums_tabelas.sql`) → Nest (`db.types.generated.ts`, kysely-codegen) → React (`npm run gerar:enums` escreve `services/constant/type/enums-do-banco.gerado.ts`, que vai para o Git). Os rótulos são `Record<Tipo, string>` (o compilador acusa rótulo faltando) e as listas de ordem passam por `listaCompleta<Tipo>()` (acusa valor faltando, com o nome dele).
+- **Por quê:** fechar o erro silencioso de valor novo no banco que a tela não conhece.
+- **Caso-limite:** esquecer de rodar `npm run gerar:enums` não quebra na hora; `npm run gerar:enums -- --conferir` e a suíte de testes de tipos acusam. Tipos que são regra do Nest, e não ENUM do banco (`EscopoTipoLink`, `ContextoArquivo`), continuam escritos à mão.
 
 **Para acrescentar um valor a um ENUM:** mudar o `01` e o grupo do `ATUALIZAR`; regerar os tipos do Nest; `npm run gerar:enums` no React; `npx tsc --noEmit` aponta cada rótulo e lista de ordem que precisa do valor novo.
 
@@ -125,7 +125,7 @@ react/
 
 📌 **As rotas do Campo de Testes não estão nesta lista:** entram pela porta `services/router/campo-testes-opcional.ts` (seção 12), só em desenvolvimento.
 
-📌 **O menu é derivado.** `components/layout/painel-admin/admin-menu.constants.ts` filtra `ROTAS_ADMIN` por `grupoMenu` (`itensDoGrupo()`). Grupos: o Dashboard (sem título), `GESTÃO DO USUÁRIO`, `Configurações`, `CAMPANHA`, `MODERAÇÃO` e, por último, `CAMPO DE TESTES` (some sozinho quando não há rota dele). A chave interna do grupo (ex.: `'CADASTROS'`) não muda quando o título visível muda. Item de módulo que ainda não existe aparece apagado com `aria-disabled` (não `disabled`): continua focável pelo teclado, e a dica "Ainda não implementado" aparece também no Tab. Desde 03-10-2026 a MODERAÇÃO não tem mais nenhum (Aprovar Campanhas, Denúncias e Pedidos de Encerramento).
+📌 **O menu é derivado.** `components/layout/painel-admin/admin-menu.constants.ts` filtra `ROTAS_ADMIN` por `grupoMenu` (`itensDoGrupo()`). Grupos: o Dashboard (sem título), `GESTÃO DO USUÁRIO`, `Configurações`, `CAMPANHA`, `MODERAÇÃO` e, por último, `CAMPO DE TESTES` (some sozinho quando não há rota dele). A chave interna do grupo (ex.: `'CADASTROS'`) não muda quando o título visível muda. Item de módulo que ainda não existe aparece apagado com `aria-disabled` (não `disabled`): continua focável pelo teclado, e a dica "Ainda não implementado" aparece também no Tab. A MODERAÇÃO não tem nenhum (Aprovar Campanhas, Denúncias e Pedidos de Encerramento).
 
 📌 **Acessados recentemente.** O `AdminLayout` registra as páginas do menu que a pessoa abre (`services/router/acessados-recentemente.ts`, `localStorage` com o id do usuário na chave); o Dashboard mostra as últimas 5.
 
@@ -292,7 +292,7 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 
 📌 **Destaques:**
 - **`LimiteErro`:** um erro de renderização mostra um aviso no lugar do trecho que quebrou (com botão de recarregar), em vez de tela em branco. Em volta do conteúdo de todas as páginas e da área do painel (o menu continua de pé). Recomeça ao trocar de página.
-- **Avisos (toasts, `toast-provider.tsx`):** fila de até 3, sucesso some em 6 s e erro em 10 s (desde 13-10-2026; antes 4 e 8), acima dos modais. Com o mouse em cima, ou o foco do teclado dentro do aviso, o tempo para e volta de onde estava ao sair: é o que a WCAG 2.2.1 (tempo ajustável) pede para mensagem que some sozinha, e o que GitHub e Gmail fazem. Aviso igual não empilha: recomeça o tempo com uma pulsada leve. Quem sai encolhe e os de baixo sobem deslizando. Três tipos: sucesso (verde), aviso (laranja, a ação deu certo mas pede atenção, como a pontuação que caiu; mesmo tempo do sucesso) e erro (vermelho). Erro é `role="alert"`; sucesso e aviso, `role="status"`.
+- **Avisos (toasts, `toast-provider.tsx`):** fila de até 3, sucesso some em 6 s e erro em 10 s, acima dos modais. Com o mouse em cima, ou o foco do teclado dentro do aviso, o tempo para e volta de onde estava ao sair: é o que a WCAG 2.2.1 (tempo ajustável) pede para mensagem que some sozinha, e o que GitHub e Gmail fazem. Aviso igual não empilha: recomeça o tempo com uma pulsada leve. Quem sai encolhe e os de baixo sobem deslizando. Três tipos: sucesso (verde), aviso (laranja, a ação deu certo mas pede atenção, como a pontuação que caiu; mesmo tempo do sucesso) e erro (vermelho). Erro é `role="alert"`; sucesso e aviso, `role="status"`.
 - **Dica (`tooltip.tsx`):** `.dica` + `<Dica texto />` dá nome visível a qualquer controle; abre no `:hover` e no foco de teclado (`:focus-visible`), nunca no foco de clique (senão ficava presa depois de fechar um modal). `Tooltip` é o ⓘ avulso (`baixo`, `aoClicar` para abrir um modal com a explicação longa, `badge`). `<Dica>` é `aria-hidden`: o nome acessível mora no gatilho. `title` nativo só onde o elemento não é interativo.
 - **`AvatarUsuario`:** cor da inicial pelo nome (sempre a mesma, sem guardar nada); foto que não carrega vira a inicial.
 - **Tema e fonte são do dispositivo, não da conta** (`localStorage`): preferência por conta exigiria tabela própria.
@@ -374,12 +374,12 @@ Peças de tela compartilhadas entre módulos: `views/1-usuario/modais-usuario.ts
 ### Gestão do usuário
 
 - **Usuários:** Alterar é uma tela só, que rola (sem abas): em cima, o que espera o Salvar (foto, nome, senha, perfil de pesquisador); embaixo, o que grava na hora (papéis, moderação, CPF, links acadêmicos). Um filtro no topo mostra uma parte só sem desmontar as outras; o cabeçalho mostra pílulas da situação; o rodapé diz o que mudou. Revogar papel pede confirmação; suspender pede motivo e prazo de Parâmetros.
-- **Papéis & Permissões:** matriz Papel × Permissão; a descrição de cada papel vem do banco (`papel.descricao`, editável no Alterar Papel desde 13-10-2026), e o significado de cada permissão, de um dicionário (`permissao-nomes-amigaveis.constants.ts`); quem tem uma permissão é lido ao vivo.
+- **Papéis & Permissões:** matriz Papel × Permissão; a descrição de cada papel vem do banco (`papel.descricao`, editável no Alterar Papel), e o significado de cada permissão, de um dicionário (`permissao-nomes-amigaveis.constants.ts`); quem tem uma permissão é lido ao vivo.
 
 ### Configurações
 
 - **Termo de Uso:** Criar, Consultar, Alterar e Excluir em modal. Versão aceita é só leitura (e não se exclui); "Começar da vigente" no Criar. Selos: Vigente, Substituída, Rascunho.
-- **Tela de aceite (`views/5-termo-uso/tela-aceite-termo-uso.tsx`, RF-015):** mostra o termo pendente que `GET /termos-uso/pendente` devolver (o da conta ou o de pesquisador, com o nome certo no título). Com os dois pendentes, aceitar o primeiro mostra o segundo. Desde 04-10-2026 usa o `ModalTermo` (o padrão do termo do Criar conta); antes era um cartão solto próprio, sem "Tela cheia". O X e o Esc encerram a sessão, como "Sair" (RF-015: com termo pendente só dá para ler, aceitar ou sair).
+- **Tela de aceite (`views/5-termo-uso/tela-aceite-termo-uso.tsx`, RF-015):** mostra o termo pendente que `GET /termos-uso/pendente` devolver (o da conta ou o de pesquisador, com o nome certo no título). Com os dois pendentes, aceitar o primeiro mostra o segundo. Usa o `ModalTermo` (o padrão do termo do Criar conta, com "Tela cheia"). O X e o Esc encerram a sessão, como "Sair" (RF-015: com termo pendente só dá para ler, aceitar ou sair).
 - **Pontuação (Score) (`views/11-configuracoes/pontuacao-score.tsx`, Configurações):** os pesos das 4 dimensões e, dentro de cada uma, os itens com "ligado" e peso, mostrando quantos pontos cada item vale na hora (a parte dele da dimensão); e as faixas de reputação (nome, descrição, de, até). Cada bloco tem Desfazer e Salvar; Salvar só liga sem erro (dimensões somando 100, faixas cobrindo 0 a 100 sem buraco), e o banco confere de novo. Salvar recalcula todo mundo. O aviso de "regra ainda não fechada" saiu do painel de score do Consultar Usuário.
 - **Parâmetros do Sistema:** a descrição como nome; o campo de valor segue o tipo (Sim/Não, inteiro, decimal). Chave de um par mínimo/máximo mostra o aviso de qual editar primeiro.
 - **Áreas do Conhecimento, Tipos de Link, Motivos de Denúncia:** catálogos com a mesma API (`criarApiCatalogo`) e modais; Tipo de Link tem "Testar com um link".
@@ -397,7 +397,7 @@ Peças de tela compartilhadas entre módulos: `views/1-usuario/modais-usuario.ts
 - **Alterar Campanha:** os campos protegidos depois da aprovação aparecem só para leitura, com o aviso de por quê (a lista vem do banco). Rascunho e rejeitada têm "Enviar para aprovação" ou "Corrigir e reenviar"; datas vencidas oferecem reagendar mantendo a duração (RF-070). Para o **dono** de uma campanha já publicada: **Atualizações** (`SecaoAtualizacoesCampanha`: publicar com título, conteúdo, fase e formato; ocultar e mostrar, RF-051/052) e **Comentários recebidos** (`SecaoComentariosRecebidos`: endossar até o limite de Parâmetros, excluir ou excluir e bloquear, sem avisar o autor, RF-093/094).
 - **Comentar:** sempre como a conta logada (`comentarioApi.criar`, `POST /comentario`), na Bancada da Campanha; só pesquisador ativo comenta, e quem não é vê o mesmo aviso de Minhas Campanhas, com o caminho do upgrade (`AvisoSoPesquisador`).
 - **Seguir campanha e seguir pesquisador** têm serviços próprios em `services/16-seguir` (`seguir-campanha.api.ts`, `seguir-pesquisador.api.ts`): seguir, deixar de seguir e listar o que a conta segue; a contagem de seguidores do pesquisador é pública (para a página do perfil, que ainda não existe).
-- **Recompensas (`views/18-recompensa/secao-recompensas-campanha.tsx`, 19-10-2026):** parte "Recompensas" do Alterar (o dono cria, desativa e reativa, com o link especial opcional) e do Consultar (só leitura, só as ativas). Recompensa simbólica, sem estoque. Escolher a recompensa é na hora de contribuir, na área pública.
+- **Recompensas (`views/18-recompensa/secao-recompensas-campanha.tsx`):** parte "Recompensas" do Alterar (o dono cria, desativa e reativa, com o link especial opcional) e do Consultar (só leitura, só as ativas). Recompensa simbólica, sem estoque. Escolher a recompensa é na hora de contribuir, na área pública.
 - **Líquido estimado (RF-087):** no Consultar, grupo Financeiro, o valor que o pesquisador receberia hoje e a taxa usada, vindos do Nest (a mesma conta do repasse).
 - **Minha Conta, aba Contribuições (`views/22-contribuicao/aba-minhas-contribuicoes.tsx`):** o histórico de contribuições da conta (RF-009, RF-085), com a situação e a recompensa escolhida, e as recompensas ganhas com o link especial (RF-101).
 
@@ -405,12 +405,12 @@ Peças de tela compartilhadas entre módulos: `views/1-usuario/modais-usuario.ts
 
 > **Em palavras simples:** o Campo de Testes é a parte do painel onde qualquer conta (o administrador, um usuário comum ou um pesquisador) faz, com a própria sessão, o que faria na área pública (comentar, seguir, denunciar, pedir upgrade, criar campanha), usando os mesmos endpoints. Serve para achar problema rápido. Tudo dele mora numa pasta só, e apagar essa pasta não quebra o sistema.
 
-- **Decisão:** o Campo de Testes usa o sistema; o sistema nunca importa o Campo de Testes. Ele entra por uma porta só: `src/30-campo-testes/plugin.ts` exporta as rotas e o contexto, e `services/router/campo-testes-opcional.ts` carrega esse arquivo com `import.meta.glob`, só em desenvolvimento. A regra `no-restricted-imports` do ESLint acusa qualquer import do sistema para dentro da pasta.
-- **Motivo:** dependência de mão única (o padrão "pasta por funcionalidade" do Bulletproof React). Em produção, nem a rota nem o código do Campo de Testes vão para o build.
-- **Caso-limite aceito:** algumas peças do sistema têm uma opção que hoje só o Campo de Testes usa, sem importar nada dele: as ações da seção `AcaoCampoTestes` e o `gerarCpfDeTeste` do campo de CPF e do modal de upgrade. O CSS dele continua em `assets/css/8-campo-testes.css`, por último na ordem dos estilos.
+- O Campo de Testes usa o sistema; o sistema nunca importa o Campo de Testes. Ele entra por uma porta só: `src/30-campo-testes/plugin.ts` exporta as rotas e o contexto, e `services/router/campo-testes-opcional.ts` carrega esse arquivo com `import.meta.glob`, só em desenvolvimento. A regra `no-restricted-imports` do ESLint acusa qualquer import do sistema para dentro da pasta.
+- **Por quê:** dependência de mão única (o padrão "pasta por funcionalidade" do Bulletproof React). Em produção, nem a rota nem o código do Campo de Testes vão para o build.
+- **Caso-limite:** algumas peças do sistema têm uma opção que hoje só o Campo de Testes usa, sem importar nada dele: as ações da seção `AcaoCampoTestes` e o `gerarCpfDeTeste` do campo de CPF e do modal de upgrade. O CSS dele continua em `assets/css/8-campo-testes.css`, por último na ordem dos estilos.
 
-- **Decisão (21-10-2026):** o Campo de Testes funciona logado com qualquer papel, não só com o admin. Dentro dele, nenhuma tela exige permissão de admin: cada uma lê pela sessão de quem está logado, e as regras de acesso do banco decidem o que aparece. Sem permissão de listar usuários, a lista cai para a própria conta (`servicos/util/usuarios-visiveis.util.ts`).
-- **Motivo:** testar os fluxos do usuário comum e do pesquisador (contribuir e pagar, o próprio upgrade, criar a própria campanha, ver os próprios e-mails) enquanto a área pública não existe. A barreira do Campo de Testes é não existir em produção.
+- O Campo de Testes funciona logado com qualquer papel, não só com o admin. Dentro dele, nenhuma tela exige permissão de admin: cada uma lê pela sessão de quem está logado, e as regras de acesso do banco decidem o que aparece. Sem permissão de listar usuários, a lista cai para a própria conta (`servicos/util/usuarios-visiveis.util.ts`).
+- **Por quê:** testar os fluxos do usuário comum e do pesquisador (contribuir e pagar, o próprio upgrade, criar a própria campanha, ver os próprios e-mails) enquanto a área pública não existe. A barreira do Campo de Testes é não existir em produção.
 - **Caso-limite:** o que tem efeito para todo mundo continua com permissão: "Limpar a caixa" da T6 (`notificacao_processar`) e os interruptores das tarefas automáticas, que são Parâmetros do sistema. O "Rodar agora" da T5 fica liberado, porque faz o mesmo que o sistema faz sozinho de tempos em tempos.
 
 **As telas** (todas com a `GenericTable` e o Registro de Chamadas, que mostra cada chamada feita à API):
@@ -419,7 +419,7 @@ Peças de tela compartilhadas entre módulos: `views/1-usuario/modais-usuario.ts
 - **T3, Minhas Campanhas:** a tela real de `views/12-campanha`, para testar o fluxo do pesquisador.
 - **T4, Seguindo:** as campanhas que a conta segue, com as mesmas colunas do T2 e só Consultar na coluna Ações; no segundo card, os pesquisadores que ela segue. Cada card tem o próprio Registro de Chamadas, como os da T5 (as chamadas de `/seguir-pesquisador` ficam no dos pesquisadores). Deixar de seguir tira da lista na hora.
 - **T5, Bancada de Pagamento:** faz o papel de quem paga e do provedor (contribuir, Pagar, Vencer, Liberar, Repetir aviso, Concluir e Falhar a transferência) e roda as tarefas automáticas na hora. Cada conta vê as próprias contribuições e os repasses das próprias campanhas; o admin vê tudo. Detalhe em `DOCUMENTACAO_FINANCEIRO.md`, seção 2.3.
-- **T6, Caixa de E-mails (19-10-2026):** o que o provedor de e-mail de teste "enviou" (nada sai para fora; cada conta vê os próprios e-mails, o admin vê todos): para, assunto, prévia do HTML (num `iframe` com `sandbox`, sem script) e o texto puro; no topo, o card "Enviar os e-mails" (a tarefa automática, com o interruptor e o Rodar agora; nasce desligado no banco de demonstração, então o e-mail espera na fila até alguém conferir) e "Limpar a caixa" esvazia. O card é o mesmo componente dos cards da T5 (`cards-tarefas-automaticas.tsx`, que recebe a lista de cards), na mesma grade e com a mesma altura: título e texto de cada card reservam o espaço do maior de todos os cards (`.cartao-tarefa__pilha`, `8-campo-testes.css`), então um card sozinho mede igual a um da fileira da T5 em qualquer tela. A caixa mora na memória do Nest. Passo a passo em `.Tutorial-email.md`.
+- **T6, Caixa de E-mails:** o que o provedor de e-mail de teste "enviou" (nada sai para fora; cada conta vê os próprios e-mails, o admin vê todos): para, assunto, prévia do HTML (num `iframe` com `sandbox`, sem script) e o texto puro; no topo, o card "Enviar os e-mails" (a tarefa automática, com o interruptor e o Rodar agora; nasce desligado no banco de demonstração, então o e-mail espera na fila até alguém conferir) e "Limpar a caixa" esvazia. O card é o mesmo componente dos cards da T5 (`cards-tarefas-automaticas.tsx`, que recebe a lista de cards), na mesma grade e com a mesma altura: título e texto de cada card reservam o espaço do maior de todos os cards (`.cartao-tarefa__pilha`, `8-campo-testes.css`), então um card sozinho mede igual a um da fileira da T5 em qualquer tela. A caixa mora na memória do Nest. Passo a passo em `.Tutorial-email.md`.
 - **Guia de Estilo:** cores nos dois temas, tipografia e componentes reais. A lista de pares de contraste que ele mostra é do sistema (`assets/css/pares-contraste.json`, a mesma que o `npm run contraste` confere).
 
 📌 **Peças compartilhadas:** `servicos/hook/use-campanhas-campo-testes.tsx` entrega a toda tela de campanha do Campo de Testes as colunas, as facetas, as ações de quem visita a campanha (Consultar, Comentar, Seguir, Deixar de seguir, Denunciar), as regras de quando cada uma vale e os modais delas. O T2 acrescenta só o que é dele; o T4 só filtra as seguidas. Um "T" novo de campanha começa por esse hook.
@@ -430,42 +430,21 @@ Peças de tela compartilhadas entre módulos: `views/1-usuario/modais-usuario.ts
 
 Cinco abas (`BarraAbasBotoes`): **Visão Geral** (faixa de saúde, cartões de métrica que levam à lista já filtrada, acessados recentemente, prévia de notificações), **Regras do Negócio** (os parâmetros agrupados por assunto, `configuracoes-grupos.constants.ts`; chave sem grupo cai em "Outras"), **Identidade Visual** (espaço reservado: a gestão de logo e favicon não foi construída) e **Saúde**. Saúde e métricas vêm de duas requisições independentes, para a falta de banco aparecer mesmo quando o resumo falha.
 
-📌 **Aba Notificações (19-10-2026):** fica entre Regras do Negócio e Identidade Visual e mostra `views/27-notificacao/listar-notificacoes.tsx` (a tela mora no módulo dono do dado). Todos os e-mails do sistema, com situação, tipo, destinatário e assunto; Consultar abre a ficha (dados do texto, erro, tentativas, provedor); as ações Reenviar e Cancelar envio (novas em `AcaoSistema`, `5-coluna-acoes.tsx`) aparecem apagadas, com o motivo, quando não se aplicam. Na Visão Geral, o cartão Notificações mostra quantos estão na fila e quantos falharam, com "Ver os e-mails". Exige `notificacao_processar` (sem ela, a mensagem de 403 da API).
+📌 **Aba Notificações:** fica entre Regras do Negócio e Identidade Visual e mostra `views/27-notificacao/listar-notificacoes.tsx` (a tela mora no módulo dono do dado). Todos os e-mails do sistema, com situação, tipo, destinatário e assunto; Consultar abre a ficha (dados do texto, erro, tentativas, provedor); as ações Reenviar e Cancelar envio (novas em `AcaoSistema`, `5-coluna-acoes.tsx`) aparecem apagadas, com o motivo, quando não se aplicam. Na Visão Geral, o cartão Notificações mostra quantos estão na fila e quantos falharam, com "Ver os e-mails". Exige `notificacao_processar` (sem ela, a mensagem de 403 da API).
 
 ### Pagamentos (`views/25-pagamento-revisao`)
 
-Três telas para o que pede uma pessoa: **Eventos de Pagamento** (todos os avisos do provedor; Dar baixa nos que ainda não foram processados), **Reembolsos Manuais** (registrar a devolução feita por fora, sempre com o valor inteiro da contribuição) e **Repasses em Atenção** (repasse em erro: Reenfileirar ou Marcar como pago). As regras do dinheiro estão em `DOCUMENTACAO_FINANCEIRO.md`.
+Três telas para o que pede uma pessoa: **Eventos de Pagamento** (todos os avisos do provedor; Dar baixa nos que ainda não foram processados), **Reembolsos Manuais** (registrar a devolução feita pelo painel do provedor, sempre com o valor inteiro da contribuição e só se o provedor a mostrar) e **Repasses em Atenção** (repasse em erro: Reenfileirar, ou Marcar como pago só com a confirmação do provedor). E uma de leitura: **Auditoria Financeira** (cada mudança de dinheiro de contribuição e de repasse, a mais nova primeiro pela data; colunas id, registro (a coluna nome), de e para com as pílulas de situação, valor, quem fez e quando, "Sistema" quando foi automático; o código do que aconteceu fica só na ficha do Consultar; exige `auditoria_financeira_visualizar`, admin e revisor). As regras do dinheiro estão em `DOCUMENTACAO_FINANCEIRO.md`.
+
+#### "Último motivo": frase, não código
+
+Em Repasses em Atenção e Reembolsos Manuais (lista e ficha), o "último motivo" sai em frase ("A tentativa 1 de transferência falhou: ...", "Passou de 'A devolver' para 'Devolvida'."), traduzida por `fraseDoEventoFinanceiro` (`services/25-pagamento-revisao/util/evento-financeiro.util.ts`) a partir do código gravado em `auditoria_financeira.evento`. Quem opera lê a frase; a Auditoria Financeira mostra o código, como o banco grava, para quem audita comparar com o banco. Código que o dicionário não conhece aparece como veio, nunca some. Os nomes de evento do provedor (`PAYMENT_RECEIVED`...) não são traduzidos (ver abaixo).
 
 #### Nome do evento: como o provedor manda
 
-- **Decisão (21-10-2026):** a coluna "evento" e o subtítulo do modal de baixa mostram o nome do evento exatamente como o provedor manda (`PAYMENT_RECEIVED`, `TRANSFER_DONE`...), sem tradução. A coluna que mostra o motivo de o aviso não ter sido aplicado se chama "erro de processamento".
-- **Motivo:** pedido do Lucas: soa técnico, é o que se vê nos painéis de gateway e bate com o painel do Asaas, então quem opera procura o mesmo nome nos dois lugares.
-- **Caso-limite:** como nada é traduzido, todo evento novo do provedor aparece sozinho, sem lista para manter. Para voltar a traduzir, basta recolocar o dicionário abaixo em `services/25-pagamento-revisao/constants/pagamento-revisao.constants.ts` e chamar `rotuloTipoEvento(revisao.tipoEvento)` em `listar-revisoes-pagamento.tsx` (coluna evento) e em `modal-resolver-revisao.tsx` (subtítulo). Nome fora do dicionário aparece como veio.
-
-O dicionário que existia até 21-10-2026:
-
-| Evento do provedor | Tradução |
-|---|---|
-| `PAYMENT_CONFIRMED` | Pagamento confirmado |
-| `PAYMENT_RECEIVED` | Pagamento recebido |
-| `PAYMENT_OVERDUE` | Cobrança vencida |
-| `PAYMENT_DELETED` | Cobrança removida |
-| `PAYMENT_REFUNDED` | Pagamento estornado |
-| `PAYMENT_PARTIALLY_REFUNDED` | Pagamento estornado em parte |
-| `TRANSFER_DONE` | Repasse concluído |
-| `TRANSFER_FAILED` | Repasse falhou |
-| `TRANSFER_CANCELLED` | Repasse cancelado |
-| `PAYMENT_CHARGEBACK_REQUESTED` | Contestação de cartão aberta |
-| `PAYMENT_CHARGEBACK_DISPUTE` | Contestação de cartão em disputa |
-| `PAYMENT_AWAITING_CHARGEBACK_REVERSAL` | Contestação de cartão ganha |
-
-```ts
-const ROTULO_TIPO_EVENTO: Partial<Record<string, string>> = { PAYMENT_CONFIRMED: 'Pagamento confirmado', /* ...a tabela acima... */ };
-
-export function rotuloTipoEvento(tipoEvento: string): string {
-  return ROTULO_TIPO_EVENTO[tipoEvento] ?? tipoEvento;
-}
-```
+- A coluna "evento" e o subtítulo do modal de baixa mostram o nome do evento exatamente como o provedor manda (`PAYMENT_RECEIVED`, `TRANSFER_DONE`...), sem tradução. A coluna que mostra o motivo de o aviso não ter sido aplicado se chama "erro de processamento".
+- **Por quê:** soa técnico, é o que se vê nos painéis de gateway e bate com o painel do Asaas, então quem opera procura o mesmo nome nos dois lugares.
+- **Caso-limite:** como nada é traduzido, todo evento novo do provedor aparece sozinho, sem lista para manter. Para traduzir um dia, bastam um dicionário em `services/25-pagamento-revisao/constants/pagamento-revisao.constants.ts` e a chamada dele em `listar-revisoes-pagamento.tsx` (coluna evento) e em `modal-resolver-revisao.tsx` (subtítulo), com o nome fora do dicionário aparecendo como veio.
 
 ---
 

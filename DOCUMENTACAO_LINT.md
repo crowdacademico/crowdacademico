@@ -1,127 +1,105 @@
-# Lint - `react/eslint.config.js`
+# Lint - `react/eslint.config.js` e `nest/eslint.config.mjs`
 
-Referência do estado atual do lint do `react/` - o que está ligado, por quê, e o que foi testado e deixado de fora de propósito. Documento de consulta, não de trabalho em andamento: não deve precisar de atualização com frequência, mas precisa existir pra você e a Alexia saberem o que há por trás do sistema sem precisar reconstruir o raciocínio do zero.
+O que o lint confere nos dois lados do projeto, por que cada regra está ligada e como decidir quando ele acusa algo. O lint (ESLint) é um revisor automático de código: aponta erros comuns, como uma variável criada e nunca usada, uma chamada assíncrona sem tratamento de erro ou um import que cruza uma fronteira proibida.
 
-**Escopo: majoritariamente `react/`** (é onde está o detalhamento, achado por achado, da maioria das regras). O `nest/` tem seu próprio `eslint.config.mjs`, resumido na tabela abaixo - desde 14-09-2026, as 3 regras extras que o `nest/` liga (`no-floating-promises`, `no-unsafe-argument`, `no-unnecessary-condition`) já estão na mesma severidade `'error'` que o `react/` usa, mas só `no-unnecessary-condition` passou pela auditoria achado-por-achado de verdade (ver seção própria mais abaixo) - as outras duas já estavam com zero ocorrências reais, promovidas sem precisar corrigir nada.
+## 📑 Índice
 
----
-
-## Lista completa - tudo que está ligado hoje, nos dois lados
-
-### `react/eslint.config.js`
-
-**Bases (presets herdados, não regra avulsa):** `js.configs.recommended` (só nos arquivos `.js`/`.jsx` da raiz - `eslint.config.js`/`vite.config.js`); `tseslint.configs.recommended` (todo `.ts`/`.tsx` de `src/`); `reactHooks.configs.flat.recommended`; `reactRefresh.configs.vite`.
-
-**Regras extras, além do preset, hoje todas em `'error'`:**
-
-| Regra | Desde |
-|---|---|
-| `@typescript-eslint/no-non-null-assertion` | 06-09-2026 |
-| `@typescript-eslint/no-misused-promises` (`checksVoidReturn: { attributes: false }`) | 07-09-2026 |
-| `@typescript-eslint/no-floating-promises` | 08-09-2026 |
-| `@typescript-eslint/no-base-to-string` | 08-09-2026 |
-| `@typescript-eslint/restrict-template-expressions` | 08-09-2026 |
-| `@typescript-eslint/no-unsafe-argument` | 08-09-2026 |
-| `@typescript-eslint/no-unnecessary-condition` | 12-09-2026 |
-
-Detalhamento de cada uma (o quê, por quê, o que foi achado ao ligar) nas seções abaixo.
-
-### `nest/eslint.config.mjs`
-
-Essencialmente o esqueleto padrão que o `nest new` gera, mas hoje já com as mesmas 3 regras extras do `react/` na mesma severidade (`'error'`) - ver abaixo.
-
-- **Bases:** `eslint.configs.recommended` (`@eslint/js`); `tseslint.configs.recommendedTypeChecked` (preset TS ciente de tipo, mais amplo que o `recommended` simples do React); `eslintPluginPrettierRecommended` (formatação, não é análise de bug).
-- **Ajustes por cima do preset:** `@typescript-eslint/no-explicit-any` **desligado** (`'off'`) - o preset `recommendedTypeChecked` liga por padrão, decisão deliberada mantida (não reavaliada nesta rodada); `@typescript-eslint/no-floating-promises`, `@typescript-eslint/no-unsafe-argument` e `@typescript-eslint/no-unnecessary-condition` ligadas como `'error'` (14-09-2026) - mesma severidade que o `react/` já usa pras 3.
-- **As duas primeiras (`no-floating-promises`/`no-unsafe-argument`) eram `'warn'` desde sempre - promovidas pra `'error'` sem precisar corrigir nenhum código**, porque já estavam com ZERO ocorrências reais no `nest/src` mesmo como aviso (confirmado rodando `eslint src` antes de promover). Só a rede de segurança estava mais fraca do que precisava - uma ocorrência nova não quebrava o build, só aparecia como aviso fácil de ignorar.
+1. [Duas camadas de lint](#1-duas-camadas-de-lint)
+2. [O que está ligado no `react/`](#2-o-que-está-ligado-no-react)
+3. [O que está ligado no `nest/`](#3-o-que-está-ligado-no-nest)
+4. [Fronteiras que o lint guarda](#4-fronteiras-que-o-lint-guarda)
+5. [Checagem no commit (husky + lint-staged)](#5-checagem-no-commit-husky--lint-staged)
+6. [Quando o lint diz que uma condição é desnecessária](#6-quando-o-lint-diz-que-uma-condição-é-desnecessária)
+7. [Como rodar](#7-como-rodar)
 
 ---
 
-## Checagem no commit (husky + lint-staged, 28-09-2026)
+## 1. Duas camadas de lint
 
-**Em palavras simples.** O "lint" (ESLint) é um revisor automático de código: ele aponta erros comuns, como uma variável criada e nunca usada ou um tipo errado. Antes, ele só rodava quando alguém lembrava de mandar. Agora ele roda sozinho toda vez que alguém salva uma versão do código no git (o `git commit`). São duas ferramentas trabalhando juntas:
+**Camada 1, lint de forma.** Olha só como o código está escrito: variável não usada, import faltando, hook do React chamado dentro de um `if`. Não sabe o que cada valor é.
 
-- **husky** é o "porteiro": fica de olho no momento do commit e chama a revisão antes de deixar o commit acontecer.
-- **lint-staged** é o "revisor rápido": em vez de revisar o projeto inteiro (lento), revisa só os arquivos que a pessoa mudou e está commitando.
+**Camada 2, lint ciente de tipo.** Enxerga o que cada valor realmente é ("isto é sempre uma Promise", "este campo nunca é `null`") e por isso acha o que a Camada 1 não vê: código que só existe por incerteza de tipo, ou uma chamada assíncrona cujo erro ninguém trata. Exige `parserOptions.projectService` apontando para o `tsconfig.json`: é o que dá ao ESLint o mesmo motor de tipos do `tsc`.
 
-Como funciona: a pessoa faz `git add` e `git commit`, o husky chama o lint-staged, e ele roda o ESLint só nos arquivos alterados. Se achar erro, o commit é recusado e o erro aparece na tela para ser corrigido; se estiver tudo certo, o commit passa normalmente. Serve para o erro ser pego na hora, por quem acabou de escrever o código, e não depois, quando outra pessoa baixa o projeto e ele não funciona. Diferença para o uso mais comum dessas ferramentas: aqui elas **não formatam** o código sozinhas (o Prettier ficou de fora, ver abaixo), só conferem.
-
-**Commit barrado?** Passo a passo para descobrir e resolver sozinho: `.Tutorial-rodar-projeto.md`, seção "Meu commit foi barrado".
-
-- **Decisão:** a cada `git commit`, o ESLint roda só nos arquivos alterados e prontos para o commit (`git add`); se tiver erro, o commit não acontece. O `package.json` da raiz existe só para isso (`husky` e `lint-staged`); o gancho está em `.husky/pre-commit` e as regras em `nest/lint-staged.config.mjs` (`src/**/*.ts`) e `react/lint-staged.config.mjs` (`src/**/*.{ts,tsx}`); com mais de 40 arquivos no commit, o ESLint confere a pasta `src` inteira, porque a lista de nomes estoura o limite de tamanho da linha de comando do Windows. Cada lado usa o próprio `eslint.config`.
-- **Motivo:** erro de lint não entra no repositório por esquecimento, e olhar só o que mudou deixa o commit rápido.
-- **Caso-limite aceito:** só barra **erro**, não aviso. Não roda o Prettier (no `react/` ele reformataria arquivos inteiros, porque não há `.prettierrc`). Só vale depois de `npm install` **na raiz**; quem não rodar commita sem a checagem. Para pular numa emergência: `git commit --no-verify`. Para desligar de vez: apagar `.husky/`, o `package.json` da raiz e os dois `lint-staged.config.mjs`, e rodar `git config --unset core.hooksPath`.
+Os dois lados usam as duas camadas.
 
 ---
 
-## Duas camadas de lint, não uma
+## 2. O que está ligado no `react/`
 
-**Camada 1 - lint de forma.** O ESLint "básico" (`js.configs.recommended`, e o `tseslint.configs.recommended` sem checagem de tipo) olha só a sintaxe: variável não usada, import faltando, hook do React chamado condicionalmente. Não sabe o que cada valor É, só como o código está escrito. Isto sempre esteve ligado no projeto.
+O `eslint.config.js` tem dois blocos de arquivos:
 
-**Camada 2 - lint ciente de tipo.** Ligada em 07-09-2026, depois que a migração de `react/` inteiro pra TypeScript terminou (ver `HISTORICO_ACHADOS_PARA_DISCUTIR.md`, item 13, e a memória da migração). Essa camada enxerga o que cada valor REALMENTE é - "isto aqui é sempre uma Promise", "este campo nunca pode ser `null`" - e por isso encontra uma categoria de erro que a Camada 1 não vê: código que só existe por incerteza de tipo (uma sobra do tempo em que o compilador não conseguia provar algo), ou uma chamada assíncrona cujo tratamento de erro foi esquecido.
+1. **`**/*.{js,jsx}`:** só os arquivos de configuração da raiz (`eslint.config.js`, `vite.config.js`), que continuam JavaScript de propósito. Nenhum arquivo de `src/` é JavaScript. Bases: `js.configs.recommended`, `reactHooks.configs.flat.recommended`, `reactRefresh.configs.vite`.
+2. **`**/*.{ts,tsx}`:** todo o código do app. Bases: `tseslint.configs.recommended` (Camada 1) mais `projectService` (Camada 2), os hooks do React e o `react-refresh`.
 
-Tecnicamente, a Camada 2 exige `parserOptions.projectService` apontando pro `tsconfig.json` - é isso que dá ao ESLint acesso ao mesmo motor de tipos do próprio `tsc`, não só ao texto do arquivo.
+**Regras extras, todas em `'error'`:**
 
----
-
-## Configuração atual (`eslint.config.js`)
-
-Dois blocos:
-
-1. **`**/*.{js,jsx}`** - hoje só cobre `eslint.config.js`/`vite.config.js` (arquivos de configuração na raiz do projeto, que continuam JS puro de propósito). Zero arquivo de `src/` cai aqui - a migração pra TypeScript (07-09-2026) zerou todo `.js`/`.jsx` de dentro de `src/`.
-2. **`**/*.{ts,tsx}`** - todo o código de verdade do app. Usa `tseslint.configs.recommended` como base (Camada 1) + `parserOptions.projectService` (habilita a Camada 2) + as regras extras da tabela abaixo.
-
-### Regras ligadas além do padrão
-
-Todas as regras da Camada 2 testadas até hoje acabaram adotadas - não sobrou nenhuma "testada e deixada de fora" (a tabela antiga desta seção listava 4 regras como pendentes; as 4 foram resolvidas em 08-09-2026, e a 5ª, `no-unnecessary-condition`, em 12-09-2026).
-
-| Regra | Camada | Desde | Por quê |
-|---|---|---|---|
-| `@typescript-eslint/no-non-null-assertion` | forma | Fase 1 da migração TS (06-09-2026) | Proíbe o operador `!` (ex.: `valor!`) - mesma categoria de "confiar sem prova" que a migração evitou desde o início; usa `??`/reestruturação de código no lugar. |
-| `@typescript-eslint/no-misused-promises`, com `checksVoidReturn: { attributes: false }` | tipo | 07-09-2026 | Sem a opção, todo `onClick`/`onSubmit` assíncrono (`onClick={async () => {...}}`, padrão usado em ~40 arquivos do painel) acusava erro - o React não liga pro retorno de uma Promise em atributo de evento, mas o TypeScript reclamava mesmo assim. A opção desliga só essa checagem específica (atributo JSX), mantendo as outras formas de uso indevido de Promise que a regra ainda pega. Testado antes de ligar: amostrados 4 handlers de módulos diferentes (`alterar-usuario.tsx`, `bancada-campanha.tsx`, `dev-login-rapido.tsx`, `menu-usuario.tsx`) - todos já tratavam erro internamente (try/catch ou `.catch()` explícito). Resultado: 69 ocorrências → 0. |
-| `@typescript-eslint/no-floating-promises` | tipo | 08-09-2026 | Das 32 ocorrências (31 do achado original + 1 nova entre 07 e 08-09): 27 eram `navigate()` do react-router não aguardado (trivial, resolvido com `void`), 5 já tratavam erro internamente (também só precisaram de `void` pra declarar a intenção), e **1 era bug real** - `bancada-pesquisador.tsx` (`carregarPesquisadores`) podia falhar em silêncio, spinner some sem nenhum erro aparecer. Ganhou um `.catch()` de verdade (linha vermelha na própria tabela) antes da regra ser ligada. |
-| `@typescript-eslint/no-base-to-string` | tipo | 08-09-2026 | As 4 ocorrências (`campo-somente-leitura.tsx`, `generic-table.tsx`, `log-auditoria-painel.tsx`) passaram a usar um util novo e compartilhado, `textoSeguro()` (`formatacao.util.ts`) - trata `object` explicitamente via `JSON.stringify` em vez de confiar no `toString()` padrão, então um valor-objeto real nunca mais viraria `"[object Object]"` visível. `use-chamada-registrada.ts` era um caso diferente (corpo de requisição, não valor de exibição), corrigido separadamente. |
-| `@typescript-eslint/restrict-template-expressions` | tipo | 08-09-2026 | As 3 ocorrências (`generic-table.tsx`) - `linha[chavePrimaria]` envolto em `String(...)` explícito antes de entrar no template literal, mesmo padrão que a própria `key` da linha já usava. |
-| `@typescript-eslint/no-unsafe-argument` | tipo | 08-09-2026 | `configuracoes-provider.tsx` - `.catch()` ganhou `instanceof Error` antes de guardar no estado, mesmo padrão de narrowing já usado no resto do projeto. |
-| `@typescript-eslint/no-unnecessary-condition` | tipo | 12-09-2026 | As 57 ocorrências (cresceram de 41 pra 57 entre 07 e 12-09, com o trabalho novo) foram conferidas uma a uma contra o DTO Nest/tipo real correspondente - ver seção própria abaixo. |
-
-Detalhamento completo do achado original (arquivo, linha, e o raciocínio de cada classificação) em `HISTORICO_ACHADOS_PARA_DISCUTIR.md`, item 14.
+| Regra | Camada | O que barra, e por quê |
+|---|---|---|
+| `@typescript-eslint/no-non-null-assertion` | forma | O operador `!` (`valor!`): é confiar sem prova. No lugar, `??` ou reestruturar o código. |
+| `@typescript-eslint/no-misused-promises`, com `checksVoidReturn: { attributes: false }` | tipo | Promise usada onde não devia. A opção libera só o atributo JSX (`onClick={async () => ...}`), porque o React ignora o retorno do evento; os outros usos indevidos continuam barrados. Todo handler assíncrono trata o próprio erro. |
+| `@typescript-eslint/no-floating-promises` | tipo | Chamada assíncrona solta, cujo erro sumiria em silêncio. Quando a intenção é mesmo não esperar (ex.: `navigate()`), escreve-se `void`. |
+| `@typescript-eslint/no-base-to-string` | tipo | Objeto virando `"[object Object]"` na tela. Valores de exibição passam por `textoSeguro()` (`formatacao.util.ts`), que trata objeto com `JSON.stringify`. |
+| `@typescript-eslint/restrict-template-expressions` | tipo | Valor de tipo incerto dentro de template literal; converte-se com `String(...)` explícito. |
+| `@typescript-eslint/no-unsafe-argument` | tipo | Valor `any` passado adiante; o erro de `catch` é estreitado com `instanceof Error` antes de ir para o estado. |
+| `@typescript-eslint/no-unnecessary-condition` | tipo | `??`, `?.` ou `if` que o tipo prova que nunca dispara. Como decidir cada caso: seção 6. |
 
 ---
 
-## Sobre o achado que motivou ligar a Camada 2
+## 3. O que está ligado no `nest/`
 
-Duas telas do painel (`services/12-campanha/constants/status-campanha.constants.ts` e `services/3-auth/hook/use-auth.ts`) tinham código que só existia porque, em algum momento da migração, o compilador ainda não conseguia provar que ele era desnecessário - um `??` de segurança cobrindo um valor de enum que o Postgres nunca produz, e duas guardas (`if (resultado.usuario)`) verificando campos que o próprio tipo já garante que nunca são vazios. Ninguém tinha achado isso de propósito - apareceu numa auditoria manual, achado por achado.
-
-`no-unnecessary-condition` é a regra que teria apontado os dois sozinha, sem precisar de auditoria nenhuma - e foi exatamente essa a motivação de fazer a rodada de meio dia (ver seção abaixo).
-
----
-
-## `no-unnecessary-condition` - as 57 ocorrências, uma a uma (12-09-2026)
-
-Cada uma das 57 (17 arquivos) foi conferida contra o DTO Nest ou tipo real correspondente antes de decidir - nunca só apagada por confiar cegamente no lint. Caíram em 3 grupos:
-
-**Grupo 1 - código morto de verdade, removido (a maioria).** Um `??`/`?.`/guarda cobrindo um caso que o tipo E os dados reais garantem que nunca acontece - mesma categoria do `?? 'badge-neutro'` já achado antes (item 13). Exemplos: `ROTULO_STATUS_CAMPANHA[status] ?? status`/`ROTULO_STATUS_PESQUISADOR[status] ?? status`/`ROTULO_TITULO_ACADEMICO[titulo] ?? titulo` (Record exaustivo sobre ENUM fechado, confirmado contra o Postgres), `PesquisadorLinha.usuario?.` (campo declarado obrigatório na interface E sempre populado na única construção real do objeto), `ResultadoPaginado.dados ?? []` (campo `T[]` obrigatório, espelhando `nest/src/commons/database/paginacao.util.ts`), e duas guardas redundantes em `bancada-pesquisador.tsx` (`chaveFoco !== null` depois de já estar dentro de um `{chaveFoco && (...)}`, `!perfil.usuario` sempre falso).
-
-**Grupo 2 - proteção legítima, tipo corrigido pra ficar honesto (2 ocorrências).** `permissao-nomes-amigaveis.constants.ts` (`DETALHE_PERMISSAO`) estava com tipo `Record<string, DetalhePermissao>` - mas o dicionário é fechado (só as permissões documentadas) enquanto quem chama passa `permissao.nome` vindo do banco, um espaço de chaves aberto. Uma permissão nova, semeada mas ainda não documentada aqui, é um caso real, não hipotético. Trocado pra `Partial<Record<string, DetalhePermissao>>` - o tipo passa a admitir `undefined` de verdade, e os dois fallbacks (que já existiam, corretos, desde antes) voltam a ser necessários pro compilador também, não só na prática.
-
-**Grupo 3 - proteção legítima contra o próprio tipo embutido do TypeScript "mentir", mantida com `eslint-disable` comentado (2 ocorrências).** Duas APIs onde o `lib.d.ts` do TypeScript declara um retorno mais otimista do que a realidade: `JSON.stringify()` é tipado como `string` sempre, mas devolve `undefined` de verdade pra `função`/`símbolo`/`undefined` puro (`textoSeguro()` em `formatacao.util.ts`, e o preview de corpo de chamada em `registro-chamadas.tsx`); `navigator.clipboard` é tipado como sempre presente, mas a Clipboard API real só existe em contexto seguro (HTTPS/localhost) e falta em navegador mais antigo (`registro-chamadas.tsx`, botão "Copiar como cURL"). Nos dois casos, o comentário ao lado da linha explica o motivo específico - não é uma supressão genérica.
-
-Verificado ao final: `eslint .` (0 ocorrências da regra, 0 erros/avisos no total), `tsc --noEmit` e `npm run build` limpos.
+- **Bases:** `eslint.configs.recommended` (`@eslint/js`), `tseslint.configs.recommendedTypeChecked` (Camada 2, mais amplo que o `recommended` do React) e `eslintPluginPrettierRecommended` (formatação).
+- **`@typescript-eslint/no-explicit-any` desligado** (`'off'`): o preset liga por padrão; aqui fica desligado de propósito.
+- **Em `'error'`, como no `react/`:** `no-floating-promises`, `no-unsafe-argument` e `no-unnecessary-condition`.
 
 ---
 
-## `no-unnecessary-condition` no `nest/` - as 22 ocorrências, uma a uma (14-09-2026)
+## 4. Fronteiras que o lint guarda
 
-Tentativa anterior (12-09-2026, `HISTORICO_ACHADOS_PARA_DISCUTIR.md` item 18) tinha esgotado memória rodando `no-unnecessary-condition` contra `nest/src` inteiro de uma vez, sem nunca ser retomada. A causa real não era falta de RAM na máquina (32GB, a maior parte livre) - era o limite padrão de heap do V8/Node. Rodando de novo com `NODE_OPTIONS=--max-old-space-size=8192`, o `eslint src` completo terminou em segundos, achando só **22 ocorrências em 10 arquivos** (bem menos que as 57 do `react/`, porque o `nest/` tem menos módulos implementados hoje). Cada uma conferida contra o tipo real (Kysely) ou a real amplitude do valor `unknown` antes de decidir - nunca só apagada por confiar no lint.
+| Onde | Regra | O que garante |
+|---|---|---|
+| `react/` (todo `src/` menos `src/30-campo-testes/`) | `no-restricted-imports` | O sistema nunca importa o Campo de Testes; a única porta é o glob de `src/services/router/campo-testes-opcional.ts`. Apagar `src/30-campo-testes/` não quebra o build. |
+| `nest/` (todo `src/` menos `src/30-campo-testes/` e `src/app/app.module.ts`) | `@typescript-eslint/no-restricted-imports` | A mesma regra do Campo de Testes: a única porta é o `app.module.ts`, que só o carrega fora de produção. Usa a versão do typescript-eslint de propósito: a versão padrão já guarda a fronteira do provedor (linha abaixo), e duas configurações da mesma regra nos mesmos arquivos fazem a última apagar a primeira. |
+| `nest/` (todo `src/` menos `src/23-pagamento/adapters/asaas/` e `pagamento.module.ts`) | `no-restricted-imports` e `no-restricted-syntax` | O nome do provedor de pagamento e o formato do JSON dele existem só dentro do adapter dele. Fora dali, nada importa o adapter nem escreve o nome numa string; o resto do sistema fala com as portas (`COBRANCA_GATEWAY`, `REPASSE_GATEWAY`, `WEBHOOK_VERIFIER`). Trocar de provedor é criar outra pasta de adapter e um caso novo em `pagamento.module.ts`. Comentários não contam. |
 
-**Grupo 1 - código morto de verdade, provado pelo tipo do Kysely, removido (14 ocorrências, 7 sites).** Padrão idêntico nos 7 arquivos (`motivo-denuncia`, `configuracao`, `papel-permissao`, `usuario-papel`, `area-conhecimento`, `tipo-link`, `termo-uso` - todos os `*.service.remove.ts` que fazem `db.deleteFrom(...).executeTakeFirst()`): `(resultado?.numDeletedRows ?? 0n) === 0n`. O tipo do próprio Kysely prova que é sempre morto - `SimplifySingleResult<O>` (`kysely/dist/util/type-utils.d.ts`) devolve `O` puro, nunca `O | undefined`, quando `O` é `InsertResult | UpdateResult | DeleteResult | MergeResult` (Postgres sempre sintetiza um resultado de comando pra essas operações, mesmo com 0 linhas afetadas - diferente de um `SELECT`, que pode legitimamente não achar nada). Simplificado pra `resultado.numDeletedRows === 0n` nos 7 arquivos, cada um com um comentário curto explicando o motivo (referenciando o primeiro, `motivo-denuncia.service.remove.ts`, pra não repetir o parágrafo inteiro 7 vezes).
+---
 
-**Grupo 2 - proteção legítima contra um valor genuinamente `unknown`/tipo de biblioteca que mente, mantida com `eslint-disable-next-line` comentado (8 ocorrências, 6 arquivos).** Todos os casos seguem o mesmo formato: um `catch (erro)` (`erro: unknown`) ou uma chamada de biblioteca cujo tipo declarado é mais otimista que a realidade, e um cast `as` que faz o TypeScript "esquecer" que o valor de origem podia ser nulo:
-- **`database.service.ts`** (`!db`, depois de `this.cls.get<Kysely<DB>>(...)`) - `ClsService.get<T>()` (`nestjs-cls`) é tipado pra devolver `T` sempre, mas o próprio JSDoc do método (`cls.service.d.ts`) admite "returns the value stored under the key or undefined". O tipo mente; a guarda protege o cenário real que o comentário do arquivo já descrevia (chamar `getDb()` fora do pipeline HTTP, antes do `GlobalDbInterceptor` rodar).
-- **`postgres-exception.filter.ts`** (`erro?.code`, 2×) - `traduzir(erro: ErroPostgres)` recebe `excecao as ErroPostgres` de um `catch(excecao: unknown, host)` **global** (`@Catch()` sem filtro de tipo) - captura literalmente qualquer coisa lançada em qualquer lugar da aplicação, presente ou futura. É a fronteira mais aberta do projeto pra esse tipo de cast - mantida defensiva de propósito.
-- **`s3-compativel-armazenamento.service.ts`** (`erroTipado?.name`/`?.$metadata?.`, 2×) - mesmo padrão, `erro: unknown` de uma chamada ao SDK da AWS, cast pra inspecionar a forma do erro sem travar se vier algo inesperado.
-- **`motivo-denuncia`/`area-conhecimento`/`tipo-link` (`*.service.remove.ts`)** (`(erro as { code?: string })?.code`, 1× cada) - mesmo padrão, dentro de um `catch` mais estreito (só 2 chamadas Kysely no `try`), mas mesma lógica: `as` é cast, não prova, e o custo de manter a defesa é zero.
+## 5. Checagem no commit (husky + lint-staged)
 
-Critério usado pra separar Grupo 1 de Grupo 2: se a "morte" do código é provada pelo **tipo real de uma biblioteca formal** (Kysely) → simplifica. Se depende de um **cast `as` sobre um valor `unknown`** (onde o TypeScript só finge saber a forma, não prova) → mantém, documentado. Mesmo espírito do Grupo 3 do `react/` (JSON.stringify/navigator.clipboard), aplicado a uma categoria nova (`unknown` de `catch`/SDK externo, não uma API do browser).
+**Em palavras simples.** O lint roda sozinho toda vez que alguém salva uma versão do código no git (`git commit`). São duas ferramentas juntas:
 
-Verificado ao final: `eslint src` (0 ocorrências da regra, exit code determinado só pelos ~20 erros pré-existentes de prettier/`no-unnecessary-type-assertion` em arquivos NÃO tocados nesta rodada - `1-usuario`, `26-arquivo`, `storage.service.interface.ts`, confirmados por `git status` como já sujos antes desta rodada), `tsc --noEmit -p tsconfig.build.json` e `nest build` limpos. Servidor testado ao vivo (`npm run start:dev`): sobe, conecta no Postgres real como `app_nestjs` com RLS ativa, `Nest application successfully started`, zero erro - processo encerrado depois do teste.
+- **husky** é o "porteiro": no momento do commit, chama a revisão antes de deixar o commit acontecer.
+- **lint-staged** é o "revisor rápido": revisa só os arquivos que a pessoa mudou e está commitando, não o projeto inteiro.
+
+A pessoa faz `git add` e `git commit`, o husky chama o lint-staged, e ele roda o ESLint só nos arquivos alterados. Com erro, o commit é recusado e o erro aparece na tela; sem erro, o commit passa. O erro é pego na hora, por quem acabou de escrever o código.
+
+- **Onde mora:** o `package.json` da raiz existe só para isso (`husky` e `lint-staged`); o gancho está em `.husky/pre-commit` e as regras em `nest/lint-staged.config.mjs` (`src/**/*.ts`) e `react/lint-staged.config.mjs` (`src/**/*.{ts,tsx}`). Cada lado usa o próprio `eslint.config`.
+- **Com mais de 40 arquivos no commit**, o ESLint confere a pasta `src` inteira, com memória maior (`--max-old-space-size=8192`), porque a lista de nomes estoura o limite de tamanho da linha de comando do Windows.
+- **Só barra erro, não aviso.** Não formata nada: o Prettier fica de fora porque, no `react/`, sem `.prettierrc`, ele reformataria arquivos inteiros.
+- **Só vale depois de `npm install` na raiz**; quem não rodar commita sem a checagem.
+- **Para pular numa emergência:** `git commit --no-verify`. **Para desligar de vez:** apagar `.husky/`, o `package.json` da raiz e os dois `lint-staged.config.mjs`, e rodar `git config --unset core.hooksPath`.
+
+**Commit barrado?** Passo a passo para descobrir e resolver: `.Tutorial-rodar-projeto.md`, seção "Meu commit foi barrado".
+
+---
+
+## 6. Quando o lint diz que uma condição é desnecessária
+
+`no-unnecessary-condition` acusa um `??`, `?.` ou `if` que o tipo prova que nunca dispara. Cada caso é conferido contra o tipo real (o DTO do Nest, o tipo do Kysely, o ENUM do banco) antes de decidir; nunca se apaga só porque o lint mandou. Há três saídas:
+
+1. **Código morto de verdade: remove.** O tipo e os dados reais garantem que o caso não acontece. Exemplos: `ROTULO_STATUS_CAMPANHA[status] ?? status` sobre um `Record` exaustivo de um ENUM fechado; `ResultadoPaginado.dados ?? []` com `dados` obrigatório; no Nest, `(resultado?.numDeletedRows ?? 0n)` num `DELETE` do Kysely, que sempre devolve um resultado (o tipo `SimplifySingleResult` prova isso), e por isso é `resultado.numDeletedRows === 0n` nos `*.service.remove.ts`.
+2. **A proteção é legítima e o tipo mentia: corrige o tipo.** Exemplo: `DETALHE_PERMISSAO` (`permissao-nomes-amigaveis.constants.ts`) é `Partial<Record<string, DetalhePermissao>>`, porque quem chama passa um nome vindo do banco e uma permissão nova pode não estar documentada ainda. Com o tipo honesto, o fallback volta a ser necessário também para o compilador. O mesmo vale para o dicionário de frases da auditoria financeira (`evento-financeiro.util.ts`).
+3. **A biblioteca promete mais do que entrega: mantém, com `eslint-disable-next-line` e o motivo escrito ao lado.** Exemplos:
+   - `JSON.stringify()` é tipado como `string`, mas devolve `undefined` para função, símbolo e `undefined` (`textoSeguro()`, e o corpo de chamada em `registro-chamadas.tsx`);
+   - `navigator.clipboard` é tipado como sempre presente, mas só existe em contexto seguro (botão "Copiar como cURL" de `registro-chamadas.tsx`);
+   - `ClsService.get<T>()` (`nestjs-cls`) é tipado como `T`, mas o próprio JSDoc admite `undefined` (`database.service.ts`, `getDb()` chamado fora do pipeline HTTP);
+   - erro de `catch` (`unknown`) convertido com `as` para ler o código: `postgres-exception.filter.ts` (o filtro global, que pega qualquer coisa lançada no sistema), `s3-compativel-armazenamento.service.ts` (erro do SDK do armazenamento) e os `*.service.remove.ts` de catálogo.
+
+**Critério entre a 1 e a 3:** se a "morte" do código é provada pelo tipo de uma biblioteca formal (Kysely, ENUM do banco), simplifica. Se depende de um `as` sobre um valor `unknown`, em que o TypeScript só finge saber a forma, mantém e documenta.
+
+---
+
+## 7. Como rodar
+
+- `react/`: `npx eslint .` (ou `npm run lint`).
+- `nest/`: `npx eslint src`. O projeto inteiro de uma vez pode estourar o limite de memória padrão do Node: aumente com `NODE_OPTIONS=--max-old-space-size=8192` antes de dividir por módulo ou desconfiar da máquina.
+- Junto do lint, confira os tipos: `npx tsc --noEmit -p tsconfig.json` no `react/` e no `nest/`.

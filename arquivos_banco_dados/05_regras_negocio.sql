@@ -2556,8 +2556,7 @@ EXECUTE FUNCTION public.fn_campanha_encerrada_destino_dinheiro();
 -- Regra:      Encerra campanhas 'ativo' com prazo vencido (RF-037): sucesso se atingiu a meta, nao_atingido se não. Um job de
 --             fundo roda como app_nestjs SEM sessão de usuário (id_usuario_atual() é NULL) e pol_campanha_update (04) exige
 --             dono ou permissão, então a RLS não deixaria NENHUMA linha visível ao job: UPDATE 0 sem erro, e a campanha
---             ficaria 'ativo' para sempre (contador negativo na página pública, doações recusadas). A causa NÃO é
---             trg_campanha_valida_transicao (o ramo autoverificável está certo): é a RLS, que barra antes da trigger.
+--             ficaria 'ativo' para sempre (contador negativo na página pública, doações recusadas).
 --             SECURITY DEFINER bypassa a RLS, não a trigger, que continua validando cada transição. Chamada por
 --             agendamento (@Cron no NestJS), sem sessão de usuário: mesma categoria pré-autorização de
 --             registrar_falha_login/registrar_login_sucesso ([03-O]). Retorna a quantidade de campanhas encerradas, para o
@@ -2569,7 +2568,7 @@ EXECUTE FUNCTION public.fn_campanha_encerrada_destino_dinheiro();
 --             pix_validade_horas depois do fim. Sem isso, um Pix pago no último minuto, com o aviso chegando depois
 --             do encerramento, faria uma campanha que bateu a meta ser dada como não atingida. Mesmo princípio do
 --             "Aguardando" do Catarse. Ver DOCUMENTACAO_BD.md [05-K-2-E].
---             Além de trocar o status, o encerramento AGORA aciona o dinheiro (PR-06 do plano de pagamentos), tudo na
+--             Além de trocar o status, o encerramento também aciona o dinheiro, tudo na
 --             mesma transação por campanha (uma que falhe volta inteira ao estado anterior e é tentada no próximo ciclo):
 --               - 'sucesso' (qualquer modelo) e 'nao_atingido' em campanha FLEXÍVEL: cria UMA linha em repasse
 --                 (valor_bruto = soma das contribuições 'confirmado'; taxa_relativa = campanha.taxa_plataforma, ou a taxa
@@ -2577,10 +2576,10 @@ EXECUTE FUNCTION public.fn_campanha_encerrada_destino_dinheiro();
 --                 resultado; status 'pendente'), e cada contribuição 'confirmado' passa a apontar para ele (contribuicao.id_repasse).
 --                 O flexível fica com o que arrecadou mesmo sem a meta (RF-038/RF-063), por isso nunca devolve.
 --                 Sem contribuição confirmada (bruto 0) não há o que repassar e nenhuma linha é criada.
---                 Quem faz a transferência é o worker de repasse (PR-08), não esta função.
+--                 Quem faz a transferência é o worker de repasse, não esta função.
 --               - 'nao_atingido' em campanha ALL-OR-NOTHING: move cada contribuição 'confirmado' para 'a_devolver'. NÃO
 --                 calcula valor nenhum: quem apoiou recebe de volta o valor inteiro da contribuição (a tarifa de pagamento,
---                 paga por cima, fica com o provedor), pelo worker de estorno (PR-07).
+--                 paga por cima, fica com o provedor), pelo worker de estorno.
 --               - contribuição 'pendente' NÃO é tocada aqui: se o pagamento ainda chegar (aviso atrasado do gateway),
 --                 aplicar_evento_pagamento() o confirma e aplica a regra do fechamento (repasse adicional; devolução só em
 --                 all-or-nothing que não bateu a meta). O Pix pendente vence sozinho em expirar_contribuicoes_pendentes.
@@ -2654,7 +2653,7 @@ $$;
 --             ficaria 'pendente' para sempre. SECURITY DEFINER, chamada por @Cron, sem sessão de usuário (o
 --             app_nestjs não tem UPDATE em contribuicao). Retorna quantas expiraram.
 --             Cada expiração passa por atualizar_status_contribuicao() (valida a transição e grava auditoria_financeira),
---             como toda mudança de status de contribuição; antes era um UPDATE em massa que não deixava rastro. Uma
+--             como toda mudança de status de contribuição. Uma
 --             contribuição que o webhook confirmou entre a lista e a expiração é barrada pela máquina de estados
 --             (91050), fica como está e não derruba as demais (WARNING, não é contada).
 -- ----------------------------------------------------------------------------
@@ -2978,7 +2977,7 @@ EXECUTE FUNCTION fn_valida_prazo_campanha_negocio();
 -- Bloco:      [05-K-2]
 -- Regra:      Meta financeira mínima de negócio: o limite técnico (`meta_financeira > 0`) mora na CHECK (01); esta trigger
 --             aplica o mínimo de verdade, maior e configurável, via configuracoes.meta_minima_campanha (mudar o valor é um
---             UPDATE numa linha, não uma migração de constraint). Sem isso, meta 0.00 era aceita e, numa campanha
+--             UPDATE numa linha, não uma migração de constraint). Sem isso, meta 0.00 seria aceita e, numa campanha
 --             all-or-nothing, seria sucesso instantâneo (a primeira contribuição confirmada já bate a meta).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_valida_meta_campanha_negocio()
@@ -3351,7 +3350,7 @@ EXECUTE FUNCTION fn_sincroniza_arrecadado_campanha();
 --             pendente         -> confirmado | erro | expirado
 --             confirmado       -> repassado | a_devolver | reembolsado | reembolso_manual
 --             a_devolver       -> devolvido | reembolso_manual
---             reembolso_manual -> devolvido   (só por concluir_reembolso_manual: uma pessoa devolveu por fora do sistema)
+--             reembolso_manual -> devolvido   (só por concluir_reembolso_manual: uma pessoa devolveu pelo painel do provedor)
 --             'devolvido' é só da devolução do tudo-ou-nada (automática em lote, ou manual depois que o automático desistiu);
 --             qualquer outro estorno é 'reembolsado'.
 --             repassado, devolvido, reembolsado, erro e expirado são estados finais; reembolso_manual só sai para devolvido.
@@ -3808,10 +3807,10 @@ $$;
 -- Assinatura: (p_id INT, p_status status_contribuicao, p_id_transacao VARCHAR DEFAULT NULL,
 --              p_id_evento_pagamento INT DEFAULT NULL, p_valor_evento DECIMAL DEFAULT NULL) -> VOID
 -- Bloco:      [05-K-2]
--- Regra:      pol_contribuicao_update (04) era USING (true) com GRANT UPDATE de tabela inteira: qualquer usuário confirmava a
---             própria contribuição (ou a de qualquer um) por UPDATE direto, e trg_sincroniza_arrecadado_campanha somava o
---             valor em campanha.valor_bruto_arrecadado, exibindo arrecadação sem pagamento real. Como em [03-O], a coluna
---             `status` (e `id_transacao_api`) saiu do GRANT UPDATE (06) e só muda por aqui: SECURITY DEFINER, mas
+-- Regra:      Única porta para mudar `status` (e `id_transacao_api`) de uma contribuição: contribuicao não tem policy
+--             de UPDATE (04) e o app_nestjs não tem UPDATE na tabela (06). Sem isso, um UPDATE direto confirmaria uma
+--             contribuição sem pagamento real, e trg_sincroniza_arrecadado_campanha somaria o valor em
+--             campanha.valor_bruto_arrecadado. Como em [03-O]: SECURITY DEFINER, mas
 --             trg_sincroniza_arrecadado_campanha e as triggers de validação all-or-nothing continuam rodando por baixo (RLS
 --             é bypassada, trigger não). SEM AUTORIZAÇÃO DE PROPÓSITO (pré-autenticação): chamada pelo webhook do gateway de
 --             pagamento, sem sessão de usuário (mesma categoria de registrar_falha_login, [03-O]); o endpoint precisa
@@ -3866,7 +3865,6 @@ BEGIN
     );
 END;
 $$;
-
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_valida_transicao_status_repasse
@@ -3924,12 +3922,12 @@ EXECUTE FUNCTION public.fn_valida_transicao_status_repasse();
 -- Assinatura: (p_id_repasse INT, p_status status_repasse, p_repassado_em TIMESTAMPTZ DEFAULT NULL,
 --              p_motivo TEXT DEFAULT NULL, p_id_evento_pagamento INT DEFAULT NULL) -> VOID
 -- Bloco:      [05-K-2]
--- Regra:      pol_repasse_update (04) é USING (true) de propósito, mas o GRANT UPDATE de tabela inteira que isso exigia saiu
---             (06): o único jeito de mudar `status`/`repassado_em` é por aqui. Concentra toda mudança de status do repasse e
---             a AUDITA (PR-09, equivalente ao que atualizar_status_contribuicao faz): uma linha em auditoria_financeira com
+-- Regra:      Única porta para mudar `status`/`repassado_em` de um repasse: repasse não tem policy de UPDATE (04) e o
+--             app_nestjs não tem UPDATE na tabela (06). Concentra toda mudança de status do repasse e
+--             a AUDITA (como atualizar_status_contribuicao): uma linha em auditoria_financeira com
 --             id_repasse, status anterior/novo, valor = valor_liquido, id do webhook que causou (se houve) e o motivo.
 --             Chamada com o MESMO status e sem p_repassado_em não faz nada (sem linha de auditoria). Repasse inexistente:
---             não faz nada (como antes). SECURITY DEFINER, mas trg_valida_repasse e
+--             não faz nada. SECURITY DEFINER, mas trg_valida_repasse e
 --             trg_valida_transicao_status_repasse continuam rodando por baixo (RLS é bypassada, trigger não). SEM
 --             AUTORIZAÇÃO DE PROPÓSITO (pré-autenticação): chamada pelo worker e pelo webhook, sem sessão de usuário.
 -- ----------------------------------------------------------------------------
@@ -4297,7 +4295,7 @@ $$;
 -- Assinatura: (p_provedor VARCHAR) -> TABLE (id_contribuicao INT, id_cobranca VARCHAR, valor_bruto DECIMAL,
 --             valor_liquido DECIMAL, tentativas INT, prazo_vencido BOOLEAN)
 -- Bloco:      [05-K-2]
--- Regra:      Fila do worker de estorno (PR-07). Devolve a PRÓXIMA contribuição 'a_devolver' do provedor informado que já
+-- Regra:      Fila do worker de estorno. Devolve a PRÓXIMA contribuição 'a_devolver' do provedor informado que já
 --             pode ser tentada (sem tentativa agendada para o futuro) e a TRAVA com FOR UPDATE SKIP LOCKED: duas instâncias
 --             do worker nunca pegam a mesma. O lock vale até o fim da transação de quem chamou, então o worker precisa
 --             chamar dentro de BEGIN ... COMMIT e só dar o COMMIT depois de concluir_estorno() ou registrar_falha_estorno();
@@ -4722,14 +4720,15 @@ $$;
 -- Assinatura: (p_situacao TEXT DEFAULT NULL, p_limite INT DEFAULT 500) -> TABLE (id_evento_pagamento INT,
 --             provedor VARCHAR, tipo_evento VARCHAR, recebido_em TIMESTAMPTZ, situacao TEXT, motivo TEXT,
 --             revisao_manual_em TIMESTAMPTZ, id_contribuicao INT, id_repasse INT, valor DECIMAL, sentido TEXT,
---             arrecadado DECIMAL)
+--             arrecadado DECIMAL, resolvido_em TIMESTAMPTZ, id_resolvido_por INT, nome_resolvido_por VARCHAR)
 -- Bloco:      [05-K-2]
 -- Regra:      Todos os avisos do provedor (a caixa de entrada inteira), do mais novo para o mais antigo, para a tela Eventos
 --             de Pagamento. `situacao`:
 --               'processado'           o sistema aplicou o aviso (processado_em, sem revisão);
 --               'vale_tentar_de_novo'  falhou por motivo transitório ou ainda não foi tentado (nem processado nem em revisão);
 --               'em_revisao_manual'    o sistema não aplicou de propósito e alguém precisa decidir;
---               'revisao_resolvida'    passou por revisão manual e uma pessoa já deu baixa (resolver_revisao_pagamento).
+--               'revisao_resolvida'    uma pessoa deu baixa (resolver_revisao_pagamento ou marcar_repasse_pago), num aviso
+--                                      em revisão manual ou em "tentar de novo"; resolvido_em e quem (id e nome) vêm junto.
 --             p_situacao filtra uma delas; NULL traz todas. `id_contribuicao`/`id_repasse` e `valor` vêm da primeira linha
 --             de auditoria que o aviso gravou (NULL num aviso que não mexeu em nada). `sentido` diz para onde o dinheiro
 --             andou segundo o provedor: 'entrada' (pagamento recebido), 'saida' (estorno, devolução ou transferência
@@ -4741,7 +4740,7 @@ CREATE OR REPLACE FUNCTION public.listar_revisoes_pagamento(p_situacao TEXT DEFA
 RETURNS TABLE (
     id_evento_pagamento INT, provedor VARCHAR, tipo_evento VARCHAR, recebido_em TIMESTAMPTZ, situacao TEXT,
     motivo TEXT, revisao_manual_em TIMESTAMPTZ, id_contribuicao INT, id_repasse INT, valor DECIMAL, sentido TEXT,
-    arrecadado DECIMAL
+    arrecadado DECIMAL, resolvido_em TIMESTAMPTZ, id_resolvido_por INT, nome_resolvido_por VARCHAR
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -4758,11 +4757,14 @@ BEGIN
 
     RETURN QUERY
     SELECT v.id_evento_pagamento, v.provedor, v.tipo_evento, v.recebido_em, v.situacao, v.erro_processamento,
-           v.revisao_manual_em, v.id_contribuicao, v.id_repasse, v.valor, v.sentido, v.arrecadado
+           v.revisao_manual_em, v.id_contribuicao, v.id_repasse, v.valor, v.sentido, v.arrecadado,
+           v.resolvido_em, v.resolvido_por, v.nome_resolvido_por
     FROM (
         SELECT e.id_evento_pagamento, e.provedor, e.tipo_evento, e.recebido_em, e.erro_processamento, e.revisao_manual_em,
+               e.resolvido_em, e.resolvido_por, u.nome::VARCHAR AS nome_resolvido_por,
                CASE
-                   WHEN e.processado_em IS NOT NULL AND e.revisao_manual_em IS NOT NULL THEN 'revisao_resolvida'
+                   WHEN e.resolvido_em IS NOT NULL
+                        OR (e.processado_em IS NOT NULL AND e.revisao_manual_em IS NOT NULL) THEN 'revisao_resolvida'
                    WHEN e.processado_em IS NOT NULL THEN 'processado'
                    WHEN e.revisao_manual_em IS NOT NULL THEN 'em_revisao_manual'
                    ELSE 'vale_tentar_de_novo'
@@ -4795,6 +4797,7 @@ BEGIN
         LEFT JOIN contribuicao c ON c.id_contribuicao = alvo.id_contribuicao
         LEFT JOIN repasse r ON r.id_repasse = alvo.id_repasse
         LEFT JOIN campanha ca ON ca.id_campanha = COALESCE(c.id_campanha, r.id_campanha)
+        LEFT JOIN usuario u ON u.id_usuario = e.resolvido_por
     ) v
     WHERE p_situacao IS NULL OR v.situacao = p_situacao
     -- Do mais novo para o mais antigo: com o limite, o que fica de fora é o histórico mais velho, nunca o aviso de agora.
@@ -4812,7 +4815,8 @@ $$;
 --             evento em REVISÃO MANUAL e para o que está em "tentar de novo" (a pessoa conferiu no provedor e não quer
 --             esperar o prazo de webhook_reprocessar_horas; se era um pagamento de verdade, a conferência periódica ainda
 --             o aplica pela contribuição pendente). Marca o evento como processado (processado_em = agora;
---             revisao_manual_em fica, é o histórico de que passou por revisão), junta a observação ao motivo e grava uma
+--             revisao_manual_em fica, é o histórico de que passou por revisão; resolvido_em e resolvido_por guardam quando
+--             e quem, inclusive no aviso sem dono, que não tem auditoria), junta a observação ao motivo e grava uma
 --             linha de auditoria 'revisao_manual_resolvida: <observação>' no mesmo alvo (contribuição ou repasse) com quem
 --             resolveu. NÃO muda contribuição nem repasse nem move dinheiro: o estado que a revisão deixou intacto continua
 --             como está. Só evento não processado (91049); observação obrigatória (90034); exige
@@ -4848,6 +4852,8 @@ BEGIN
 
     UPDATE evento_pagamento
     SET processado_em = NOW(),
+        resolvido_em = NOW(),
+        resolvido_por = public.id_usuario_atual(),
         erro_processamento = LEFT(COALESCE(v_motivo, '') || ' | RESOLVIDO: ' || v_obs, 2000)
     WHERE id_evento_pagamento = p_id_evento;
 
@@ -4878,7 +4884,7 @@ $$;
 --             ultimo_motivo TEXT, contribuinte_tem_conta_verificada BOOLEAN)
 -- Bloco:      [05-K-2]
 -- Regra:      Contribuições em 'reembolso_manual': o estorno automático desistiu (falha definitiva, tentativas esgotadas ou
---             prazo do Pix vencido) e uma pessoa precisa devolver o dinheiro por fora. valor_a_devolver é o valor inteiro
+--             prazo do Pix vencido) e uma pessoa precisa devolver o dinheiro pelo painel do provedor. valor_a_devolver é o valor inteiro
 --             da contribuição (mesma regra do estorno automático; a tarifa de pagamento não volta). `ultimo_motivo` é o texto da última
 --             linha de auditoria (inclui 'estorno_falhou (tentativa N): ...'). `contribuinte_tem_conta_verificada` diz se quem
 --             contribuiu (id_usuario; NULL = contribuição sem conta) tem uma chave Pix verificada (só pesquisador cadastra
@@ -4922,7 +4928,7 @@ $$;
 -- Função:     concluir_reembolso_manual
 -- Assinatura: (p_id_contribuicao INT, p_valor DECIMAL, p_observacao TEXT) -> VOID
 -- Bloco:      [05-K-2]
--- Regra:      Uma pessoa devolveu, por fora do sistema, o dinheiro de uma contribuição em 'reembolso_manual': registra que
+-- Regra:      Uma pessoa devolveu, pelo painel do provedor (o Nest confere antes de chamar), o dinheiro de uma contribuição em 'reembolso_manual': registra que
 --             isso foi feito. reembolso_manual -> devolvido, com p_valor (sempre o valor inteiro da contribuição: a tela
 --             não deixa digitar e o banco recusa outro valor) em auditoria_financeira.valor, e uma linha extra
 --             'reembolso_manual_concluido: <observação>' com quem registrou. Só contribuição em 'reembolso_manual' (91049);
@@ -5078,7 +5084,7 @@ $$;
 -- Assinatura: (p_id_repasse INT, p_observacao TEXT) -> VOID
 -- Bloco:      [05-K-2]
 -- Regra:      Uma pessoa confirmou que o dinheiro de um repasse em 'erro' chegou ao pesquisador (o provedor avisou que a
---             transferência foi concluída depois de o sistema marcar erro, ou a transferência foi feita por fora). É a
+--             transferência foi concluída depois de o sistema marcar erro; o Nest confere com o provedor antes de chamar). É a
 --             alternativa ao reenfileirar, que pagaria duas vezes. erro -> concluido (repassado_em = agora, auditado com a
 --             observação e quem fez), as contribuições do repasse ainda 'confirmado' viram 'repassado', e os avisos do
 --             provedor sobre este repasse que estavam em revisão manual recebem baixa com a mesma observação. Não move
@@ -5125,6 +5131,8 @@ BEGIN
 
     UPDATE evento_pagamento e
     SET processado_em = NOW(),
+        resolvido_em = NOW(),
+        resolvido_por = public.id_usuario_atual(),
         erro_processamento = LEFT(COALESCE(e.erro_processamento, '') || ' | RESOLVIDO: ' || v_obs, 2000)
     WHERE e.processado_em IS NULL
       AND e.revisao_manual_em IS NOT NULL
@@ -5462,7 +5470,7 @@ EXECUTE FUNCTION fn_comentario_ignora_endosso_na_criacao();
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
 -- Regra:      pol_comentario_update (04) libera UPDATE ao autor do comentário, ao dono da campanha OU a quem tem
---             'comentario_moderar', mas nenhuma coluna era restrita por quem: o autor endossaria o PRÓPRIO comentário via
+--             'comentario_moderar', sem restringir coluna por quem: sem esta trigger, o autor endossaria o PRÓPRIO comentário via
 --             UPDATE (RF-089, a mesma falha do INSERT por outra porta). Só o dono da campanha ou quem tem
 --             'comentario_moderar' pode mudar `endossado`. Também calcula ordem_endosso (MAX + 1 sob pg_advisory_xact_lock
 --             por campanha) ao endossar, e a zera ao remover o endosso.

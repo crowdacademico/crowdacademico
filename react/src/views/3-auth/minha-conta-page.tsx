@@ -38,6 +38,7 @@ import { EstadoVazio } from '../../components/crud/estado-vazio';
 import { BadgeStatusPesquisador } from '../../components/crud/badge-status-pesquisador';
 import { SecaoContestacaoScore } from '../19-denuncia/secao-contestacao-score';
 import { SecaoRecebimento } from '../24-conta-recebimento/secao-recebimento';
+import { SENHA_MINIMO_CARACTERES } from '../../services/3-auth/constants/senha.constants';
 import { AbaMinhasContribuicoes } from '../22-contribuicao/aba-minhas-contribuicoes';
 
 // Minha Conta: não é um formulário só, é uma área com seções independentes, cada uma salva por conta própria.
@@ -458,8 +459,8 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
   } = useErrosFormulario(() => ({
     atual: senhaAtual === '' && 'Informe a senha atual.',
     nova:
-      novaSenha.length < 8
-        ? 'A nova senha precisa ter pelo menos 8 caracteres.'
+      novaSenha.length < SENHA_MINIMO_CARACTERES
+        ? `A nova senha precisa ter pelo menos ${SENHA_MINIMO_CARACTERES} caracteres.`
         : novaSenha === senhaAtual && 'A nova senha precisa ser diferente da senha atual.',
     confirmar: confirmarSenha === '' ? 'Confirme a nova senha.' : confirmarSenha !== novaSenha && 'As senhas não são iguais.',
   }));
@@ -730,7 +731,7 @@ function AbaPapeis({ auth }: AbaPapeisProps) {
 // algo e sendo barrado sem explicação (a suspensão de pesquisador NUNCA bloqueia login: a pessoa continua tendo
 // acesso normal a Minha Conta). Quem não é pesquisador faz o upgrade aqui (ver abaixo).
 interface AbaAcademicoProps {
-  auth: Pick<UseAuthReturn, 'usuario' | 'authFetch' | 'atualizarUsuarioLocal'>;
+  auth: Pick<UseAuthReturn, 'usuario' | 'authFetch' | 'atualizarUsuarioLocal' | 'renovarSessaoAgora'>;
 }
 
 function AbaAcademico({ auth }: AbaAcademicoProps) {
@@ -788,11 +789,7 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
             idUsuarioAlvo={auth.usuario.idUsuario}
             nomeAlvo={auth.usuario.nome}
             aoFechar={() => setFazendoUpgrade(false)}
-            aoConcluido={(perfilCriado) => {
-              setPerfil(perfilCriado);
-              // As outras telas (Perfil, Minhas Campanhas) passam a saber na hora que a conta virou pesquisadora.
-              auth.atualizarUsuarioLocal((atual) => (atual ? { ...atual, ehPesquisador: true } : atual));
-            }}
+            aoConcluido={setPerfil}
           />
         )}
       </div>

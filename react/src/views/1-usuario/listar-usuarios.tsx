@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { BotaoCriar } from '../../components/crud/botao-criar';
@@ -6,7 +6,9 @@ import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import {
-  ORDEM_PODER_PAPEL,
+  CODIGO_PAPEL_PADRAO,
+  compararPorPoder,
+  ordemDoFiltroPapel,
   PAPEL_SEM_EXTRA,
 } from '../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
 import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
@@ -19,11 +21,8 @@ interface UsuarioLinha extends UsuarioResponse {
   papel: string;
 }
 
-// Papel que TODO cadastro já ganha automaticamente (atribuir_papel_padrao,
-// 08_trigger_signup_usuario.sql) - mostrar ele na coluna "papel" seria
-// ruído (é o mesmo texto em toda linha da tabela). Só os papéis ALÉM do
-// padrão aparecem na coluna; sem nenhum, mostra PAPEL_SEM_EXTRA.
-const PAPEL_PADRAO = 'usuario';
+// O papel que TODO cadastro já ganha (CODIGO_PAPEL_PADRAO) não aparece na coluna "papel": seria o mesmo texto em toda
+// linha. Só os papéis ALÉM do padrão aparecem; sem nenhum, mostra PAPEL_SEM_EXTRA.
 
 // Aba "Usuários" do painel admin: vive na rota /admin/usuarios (ver services/router/rotas.constants.ts,
 // ROTAS_ADMIN). Renderizada dentro do <Outlet/> de components/layout/painel-admin/admin-layout.tsx (sidebar + área de conteúdo já
@@ -48,6 +47,7 @@ export function ListarUsuarios({ auth }: PropsPagina) {
     recarregar,
     acoesCompletas,
   } = useCrudModais<UsuarioLinha>();
+  const [ordemPapel, setOrdemPapel] = useState<string[]>([PAPEL_SEM_EXTRA]);
 
   // useCallback aqui não é sobre performance: é porque GenericTable usa a função em `useEffect([listar])`; sem
   // isso, cada render criaria uma função nova e recarregaria a tabela em loop.
@@ -62,11 +62,11 @@ export function ListarUsuarios({ auth }: PropsPagina) {
       usuarioPapelApi.listarTudo(auth.authFetch).catch(() => []),
     ]);
 
+    // Papéis em ordem de poder ("admin, pesquisador", nunca "pesquisador, admin"), e o filtro na mesma ordem.
+    const extras = [...vinculos].filter((vinculo) => vinculo.codigoPapel !== CODIGO_PAPEL_PADRAO).sort(compararPorPoder);
+    setOrdemPapel(ordemDoFiltroPapel(extras.map((vinculo) => ({ nome: vinculo.nomePapel, ordemExibicao: vinculo.ordemExibicao }))));
     const papeisPorUsuario = new Map<number, string[]>();
-    for (const vinculo of vinculos) {
-      if (vinculo.nomePapel === PAPEL_PADRAO) {
-        continue;
-      }
+    for (const vinculo of extras) {
       const atuais = papeisPorUsuario.get(vinculo.idUsuario) ?? [];
       atuais.push(vinculo.nomePapel);
       papeisPorUsuario.set(vinculo.idUsuario, atuais);
@@ -104,9 +104,9 @@ export function ListarUsuarios({ auth }: PropsPagina) {
         acoes={acoesCompletas}
         // Botão de filtro por papel, na mesma linha do filtro de texto, padrão "Todos" (nenhum papel marcado);
         // marcar um ou mais esconde o resto. Opções vêm sozinhas dos valores que já aparecem na coluna "papel"
-        // (ver GenericTable); `ordem` só reordena (menor para o maior poder), não filtra nada. Array de 1
+        // (ver GenericTable); `ordem` só reordena (do maior cargo para o menor), não filtra nada. Array de 1
         // elemento (a API é genérica para 1+ facetas lado a lado, ver GenericTable e a tabela Permissões).
-        filtrosFacetados={[{ chave: 'papel', rotulo: 'Papel', ordem: ORDEM_PODER_PAPEL }]}
+        filtrosFacetados={[{ chave: 'papel', rotulo: 'Papel', ordem: ordemPapel }]}
       />
 
       {/* "De"/"Para": "nome" é o único campo de texto editável de usuario que faz sentido rastrear assim

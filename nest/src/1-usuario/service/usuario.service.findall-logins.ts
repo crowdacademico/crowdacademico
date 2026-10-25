@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { AutorizacaoService } from '../../commons/seguranca/autorizacao.service';
+import { PERMISSOES_VER_USUARIOS } from '../constants/usuario.constants';
 import { UsuarioResponseLoginHistory } from '../dto/response/usuario.response-login-history';
 
 @Injectable()
@@ -18,10 +19,10 @@ export class UsuarioServiceFindAllLogins {
   // auth.service.login.ts.
   async executar(idUsuario: number): Promise<UsuarioResponseLoginHistory[]> {
     // `sessao` é lida por qualquer sessão (o refresh precisa achar o token antes de existir usuário atual), então
-    // a RLS não protege o histórico de login: só o próprio usuário ou quem tem usuario_visualizar_sensivel.
+    // a RLS não protege o histórico de login: só o próprio usuário ou quem pode ver usuários.
     await this.autorizacao.exigirProprioOuPermissao(
       idUsuario,
-      'usuario_visualizar_sensivel',
+      PERMISSOES_VER_USUARIOS,
       'Você só pode ver o seu próprio histórico de login.',
     );
     const linhas = await this.database

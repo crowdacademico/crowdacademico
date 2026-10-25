@@ -37,6 +37,8 @@ export interface PapelTable {
   codigo: string;
   // Para que serve o papel; editável pelo painel, como o nome.
   descricao: string | null;
+  // Posição nas listas (1 = maior cargo). Só exibição; ver 01 [01-B].
+  ordem_exibicao: number;
 }
 
 export interface PermissaoTable {

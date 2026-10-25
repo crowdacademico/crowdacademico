@@ -19,7 +19,7 @@
 
 -- Todas as datas e horas escritas neste arquivo são do horário de Brasília. Sem isto, o Postgres (o Supabase roda
 -- em UTC) lê '2024-01-01 00:00:00' como meia-noite de Londres, que em Brasília é 21h do dia anterior: a conta
--- criada em 01/01/2024 aparecia como "Membro desde 12/2023". SET LOCAL não serve aqui (o arquivo não roda numa
+-- criada em 01/01/2024 apareceria como "Membro desde 12/2023". SET LOCAL não serve aqui (o arquivo não roda numa
 -- transação só); o SET vale até o fim da conexão, e o RESET no fim do arquivo devolve o padrão.
 SET TIME ZONE 'America/Sao_Paulo';
 
@@ -72,14 +72,14 @@ INSERT INTO score_rotulo (rotulo, descricao, score_minimo, score_maximo) VALUES
 -- bonitinhos (1=admin... 7=usuario) num banco novo. Não referenciado por número em nenhum lugar
 -- (papel_permissao e usuario_papel, abaixo, buscam papel por `nome`), então reordenar aqui é seguro e não
 -- quebra nada além do id_papel gerado.
-INSERT INTO papel (nome, codigo, descricao) VALUES
-('admin', 'admin', 'Acesso total ao painel: usuários, papéis e permissões, parâmetros, catálogos, Termo de Uso, aprovação de campanhas, moderação e log.'),
-('moderador', 'moderador', 'Cuida do conteúdo: julga denúncias, decide contestações de denúncias julgadas por outra pessoa, modera comentários e atualizações e pode encerrar uma campanha por moderação.'),
-('revisor', 'revisor', 'Acompanha o funcionamento, só lendo: vê relatórios, a pontuação dos pesquisadores, a auditoria financeira e o log, sem dados pessoais.'),
-('suporte', 'suporte', 'Atende quem tem problema para entrar: desbloqueia login, encerra sessões, reenvia a verificação de e-mail e cancela pedidos de recuperação de senha.'),
-('curador', 'curador', 'Faz a curadoria das campanhas (aprova e rejeita) e cuida dos catálogos: áreas do conhecimento, tipos de link e motivos de denúncia.'),
-('pesquisador', 'pesquisador', 'Recebido no upgrade para pesquisador: cria e gerencia as próprias campanhas. Não dá acesso ao que é de outras pessoas.'),
-('usuario', 'usuario', 'Papel de toda conta cadastrada. Sozinho, não libera nenhuma área de administração.')
+INSERT INTO papel (nome, codigo, descricao, ordem_exibicao) VALUES
+('admin', 'admin', 'Acesso total ao painel: usuários, papéis e permissões, parâmetros, catálogos, Termo de Uso, aprovação de campanhas, moderação e log.', 1),
+('moderador', 'moderador', 'Cuida do conteúdo: julga denúncias, decide contestações de denúncias julgadas por outra pessoa, modera comentários e atualizações e pode encerrar uma campanha por moderação.', 2),
+('revisor', 'revisor', 'Acompanha o funcionamento, só lendo: vê relatórios, a pontuação dos pesquisadores, a auditoria financeira e o log, sem dados pessoais.', 3),
+('suporte', 'suporte', 'Atende quem tem problema para entrar: desbloqueia login e reenvia a verificação de e-mail.', 4),
+('curador', 'curador', 'Faz a curadoria das campanhas (aprova e rejeita) e cuida dos catálogos: áreas do conhecimento, tipos de link e motivos de denúncia.', 5),
+('pesquisador', 'pesquisador', 'Recebido no upgrade para pesquisador: cria e gerencia as próprias campanhas. Não dá acesso ao que é de outras pessoas.', 6),
+('usuario', 'usuario', 'Papel de toda conta cadastrada. Sozinho, não libera nenhuma área de administração.', 7)
 ON CONFLICT (nome) DO NOTHING;
 
 -- [07-B-2] permissao: por que o formato "entidade_acao" (ver DOCUMENTACAO_BD.md)
@@ -119,13 +119,9 @@ INSERT INTO permissao (nome) VALUES
 -- só edita o próprio perfil.
 ('perfil_pesquisador_alterar_de_outro'),
 ('termos_uso_gerenciar'),
--- NOTA: estas 3 são propositalmente sem policy de RLS - verificacao_email,
--- recuperacao_senha e sessao já têm policy FOR ALL USING(true) de propósito (o
--- projeto decidiu que a autorização desses fluxos fica no NestJS, não na RLS,
--- porque acontecem antes de existir sessão de usuário). Criar policy pra elas
--- seria redundante.
-('sessao_revogar'),
-('recuperacao_senha_revogar'),
+-- NOTA: esta é propositalmente sem policy de RLS - verificacao_email já tem policy FOR ALL USING(true) de
+-- propósito (a autorização desse fluxo fica no NestJS, não na RLS, porque acontece antes de existir sessão de
+-- usuário). Criar policy para ela seria redundante.
 ('verificacao_email_reenviar'),
 -- O worker de envio de notificação precisa de uma permissão própria para ler a fila (pol_notificacao_select,
 -- 04); emprestar 'usuario_visualizar_sensivel' quebraria o envio de e-mail se essa permissão fosse restringida
@@ -137,6 +133,10 @@ INSERT INTO permissao (nome) VALUES
 -- gateia liberar_bloqueio_login por inteiro (sempre ação de suporte/admin sobre a conta de outra pessoa).
 ('usuario_excluir'),
 ('usuario_desbloquear'),
+-- Ver a lista de usuários, a ficha e o histórico de login de outra pessoa, para atender (Nest,
+-- PERMISSOES_VER_USUARIOS). Diferente de usuario_visualizar_sensivel, não abre a fila de e-mails (com os links de
+-- verificação e de nova senha) nem os aceites de termo de ninguém.
+('usuario_visualizar_atendimento'),
 -- E - CAMPANHA (Campanhas, Atualizações, Comentários, Denúncias, Recompensas)
 ('campanha_aprovar'),
 ('campanha_rejeitar'),
@@ -162,9 +162,6 @@ INSERT INTO permissao (nome) VALUES
 ('pagamento_revisao_resolver'),
 -- I - SCORE (Parâmetros, Rótulos e motor de cálculo)
 ('score_editar'),
--- Permissão do catálogo sem uso em policy hoje: pol_score_select (04) é público (o score é a base do segundo
--- app do projeto), então esta permissão não gateia mais a leitura do score.
-('score_visualizar'),
 -- L - LOG DE AUDITORIA
 -- Gate de SELECT em log_auditoria (ver pol_log_auditoria_select, 04_rls_policies.sql [04-L]): sem esta
 -- permissão, só o próprio autor de uma linha a enxerga. trg_permissao_auto_admin (05, [05-K-3]) já concede ela
@@ -202,8 +199,6 @@ WHERE (p.nome, perm.nome) IN (
     ('admin', 'perfil_pesquisador_corrigir_cpf'),
     ('admin', 'perfil_pesquisador_alterar_de_outro'),
     ('admin', 'termos_uso_gerenciar'),
-    ('admin', 'sessao_revogar'),
-    ('admin', 'recuperacao_senha_revogar'),
     ('admin', 'verificacao_email_reenviar'),
     ('admin', 'notificacao_processar'),
     ('admin', 'usuario_excluir'),
@@ -227,42 +222,37 @@ WHERE (p.nome, perm.nome) IN (
     ('admin', 'pagamento_revisao_resolver'),
     -- I
     ('admin', 'score_editar'),
-    ('admin', 'score_visualizar'),
     -- L
     ('admin', 'log_visualizar'),
-    -- moderador: cuida da moderação de conteúdo e denúncias. score_visualizar
-    -- ajuda a priorizar fila de moderação (sinal de apoio, não bloqueio).
+    -- moderador: cuida da moderação de conteúdo e denúncias.
     ('moderador', 'denuncia_responder'),
     ('moderador', 'comentario_moderar'),
     ('moderador', 'atualizacao_moderar'),
     -- RF-108: fecha o ciclo de julgar uma denúncia e agir sobre ela sem precisar do admin (ver nota em [07-B-2]).
     ('moderador', 'campanha_encerrar_moderacao'),
-    ('moderador', 'score_visualizar'),
     -- revisor: vê tudo do funcionamento (relatórios, pontuação, auditoria financeira e log), sem dados pessoais e sem
     -- alterar nada. Mudar pesos e faixas da pontuação (score_editar) é só do admin.
     ('revisor', 'relatorio_visualizar'),
-    ('revisor', 'score_visualizar'),
     ('revisor', 'auditoria_financeira_visualizar'),
     ('revisor', 'log_visualizar'),
     -- suporte: atendimento de conta, sem acesso a dados sensíveis ou financeiros.
-    ('suporte', 'sessao_revogar'),
-    ('suporte', 'recuperacao_senha_revogar'),
     ('suporte', 'verificacao_email_reenviar'),
     -- Desbloquear login é atendimento de conta, mesmo escopo das outras permissões de 'suporte' acima.
     -- usuario_excluir NÃO fica com 'suporte': exclusão de conta é auto-serviço do titular (já funciona sem
     -- nenhuma permissão, ver excluir_conta_usuario em 03, [03-O]); suporte abre chamado, não executa. Só o
     -- admin mantém a permissão.
     ('suporte', 'usuario_desbloquear'),
+    -- Sem ver a conta, o Suporte não chega aos botões acima (ficam no Alterar Usuário).
+    ('suporte', 'usuario_visualizar_atendimento'),
     -- curador: aprova e rejeita campanhas (a curadoria) e cuida dos catálogos que classificam o conteúdo.
     -- relatorio_visualizar: sem ela a fila de campanhas aguardando aprovação fica invisível (pol_campanha_select, 04).
-    -- score_visualizar apoia a decisão. Publicar o Termo de Uso é só do admin.
+    -- Publicar o Termo de Uso é só do admin.
     ('curador', 'campanha_aprovar'),
     ('curador', 'campanha_rejeitar'),
     ('curador', 'relatorio_visualizar'),
     ('curador', 'tipolink_gerenciar'),
     ('curador', 'area_conhecimento_gerenciar'),
-    ('curador', 'motivo_denuncia_gerenciar'),
-    ('curador', 'score_visualizar')
+    ('curador', 'motivo_denuncia_gerenciar')
 )
 ON CONFLICT DO NOTHING;
 
@@ -285,11 +275,8 @@ INSERT INTO tipo_link (codigo, nome, ativo, regex, dominio, permite_perfil, perm
 -- score_config/id_pai, ver [01-I]); a campanha é OBRIGADA a escolher uma área de nível 2 (trigger em 05, ver
 -- [05-K-1]). Inclui a área Multidisciplinar.
 --
--- codigo_cnpq guarda só 'X.YY.00.00', sem dígito verificador: os dígitos que existiam não vieram de nenhuma fonte
--- conferida (nos códigos de grande área só o primeiro dígito é diferente de zero, então um dígito verificador
--- real por soma ponderada seria função só dele, e o seed antigo tinha 8 valores distintos para 9 entradas:
--- impossível vir de um algoritmo de verdade). Como codigo_cnpq é comparado por igualdade e nunca digitado à
--- mão, o dígito não protegia nada. Os nomes das áreas e a grande área de cada uma seguem a nomenclatura padrão
+-- codigo_cnpq guarda só 'X.YY.00.00', sem dígito verificador: como é comparado por igualdade e nunca digitado à
+-- mão, o dígito não protegeria nada. Os nomes das áreas e a grande área de cada uma seguem a nomenclatura padrão
 -- e estável do CNPq.
 INSERT INTO area_conhecimento (codigo_cnpq, nome, id_pai, ativo) VALUES
 ('1.00.00.00', 'Ciências Exatas e da Terra',          NULL, TRUE),
@@ -442,8 +429,7 @@ FROM (VALUES
 
 -- [07-C-3] motivo_denuncia
 -- Puro dado de catálogo. PERF-004 (vínculo institucional falso) é diferente de PERF-001 (dados acadêmicos
--- falsos, mais genérico): ficou relevante depois que perfil_pesquisador.vinculo_institucional virou NOT NULL.
--- Sem `codigo` (coluna removida, ver 01_extensoes_enums_tabelas.sql).
+-- falsos, mais genérico): perfil_pesquisador.vinculo_institucional é obrigatório.
 INSERT INTO motivo_denuncia (descricao, tipo) VALUES
 ('Campanha com informações falsas ou enganosas',           'campanha'),
 ('Campanha duplicada ou já existente',                     'campanha'),
@@ -548,7 +534,6 @@ O CPF é armazenado de forma cifrada e nunca exibido publicamente em sua forma c
 Este termo pode ser atualizado periodicamente; a versão vigente no momento da solicitação do upgrade é a que se aplica.', TRUE, '2026-10-03 00:00:00');
 -- Com id escrito à mão, a sequência não anda sozinha: a próxima versão criada recebe o id 5.
 SELECT setval(pg_get_serial_sequence('termos_de_uso', 'id_termo'), (SELECT max(id_termo) FROM termos_de_uso));
-
 
 -- [07-C-5] configuracoes: por que este bloco vem depois de usuario (ver DOCUMENTACAO_BD.md)
 -- Agrupado por domínio (A,D,E,F,H,I, mesma ordem de [07-B-2]): configuracoes.service.findall.ts ordena por
@@ -762,7 +747,6 @@ ON CONFLICT (chave) DO NOTHING;
 -- fila até alguém conferir e clicar em Rodar agora na T6, sem sair sozinho nem gastar a cota do provedor nos testes.
 UPDATE configuracoes SET valor = 'false' WHERE chave = 'tarefa_envio_email_ligada' AND id_usuario IS NULL;
 
-
 -- Permissões das ferramentas de teste do painel. trg_permissao_auto_admin (05) dá cada uma ao admin assim que a
 -- linha nasce; um banco de produção não roda esta parte, então nasce sem elas.
 --   perfil_pesquisador_criar_para_outro: criar_perfil_pesquisador_para_outro() (03, [03-R]), Bancada do Pesquisador.
@@ -789,7 +773,6 @@ WHERE p.codigo = 'usuario'
     'perfil_pesquisador_visualizar_sensivel',
     'contribuicao_visualizar_sensivel',
     'auditoria_financeira_visualizar',
-    'score_visualizar',
     'log_visualizar'
   )
 ON CONFLICT DO NOTHING;
@@ -989,7 +972,7 @@ INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, cpf_hash, tipo_vi
 (14, 'v1:gRfGHqP2CaS1KfN8:/Ndt5pdWu6A/ZxDBptQipQ==:XXTsLYETudrxeik=', '74fc41e2f0ea9e284b8c1d2379fcc4388988d1b4a18f53c88a626d91b5d4cbc6', 'institucional', 'Universidade Federal de Santa Catarina (UFSC)',     'mestre',   'ativo', '2025-03-18 11:30:00', 'email',     'v1:BktVyX2lb13+pXgw:HAs2NfQY/xfhwkfL0/ew3g==:KkqcgrQXrBTRVaZBeeJCH7C8m17wRUqS', '2025-03-20 10:00:00'),
 (15, 'v1:gH+4XLY9grNC1AAN:f0QkyT8OuWRTKwwbyHhtKQ==:/dE9nq3r7rYxs3k=', '3f022d05c183ecfb64cbb6ac2500e66ad731e684f1c9afd5e2cb801d5576d376', 'institucional', 'Universidade Federal de São Paulo (UNIFESP)',       'doutor',   'ativo', '2025-04-02 09:40:00', 'email',     'v1:UD+7wVPGzE/66K9j:i0IbQ4LVWvBT6wjsi1KUOw==:bIv+5CJ+YHLcwyezRmobW+Y1dadW8TCQ6Q==', '2025-04-05 10:00:00'),
 (16, 'v1:m7z9uq+435l0syBo:wVQB6djPxdi38eWcfpnUAQ==:45Hee0oUAA3IDek=', '469f49af437e577be058f668669a27ec903aa9ddc42895750ef3e1d45f05c380', 'independente',  NULL,                                                'graduado', 'ativo', '2025-04-20 09:10:00', 'aleatoria', 'v1:osAv1z/OK2WZ8RU3:vJDeX+k0L2kD5Q+T4CijEA==:dAVI1j17QB+ioBwcDzGp53tIsEZ6cX8H8FdqhOfJ+69WbX3s', '2025-04-22 10:00:00'),
-(17, 'v1:C1Zn4ew8FWLXPe4S:wcLOpqSIBgvH2Genmxlgsw==:RGXCLYPxkIwNTWM=', 'b9569cd5536268347eacea693dc45a92962d3084beca606e73fead8c3723d8fa', 'independente',  NULL,                                                'graduado', 'ativo', NOW() - INTERVAL '40 days', NULL, NULL, NULL);
+(17, 'v1:C1Zn4ew8FWLXPe4S:wcLOpqSIBgvH2Genmxlgsw==:RGXCLYPxkIwNTWM=', 'b9569cd5536268347eacea693dc45a92962d3084beca606e73fead8c3723d8fa', 'independente',  NULL,                                                'especialista', 'ativo', NOW() - INTERVAL '40 days', NULL, NULL, NULL);
 
 -- Estes pesquisadores já nascem com perfil pronto acima, então aceitaram o Termo de Upgrade de Pesquisador na
 -- data em que o próprio perfil foi ativado (ativado_em), na versão vigente naquela data.
@@ -1428,6 +1411,7 @@ BEGIN
     UPDATE evento_pagamento SET recebido_em = p_quando WHERE recebido_em >= v_inicio;
     UPDATE evento_pagamento SET processado_em = p_quando WHERE processado_em >= v_inicio;
     UPDATE evento_pagamento SET revisao_manual_em = p_quando WHERE revisao_manual_em >= v_inicio;
+    UPDATE evento_pagamento SET resolvido_em = p_quando WHERE resolvido_em >= v_inicio;
     UPDATE repasse SET repassado_em = p_quando WHERE repassado_em >= v_inicio;
     UPDATE repasse SET criado_em = p_quando WHERE criado_em >= v_inicio;
     UPDATE contribuicao SET dinheiro_liberado_em = p_quando WHERE dinheiro_liberado_em >= v_inicio;
@@ -1867,6 +1851,28 @@ FROM (VALUES
      'cancelado', 0, INTERVAL '3 days', INTERVAL '0 seconds', NULL, NULL, 'Cancelado no painel: a atualização foi retirada')
 ) AS v(id, tipo, dados, status, tentativas, idade, espera, provedor, assunto, erro)
 JOIN usuario u ON u.id_usuario = v.id;
+
+-- E-mails dos acontecimentos que o seed grava direto, sem passar pela função que enfileira: a campanha que já nasce
+-- aprovada, a conta que nasce sem o cadastro (21 a 23, ainda sem confirmar o e-mail) e a suspensão do Vinícius, já
+-- revogada (o "reativado" está acima). Entram como enviados, na data do acontecimento, com os mesmos dados que o
+-- gatilho grava, para a aba Notificações mostrar cada tipo.
+INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, dados, status, tentativas, criado_em, enviado_em, proxima_tentativa_em, provedor, assunto)
+SELECT u.id_usuario, u.email, 'campanha_aprovada', jsonb_build_object('nome', u.nome, 'id_campanha', c.id_campanha, 'titulo', c.titulo),
+       'enviado'::status_notificacao, 1, c.aprovado_em, c.aprovado_em, c.aprovado_em, 'seed', 'Sua campanha foi aprovada'
+FROM campanha c JOIN usuario u ON u.id_usuario = c.id_usuario
+WHERE c.aprovado_em IS NOT NULL
+UNION ALL
+SELECT u.id_usuario, u.email, 'verificacao_email', jsonb_build_object('nome', u.nome),
+       'enviado'::status_notificacao, 1, u.criado_em, u.criado_em, u.criado_em, 'seed', 'Confirme o seu e-mail no CrowdAcadêmico'
+FROM usuario u
+WHERE NOT u.email_verificado AND NOT u.deletado
+UNION ALL
+SELECT u.id_usuario, u.email, 'pesquisador_suspenso',
+       jsonb_build_object('nome', u.nome, 'motivo', 'Título acadêmico informado não confirmado no currículo Lattes; envie o comprovante ao suporte.',
+                          'suspenso_ate', NOW() - INTERVAL '30 days'),
+       'enviado'::status_notificacao, 1, NOW() - INTERVAL '60 days', NOW() - INTERVAL '60 days', NOW() - INTERVAL '60 days', 'seed', 'Seu perfil de pesquisador foi suspenso'
+FROM usuario u
+WHERE u.id_usuario = 16;
 
 -- [07-H-4] termos_de_uso: rascunhos da próxima versão (v3, id 5 e 6), feitos a partir da vigente com uma seção nova.
 -- Ainda não publicados (ativo = FALSE) e sem aceite: a tela mostra "Rascunho" e deixa editar e excluir. Entram

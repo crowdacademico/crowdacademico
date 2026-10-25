@@ -3,8 +3,8 @@ import { Link } from 'react-router';
 // Cópia fiel de componentes/footer.html do Projeto de Interface real (mesmas
 // classes Tailwind, mesmo conteúdo, inclusive os links das colunas - eles
 // apontam pra "#" no original também, são parte do protótipo visual, não
-// promessa de rota real). Único em toda tela (App.tsx). Marca agora navega
-// pra "/" (home), igual o logo do cabeçalho já fazia.
+// promessa de rota real). Único em toda tela (App.tsx). A marca navega pra
+// "/" (home), como o logo do cabeçalho.
 // As duas colunas de links: só os dados; o visual mora uma vez em ColunaDeLinks.
 const COLUNAS_DE_LINKS = [
   { titulo: 'Explore Projetos', links: ['Ciências Biológicas', 'Exatas e Engenharias', 'Ciências Humanas'] },

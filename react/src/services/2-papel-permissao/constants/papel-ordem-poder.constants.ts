@@ -1,17 +1,22 @@
-// Rótulo mostrado quando alguém só tem o papel padrão: usado tanto na coluna "papel" de ListarUsuarios quanto
-// (indiretamente, via ORDEM_PODER_PAPEL abaixo) no filtro por papel da tabela Permissões.
+// Rótulo mostrado quando alguém só tem o papel padrão (coluna e filtro "Papel" de Usuários e da T1).
 export const PAPEL_SEM_EXTRA = 'usuário';
 
-// Ordem de poder dos papéis, do menor para o maior (o filtro por papel vai de "usuário" até "admin", não
-// alfabético). Mesma ordem de DevLoginRapido/CONTAS_DEV, só invertida (lá é do maior para o menor). id_papel
-// 7=usuario ... 1=admin (07_seed_dados.sql [07-B-1]). Um só lugar de verdade (usado por listar-usuarios.tsx e
-// listar-papeis.tsx) evita as duas telas divergirem se a ordem de poder mudar.
-export const ORDEM_PODER_PAPEL = [
-  PAPEL_SEM_EXTRA,
-  'pesquisador',
-  'curador',
-  'suporte',
-  'revisor',
-  'moderador',
-  'admin',
-];
+// O papel que toda conta ganha no cadastro (atribuir_papel_padrao, 08). Reconhecido pelo código, que é fixo: o nome
+// pode ser renomeado pelo painel.
+export const CODIGO_PAPEL_PADRAO = 'usuario';
+
+interface PapelComOrdem {
+  ordemExibicao: number;
+}
+
+// Ordem de poder dos papéis, do maior cargo para o menor: papel.ordem_exibicao (01 [01-B]), a mesma em toda tela.
+// Nunca o nome (renomeável) nem o id_papel (ordem em que o papel foi criado).
+export function compararPorPoder(a: PapelComOrdem, b: PapelComOrdem): number {
+  return a.ordemExibicao - b.ordemExibicao;
+}
+
+// Opções do filtro "Papel" na ordem de poder, com o rótulo de quem só tem o papel padrão por último.
+export function ordemDoFiltroPapel(papeis: readonly (PapelComOrdem & { nome: string })[]): string[] {
+  const nomes = [...papeis].sort(compararPorPoder).map((papel) => papel.nome);
+  return [...new Set([...nomes, PAPEL_SEM_EXTRA])];
+}

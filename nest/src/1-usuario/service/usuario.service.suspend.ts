@@ -16,34 +16,24 @@ export class UsuarioServiceSuspend {
     private readonly autorizacao: AutorizacaoService,
   ) {}
 
-  // SAVEPOINT: buscarSuspensao roda AUTOMATICAMENTE ao abrir Alterar Usuário (SecaoModeracao), não é uma ação
-  // explícita da pessoa; sem essa proteção, a tela inteira dependeria das colunas
-  // suspenso_ate/motivo_suspensao/suspenso_por existirem no banco, e o endpoint sozinho derrubaria com 500 (o
-  // endpoint deve responder certo, não depender de o cliente engolir o erro).
   async buscarSuspensao(idUsuario: number): Promise<SuspensaoResponseDto> {
     await this.autorizacao.exigirProprioOuPermissao(
       idUsuario,
       'usuario_suspender',
       'Você só pode ver a suspensão da sua própria conta.',
     );
-    const db = this.database.getDb();
-    await sql`SAVEPOINT sp_buscar_suspensao_usuario`.execute(db);
-    try {
-      const linha = await db
-        .selectFrom('usuario')
-        .select(['suspenso_ate', 'motivo_suspensao', 'suspenso_por'])
-        .where('id_usuario', '=', idUsuario)
-        .executeTakeFirst();
+    const linha = await this.database
+      .getDb()
+      .selectFrom('usuario')
+      .select(['suspenso_ate', 'motivo_suspensao', 'suspenso_por'])
+      .where('id_usuario', '=', idUsuario)
+      .executeTakeFirst();
 
-      return {
-        suspensoAte: linha?.suspenso_ate ?? null,
-        motivoSuspensao: linha?.motivo_suspensao ?? null,
-        suspensoPor: linha?.suspenso_por ?? null,
-      };
-    } catch {
-      await sql`ROLLBACK TO SAVEPOINT sp_buscar_suspensao_usuario`.execute(db);
-      return { suspensoAte: null, motivoSuspensao: null, suspensoPor: null };
-    }
+    return {
+      suspensoAte: linha?.suspenso_ate ?? null,
+      motivoSuspensao: linha?.motivo_suspensao ?? null,
+      suspensoPor: linha?.suspenso_por ?? null,
+    };
   }
 
   async suspender(

@@ -22,6 +22,7 @@ import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
 import { contribuicaoApi } from '../../services/22-contribuicao/api/contribuicao.api';
+import { seguirCampanhaApi } from '../../services/16-seguir/api/seguir-campanha.api';
 import type { ResumoContribuicoes } from '../../services/22-contribuicao/type/contribuicao.type';
 
 interface ModalConsultarCampanhaProps {
@@ -52,6 +53,8 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
   // Quantas contribuições estão pagas e quantas existem. null = sem permissão para ver (só o dono e quem tem a
   // permissão): a linha some.
   const [resumoContribuicoes, setResumoContribuicoes] = useState<ResumoContribuicoes | null>(null);
+  // Quantas pessoas seguem (só o número). null = a busca falhou: a linha some.
+  const [seguidores, setSeguidores] = useState<number | null>(null);
   // O histórico e o resumo vêm em buscas à parte: o modal só aparece quando os dois chegam, para não crescer depois
   // de aberto.
   const [historicoCarregado, setHistoricoCarregado] = useState(false);
@@ -61,6 +64,7 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
       void Promise.allSettled([
         campanhaApi.listarHistoricoRejeicao(auth.authFetch, campanha.idCampanha).then(setHistoricoRejeicao),
         contribuicaoApi.resumoDaCampanha(auth.authFetch, campanha.idCampanha).then(setResumoContribuicoes),
+        seguirCampanhaApi.contarSeguidores(auth.authFetch, campanha.idCampanha).then((contagem) => setSeguidores(contagem.seguidores)),
       ]).then(() => setHistoricoCarregado(true));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -127,6 +131,7 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
             <SecaoFicha titulo="Dados">
               <CampoFicha rotulo="id" valor={campanha.idCampanha} />
               <CampoFicha rotulo="Área do conhecimento" valor={campanha.nomeArea ?? `#${campanha.idAreaConhecimento}`} />
+              {seguidores !== null && <CampoFicha rotulo="Seguidores" valor={seguidores} />}
               <CampoFicha rotulo="Descrição" valor={campanha.descricao} largura="cheia" />
               <CampoFicha rotulo="Vídeo de apresentação" valor={campanha.videoApresentacaoUrl} largura="cheia" />
             </SecaoFicha>
@@ -227,8 +232,7 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
             </div>
           ) : (
             // A gestão (Campanhas) só lê: os endossados (o que a página pública mostra), as denúncias e todos os
-            // comentários, os dois últimos paginados pelo servidor. Contribuições e seguidores entram aqui quando os
-            // módulos deles existirem.
+            // comentários, os dois últimos paginados pelo servidor.
             <>
               {campanha.aprovadoEm !== null && (
                 <div className={'lg:col-span-3' + ve('comentarios')}>

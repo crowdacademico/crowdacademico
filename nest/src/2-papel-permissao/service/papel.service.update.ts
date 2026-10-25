@@ -49,6 +49,7 @@ export class PapelServiceUpdate {
         nome: linha.nome,
         codigo: linha.codigo,
         descricao: linha.descricao,
+        ordemExibicao: linha.ordem_exibicao,
       };
     } catch (erro) {
       if (
