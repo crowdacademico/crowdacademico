@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useId, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { FichaLadoALado, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { FiltroPartes } from '../../components/crud/filtro-partes';
@@ -111,7 +111,11 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
   const [formPerfil, setFormPerfil] = useState<FormPerfil | null>(null);
   const [corrigindoCpf, setCorrigindoCpf] = useState(false);
   const [cpfCorrecao, setCpfCorrecao] = useState('');
-  const idCpfCorreto = useId();
+  // Ao abrir a correção, o foco vai para a caixa "CPF correto" (ela já existe, invisível, antes de abrir).
+  const campoCpfCorreto = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (corrigindoCpf) campoCpfCorreto.current?.focus();
+  }, [corrigindoCpf]);
   // Suspensões, lidas pelas seções de moderação: aparecem também no cabeçalho.
   const [suspensaoConta, setSuspensaoConta] = useState<EstadoSuspensao | null>(null);
   const [suspensaoPesquisador, setSuspensaoPesquisador] = useState<EstadoSuspensao | null>(null);
@@ -501,42 +505,50 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
             </div>
 
             {formPerfil && perfilPesquisador && (
-              <div className="lg:col-span-2">
-                <SecaoFicha titulo="Perfil de Pesquisador">
-                  <CaixaSomenteLeitura rotulo="CPF atual" valor={formatarCpfOuMotivoOculto(perfilPesquisador.cpf)} />
-                  {corrigindoCpf ? (
-                    // Mesma grade de 2 colunas da seção: o campo com a largura dos outros, e os botões na 2ª coluna,
-                    // centralizados na altura do campo (linha 2 da grade).
-                    <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 items-center rounded-lg border borda-forte p-3">
-                      <label htmlFor={idCpfCorreto} className="legenda texto-herdado">
-                        CPF correto (suporte/admin)
-                      </label>
-                      <input
-                        id={idCpfCorreto}
-                        type="text"
-                        value={formatarCpf(cpfCorrecao)}
-                        onChange={(evento) => setCpfCorrecao(evento.target.value.replace(/\D/g, '').slice(0, 11))}
-                        aria-invalid={Boolean(cpf.erroDe('cpf'))}
-                        className={'input-padrao sm:col-start-1' + (cpf.erroDe('cpf') ? ' borda-erro' : '')}
-                        autoFocus
-                      />
-                      <div className="flex justify-end gap-2 sm:col-start-2 sm:row-start-2">
-                        <button type="button" className="btn btn-secondary" onClick={cancelarCorrecaoCpf}>
-                          Cancelar
-                        </button>
-                        <button type="button" className="btn btn-primary" onClick={() => void salvarCorrecaoCpf()}>
-                          Salvar CPF
-                        </button>
-                      </div>
-                      {cpf.erroDe('cpf') && <span className="texto-erro enfase sm:col-span-2">{cpf.erroDe('cpf')}</span>}
+              <div className="lg:col-span-3">
+                {/* A linha toda, em 2 linhas de 3 colunas: CPF, a correção e o score em cima; o vínculo e o título embaixo.
+                    Nada muda de tamanho: a correção do CPF troca a caixa e o botão no mesmo lugar (.camadas), e o
+                    "Vínculo institucional" fica no lugar, em branco, quando não se aplica. */}
+                <SecaoFicha titulo="Perfil de Pesquisador" colunas={3}>
+                  <div className="camadas">
+                    <div className={corrigindoCpf ? 'invisible' : undefined} inert={corrigindoCpf}>
+                      <CaixaSomenteLeitura rotulo="CPF atual" valor={formatarCpfOuMotivoOculto(perfilPesquisador.cpf)} />
                     </div>
-                  ) : (
-                    <div className="flex items-end">
-                      <button type="button" className="btn btn-secondary" onClick={() => setCorrigindoCpf(true)}>
-                        <i className="fa-solid fa-pen" aria-hidden="true"></i> Corrigir CPF
+                    <div className={corrigindoCpf ? undefined : 'invisible'} inert={!corrigindoCpf}>
+                      <Campo rotulo="CPF correto" erro={cpf.erroDe('cpf')}>
+                        {({ atributos, classeErro }) => (
+                          <input
+                            {...atributos}
+                            type="text"
+                            value={formatarCpf(cpfCorrecao)}
+                            onChange={(evento) => setCpfCorrecao(evento.target.value.replace(/\D/g, '').slice(0, 11))}
+                            className={'input-padrao' + classeErro}
+                            ref={campoCpfCorreto}
+                          />
+                        )}
+                      </Campo>
+                    </div>
+                  </div>
+                  {/* Encostado embaixo, na linha da caixa: "Corrigir CPF" vira "Cancelar" e "Salvar CPF" no mesmo lugar. */}
+                  <div className="camadas self-end justify-items-start">
+                    <button
+                      type="button"
+                      className={'btn btn-secondary altura-de-campo whitespace-nowrap' + (corrigindoCpf ? ' invisible' : '')}
+                      inert={corrigindoCpf}
+                      onClick={() => setCorrigindoCpf(true)}
+                    >
+                      <i className="fa-solid fa-pen" aria-hidden="true"></i> Corrigir CPF
+                    </button>
+                    <div className={'flex gap-2' + (corrigindoCpf ? '' : ' invisible')} inert={!corrigindoCpf}>
+                      <button type="button" className="btn btn-secondary altura-de-campo whitespace-nowrap" onClick={cancelarCorrecaoCpf}>
+                        Cancelar
+                      </button>
+                      <button type="button" className="btn btn-primary altura-de-campo whitespace-nowrap" onClick={() => void salvarCorrecaoCpf()}>
+                        Salvar CPF
                       </button>
                     </div>
-                  )}
+                  </div>
+                  <CaixaSomenteLeitura rotulo="Score atual" valor={scoreNovo ?? perfilPesquisador.scoreAtual} />
                   <CamposVinculoPerfil
                     tipoVinculo={formPerfil.tipoVinculo}
                     vinculoInstitucional={formPerfil.vinculoInstitucional}
@@ -546,8 +558,8 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                     aoAlterarVinculoInstitucional={(valor) => setFormPerfil({ ...formPerfil, vinculoInstitucional: valor })}
                     aoAlterarTituloAcademico={(titulo) => setFormPerfil({ ...formPerfil, tituloAcademico: titulo })}
                     erroVinculoInstitucional={perfil.erroDe('vinculoInstitucional')}
+                    reservarVinculoInstitucional
                   />
-                  <CaixaSomenteLeitura rotulo="Score atual" valor={scoreNovo ?? perfilPesquisador.scoreAtual} />
                 </SecaoFicha>
               </div>
             )}

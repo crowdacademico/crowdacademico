@@ -18,6 +18,9 @@ interface CamposVinculoPerfilProps {
   aoAlterarVinculoInstitucional: (valor: string) => void;
   aoAlterarTituloAcademico: (titulo: TituloAcademico) => void;
   erroVinculoInstitucional?: string;
+  // Quando o vínculo não é institucional, o campo fica no lugar, invisível, em vez de sumir: o título acadêmico não
+  // pula para o lado (Alterar Usuário, grade de 3 colunas).
+  reservarVinculoInstitucional?: boolean;
 }
 
 // Os 3 campos abaixo (tipo de vínculo, vínculo institucional condicional, título acadêmico) são idênticos em 3
@@ -34,7 +37,9 @@ export function CamposVinculoPerfil({
   aoAlterarVinculoInstitucional,
   aoAlterarTituloAcademico,
   erroVinculoInstitucional,
+  reservarVinculoInstitucional = false,
 }: CamposVinculoPerfilProps) {
+  const institucional = tipoVinculo === 'institucional';
   return (
     <>
       <Campo rotulo="Tipo de vínculo">
@@ -56,18 +61,20 @@ export function CamposVinculoPerfil({
         )}
       </Campo>
 
-      {tipoVinculo === 'institucional' && (
-        <Campo rotulo={rotuloVinculoInstitucional} erro={erroVinculoInstitucional}>
-          {({ atributos, classeErro }) => (
-            <input
-              {...atributos}
-              type="text"
-              value={vinculoInstitucional}
-              onChange={(evento) => aoAlterarVinculoInstitucional(evento.target.value)}
-              className={'input-padrao' + classeErro}
-            />
-          )}
-        </Campo>
+      {(institucional || reservarVinculoInstitucional) && (
+        <div className={institucional ? undefined : 'invisible'} inert={!institucional} aria-hidden={!institucional || undefined}>
+          <Campo rotulo={rotuloVinculoInstitucional} erro={erroVinculoInstitucional}>
+            {({ atributos, classeErro }) => (
+              <input
+                {...atributos}
+                type="text"
+                value={vinculoInstitucional}
+                onChange={(evento) => aoAlterarVinculoInstitucional(evento.target.value)}
+                className={'input-padrao' + classeErro}
+              />
+            )}
+          </Campo>
+        </div>
       )}
 
       <Campo rotulo="Título acadêmico">

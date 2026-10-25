@@ -9,7 +9,7 @@ import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 
 import { useBuscar } from '../../services/constant/hook/use-buscar';
-import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
+import { formatarData, formatarDataHora } from '../../services/constant/util/formatacao.util';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { SecaoComentariosRecebidos } from '../17-comentario/secao-comentarios-recebidos';
 import { SecaoDenunciasCampanha } from '../19-denuncia/secao-denuncias-campanha';
@@ -17,8 +17,8 @@ import { SecaoPedidosEncerramento } from '../20-solicitacao-encerramento/secao-p
 import { SecaoComentariosEndossados, SecaoComentariosTodos } from '../17-comentario/secao-comentarios-campanha';
 import { SecaoAtualizacoesCampanha } from '../15-atualizacao-campanha/secao-atualizacoes-campanha';
 import { SecaoRecompensasCampanha } from '../18-recompensa/secao-recompensas-campanha';
-import { celulaArrecadado } from './colunas-campanha';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
+import { SecaoFinanceiroCampanha } from './secao-financeiro-campanha';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
 import { contribuicaoApi } from '../../services/22-contribuicao/api/contribuicao.api';
@@ -196,37 +196,14 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
             </div>
           )}
 
-          {/* Financeiro na linha inteira, embaixo de Dados e Auditoria, numa linha só de ponta a ponta, na ordem do
-              dinheiro: quanto entrou, contra a meta, a taxa e o que sobra para o pesquisador; por último, de quantas
-              contribuições. */}
+          {/* Financeiro na linha inteira, embaixo de Dados e Auditoria (a mesma peça do Alterar). */}
           <div className={'lg:col-span-3' + ve('dados')}>
-            <SecaoFicha titulo="Financeiro" centralizada>
-              {/* A mesma célula da coluna "arrecadado" das tabelas (DS-105): a barra fina colada embaixo do número, na
-                  largura dele, mostrando quanto da meta já foi atingido. */}
-              <CampoFicha rotulo="Arrecadado" valor={celulaArrecadado(campanha.valorBrutoArrecadado, campanha.metaFinanceira)} />
-              <CampoFicha rotulo="Meta" valor={formatarMoeda(campanha.metaFinanceira)} />
-              <CampoFicha
-                rotulo="Taxa"
-                valor={campanha.taxaPlataforma === null ? 'Ainda não carimbada (não aprovada)' : `${campanha.taxaPlataforma}%`}
-              />
-              {/* RF-087: o que o pesquisador receberia hoje, pela mesma conta do repasse (taxa mínima incluída); antes
-                  da aprovação, com a taxa padrão. */}
-              <CampoFicha rotulo="Líquido estimado" valor={formatarMoeda(campanha.valorLiquidoEstimado)} />
-              <CampoFicha
-                rotulo="Contribuições"
-                valor={
-                  resumoContribuicoes &&
-                  (resumoContribuicoes.total === 0
-                    ? 'Nenhuma ainda.'
-                    : `${resumoContribuicoes.pagas} pagas de ${resumoContribuicoes.total}`)
-                }
-              />
-            </SecaoFicha>
+            <SecaoFinanceiroCampanha campanha={campanha} meta={campanha.metaFinanceira} resumoContribuicoes={resumoContribuicoes} />
           </div>
 
-          {/* Orçamento e cronograma, só para ler: a consulta mostra a campanha inteira. Um respiro a mais antes (mt-4,
-              além do vão da grade): as tabelas começam outro assunto, depois dos campos de Dados, Auditoria e Financeiro. */}
-          <div className={'lg:col-span-3 mt-4' + ve('orcamento')}>
+          {/* Orçamento e cronograma, só para ler: a consulta mostra a campanha inteira. Uma linha divisória antes (com o
+              Financeiro à vista): as tabelas começam outro assunto, depois dos campos de Dados, Auditoria e Financeiro. */}
+          <div className={'lg:col-span-3' + (parte === 'geral' ? ' pt-6 border-t borda-padrao' : '') + ve('orcamento')}>
             <PainelOrcamentoCronograma auth={auth} idCampanha={campanha.idCampanha} podeEditar={false} />
           </div>
 

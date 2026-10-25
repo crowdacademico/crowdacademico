@@ -27,8 +27,8 @@ interface PainelOrcamentoCronogramaProps {
   // `abaFixa`: mostra só uma das duas partes (Orçamento e Cronograma são etapas diferentes de Criar Campanha).
   // Sem isto (Consultar e Alterar Campanha), as duas aparecem juntas, cada uma com o seu título: nada escondido atrás
   // de botões de trocar. Lado a lado, com uma linha entre elas, quando o espaço do painel passa de 48rem (`@3xl`); senão,
-  // uma embaixo da outra. Conta o espaço do PAINEL, não da tela: no Consultar ele tem o modal inteiro (lado a lado),
-  // no Alterar divide o modal com o Resumo (uma embaixo da outra), e no celular nunca cabe.
+  // uma embaixo da outra. Conta o espaço do PAINEL, não da tela: no Consultar e no Alterar ele tem a largura toda do
+  // modal (lado a lado); no celular, nunca cabe.
   abaFixa?: 'orcamento' | 'cronograma';
   // `metaFinanceira`: opcional; quando presente, a tabela de Orçamento mostra o total em relação à meta acima dela.
   metaFinanceira?: number;

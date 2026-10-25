@@ -33,8 +33,9 @@ import type {
 } from '../../services/12-campanha/type/campanha.type';
 import type { OrcamentoCampanhaResponse } from '../../services/13-orcamento-campanha/type/orcamento-campanha.type';
 import type { MarcoCronogramaResponse } from '../../services/14-marco-cronograma/type/marco-cronograma.type';
-import { celulaArrecadado } from './colunas-campanha';
 import { avaliarCriteriosEnvio } from '../../services/12-campanha/util/criterios-envio.util';
+import { contribuicaoApi } from '../../services/22-contribuicao/api/contribuicao.api';
+import { SecaoFinanceiroCampanha } from './secao-financeiro-campanha';
 
 // O que a Bancada da Campanha encaixa abaixo do orçamento/cronograma: checklist e Aprovar/Rejeitar, com as
 // contagens já carregadas pelo painel.
@@ -128,26 +129,31 @@ export function ModalAlterarCampanha({
   // sendo editado se perde ao trocar. Avisos do topo e a decisão da Bancada aparecem em todas as partes.
   const [parte, setParte] = useState<ParteAlterar>('geral');
   const ve = (alvo: ParteAlterar) => (parte === 'geral' || parte === alvo ? '' : ' hidden');
-  const comResumo = parte === 'geral' || parte === 'dados';
+  const comDados = parte === 'geral' || parte === 'dados';
 
-  // Campanha rejeitada traz junto o histórico de rejeições (o motivo aparece no topo do modal).
+  // Campanha rejeitada traz junto o histórico de rejeições (o motivo aparece no topo do modal). O resumo das
+  // contribuições (Financeiro) vem na mesma busca: o modal só aparece com tudo, sem crescer depois de aberto. Sem
+  // permissão para ver, o resumo fica null e o campo mostra "-".
   const { dado } = useBuscar(
     async () => {
       const campanhaBuscada = await campanhaApi.buscar(auth.authFetch, idCampanha);
-      const historicoBuscado: HistoricoRejeicaoResponse[] =
+      const [historicoBuscado, resumoBuscado] = await Promise.all([
         campanhaBuscada.status === 'rejeitado'
-          ? await campanhaApi.listarHistoricoRejeicao(auth.authFetch, idCampanha).catch((erroHistorico: unknown) => {
+          ? campanhaApi.listarHistoricoRejeicao(auth.authFetch, idCampanha).catch((erroHistorico: unknown) => {
               reportarErro(erroHistorico);
-              return [];
+              return [] as HistoricoRejeicaoResponse[];
             })
-          : [];
-      return { campanha: campanhaBuscada, historico: historicoBuscado };
+          : Promise.resolve([] as HistoricoRejeicaoResponse[]),
+        contribuicaoApi.resumoDaCampanha(auth.authFetch, idCampanha).catch(() => null),
+      ]);
+      return { campanha: campanhaBuscada, historico: historicoBuscado, resumoContribuicoes: resumoBuscado };
     },
     [idCampanha],
     { aoChegar: ({ campanha: dados }) => setForm(paraForm(dados)), erros: errosDaTela },
   );
   const campanha: CampanhaResponse | null = dado?.campanha ?? null;
   const historico = dado?.historico ?? [];
+  const resumoContribuicoes = dado?.resumoContribuicoes ?? null;
 
   const rejeitadaSomenteLeitura = campanha?.status === 'rejeitado' && campanha.somenteLeitura;
   const edicaoTravada = rejeitadaSomenteLeitura;
@@ -350,10 +356,15 @@ export function ModalAlterarCampanha({
           )}
 
           <div className="grade-ficha">
-            <div className={(comResumo ? 'lg:col-span-2' : 'lg:col-span-3') + ' space-y-6'}>
+            {/* Primeira faixa: os dados à esquerda e, à direita, a Auditoria. Embaixo, na largura toda (como no
+                Consultar), o orçamento e o cronograma, lado a lado quando cabem, e as seções do dono. */}
+            <div className={'lg:col-span-2 space-y-6' + (comDados ? '' : ' hidden')}>
               <div className={'space-y-6' + ve('dados')}>
+                {/* Duas colunas: Título e Início na primeira linha, Área e Fim na segunda; Descrição e Vídeo na largura
+                    toda. As datas ficam aqui, não numa seção "Período" à parte. */}
                 <SecaoFicha titulo="Informações da campanha">
-                  {campoTexto('titulo', 'Título')}
+                  {campoTexto('titulo', 'Título', '')}
+                  {campoTexto('dataInicio', 'Início', '', 'date')}
                   {travado('idAreaConhecimento') ? (
                     <CampoFicha rotulo="Área do conhecimento" valor={areas.find((area) => String(area.idAreaConhecimento) === form.idAreaConhecimento)?.nome ?? campanha.nomeArea} />
                   ) : (
@@ -375,6 +386,7 @@ export function ModalAlterarCampanha({
                       )}
                     </Campo>
                   )}
+                  {campoTexto('dataFim', 'Fim (previsto)', '', 'date')}
                   {travado('descricao') ? (
                     <CampoFicha rotulo="Descrição" valor={form.descricao} largura="cheia" />
                   ) : (
@@ -396,65 +408,12 @@ export function ModalAlterarCampanha({
                   )}
                   {campoTexto('videoApresentacaoUrl', 'Vídeo de apresentação', 'sm:col-span-2', 'url')}
                 </SecaoFicha>
-
-                <SecaoFicha titulo="Período">
-                  {campoTexto('dataInicio', 'Início', '', 'date')}
-                  {campoTexto('dataFim', 'Fim (previsto)', '', 'date')}
-                </SecaoFicha>
               </div>
-
-              <div className={ve('orcamento').trim()}>
-                <PainelOrcamentoCronograma
-                  auth={auth}
-                  idCampanha={idCampanha}
-                  podeEditar={podeEditarItens}
-                  metaFinanceira={Number(form.metaFinanceira)}
-                  dataInicioCampanha={form.dataInicio}
-                  minimoMarcosCronograma={regras.minimoMarcosCronograma}
-                  aoCarregar={(itens, marcos) => {
-                    setOrcamento(itens);
-                    setCronograma(marcos);
-                  }}
-                />
-              </div>
-
-              {ehDono && (
-                <div className={ve('recompensas').trim()}>
-                  <SecaoRecompensasCampanha auth={auth} idCampanha={idCampanha} podeGerenciar />
-                </div>
-              )}
-
-              {ehDono && STATUS_PUBLICADA.has(campanha.status) && (
-                <>
-                  <div className={ve('atualizacoes').trim()}>
-                    <SecaoAtualizacoesCampanha auth={auth} idCampanha={idCampanha} podePublicar={STATUS_ACEITA_ATUALIZACAO.has(campanha.status)} />
-                  </div>
-                  <div className={ve('comentarios').trim()}>
-                    <SecaoComentariosRecebidos auth={auth} idCampanha={idCampanha} publicada />
-                  </div>
-                </>
-              )}
-
-              {ehDono && campanha.status === 'ativo' && (
-                <div className={ve('encerramento').trim()}>
-                  <SecaoEncerramentoAntecipado
-                    authFetch={auth.authFetch}
-                    idCampanha={idCampanha}
-                    valorArrecadado={campanha.valorBrutoArrecadado}
-                    aoEncerrada={() => {
-                      aoMudar();
-                      aoFechar();
-                    }}
-                  />
-                </div>
-              )}
-
-              {secaoAdmin?.({ campanha, orcamento, cronograma })}
             </div>
 
-            <div className={'space-y-6' + (comResumo ? '' : ' hidden')}>
+            <div className={'space-y-6' + (comDados ? '' : ' hidden')}>
               {/* Auditoria no topo da coluna da direita, como no Consultar Campanha: quando cada coisa aconteceu. Início e
-                  fim não entram: aqui são campos de Período, à esquerda. "Por" só com o nome de quem aprovou (só vem
+                  fim não entram: aqui são campos de Informações da campanha, à esquerda. "Por" só com o nome de quem aprovou (só vem
                   para quem pode aprovar); antes da aprovação, os dois com "-". */}
               <SecaoFicha titulo="Auditoria">
                 <CampoFicha rotulo="Criada em" valor={formatarDataHora(campanha.criadoEm, true)} largura="cheia" />
@@ -475,29 +434,67 @@ export function ModalAlterarCampanha({
                   <CampoFicha rotulo="Encerrada em" valor={formatarDataHora(campanha.encerradoEm, true)} largura="cheia" />
                 )}
               </SecaoFicha>
+            </div>
 
-              {/* Resumo: o que só se consulta aqui (arrecadado, taxa, status, id) e a meta, que só é campo enquanto a
-                  campanha não foi aprovada. */}
-              <div className="rounded-xl border borda-padrao fundo-sutil p-5 space-y-5">
-                <h3 className="titulo-bloco titulo-bloco--linha mb-0">Resumo</h3>
-                <CampoFicha
-                  rotulo="Status"
-                  valor={
-                    <BadgeStatusCampanha campanha={campanha} />
-                  }
+            <div className="lg:col-span-3 space-y-6">
+              {/* Financeiro na linha inteira, como no Consultar (a mesma peça). A meta é campo enquanto a campanha não foi
+                  aprovada; a situação já está no selo do topo do modal. */}
+              <div className={ve('dados').trim()}>
+                <SecaoFinanceiroCampanha
+                  campanha={campanha}
+                  meta={Number(form.metaFinanceira)}
+                  campoMeta={campoTexto('metaFinanceira', 'Meta', '', 'number')}
+                  resumoContribuicoes={resumoContribuicoes}
                 />
-                {campoTexto('metaFinanceira', 'Meta (R$)', '', 'number')}
-                {/* A mesma célula da coluna "arrecadado" das tabelas (DS-105), com a meta do formulário: muda junto. */}
-                <CampoFicha
-                  rotulo="Arrecadado"
-                  valor={celulaArrecadado(Number(campanha.valorBrutoArrecadado), Number(form.metaFinanceira))}
-                />
-                <CampoFicha
-                  rotulo="Taxa da plataforma"
-                  valor={campanha.taxaPlataforma === null ? 'Definida na aprovação' : `${campanha.taxaPlataforma}%`}
-                />
-                <CampoFicha rotulo="id" valor={campanha.idCampanha} />
               </div>
+                {/* Uma linha divisória antes das tabelas, como no Consultar: começa outro assunto, depois do Financeiro. */}
+                <div className={ve('orcamento').trim() + (comDados ? ' pt-6 border-t borda-padrao' : '')}>
+                  <PainelOrcamentoCronograma
+                    auth={auth}
+                    idCampanha={idCampanha}
+                    podeEditar={podeEditarItens}
+                    metaFinanceira={Number(form.metaFinanceira)}
+                    dataInicioCampanha={form.dataInicio}
+                    minimoMarcosCronograma={regras.minimoMarcosCronograma}
+                    aoCarregar={(itens, marcos) => {
+                      setOrcamento(itens);
+                      setCronograma(marcos);
+                    }}
+                  />
+                </div>
+
+                {ehDono && (
+                  <div className={ve('recompensas').trim()}>
+                    <SecaoRecompensasCampanha auth={auth} idCampanha={idCampanha} podeGerenciar />
+                  </div>
+                )}
+
+                {ehDono && STATUS_PUBLICADA.has(campanha.status) && (
+                  <>
+                    <div className={ve('atualizacoes').trim()}>
+                      <SecaoAtualizacoesCampanha auth={auth} idCampanha={idCampanha} podePublicar={STATUS_ACEITA_ATUALIZACAO.has(campanha.status)} />
+                    </div>
+                    <div className={ve('comentarios').trim()}>
+                      <SecaoComentariosRecebidos auth={auth} idCampanha={idCampanha} publicada />
+                    </div>
+                  </>
+                )}
+
+                {ehDono && campanha.status === 'ativo' && (
+                  <div className={ve('encerramento').trim()}>
+                    <SecaoEncerramentoAntecipado
+                      authFetch={auth.authFetch}
+                      idCampanha={idCampanha}
+                      valorArrecadado={campanha.valorBrutoArrecadado}
+                      aoEncerrada={() => {
+                        aoMudar();
+                        aoFechar();
+                      }}
+                    />
+                  </div>
+                )}
+
+                {secaoAdmin?.({ campanha, orcamento, cronograma })}
             </div>
           </div>
         </>
