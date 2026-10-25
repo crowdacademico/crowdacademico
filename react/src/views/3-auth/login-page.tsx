@@ -3,6 +3,7 @@ import { MensagemErro } from '../../components/crud/mensagem-erro';
 import type { FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { IconeGoogle } from '../../components/auth/icone-google';
+import { LogoMarca } from '../../components/layout/logo-marca';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { Campo } from '../../components/input/campo';
 import { ErroHttp } from '../../services/constant/api/http.util';
@@ -87,9 +88,7 @@ export function LoginPage({ auth }: PropsPagina) {
           <div
             className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 brilho-marca brilho-marca-forte rounded-full blur-3xl"
           ></div>
-          <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center texto-sobre-cor icone-destaque mb-5 shadow-lg relative z-10">
-            <i className="fa-solid fa-flask" aria-hidden="true"></i>
-          </div>
+          <LogoMarca className="h-14 mx-auto mb-5 relative z-10" />
           <h1 className="titulo-pagina mb-2 relative z-10">Bem-vindo(a)</h1>
           <p className="paragrafo texto-fraco relative z-10">
             Acesse sua conta para apoiar a ciência brasileira.

@@ -4,15 +4,15 @@
 
 > 📌 **Numeração de RF (24-10-2026):** os requisitos vigentes têm 125 RFs, na numeração da `MATRIZ-RASTREABILIDADE-RF.md`. Citações de RF por número neste documento foram escritas em datas diferentes e podem estar em qualquer numeração anterior (a numeração mudou várias vezes, a última em 24-10-2026). A `MATRIZ-RASTREABILIDADE-RF.md` está inteira na numeração vigente e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
 
-**Grupos:** 0. Para a Alexia ler · 1. Levar para a revisão externa (Requisitos) · 2. Dependem de outro módulo · 3. No dia do deploy · 4. Fim do projeto · 5. Decisões do Lucas, sem pressa · 6. Registros que não são pendência.
+**Grupos:** 0. Para a Alexia ler · 1. Levar para a revisão externa (Requisitos) · 2. Dependem de outro módulo · 3. No dia do deploy · 4. Fim do projeto · 5. Decisões em aberto, sem pressa · 6. Registros que não são pendência.
 
 ---
 
 ## ⭐ Para discutir (anotado em 18-10-2026, no topo de propósito)
 
 - **Colunas das tabelas, passo seguinte (largura mínima por tipo e respiro maior).** Medido em 18-10-2026 (20 telas, 1400 e 1920 px): a dança entre páginas acabou (coluna id fixa e `textoExibido`, DS-104), mas **6 tabelas rolam de lado a 1400 px** (Campanhas, Parâmetros, Denúncias, Pedidos de Encerramento, T2 e T5) e o respiro entre colunas é de cerca de 27 px. Aumentar o respiro hoje faria mais tabelas rolarem. Opções: um token de largura mínima por tipo de coluna (`--largura-coluna-status`, `-dinheiro`, `-data`...), tirar colunas das listas mais largas (deixar no Consultar) ou aceitar a rolagem. Decidir antes de mexer.
-  - **Condições do Lucas (25-10-2026):** não tirar nenhuma coluna por enquanto. O caminho é **apertar** sem valor escrito à mão: por exemplo, o e-mail (`suporte@crowdacademico.com.br`) quebrar no "@" ou ganhar o "ler tudo", para a coluna não ficar tão larga. Fazer olhando as telas com o Playwright, tabela por tabela. Se alguma coluna for muito, muito menos útil e puder ficar só no Consultar, apontar e provar com a tela, sem tirar sozinho.
-- **Reorganizar o `DESIGN_SYSTEM.md` (Lucas, 18-10-2026, para o futuro, não agora):** as regras principais (core), como linha e coluna das tabelas (DS-100, DS-104, DS-105), passam para os números de destaque, para serem achadas primeiro. Junto da reorganização numérica de pastas e arquivos (seção de Pagamento).
+  - **Condições (25-10-2026):** não tirar nenhuma coluna por enquanto. O caminho é **apertar** sem valor escrito à mão: por exemplo, o e-mail (`suporte@crowdacademico.com.br`) quebrar no "@" ou ganhar o "ler tudo", para a coluna não ficar tão larga. Fazer olhando as telas com o Playwright, tabela por tabela. Se alguma coluna for muito, muito menos útil e puder ficar só no Consultar, apontar e provar com a tela antes de tirar.
+- **Reorganizar o `DESIGN_SYSTEM.md` (18-10-2026, para o futuro, não agora):** as regras principais (core), como linha e coluna das tabelas (DS-100, DS-104, DS-105), passam para os números de destaque, para serem achadas primeiro. Junto da reorganização numérica de pastas e arquivos (seção de Pagamento).
 
 **Financeiro comparado com o mercado (19-10-2026).** Feitos no mesmo dia: a contestação de cartão vai para revisão manual, e o repasse espera a carência de `repasse_carencia_dias` (15). Fica para decidir:
 - **Quem ressarce o dinheiro que volta depois do repasse.** Contestação de cartão e devolução por fraude do Pix (MED, até 80 dias) podem chegar depois da carência. O Catarse põe no termo que o criador ressarce, desconta do saldo dele e, se ele já sacou, cobra em 10 dias com multa de 10% (Termos de Uso, itens 7.9 e 7.10). Aqui: escrever a cláusula no Termo do Pesquisador (Lucas e Alexia) e decidir se o sistema registra a dívida e desconta do próximo repasse.
@@ -33,27 +33,28 @@
 
 - **Textos dos e-mails: no código ou em tabela? (aberto em 24-10-2026, ESTUDAR antes de decidir).** Hoje o assunto e o texto de cada e-mail moram no código (`nest/src/4-mail/modelos/modelos-email.ts`), decisão de 19-10-2026 para não aumentar o escopo. A Alexia é a favor de tabelas novas (o admin editaria os textos pelo painel); o Lucas, contra. Não é ajuste leve: mexe no envio, no escopo (o orientador já achou o banco grande) e no que o admin pode quebrar sem querer. Estudar com calma: como os sistemas de referência fazem, o que muda em cada caminho, o custo e o risco de cada um, e só então decidir. Antes, só lembrete: se virar tabela, uma `template_email` entraria sem mexer na fila.
 
-O "Aguardando" (pagamento que chega depois do fim da campanha) foi decidido e feito em 03-10-2026; a explicação continua no topo do `ACHADOS_PARA_DISCUTIR.md`.
+O "Aguardando" (pagamento que chega depois do fim da campanha) foi decidido e feito em 03-10-2026; a explicação está em `informacoes/HISTORICO/HISTORICO_ACHADOS_PARA_DISCUTIR.md`, seção "Limpeza de 25-10-2026", e o `ACHADOS_PARA_DISCUTIR.md` lista os decididos para a Alexia.
 
 ---
 
 ## 1. Levar para a revisão externa
 
-Quem atualiza os requisitos é o Lucas com a revisão externa; aqui fica só o que precisa ir no próximo pedido. A atualização dos requisitos de 29-09-2026 já absorveu o termo único, o 2FA (fica sem RF, como ideia do fim do projeto), o modelo flexível e o Alterar/Excluir do admin. A atualização de 04-10-2026 absorveu os 12 pontos levados naquele dia (validade do Pix, espera do Pix no encerramento, IP do aceite, contestação, re-aceite dos dois termos, exclusão de conta, taxa de conclusão e os parâmetros novos). Os itens abaixo não foram tratados nela e continuam abertos.
+Os requisitos são atualizados com a revisão externa; aqui fica só o que precisa ir no próximo pedido. A atualização dos requisitos de 29-09-2026 já absorveu o termo único, o 2FA (fica sem RF, como ideia do fim do projeto), o modelo flexível e o Alterar/Excluir do admin. A atualização de 04-10-2026 absorveu os 12 pontos levados naquele dia (validade do Pix, espera do Pix no encerramento, IP do aceite, contestação, re-aceite dos dois termos, exclusão de conta, taxa de conclusão e os parâmetros novos). Os itens abaixo não foram tratados nela e continuam abertos.
 
 - **Tipografia do painel padronizada** (6 classes em `2-tipografia.css`): citar no próximo pedido de revisão de interface, pedindo ideias para enxugar mais sem quebrar.
-- **Para o Lucas discutir com a revisão externa (29-09-2026; o Lucas acha que alguns pontos do V8 não batem):**
-  - **Aceite pendente no próximo login:** vale para versão nova do Termo (RF-015). O V8 tirou a parte da conta criada pelo admin (nascer com senha provisória e aceite pendente), por ser ferramenta de teste; o Lucas quer rediscutir.
+- **Para discutir com a revisão externa (29-09-2026; achamos que alguns pontos do V8 não batem):**
+  - **Aceite pendente no próximo login:** vale para versão nova do Termo (RF-015). O V8 tirou a parte da conta criada pelo admin (nascer com senha provisória e aceite pendente), por ser ferramenta de teste; queremos rediscutir.
   - **Modelo da campanha pode mudar até a aprovação:** o V8 deixou implícito (congelamento na aprovação); hoje o formulário nem envia o modelo.
-  - **Links no upgrade, "Projetos Criados" e validação de domínio dos links:** a resposta da revisão externa à comparação V8 × código tem pontos que o Lucas vai revisar com ela.
+  - **Links no upgrade, "Projetos Criados" e validação de domínio dos links:** a resposta da revisão externa à comparação V8 × código tem pontos que vamos revisar com ela.
 - **E-mail pronto (19-10-2026), ideias do mercado de 12-10-2026:** lembretes para quem segue a campanha ("faltam 48 h" e "faltam 8 h" para o fim, como faz o Kickstarter) e o endosso de colegas antes de enviar a campanha para aprovação (como faz o Experiment.com; este só com requisito novo).
-- **Como o Lucas quer esse pedido escrito:** "pegar no pé" da revisão externa, pedir que olhe sistemas de referência e traga ideias próprias, não só responda a lista.
+- **Status "repassado" da contribuição (25-10-2026):** o RF-082 (`informacoes/REQUISITOS_V10.md`) lista os status obrigatórios de cada transação: "pendente, confirmado, repassado, a devolver, devolvido...". Queremos tirar o "repassado": a tela Contribuições já mostra a situação do repasse numa coluna própria (que pode estar "Concluído"), então o máximo da contribuição seria "Paga". Apagar o status antes de mudar o requisito deixaria o sistema contra ele. Pedir para tirar do requisito; a mudança no banco (o status é usado nas regras do dinheiro) entra na auditoria dos status (grupo 5).
+- **Como queremos esse pedido escrito:** "pegar no pé" da revisão externa, pedir que olhe sistemas de referência e traga ideias próprias, não só responda a lista.
 
 ---
 
 ## 2. Dependem de outro módulo ou de outra coisa existir
 
-> **Nota do Lucas (27-09-2026):** 18, 19, 20 e 26 podem ganhar tela na área administrativa (nem que seja na área de testes) antes da página pública existir. Não é para fazer agora, mas o lado Nest desses módulos não depende da página pública.
+> **Nota (27-09-2026):** 18, 19, 20 e 26 podem ganhar tela na área administrativa (nem que seja na área de testes) antes da página pública existir. Não é para fazer agora, mas o lado Nest desses módulos não depende da página pública.
 
 ### Precisam da área pública (anotado em 19-10-2026; o lado Nest e o que cabe no painel já estão prontos)
 
@@ -65,7 +66,7 @@ A área pública não pode ser feita agora (primeiro termina a área restrita). 
 - **Painel "Projetos Criados" do pesquisador (RF-086, RF-087):** a lista com as métricas e o líquido estimado (o `GET /campanha/:id` já devolve `valorLiquidoEstimado`).
 - **Painel de quem apoia (RF-085):** o histórico já existe na Minha Conta, aba Contribuições; na área pública vira o painel do doador.
 - **Desistir do apoio (decidido em 24-10-2026: regra do Catarse, com o art. 49 do CDC como fundamento):** o botão na área de quem apoia. As condições, as fontes e o ponto a validar com o orientador (o CDC nos 7 dias depois de contribuir) estão no `DOCUMENTACAO_FINANCEIRO.md`. Antes do botão: o texto no Termo de Uso (Administrador) e o parâmetro do prazo.
-  - **Sem o orientador (25-10-2026):** o Lucas avisou que não dá para contar com o orientador nesta pergunta (CDC × Catarse), nem na cláusula de ressarcimento e na da chave Pix. A decisão sai do estudo feito aqui, bem documentado, com as fontes.
+  - **Sem o orientador (25-10-2026):** não dá para contar com o orientador nesta pergunta (CDC × Catarse), nem na cláusula de ressarcimento e na da chave Pix. A decisão sai do estudo feito aqui, bem documentado, com as fontes.
 
 ### E-mail: o que ainda é decisão (19-10-2026; o módulo está pronto e testado no modo de teste)
 
@@ -74,7 +75,7 @@ A área pública não pode ser feita agora (primeiro termina a área restrita). 
 
 ### Pagamento (feito em 17 e 18-10-2026; visão completa em `DOCUMENTACAO_FINANCEIRO.md`)
 
-#### 🟡 Testes no sandbox que faltam (próximos dias, com o Lucas)
+#### 🟡 Testes no sandbox que faltam (próximos dias)
 
 - **Cartão** numa campanha flexível (cartão de teste 4444 4444 4444 4444 aprova; 5184019740373151 recusa), até o repasse da parte liberada.
 - **Boleto:** ligar `boleto_habilitado` em Parâmetros; gerar, pagar ("Confirmar pagamento" no sandbox), repasse, e a devolução por link num cancelamento (vai para reembolso manual com o link).
@@ -83,7 +84,7 @@ A área pública não pode ser feita agora (primeiro termina a área restrita). 
 
 #### 🟡 Ainda aberto no pagamento
 
-- **Checkout e painel de quem apoia** (`views/22-contribuicao` e `views/29-dashboard/doador`, pastas vazias): a tela pública de apoiar. Hoje uma contribuição nasce pela T5 ou pela API. Junto vem o **aviso ao apoiador** sobre o modelo da campanha (tudo-ou-nada devolve, flexível não) com confirmação de ciência.
+- **Checkout e painel de quem apoia** (`views/29-dashboard/doador`, pasta vazia; `views/22-contribuicao` hoje só tem a aba Contribuições da Minha Conta): a tela pública de apoiar. Hoje uma contribuição nasce pela T5 ou pela API. Junto vem o **aviso ao apoiador** sobre o modelo da campanha (tudo-ou-nada devolve, flexível não) com confirmação de ciência.
 
 ### Página pública da campanha (ainda não existe)
 
@@ -97,7 +98,7 @@ A área pública não pode ser feita agora (primeiro termina a área restrita). 
 
 #### 🟡 Especificação registrada (13-09-2026): tela de administração pra `arquivo` (espaço ocupado, órfãos, maiores consumidores) - NÃO construída de propósito
 
-O Lucas pediu detalhamento dessa ideia (citada de passagem pelo Lucas numa rodada anterior, descartada na hora). Resposta completa, registrada aqui pra não se perder - **decisão de não construir agora confirmada pelo próprio Lucas**: poucos arquivos no sistema hoje (todos de teste), a tela mostraria números perto de zero e não responderia pergunta nenhuma de verdade. Momento certo: depois de `18-recompensa`/`15-atualizacao-campanha` estarem em uso real, quando anexos tiverem volume e órfãos aparecerem sozinhos.
+Ideia detalhada e registrada aqui pra não se perder. **Decisão: não construir agora**: poucos arquivos no sistema hoje (todos de teste), a tela mostraria números perto de zero e não responderia pergunta nenhuma de verdade. Momento certo: depois de `18-recompensa`/`15-atualizacao-campanha` estarem em uso real, quando anexos tiverem volume e órfãos aparecerem sozinhos.
 
 **Por que é possível sem nenhum módulo novo**: `arquivo` já guarda `tamanho_bytes` (do arquivo JÁ PROCESSADO, depois da redução - não o que o navegador declarou), `id_usuario_upload`, `tipo_mime`, `criado_em`, `ativo`/`desativado_em`. Com essas 5 colunas dá pra montar o painel inteiro sem consultar o provedor de armazenamento.
 
@@ -121,7 +122,7 @@ O Lucas pediu detalhamento dessa ideia (citada de passagem pelo Lucas numa rodad
 - **Banco depois do deploy: mudança vira arquivo novo numerado** (começando em 09, depois 10, e assim por diante), nunca edição dos arquivos `01` a `08` nem só o `ATUALIZAR`. O executor de migrações (`npm run db:migrate`) aplica só o que é novo e avisa, sem reaplicar, quando um arquivo já aplicado muda. No primeiro deploy: `npm run db:migrate:adotar` no banco que já tem tudo, e `DATABASE_URL_MIGRATIONS` com a credencial de administrador do banco.
 - **Registro de acessos (Marco Civil da Internet, art. 15):** quem opera como empresa precisa guardar IP, data e hora de cada acesso por 6 meses. Hoje o IP fica só nos aceites e no último login. Só vale se o sistema entrar em operação; detalhe em `DOCUMENTACAO_BD.md`, "IP: base legal e anonimato do Pix".
 - **Teste de fumaça do pagamento em produção (18-10-2026):** uma contribuição de **R$ 1 de verdade**, paga com o Pix do próprio Lucas, numa campanha de teste tudo-ou-nada, e depois "Cancelar o projeto". Confere o que o sandbox não consegue simular: o dinheiro **voltando** para quem apoiou (no sandbox o pagador é sempre fictício e o banco simulado recusa devolver; ver `.Tutorial-plataforma-pagamento-sandbox.md`, Parte 12). Custo: só a tarifa (R$ 0,99). É o padrão do mercado: todo sistema de pagamento faz um teste com valor mínimo em produção antes de abrir.
-- **Apagar a conta de testes "Apoiador" do `nest/.env`** (`ASAAS_API_KEY_APOIADOR`, 18-10-2026): só serve aos testes no sandbox (segunda conta que paga e recebe devolução). Mantida até o deploy por decisão do Lucas.
+- **Apagar a conta de testes "Apoiador" do `nest/.env`** (`ASAAS_API_KEY_APOIADOR`, 18-10-2026): só serve aos testes no sandbox (segunda conta que paga e recebe devolução). Mantida até o deploy, por decisão nossa.
 - **`trust proxy` no Nest:** atrás de um proxy (servidor de hospedagem), o Nest precisa confiar nele para ler o IP real de quem contribui (gravado no aceite do Termo, `aceite_termo_contribuicao.ip_aceite`) e de quem faz login. Sem isso, todo IP gravado seria o do proxy.
 - **Docker** do Nest e do React (F2 do roteiro do Atlas, com o `docker/` deles como referência).
 - **`react/.gitignore` não cobre `.env`:** inofensivo hoje (o `.env` só tem a URL da API); só volta à tona se o conteúdo do `.env` mudar ou no deploy.
@@ -154,57 +155,60 @@ O `react/` não tem nenhum teste automatizado hoje (só `build`+`lint`). Um proj
 
 ---
 
-## 5. Decisões do Lucas, sem pressa
+## 5. Decisões em aberto, sem pressa
 
 ### Segurança
 
 #### 🟡 Cláusula da chave Pix no Termo de Pesquisador (RF-026, 24-10-2026)
 
-O requisito pede que o Termo de Pesquisador diga, de forma explícita, que a correção da chave Pix cadastrada é responsabilidade do pesquisador. O termo vigente não fala da chave. Quem escreve é o Administrador, numa versão nova do termo pelo painel (o re-aceite já funciona); o Lucas quer antes estudar e fazer uma pesquisa de mercado, sem pressa. O e-mail do repasse previsto, a outra parte do RF-026, já foi feito.
+O requisito pede que o Termo de Pesquisador diga, de forma explícita, que a correção da chave Pix cadastrada é responsabilidade do pesquisador. O termo vigente não fala da chave. Quem escreve é o Administrador, numa versão nova do termo pelo painel (o re-aceite já funciona); antes, queremos estudar e fazer uma pesquisa de mercado, sem pressa. O e-mail do repasse previsto, a outra parte do RF-026, já foi feito.
 
 #### 🔴 Pendência aberta: refresh token em cookie `HttpOnly`, em vez de `localStorage`
 
 Achado revisando um projeto de referência da disciplina (04-09-2026): hoje o CrowdAcademico guarda o refresh token no `localStorage` do navegador (`use-auth.js`, decisão já documentada - "pra não precisar logar de novo a cada F5"). Um cookie `HttpOnly` com `SameSite=Strict` faz o mesmo papel, mas com uma vantagem real de segurança: o JavaScript da página nunca consegue ler o valor do cookie, então um ataque de XSS (injeção de script malicioso) não consegue roubar o refresh token, mesmo que consiga rodar código na página - com `localStorage`, qualquer script que rode na página consegue ler o token.
 
-**Não é decisão óbvia, nem copy-paste** - trocar exigiria mexer em como o `authFetch`/`use-auth.js` renovam sessão (hoje leem o token direto do `localStorage`; um cookie `HttpOnly` é enviado automaticamente pelo navegador em toda requisição, sem o JavaScript precisar ler nem anexar nada - muda o formato da chamada) e como o backend define/lê esse cookie. Vale uma rodada de análise mais aprofundada de IA antes de decidir - não é pra implementar agora, só registrado pra não esquecer que a opção existe. **O estudo foi entregue em 24-10-2026** (o que muda no `use-auth` e no Nest, o risco, a dependência do CORS e o padrão de mercado); a decisão continua aberta.
+**Não é decisão óbvia, nem copy-paste** - trocar exigiria mexer em como o `authFetch`/`use-auth.js` renovam sessão (hoje leem o token direto do `localStorage`; um cookie `HttpOnly` é enviado automaticamente pelo navegador em toda requisição, sem o JavaScript precisar ler nem anexar nada - muda o formato da chamada) e como o backend define/lê esse cookie. Vale uma análise mais aprofundada antes de decidir - não é pra implementar agora, só registrado pra não esquecer que a opção existe. **O estudo foi feito em 24-10-2026** (o que muda no `use-auth` e no Nest, o risco, a dependência do CORS e o padrão de mercado); a decisão continua aberta.
 
 #### 🟡 Anotado para pensar com calma (27-09-2026): 3 ideias vindas do `.env` do sistema Atlas
 
-Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/todas as auditorias/ROTEIRO_INCORPORACAO_ATLAS.md`.
+Decidimos depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/todas as auditorias/ROTEIRO_INCORPORACAO_ATLAS.md`.
 
 - **Lista de origens permitidas (CORS):** a API do Atlas só aceita chamadas dos endereços de uma lista no `.env`. A nossa aceita chamadas de qualquer site (`app.enableCors()` sem opções, `nest/src/main.ts`). Correção pequena e pré-requisito da pendência do cookie HttpOnly (cookie com credencial exige origem explícita).
 - **Configuração da sessão em cookie:** o Atlas usa cookie HttpOnly com tempo de vida e regras de envio (`SESSION_LIFETIME`, `SESSION_SECURE_COOKIE`, `SESSION_SAME_SITE`) no `.env`. Referência pronta para a pendência "refresh token em cookie HttpOnly".
 
 - **Permissão por rota no painel:** a guarda do `/admin/*` só exige login, não confere o papel (quem vê o quê continua decidido pelo backend). "Fica para perto do fim".
 
-#### 🟡 Achados da super auditoria ao vivo de 24-10-2026 (decisão do Lucas)
+#### 🟡 Achados da super auditoria ao vivo de 24-10-2026 (a decidir)
 
-- **Telas que faltam no painel (levantamento de 24-10-2026; a Auditoria Financeira foi feita no mesmo dia):** (1) **Contribuições**, a lista de todas as contribuições do sistema para o admin (hoje só a T5, que não vai para produção, a da própria conta em Minha Conta e o resumo no Consultar da campanha; o Nest ainda não tem a listagem); (2) **Repasses**, o histórico de todos os repasses (hoje só os "em atenção" e os do próprio pesquisador); (3) **anexos das atualizações de campanha** (arquivos e links): a API existe (`/arquivo-atualizacao`, `/link-atualizacao`), nenhuma tela mostra; o envio de arquivo passa pelo Storage. Decisão do Lucas: quais fazer.
-- **Aviso de erro: estudar antes de mexer (25-10-2026, sem pressa).** Hoje o painel faz de dois jeitos: quase toda tela com formulário mostra só o texto vermelho (o `useErroToast` com `mostraTexto` esconde o aviso flutuante quando o erro já está na tela), e as seções Encerrar a campanha (Alterar do dono) e chave Pix (`secao-recebimento.tsx`) mostram os dois com a mesma frase, porque o texto vermelho delas não tem a marca `data-mensagem-erro`. O Lucas gosta dos dois avisos (retorno claro e imediato) e gostou da ideia do meio-termo: o aviso flutuante só avisa ("Não foi possível..., veja o motivo abaixo") e o texto vermelho traz o motivo. Antes de aplicar, estudar as variáveis, sem valor escrito à mão:
+- **Tela dos anexos das atualizações de campanha** (arquivos e links, levantamento de 24-10-2026): a API existe (`/arquivo-atualizacao`, `/link-atualizacao`), nenhuma tela mostra; o envio de arquivo passa pelo Storage. As telas Contribuições e Repasses, do mesmo levantamento, foram feitas em 25-10-2026.
+- **Aviso de erro: estudar antes de mexer (25-10-2026, sem pressa).** Hoje o painel faz de dois jeitos: quase toda tela com formulário mostra só o texto vermelho (o `useErroToast` com `mostraTexto` esconde o aviso flutuante quando o erro já está na tela), e as seções Encerrar a campanha (Alterar do dono) e chave Pix (`secao-recebimento.tsx`) mostram os dois com a mesma frase, porque o texto vermelho delas não tem a marca `data-mensagem-erro`. Gostamos dos dois avisos (retorno claro e imediato) e da ideia do meio-termo: o aviso flutuante só avisa ("Não foi possível..., veja o motivo abaixo") e o texto vermelho traz o motivo. Antes de aplicar, estudar as variáveis, sem valor escrito à mão:
   - **Tipo de erro:** de campo (o backend manda `campos`, o erro aparece embaixo do campo), recusa de regra (409, 422), sem permissão (403), falha de rede ou do servidor (500).
   - **Onde a tela mostra:** modal de Criar/Alterar (38 dos arquivos), página inteira (login, Minha Conta, cadastro), seção dentro de modal, janelinha de confirmação. O login já tem desenho próprio, decidido em 24-10-2026 (frase no topo e os campos em vermelho): o aviso flutuante ali seria repetido.
   - **O texto do aviso flutuante:** uma frase única num lugar só (constante), a frase com o nome da ação passado por quem chama ("Não foi possível salvar a campanha"), ou o próprio motivo, como hoje.
   - **Leitor de tela:** o texto vermelho já é anunciado (`role="alert"`); um aviso flutuante com a mesma frase seria anunciado duas vezes.
   - **Quantas telas:** 46 arquivos usam `mostraTexto`, 16 usam o aviso flutuante sozinho (ações fora de formulário).
   Mercado (24-10-2026): o Primer, do GitHub, desaconselha o aviso flutuante para erro; o GOV.UK usa duas camadas, um resumo no topo mais o erro em cada campo, as duas na própria página.
-- **Levantamento das mensagens técnicas na tela (25-10-2026, sem pressa):** listar todo texto de programação que aparece para quem usa o painel (ex.: "APAGADO DO CÓDIGO", códigos de erro, nomes de coluna do banco), com a tela onde aparece e uma frase sugerida, para o Lucas decidir tudo de uma vez. O "Último motivo" do repasse já virou frase em 25-10-2026.
+- **Mensagens técnicas na tela (25-10-2026):** o levantamento está feito, com a sugestão de texto e o porquê de cada uma, em `informacoes/MENSAGENS_TECNICAS_SUGESTOES.md`. Falta marcar o que aprovamos; depois, aplicar só o aprovado. O "Último motivo" do repasse já virou frase em 25-10-2026.
+
+#### 🟡 Auditoria de todos os status do sistema (25-10-2026)
+
+Conferir cada status de cada tabela (campanha, contribuição, repasse, denúncia, encerramento...) contra os requisitos: todo status precisa estar num RF, e nenhum pode sobrar ou repetir o que outra coluna já diz (o caso do "repassado" da contribuição, grupo 1). Maior do que parece: status mexe em regra do banco, em tela e em teste.
 
 ### Visual e marca
 
 - **Branch `feat/novas-telas-teste` (02-10-2026):** tem o Dashboard em seções ("Precisa de você") e os links acadêmicos em cartões no celular, feitos antes das regras visuais novas. Decidir se entram no main, refeitos com as regras do `DESIGN_SYSTEM.md`, ou se a branch é descartada.
 
-- **Gestão de logo e favicon:** a aba Identidade Visual do Dashboard é só um espaço reservado.
-  - **Decidido (25-10-2026): envio pelo painel**, não arquivo fixo no projeto: mais profissional e o admin do futuro troca a logo sem mexer no código nem no banco. O envio passa pelo Storage pessoal do Lucas: nos testes, só ele envia.
+- **Troca do logo e do ícone pelo painel** (aba Identidade Visual do Dashboard, hoje um espaço reservado). Desde 25-10-2026 a marca padrão está no projeto (`DOCUMENTACAO_FRONTEND.md`, seção 12); o envio pelo painel substitui a padrão, e o admin do futuro troca sem mexer no código nem no banco. A análise, os 4 problemas e as duas decisões em aberto estão no topo do `ACHADOS_PARA_DISCUTIR.md`. O envio passa pelo Storage pessoal do Lucas: nos testes, só ele envia.
 
 ### Estrutura e ferramentas
 
 #### 🟡 Para o futuro (29-09-2026): super auditoria de padrões de mercado
 
-Pedido do Lucas: comparar o sistema inteiro com o que os sistemas de referência fazem (login e sessão, termos, moderação, campanha, pagamento, mensagens de erro, telas), para cada diferença dizer qual é o padrão de mercado, o que o projeto faz e se vale mudar. Motivo: citar o padrão de mercado ajuda muito a decidir. Não começar sem pedido; é "bem no futuro".
+Ideia: comparar o sistema inteiro com o que os sistemas de referência fazem (login e sessão, termos, moderação, campanha, pagamento, mensagens de erro, telas), para cada diferença dizer qual é o padrão de mercado, o que o projeto faz e se vale mudar. Motivo: citar o padrão de mercado ajuda muito a decidir. Fica para bem no futuro.
 
 #### 🟡 Anotado (29-09-2026): dispatcher de triggers
 
-Hoje `campanha` tem 23 triggers (17 funções; algumas são pares INSERT e UPDATE) e `comentario` tem 9 (contagem de 24-10-2026). Quando várias rodam no mesmo momento, o Postgres escolhe a ordem pela ordem alfabética do nome; o dispatcher seria uma trigger só por momento, chamando as regras numa ordem escrita. Ganho: ordem explícita e mensagem de erro previsível quando duas regras falhariam juntas. Custo: mexer nas regras mais críticas (aprovação, congelamento, prazo), com risco de regressão; as suítes de caracterização (1.050 casos) são a rede de proteção. Recomendação atual: não fazer. **O estudo completo para o Lucas ler foi entregue em 24-10-2026** (como funciona a ordem hoje, o que mudaria, exemplos com as triggers reais); a decisão continua aberta.
+Hoje `campanha` tem 23 triggers (17 funções; algumas são pares INSERT e UPDATE) e `comentario` tem 9 (contagem de 24-10-2026). Quando várias rodam no mesmo momento, o Postgres escolhe a ordem pela ordem alfabética do nome; o dispatcher seria uma trigger só por momento, chamando as regras numa ordem escrita. Ganho: ordem explícita e mensagem de erro previsível quando duas regras falhariam juntas. Custo: mexer nas regras mais críticas (aprovação, congelamento, prazo), com risco de regressão; as suítes de caracterização (1.050 casos) são a rede de proteção. Recomendação atual: não fazer. **O estudo completo foi feito em 24-10-2026** (como funciona a ordem hoje, o que mudaria, exemplos com as triggers reais); a decisão continua aberta.
 
 
 ### Protótipo estático (sessão própria)

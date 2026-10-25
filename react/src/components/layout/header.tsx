@@ -4,6 +4,7 @@ import { ControleTema } from './cabecalho/controle-tema';
 import { DevLoginRapido } from './cabecalho/dev-login-rapido';
 import { MenuUsuario } from './cabecalho/menu-usuario';
 import { SinoAtividade } from './cabecalho/sino-atividade';
+import { LogoMarca } from './logo-marca';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
 // Cópia fiel de componentes/header.html do Projeto de Interface real (mesmas classes Tailwind, mesma
@@ -25,12 +26,10 @@ export function Header({ auth }: HeaderProps) {
     // propósito (ver comentário completo perto dele).
     <header data-topo-fixo className="fundo-cartao border-b borda-padrao sticky top-0 z-50 shadow-sm relative">
       <div className="largura-site h-16 flex items-center justify-between">
-        {/* Espelho da marca do <footer>: mesmo tamanho (w-10 h-10 / text-2xl) e mesma caixa (.largura-site),
-            então as duas ficam na mesma linha vertical em qualquer tela. */}
+        {/* Espelho da marca do <footer>: o mesmo LogoMarca e a mesma caixa (.largura-site), então as duas ficam na
+            mesma linha vertical em qualquer tela. */}
         <Link to="/" className="flex items-center gap-3" aria-label="CrowdAcadêmico, página inicial">
-          <div className="w-10 h-10 fundo-marca rounded-lg flex items-center justify-center texto-sobre-cor shadow-inner">
-            <i className="fa-solid fa-flask" aria-hidden="true"></i>
-          </div>
+          <LogoMarca />
           <span className="titulo-secao hidden sm:block">
             CrowdAcadêmico
           </span>

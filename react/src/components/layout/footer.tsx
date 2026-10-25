@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { LogoMarca } from './logo-marca';
 
 // Cópia fiel de componentes/footer.html do Projeto de Interface real (mesmas
 // classes Tailwind, mesmo conteúdo, inclusive os links das colunas - eles
@@ -38,9 +39,7 @@ export function Footer() {
       <div className="largura-site grid grid-cols-1 sm:grid-cols-2 gap-12 lg:flex lg:justify-between">
         <div className="lg:max-w-(--largura-coluna-rodape)">
           <Link to="/" className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 fundo-marca rounded-lg flex items-center justify-center texto-sobre-cor">
-              <i className="fa-solid fa-flask" aria-hidden="true"></i>
-            </div>
+            <LogoMarca />
             <span className="titulo-secao texto-rodape-forte">CrowdAcadêmico</span>
           </Link>
           <p className="paragrafo texto-herdado">

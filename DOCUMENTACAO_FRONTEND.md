@@ -22,10 +22,11 @@
 9. [Componentes e hooks reutilizáveis](#9-componentes-e-hooks-reutilizáveis)
 10. [Estado global: os providers](#10-estado-global-os-providers)
 11. [CSS, Tailwind e temas](#11-css-tailwind-e-temas)
-12. [As telas](#12-as-telas) (inclui o Campo de Testes)
-13. [Usabilidade e acessibilidade](#13-usabilidade-e-acessibilidade)
-14. [Dependências: o que cada uma faz](#14-dependências-o-que-cada-uma-faz)
-15. [O que não existe ainda e débitos conhecidos](#15-o-que-não-existe-ainda-e-débitos-conhecidos)
+12. [Marca: logo, favicon e ícone do iPhone](#12-marca-logo-favicon-e-ícone-do-iphone)
+13. [As telas](#13-as-telas) (inclui o Campo de Testes)
+14. [Usabilidade e acessibilidade](#14-usabilidade-e-acessibilidade)
+15. [Dependências: o que cada uma faz](#15-dependências-o-que-cada-uma-faz)
+16. [O que não existe ainda e débitos conhecidos](#16-o-que-não-existe-ainda-e-débitos-conhecidos)
 
 ---
 
@@ -80,7 +81,7 @@ react/
     ├── components/     - peças reutilizáveis entre módulos
     ├── services/       - comunicação com a API, tipos, regras de tela, estado compartilhado
     ├── views/          - as páginas
-    └── 30-campo-testes/ - o Campo de Testes inteiro (seção 12): paginas/ e servicos/; sempre o último número
+    └── 30-campo-testes/ - o Campo de Testes inteiro (seção 13): paginas/ e servicos/; sempre o último número
 ```
 
 ### `services/` e `views/` usam o número do módulo do Nest
@@ -119,11 +120,11 @@ react/
 
 **Redirecionamentos (`App.tsx`):** `/` → `/admin/dashboard`; `/admin/minha-conta` → `/admin/minha-conta/perfil`.
 
-📌 **Guarda de login única, no `AdminLayout`.** Sem sessão, qualquer `/admin/*` vai para `/login` levando a página pedida (`state.voltarPara`, só caminhos que começam com `/admin/`). Durante a restauração da sessão (F5), a guarda espera. Com nova versão do Termo de Uso pendente, mostra a tela de aceite no lugar do painel (seção 12).
+📌 **Guarda de login única, no `AdminLayout`.** Sem sessão, qualquer `/admin/*` vai para `/login` levando a página pedida (`state.voltarPara`, só caminhos que começam com `/admin/`). Durante a restauração da sessão (F5), a guarda espera. Com nova versão do Termo de Uso pendente, mostra a tela de aceite no lugar do painel (seção 13).
 
 📌 **A guarda confere se HÁ sessão, não o papel.** O que cada papel lê ou altera é decidido pelo backend (guards do Nest e RLS), a proteção de verdade. **Próximo passo, perto do fim do sistema:** cada rota ganha um campo de permissão, lido pelo menu e por esta mesma guarda.
 
-📌 **As rotas do Campo de Testes não estão nesta lista:** entram pela porta `services/router/campo-testes-opcional.ts` (seção 12), só em desenvolvimento.
+📌 **As rotas do Campo de Testes não estão nesta lista:** entram pela porta `services/router/campo-testes-opcional.ts` (seção 13), só em desenvolvimento.
 
 📌 **O menu é derivado.** `components/layout/painel-admin/admin-menu.constants.ts` filtra `ROTAS_ADMIN` por `grupoMenu` (`itensDoGrupo()`). Grupos: o Dashboard (sem título), `GESTÃO DO USUÁRIO`, `Configurações`, `CAMPANHA`, `MODERAÇÃO` e, por último, `CAMPO DE TESTES` (some sozinho quando não há rota dele). A chave interna do grupo (ex.: `'CADASTROS'`) não muda quando o título visível muda. Item de módulo que ainda não existe aparece apagado com `aria-disabled` (não `disabled`): continua focável pelo teclado, e a dica "Ainda não implementado" aparece também no Tab. A MODERAÇÃO não tem nenhum (Aprovar Campanhas, Denúncias e Pedidos de Encerramento).
 
@@ -250,7 +251,7 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 | `rodape-acoes.tsx` | `RodapeAcoes`: secundário à esquerda (Cancelar, Fechar), ações à direita, com "Salvando..." enquanto `ocupado`; `perigo` usa o botão vermelho; `formulario` submete um `<form>` pelo id; `cancelarDesabilitado` para o secundário que não se aplica (Desfazer sem nada alterado). Sem `largura`, ela sai pelo número de botões (dois ou três); `md` é para rótulo de ação longo. Todo par de ações do sistema passa por ele, também no fim de uma seção (Pontuação, contestação do score) |
 | `resumo-alteracoes.tsx` | a frase do rodapé dos Alterar: o que mudou e ainda não foi salvo |
 | `use-alteracao-nao-salva.ts` | `useFecharComAviso(sujo, aoFechar)`: o que todo modal de criar/alterar usa (aviso nativo do navegador com alteração não salva e o `fechar` que pergunta antes de sair); `confirmarSaida` e `useAvisoAlteracaoNaoSalva` soltos, para quem não é modal (Minha Conta) |
-| `badge-status-campanha.tsx` | o selo de status de uma campanha, igual em todo lugar, com "Em breve" (seção 12) |
+| `badge-status-campanha.tsx` | o selo de status de uma campanha, igual em todo lugar, com "Em breve" (seção 13) |
 | `badge-status-denuncia.tsx` | o selo da situação de uma denúncia (pendente, em contestação, resolvida, improcedente) |
 | `filtro-partes.tsx` | `FiltroPartes`: filtro fixo no topo do corpo do modal, com cara de aba. "Geral" mostra tudo; cada outra opção mostra só aquela parte, e as outras ficam escondidas (`hidden`), não desmontadas: troca instantânea, nada do que está sendo editado se perde. Usado no Alterar Usuário, no Consultar Campanha e no Alterar Campanha (Geral, Dados, Orçamento e cronograma e, para o dono, Atualizações, Comentários e Encerramento quando existem; avisos do topo e a decisão da Bancada aparecem em todas as partes) |
 | `modal-termo.tsx` | o padrão de todo termo para ler (o do Criar conta): `ModalTermo` (modal largo, título, versão, "Tela cheia" no cabeçalho, texto rolando por dentro), e as peças `TextoTermo` e `BotaoTelaCheia` para o upgrade de pesquisador. Usado no Criar conta, na tela de aceite pendente, no Consultar Termo de Uso e nos aceites do Consultar Usuário. Criar e Alterar Termo continuam com a `CaixaTextoLongo` (é edição) |
@@ -288,7 +289,7 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 
 ### `components/layout/`
 
-`layout.tsx` (cabeçalho, breadcrumb, `<main>` e rodapé), `header.tsx`, `footer.tsx`, `breadcrumb.tsx`, `avatar-usuario.tsx`, `tooltip.tsx`, `carregando.tsx`, `limite-erro.tsx`, `barra-abas-botoes.tsx`, `barra-carregamento/`, `toast/` e `cabecalho/` (busca global, menu do usuário, sino, controles de tema e de fonte, entrar como).
+`layout.tsx` (cabeçalho, breadcrumb, `<main>` e rodapé), `header.tsx`, `footer.tsx`, `logo-marca.tsx` (o logo, seção 12), `breadcrumb.tsx`, `avatar-usuario.tsx`, `tooltip.tsx`, `carregando.tsx`, `limite-erro.tsx`, `barra-abas-botoes.tsx`, `barra-carregamento/`, `toast/` e `cabecalho/` (busca global, menu do usuário, sino, controles de tema e de fonte, entrar como).
 
 📌 **Destaques:**
 - **`LimiteErro`:** um erro de renderização mostra um aviso no lugar do trecho que quebrou (com botão de recarregar), em vez de tela em branco. Em volta do conteúdo de todas as páginas e da área do painel (o menu continua de pé). Recomeça ao trocar de página.
@@ -305,14 +306,14 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 | Hook | O que resolve |
 |---|---|
 | `useEnvio` | o "enviar" de todo formulário: limpa o erro, liga `ocupado`, chama a API, reporta o erro, desliga |
-| `useErrosFormulario` | erro embaixo de cada campo na tentativa de enviar, com o cursor no primeiro (seção 13) |
+| `useErrosFormulario` | erro embaixo de cada campo na tentativa de enviar, com o cursor no primeiro (seção 14) |
 | `useBuscar` | buscar dado quando algo muda, descartando resposta atrasada; serve também ao "carregar para editar" (`aoChegar`) |
 | `useCrudModais` | o estado criar/alterar/consultar/excluir/recarregar de toda listagem; `chaveRecarga` vai para a `GenericTable` (prop de mesmo nome), que busca de novo quando ela muda |
 | `useAvisoScore` (`6-perfil-pesquisador`) | depois de uma ação que mexe na pontuação: lê a nota antes e depois e mostra "score total +N pontos" (laranja quando perde) |
 | `useFocoPreso` | foco preso na janela aberta, Esc fecha só a de cima, foco volta para quem abriu |
 | `useOpcoesDiasSuspensao` | os prazos de suspensão vindos de Parâmetros |
 | `useRegrasCampanha` | as regras de campanha de Parâmetros (meta mínima, prazos, prazo sugerido, mínimos de orçamento e cronograma, limite da descrição) |
-| `useDecisaoAprovacao` / `usePronta` | aprovar e rejeitar uma campanha, e se ela está pronta para aprovar (seção 12) |
+| `useDecisaoAprovacao` / `usePronta` | aprovar e rejeitar uma campanha, e se ela está pronta para aprovar (seção 13) |
 
 Peças de tela compartilhadas entre módulos: `views/1-usuario/modais-usuario.tsx` (`ModaisUsuario`: Alterar, Consultar e Excluir de uma conta, abertos de Usuários, Pesquisadores e da Bancada do Pesquisador) e `views/7-link-academico/links-academicos-do-usuario.tsx` (a tabela de links de um pesquisador, no Alterar Usuário e no upgrade, travada até o perfil existir).
 
@@ -362,7 +363,39 @@ Peças de tela compartilhadas entre módulos: `views/1-usuario/modais-usuario.ts
 
 ---
 
-## 12. As telas
+## 12. Marca: logo, favicon e ícone do iPhone
+
+**Em palavras simples:** a marca aparece em três lugares, e cada um tem o próprio arquivo de imagem. O **logo** é o desenho dentro do site (cabeçalho e rodapé). O **favicon** é o desenho pequeno na aba do navegador. O **ícone do iPhone** é o que aparece quando alguém salva o site na tela inicial do celular, como se fosse um aplicativo. Trocar um deles não troca os outros.
+
+### Que arquivo muda o quê
+
+| Arquivo | Onde fica | O que muda | Quem lê |
+|---|---|---|---|
+| `logo-completo.png` (960 × 640, fundo transparente) | `react/src/assets/marca/` | O logo do **cabeçalho**, do **rodapé** e da tela de **login**, juntos | `LogoMarca` (`components/layout/logo-marca.tsx`), a única peça que desenha o logo |
+| `logo-simbolo.png` (512 × 512, fundo transparente) | `react/src/assets/marca/` | Nada, por enquanto: é a versão quadrada, guardada para quando um lugar pedir um logo quadrado | ninguém |
+| `favicon.ico` (16, 32 e 48 dentro do mesmo arquivo) | `react/public/` | A aba, nos navegadores antigos e nos programas que procuram `/favicon.ico` sozinhos | `index.html` |
+| `favicon-32.png` e `favicon-16.png` | `react/public/` | A aba, nos navegadores atuais (cada tela usa o tamanho que pede) | `index.html` |
+| `apple-touch-icon.png` (180 × 180, **fundo branco**) | `react/public/` | O ícone do atalho na tela inicial do iPhone | `index.html` |
+
+**Para trocar hoje:** substituir o arquivo por outro **com o mesmo nome e o mesmo formato** e gerar o site de novo (`npm run build`, ou só salvar com o `npm run dev` aberto). Nenhuma linha de código muda. Para trocar a marca inteira, são os 5 arquivos de `public/` e o `logo-completo.png`.
+
+📌 **`assets/` e `public/` não são a mesma coisa.** O que está em `src/assets/` é importado pelo código: no build, o arquivo ganha um nome novo a cada mudança (`logo-completo-a1b2c3.png`), então o navegador nunca mostra a versão velha. O que está em `public/` é copiado como está, com o nome de sempre, porque o navegador e o iPhone procuram esses nomes exatos.
+
+📌 **O logo tem 40 px de altura e a largura que o desenho pede** (`h-10 w-auto`; no login, 56 px, `h-14`, passado por quem usa). O desenho é mais largo que alto (3 por 2); num quadrado de 40 × 40, ficaria com uns 21 px de altura. O nome "CrowdAcadêmico" ao lado é texto, não imagem: muda de cor com o tema e o leitor de tela lê. A imagem é decorativa (`alt=""`), porque o link em volta já se chama "CrowdAcadêmico, página inicial".
+
+📌 **Por que um arquivo para cada lugar, e não um só, encolhido pelo navegador:**
+- **Peso:** o navegador baixa o arquivo inteiro antes de encolher; um favicon de 16 px viria do logo de centenas de KB.
+- **Nitidez:** encolhido pelo navegador, o desenho fica borrado em 16 px; o arquivo preparado com um filtro bom fica mais nítido.
+- **Regras diferentes:** o iPhone pinta de preto o fundo transparente, então o ícone dele precisa de fundo sólido, e o logo do site precisa de fundo transparente.
+- **Nomes fixos:** o iPhone, os buscadores e alguns programas procuram `apple-touch-icon.png` e `favicon.ico` pelo nome, sem passar pelo código.
+
+O formato que serviria para todos os tamanhos com um arquivo só é o SVG (desenho feito de fórmulas). O logo tem sombreado e reflexos: convertido em SVG, ficaria pior que o PNG.
+
+**Caso-limite:** depois de uma troca, a aba pode continuar com o ícone antigo. É o navegador guardando a versão velha (os arquivos de `public/` mantêm o nome); Ctrl+F5 resolve, e quem visita pela primeira vez já vê o novo.
+
+**Ainda não existe:** trocar o logo e o ícone pelo painel, sem mexer no código (aba Identidade Visual do Dashboard, seção 16).
+
+## 13. As telas
 
 ### Entrada e conta
 
@@ -428,7 +461,7 @@ Peças de tela compartilhadas entre módulos: `views/1-usuario/modais-usuario.ts
 
 ### Dashboard (`views/29-dashboard/dashboard.tsx`)
 
-Cinco abas (`BarraAbasBotoes`): **Visão Geral** (faixa de saúde, cartões de métrica que levam à lista já filtrada, acessados recentemente, prévia de notificações), **Regras do Negócio** (os parâmetros agrupados por assunto, `configuracoes-grupos.constants.ts`; chave sem grupo cai em "Outras"), **Identidade Visual** (espaço reservado: a gestão de logo e favicon não foi construída) e **Saúde**. Saúde e métricas vêm de duas requisições independentes, para a falta de banco aparecer mesmo quando o resumo falha.
+Cinco abas (`BarraAbasBotoes`): **Visão Geral** (faixa de saúde, cartões de métrica que levam à lista já filtrada, acessados recentemente, prévia de notificações), **Regras do Negócio** (os parâmetros agrupados por assunto, `configuracoes-grupos.constants.ts`; chave sem grupo cai em "Outras"), **Identidade Visual** (espaço reservado: a troca do logo e do favicon pelo painel não foi construída; hoje valem os padrões do projeto, o logo em `assets/marca/` (desenhado por `LogoMarca`, `components/layout/logo-marca.tsx`, no cabeçalho, no rodapé e no login, com a altura escolhida por quem usa e a largura do desenho) e os favicons e o ícone do iPhone em `public/`, ligados no `index.html`) e **Saúde**. Saúde e métricas vêm de duas requisições independentes, para a falta de banco aparecer mesmo quando o resumo falha.
 
 📌 **Aba Notificações:** fica entre Regras do Negócio e Identidade Visual e mostra `views/27-notificacao/listar-notificacoes.tsx` (a tela mora no módulo dono do dado). Todos os e-mails do sistema, com situação, tipo, destinatário e assunto; Consultar abre a ficha (dados do texto, erro, tentativas, provedor); as ações Reenviar e Cancelar envio (novas em `AcaoSistema`, `5-coluna-acoes.tsx`) aparecem apagadas, com o motivo, quando não se aplicam. Na Visão Geral, o cartão Notificações mostra quantos estão na fila e quantos falharam, com "Ver os e-mails". Exige `notificacao_processar` (sem ela, a mensagem de 403 da API).
 
@@ -448,7 +481,7 @@ Em Repasses em Atenção e Reembolsos Manuais (lista e ficha), o "último motivo
 
 ---
 
-## 13. Usabilidade e acessibilidade
+## 14. Usabilidade e acessibilidade
 
 📌 **Botão sempre clicável, erro embaixo do campo.** Com algo faltando, o botão continua funcionando; ao clicar, cada campo mostra o que falta e o cursor vai para o primeiro (`useErrosFormulario`). Ficam desabilitados só: Salvar sem alteração, Aprovar campanha que não está pronta (a lista ao lado diz o que falta), exclusões com confirmação digitada e o que está enviando. Os avisos que já aparecem enquanto se digita (meta abaixo do mínimo, e-mail inválido, senhas diferentes) continuam. Heurísticas de Nielsen 1, 5 e 9.
 
@@ -468,7 +501,7 @@ Em Repasses em Atenção e Reembolsos Manuais (lista e ficha), o "último motivo
 
 ---
 
-## 14. Dependências: o que cada uma faz
+## 15. Dependências: o que cada uma faz
 
 | Pacote | Por que está aqui |
 |---|---|
@@ -481,9 +514,10 @@ Em Repasses em Atenção e Reembolsos Manuais (lista e ficha), o "último motivo
 
 ---
 
-## 15. O que não existe ainda e débitos conhecidos
+## 16. O que não existe ainda e débitos conhecidos
 
 - **Área pública** (campanha, home, checkout, painel do doador e do pesquisador). Ver `PROXIMOS_MODULOS.md`. Botões do cabeçalho e do rodapé que levariam a ela ainda não têm destino; "Continuar com Google" é simulado.
+- **Trocar logo e ícone pelo painel** (aba Identidade Visual): hoje a marca são arquivos do projeto (seção 12).
 - **Telas que dependem da área pública:** escolher a recompensa e o aviso do modelo da campanha no checkout, o botão de seguir pesquisador no perfil público, o painel "Projetos Criados" do pesquisador.
 - ⚠️ **Nenhum teste automatizado no React.**
 - ⚠️ **`react/.gitignore` não cobre `.env`** (inofensivo hoje: o arquivo só tem a URL da API).

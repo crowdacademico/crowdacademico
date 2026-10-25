@@ -34,4 +34,4 @@ export const CLASSE_BADGE_SITUACAO_REVISAO: Record<SituacaoRevisao, string> = {
 };
 
 // O nome do evento vai para a tela como o provedor manda, sem tradução. A decisão e o dicionário que existia:
-// DOCUMENTACAO_FRONTEND.md, seção 12, "Pagamentos", "Nome do evento: como o provedor manda".
+// DOCUMENTACAO_FRONTEND.md, seção 13, "Pagamentos", "Nome do evento: como o provedor manda".

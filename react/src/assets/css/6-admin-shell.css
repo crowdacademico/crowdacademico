@@ -57,7 +57,10 @@
 .admin-sidebar {
   background-color: var(--cor-fundo-cartao);
   border-bottom: 1px solid var(--cor-borda);
-  padding: 1.5rem;
+  /* Lateral menor que o topo: com a barra de rolagem vertical do Windows, 1.5rem deixava ~146px para o
+     rótulo, e o negrito do item ativo (2 a 3px mais largo) quebrava "Papéis & Permissões" ao clicar. Com
+     1rem sobram ~162px: os rótulos de até ~160px cabem numa linha nos dois pesos. */
+  padding: 1.5rem 1rem;
 }
 
 .admin-sidebar__titulo {

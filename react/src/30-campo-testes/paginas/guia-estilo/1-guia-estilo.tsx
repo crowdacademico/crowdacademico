@@ -15,7 +15,7 @@
 //
 // A lista de pares de contraste é do sistema (assets/css/pares-contraste.json,
 // lida também pelo `npm run contraste`); o guia só a mostra.
-// Detalhes: DOCUMENTACAO_FRONTEND.md, seção 12 (Campo de Testes).
+// Detalhes: DOCUMENTACAO_FRONTEND.md, seção 13 (Campo de Testes).
 // ============================================================================
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
