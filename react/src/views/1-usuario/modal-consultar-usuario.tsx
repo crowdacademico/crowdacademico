@@ -88,8 +88,10 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
       subtitulo={usuario?.email}
       avatar={
         usuario && (
-          <div className="relative shrink-0">
-            <AvatarUsuario nome={usuario.nome} foto={avatarUrl} tamanho="lg" />
+          // Foto grande (xl, a da Minha Conta) sem o cabeçalho crescer: ela avança 20 px para cima e para baixo dentro do
+          // espaço interno do cabeçalho (-my-5) e fica centralizada na altura do nome e do e-mail (self-center).
+          <div className="relative shrink-0 self-center -my-5">
+            <AvatarUsuario nome={usuario.nome} foto={avatarUrl} tamanho="xl" />
             {avatarUrl && (
               <div className="absolute bottom-0 right-0">
                 <BotaoVerFotoPerfil url={avatarUrl} badge />
