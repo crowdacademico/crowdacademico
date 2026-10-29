@@ -4,6 +4,13 @@ import { NotificacaoResponse } from '../response/notificacao.response';
 
 export class NotificacaoConverter {
   static paraResponseDto(entity: NotificacaoEntity): NotificacaoResponse {
+    if (
+      entity.canal !== 'email' ||
+      entity.email_destinatario === null ||
+      entity.status === null
+    ) {
+      throw new Error('Notificação de e-mail inconsistente.');
+    }
     const dados = { ...entity.dados };
     delete dados[CHAVE_SEGREDO_NOTIFICACAO];
     return {

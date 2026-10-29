@@ -32,7 +32,8 @@ export class NotificacaoServiceSummary {
              count(*) FILTER (WHERE status = 'falhou')::int AS falhas,
              count(*) FILTER (WHERE status = 'enviado' AND enviado_em > NOW() - INTERVAL '7 days')::int AS enviados,
              count(*) FILTER (WHERE status = 'cancelado')::int AS cancelados
-      FROM notificacao
+            FROM notificacao
+            WHERE canal = 'email'
     `.execute(this.database.getDb());
     const linha = resultado.rows[0];
     return {

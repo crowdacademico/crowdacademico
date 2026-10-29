@@ -153,7 +153,7 @@ GRANT UPDATE (
 -- SECURITY DEFINER ([03-O] em 03_funcoes_seguranca.sql). O GRANT direto é só do que é edição de perfil.
 GRANT UPDATE (nome, id_imagem_perfil, senha_hash) ON public.usuario TO app_nestjs;
 
--- [06-D-2b] Funções de autenticação e de moderação (ver [03-O], [03-N], [03-P], [03-P-1] a [03-P-3], [03-E-1] e [03-E-2] em 03_funcoes_seguranca.sql):
+-- [06-D-2b] Funções de autenticação e de moderação (ver [03-O], [03-N], [03-P] a [03-U] em 03_funcoes_seguranca.sql):
 -- o único jeito de mudar as colunas que ficaram fora do GRANT direto acima.
 -- HIGIENE (vale para todo REVOKE ... FROM PUBLIC deste arquivo): função nova no Postgres nasce com EXECUTE
 -- liberado para PUBLIC. Para função que apaga conta, muda estado de autenticação, escreve em nome de outra pessoa
@@ -174,13 +174,13 @@ REVOKE EXECUTE ON FUNCTION public.suspender_pesquisador(INT, TIMESTAMPTZ, TEXT) 
 REVOKE EXECUTE ON FUNCTION public.reativar_pesquisador(INT)               FROM PUBLIC;
 -- reativar_pesquisadores_vencidos(): ver 05_regras_negocio.sql (@Cron, sem sessão).
 REVOKE EXECUTE ON FUNCTION public.reativar_pesquisadores_vencidos()       FROM PUBLIC;
--- corrigir_cpf_pesquisador(INT, TEXT, TEXT): ver [03-P-1] e o comentário do GRANT UPDATE de perfil_pesquisador acima.
+-- corrigir_cpf_pesquisador(INT, TEXT, TEXT): ver [03-Q] e o comentário do GRANT UPDATE de perfil_pesquisador acima.
 REVOKE EXECUTE ON FUNCTION public.corrigir_cpf_pesquisador(INT, TEXT, TEXT) FROM PUBLIC;
--- criar_perfil_pesquisador_para_outro(...): ver [03-P-2].
+-- criar_perfil_pesquisador_para_outro(...): ver [03-R].
 REVOKE EXECUTE ON FUNCTION public.criar_perfil_pesquisador_para_outro(INT, TEXT, TEXT, tipo_vinculo, TEXT, titulo_academico) FROM PUBLIC;
--- alterar_perfil_pesquisador_de_outro(...): ver [03-P-3].
+-- alterar_perfil_pesquisador_de_outro(...): ver [03-U].
 REVOKE EXECUTE ON FUNCTION public.alterar_perfil_pesquisador_de_outro(INT, tipo_vinculo, TEXT, titulo_academico) FROM PUBLIC;
--- criar_campanha_para_outro(...) / forcar_exclusao_campanha(INT): ver [03-E-1] e [03-E-2].
+-- criar_campanha_para_outro(...) / forcar_exclusao_campanha(INT): ver [03-S] e [03-T].
 REVOKE EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.forcar_exclusao_campanha(INT) FROM PUBLIC;
 -- suspender_usuario / revogar_suspensao_usuario / suspender_papel_usuario / revogar_suspensao_papel_usuario: ver [03-N].
@@ -226,8 +226,14 @@ GRANT INSERT ON usuario_termo TO app_nestjs;
 -- (não há policy de UPDATE).
 GRANT INSERT, DELETE ON usuario_papel, seguir_pesquisador TO app_nestjs;
 
--- [06-D-3] notificacao: por que precisou de GRANT de INSERT/UPDATE (ver DOCUMENTACAO_BD.md)
-GRANT INSERT, UPDATE ON notificacao TO app_nestjs;
+-- [06-D-3] notificacao: INSERT de e-mails e UPDATE limitado à leitura do sino (ver DOCUMENTACAO_BD.md)
+GRANT INSERT ON notificacao TO app_nestjs;
+REVOKE UPDATE ON notificacao FROM app_nestjs;
+GRANT UPDATE (lida_em) ON notificacao TO app_nestjs;
+
+-- [06-D-4] Modelos e regras de comunicação: leitura para o backend; escrita controlada por RLS/admin.
+GRANT SELECT, INSERT, UPDATE, DELETE ON modelo_mensagem, regra_notificacao TO app_nestjs;
+
 
 -- [06-D-4] verificacao_email / recuperacao_senha / sessao: por que têm GRANT próprio (ver DOCUMENTACAO_BD.md)
 -- DELETE: mesmo com a policy das 3 sendo FOR ALL, o GRANT precisa dele. Sem ele, um token de recuperação de
@@ -539,3 +545,7 @@ REVOKE EXECUTE ON FUNCTION public.reenviar_notificacao(INT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.reenviar_notificacao(INT) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.cancelar_notificacao(INT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.cancelar_notificacao(INT) TO app_nestjs;
+-- cancelar_notificacoes_email_desativado: o worker de envio (@Cron, sem sessão) cancela o que ficou na fila de um canal
+-- desativado. Sem verificação de permissão por dentro, como reservar/concluir/falhar.
+REVOKE EXECUTE ON FUNCTION public.cancelar_notificacoes_email_desativado() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.cancelar_notificacoes_email_desativado() TO app_nestjs;

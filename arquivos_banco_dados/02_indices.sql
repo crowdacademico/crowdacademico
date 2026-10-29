@@ -25,7 +25,7 @@
 --  [02-G] ARQUIVO
 --  [02-H] CONTRIBUIÇÃO
 --  [02-I] SCORE
---  [02-L] LOG DE AUDITORIA
+--  [02-J] LOG DE AUDITORIA
 -- ============================================================================
 -- [02-C] CONFIG
 -- ============================================================
@@ -166,7 +166,19 @@ CREATE INDEX idx_contribuicao_status_aberto ON contribuicao(status) WHERE status
 CREATE INDEX idx_score_config_pai           ON score_config(id_pai);
 
 -- ============================================================
--- [02-L] LOG DE AUDITORIA
+-- [02-I-NOTIFICACOES] Índices de modelos, regras e sino interno
+-- ============================================================
+-- Só uma versão ativa por evento/canal/idioma (a tela desativa a anterior ao criar a nova).
+CREATE UNIQUE INDEX idx_modelo_mensagem_ativo_unico
+    ON modelo_mensagem(tipo_evento, canal, idioma) WHERE ativo = TRUE;
+-- (regra_notificacao não precisa de índice próprio: UK_REGRA_NOTIFICACAO_EVENTO_CANAL já cobre a busca por evento+canal.)
+CREATE INDEX idx_notificacao_canal_interna_usuario_nao_lida
+    ON notificacao(id_usuario, criado_em DESC) WHERE canal = 'interna' AND lida_em IS NULL;
+CREATE INDEX idx_notificacao_canal_interna_usuario_data
+    ON notificacao(id_usuario, criado_em DESC, id_notificacao DESC) WHERE canal = 'interna';
+
+-- ============================================================
+-- [02-J] LOG DE AUDITORIA
 -- ============================================================
 -- As duas consultas mais frequentes do log: "tudo que mudou neste registro" (tabela + identidade, o histórico de
 -- alterações de cada tela) e "tudo que este usuário mexeu" (índice seguinte). Sem eles, as duas varrem a tabela

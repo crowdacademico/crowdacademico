@@ -8,7 +8,7 @@
 -- ----------------------------------------------------------------------------
 --  Descrição:
 --  Define toda a estrutura de dados do banco: a role de aplicação, a
---  extensão pgcrypto, os tipos ENUM usados pelas colunas de status, e as 42
+--  extensão pgcrypto, os tipos ENUM usados pelas colunas de status, e as 45
 --  tabelas do schema - organizadas por domínio, na ordem exata de
 --  dependência de Foreign Key, para permitir rodar o script do zero sem
 --  erro de referência.
@@ -21,14 +21,14 @@
 --  Inventário Mapeado:
 --  - 1 Role de aplicação (app_nestjs) + 1 Extensão (pgcrypto)
 --  - 14 Tipos ENUM
---  - 43 Tabelas em 9 blocos de domínio
+--  - 45 Tabelas em 9 blocos de domínio
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
 -- ----------------------------------------------------------------------------
 --  [01-A] BOOTSTRAP, EXTENSÕES E ENUMS
 --  [01-B] RBAC (3 tabelas)
 --  [01-C] CONFIG (5 tabelas)
---  [01-D] USUÁRIO (10 tabelas + Índices)
+--  [01-D] USUÁRIO (9 tabelas + Índices)
 --  [01-E] CAMPANHA (11 tabelas)
 --  [01-F] LINK (3 tabelas de associação)
 --  [01-G] ARQUIVO (2 tabelas de associação)
@@ -243,7 +243,7 @@ CREATE TABLE arquivo (
 );
 
 -- ============================================================
--- [01-D] USUÁRIO (10 tabelas + Índices)
+-- [01-D] USUÁRIO (9 tabelas + Índices)
 -- ============================================================
 CREATE TABLE usuario (
     id_usuario       SERIAL,
@@ -453,12 +453,42 @@ CREATE TABLE usuario_termo (
     CONSTRAINT "UK_USUARIO_TERMO_USUARIO_TERMO" UNIQUE (id_usuario, id_termo) -- [melhoria] mesmo usuário não aceita a mesma versão duas vezes
 );
 
+-- [01-D-NOTIFICACOES] Modelo de mensagem (e-mail e sino), versionado.
+-- Um único modelo para os dois canais: o que muda de um canal para o outro é só o `canal` e o uso das colunas (o
+-- e-mail usa título = assunto, corpo de texto e, opcional, corpo HTML; o sino usa título e corpo de texto, sem HTML).
+-- O TEXTO de uma versão é imutável (fn_protege_modelo_mensagem, 05 [05-Q]): mudar o conteúdo = criar uma nova versão.
+-- Só uma versão ativa por evento/canal/idioma (idx_modelo_mensagem_ativo_unico, 02). Fica ANTES de `notificacao`
+-- porque ela aponta para esta tabela.
+CREATE TABLE modelo_mensagem (
+    id_modelo_mensagem   SERIAL,
+    tipo_evento          VARCHAR(100) NOT NULL,
+    canal                VARCHAR(20)  NOT NULL,                 -- 'email' | 'interna' (sino da plataforma)
+    idioma               VARCHAR(10)  NOT NULL DEFAULT 'pt-BR',
+    titulo_template      VARCHAR(200) NOT NULL,                 -- e-mail: assunto; sino: título
+    corpo_texto_template TEXT         NOT NULL,                 -- e-mail: corpo em texto; sino: mensagem
+    corpo_html_template  TEXT,                                  -- só e-mail (NULL = o HTML é derivado do texto)
+    versao               INT          NOT NULL DEFAULT 1,
+    ativo                BOOLEAN      NOT NULL DEFAULT TRUE,
+    criado_em            TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    atualizado_em        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    CONSTRAINT "PK_MODELO_MENSAGEM" PRIMARY KEY (id_modelo_mensagem),
+    CONSTRAINT "CK_MODELO_MENSAGEM_CANAL" CHECK (canal IN ('email', 'interna')),
+    CONSTRAINT "CK_MODELO_MENSAGEM_VERSAO" CHECK (versao > 0),
+    CONSTRAINT "CK_MODELO_MENSAGEM_TITULO" CHECK (LENGTH(BTRIM(titulo_template)) > 0),
+    CONSTRAINT "CK_MODELO_MENSAGEM_CORPO" CHECK (LENGTH(BTRIM(corpo_texto_template)) > 0),
+    CONSTRAINT "CK_MODELO_MENSAGEM_HTML" CHECK (canal = 'email' OR corpo_html_template IS NULL),
+    CONSTRAINT "UK_MODELO_MENSAGEM_VERSAO" UNIQUE (tipo_evento, canal, idioma, versao),
+    -- Alvo da FK composta de regra_notificacao: garante que a regra aponte para um modelo do MESMO evento e canal.
+    CONSTRAINT "UK_MODELO_MENSAGEM_ID_CANAL_EVENTO" UNIQUE (id_modelo_mensagem, canal, tipo_evento)
+);
+
 CREATE TABLE notificacao (
     id_notificacao     SERIAL,
     id_usuario         INT,                                   -- mantém o histórico de envio mesmo se o usuário for removido
-    email_destinatario VARCHAR(255)       NOT NULL,          -- snapshot do e-mail no momento do envio (usuário pode trocar o e-mail depois)
+    canal              VARCHAR(20)        NOT NULL DEFAULT 'email',
+    email_destinatario VARCHAR(255),                         -- snapshot do e-mail no momento do envio (usuário pode trocar o e-mail depois)
     tipo_evento        VARCHAR(100)       NOT NULL,          -- ex: 'campanha_aprovada', 'doacao_recebida' - texto livre, como "evento" em auditoria_financeira
-    status             status_notificacao NOT NULL DEFAULT 'pendente',
+    status             status_notificacao DEFAULT 'pendente', -- NULL para avisos internos, que não entram na fila de e-mail
     tentativas         INT                NOT NULL DEFAULT 0,
     criado_em          TIMESTAMPTZ          NOT NULL DEFAULT NOW(),
     enviado_em         TIMESTAMPTZ,                             -- [melhoria] quando o envio de fato teve sucesso (NULL até lá)
@@ -471,10 +501,48 @@ CREATE TABLE notificacao (
     proxima_tentativa_em TIMESTAMPTZ        NOT NULL DEFAULT NOW(), -- espera entre tentativas e reserva do worker
     provedor             VARCHAR(30),                         -- quem enviou: 'fake', 'brevo', 'smtp'
     id_mensagem_provedor VARCHAR(200),                        -- id que o provedor devolveu, para achar o e-mail no painel dele
+    id_modelo_mensagem   INT,                                 -- versão imutável do modelo do canal quando o evento aconteceu (NULL só em e-mails antigos)
+    url_destino          TEXT,                                 -- destino ao clicar no aviso do sino
+    chave_deduplicacao   VARCHAR(200),                         -- evita enfileirar o mesmo aviso interno mais de uma vez
+    lida_em              TIMESTAMPTZ,
 
     CONSTRAINT "PK_NOTIFICACAO" PRIMARY KEY (id_notificacao),
     CONSTRAINT "FK_NOTIFICACAO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    CONSTRAINT "CK_NOTIFICACAO_TENTATIVAS" CHECK (tentativas >= 0)
+    CONSTRAINT "CK_NOTIFICACAO_TENTATIVAS" CHECK (tentativas >= 0),
+    CONSTRAINT "CK_NOTIFICACAO_CANAL" CHECK (canal IN ('email', 'interna')),
+    CONSTRAINT "CK_NOTIFICACAO_CANAL_CAMPOS" CHECK (
+        (canal = 'email' AND email_destinatario IS NOT NULL AND status IS NOT NULL
+            AND url_destino IS NULL AND chave_deduplicacao IS NULL AND lida_em IS NULL)
+        OR
+        (canal = 'interna' AND email_destinatario IS NULL
+            AND status IS NULL AND id_modelo_mensagem IS NOT NULL)
+    ),
+    CONSTRAINT "FK_NOTIFICACAO_MODELO_MENSAGEM" FOREIGN KEY (id_modelo_mensagem, canal, tipo_evento)
+        REFERENCES modelo_mensagem(id_modelo_mensagem, canal, tipo_evento),
+    CONSTRAINT "CK_NOTIFICACAO_URL" CHECK (url_destino IS NULL OR url_destino NOT LIKE 'javascript:%'),
+    CONSTRAINT "UK_NOTIFICACAO_DEDUPLICACAO" UNIQUE (chave_deduplicacao)
+);
+
+-- [01-D-NOTIFICACOES] Regras de canal e sino da plataforma.
+-- `notificacao` contém uma linha por canal: e-mail usa os campos de entrega; interna usa lida_em e url_destino.
+
+-- Uma regra por evento e canal: liga/desliga o canal e diz qual versão do modelo ele usa. O evento continua sendo um
+-- contrato conhecido pelo backend e pelos gatilhos (quem recebe é decidido por eles); a tabela configura os canais,
+-- mas não inventa eventos de negócio dinamicamente.
+CREATE TABLE regra_notificacao (
+    id_regra_notificacao SERIAL,
+    tipo_evento          VARCHAR(100) NOT NULL,
+    canal                VARCHAR(20)  NOT NULL,
+    ativo                BOOLEAN      NOT NULL DEFAULT TRUE,
+    obrigatoria          BOOLEAN      NOT NULL DEFAULT FALSE,   -- obrigatória: a tela não deixa desativar o canal
+    id_modelo_mensagem   INT          NOT NULL,
+    criado_em            TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    atualizado_em        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    CONSTRAINT "PK_REGRA_NOTIFICACAO" PRIMARY KEY (id_regra_notificacao),
+    CONSTRAINT "CK_REGRA_NOTIFICACAO_CANAL" CHECK (canal IN ('email', 'interna')),
+    CONSTRAINT "UK_REGRA_NOTIFICACAO_EVENTO_CANAL" UNIQUE (tipo_evento, canal),
+    CONSTRAINT "FK_REGRA_NOTIFICACAO_MODELO" FOREIGN KEY (id_modelo_mensagem, canal, tipo_evento)
+        REFERENCES modelo_mensagem(id_modelo_mensagem, canal, tipo_evento)
 );
 
 CREATE TABLE verificacao_email (

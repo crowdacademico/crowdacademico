@@ -535,7 +535,7 @@ Este termo pode ser atualizado periodicamente; a versão vigente no momento da s
 -- Com id escrito à mão, a sequência não anda sozinha: a próxima versão criada recebe o id 5.
 SELECT setval(pg_get_serial_sequence('termos_de_uso', 'id_termo'), (SELECT max(id_termo) FROM termos_de_uso));
 
--- [07-C-5] configuracoes: os parâmetros globais do sistema (o parâmetro pessoal do admin entra depois de usuario)
+-- [07-C-5] configuracoes: por que este bloco vem depois de usuario (ver DOCUMENTACAO_BD.md)
 -- Agrupado por domínio (A,D,E,F,H,I, mesma ordem de [07-B-2]): configuracoes.service.findall.ts ordena por
 -- id_config, então a ordem do INSERT é a ordem que a tela mostra. Puramente cosmético para cada chave: `chave` é
 -- UNIQUE e toda leitura (NestJS) busca por nome, nunca por posição/id_config.
@@ -676,6 +676,8 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'tarefa_conferencia_ligada', 'true', 'booleano', 'Tarefa automática: conferir com o provedor os pagamentos sem aviso e os avisos parados. Desligada, a execução agendada fica em pausa', TRUE, FALSE),
 (NULL, 'tarefa_envio_email_ligada', 'true', 'booleano', 'Tarefa automática: enviar os e-mails da fila (verificação de conta, avisos de campanha e de contribuição). Desligada, a execução agendada fica em pausa', TRUE, FALSE),
 -- Fila de e-mails (nest/src/4-mail; funções em 05, [05-Q]).
+(NULL, 'email_intervalo_processamento_minutos', '1',    'inteiro', 'Intervalo em minutos entre ciclos de processamento da fila de e-mails; o backend deve respeitar este valor', TRUE, FALSE),
+(NULL, 'email_lote_maximo',                       '20',   'inteiro', 'Número máximo de e-mails reservados por ciclo de processamento', TRUE, FALSE),
 (NULL, 'email_lease_minutos',                    '5',    'inteiro', 'Minutos que um e-mail fica reservado para um worker antes de outro poder tentar',             TRUE, FALSE),
 (NULL, 'email_max_tentativas',                   '5',    'inteiro', 'Tentativas de envio de um e-mail antes de ele aparecer como falha no painel',                TRUE, FALSE),
 (NULL, 'email_backoff_base_minutos',             '5',    'inteiro', 'Espera, em minutos, antes da 2ª tentativa de envio de um e-mail (dobra a cada falha)',      TRUE, FALSE),
@@ -688,6 +690,97 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- public.fn_precisa_revisao_score() em 05_regras_negocio.sql, [05-I-1]). De propósito, sem trigger de
 -- bloqueio.
 (NULL, 'score_minimo_campanha',      '25.00', 'decimal',  'Score mínimo para criar campanha (sinal de revisão manual, nunca bloqueio automático)', TRUE, FALSE);
+-- [07-C-5-NOTIFICACOES] Modelos iniciais e regras de canal (modelo_mensagem + regra_notificacao).
+-- O texto de cada aviso vem destes modelos (versão 1); o admin cria novas versões pela tela, sem mexer no código.
+-- O comentário "destinatário" ao lado de cada regra só documenta quem o gatilho do banco notifica: a coluna não existe
+-- mais na tabela, quem decide o destinatário é o gatilho de [05-Q].
+INSERT INTO modelo_mensagem (tipo_evento, canal, idioma, titulo_template, corpo_texto_template, versao, ativo) VALUES
+('verificacao_email', 'email', 'pt-BR', 'Confirme o seu e-mail no CrowdAcadêmico', 'Olá, {{nome}}. Confirme seu e-mail para concluir o cadastro: {{url_confirmacao}}. Se não foi você, ignore esta mensagem.', 1, TRUE),
+('recuperacao_senha', 'email', 'pt-BR', 'Crie uma nova senha no CrowdAcadêmico', 'Olá, {{nome}}. Use este link para redefinir sua senha: {{url_recuperacao}}. O link vale por {{minutos}} minutos e só pode ser usado uma vez.', 1, TRUE),
+('campanha_aprovada', 'email', 'pt-BR', 'Sua campanha foi aprovada', 'Olá, {{nome}}. A campanha {{titulo}} foi aprovada e já está visível na plataforma.', 1, TRUE),
+('campanha_rejeitada', 'email', 'pt-BR', 'Sua campanha não foi aprovada', 'Olá, {{nome}}. A campanha {{titulo}} não foi aprovada. Motivo: {{justificativa}}.', 1, TRUE),
+('nova_campanha_pesquisador', 'email', 'pt-BR', 'Nova campanha de um pesquisador que você segue', 'Olá, {{nome}}. {{nome_pesquisador}} publicou uma nova campanha: {{titulo}}.', 1, TRUE),
+('nova_atualizacao', 'email', 'pt-BR', 'Nova atualização numa campanha que você acompanha', 'Olá, {{nome}}. A campanha {{titulo}} publicou uma nova atualização: {{titulo_atualizacao}}.', 1, TRUE),
+('campanha_sucesso', 'email', 'pt-BR', 'A campanha que você apoiou bateu a meta', 'Olá, {{nome}}. A campanha {{titulo}} terminou e atingiu a meta. Obrigado por apoiar a pesquisa.', 1, TRUE),
+('campanha_nao_atingida', 'email', 'pt-BR', 'A campanha que você apoiou não bateu a meta', 'Olá, {{nome}}. A campanha {{titulo}} terminou sem atingir a meta. A devolução da contribuição será iniciada conforme as regras da campanha.', 1, TRUE),
+('campanha_encerrada_moderacao', 'email', 'pt-BR', 'A campanha que você apoiou foi encerrada', 'Olá, {{nome}}. A campanha {{titulo}} foi encerrada pela moderação. A contribuição será tratada conforme as regras da plataforma.', 1, TRUE),
+('devolucao_concluida', 'email', 'pt-BR', 'Sua contribuição foi devolvida', 'Olá, {{nome}}. A devolução da sua contribuição para {{titulo}} foi concluída. Valor: {{valor}}.', 1, TRUE),
+('repasse_previsto', 'email', 'pt-BR', 'Seu repasse foi programado', 'Olá, {{nome}}. O repasse da campanha {{titulo}} foi programado. Valor: {{valor}}. Data prevista: {{data_prevista}}.', 1, TRUE),
+('encerramento_aprovado', 'email', 'pt-BR', 'Seu pedido de encerramento foi aprovado', 'Olá, {{nome}}. O pedido de encerramento antecipado da campanha {{titulo}} foi aprovado.', 1, TRUE),
+('encerramento_rejeitado', 'email', 'pt-BR', 'Seu pedido de encerramento não foi aprovado', 'Olá, {{nome}}. O pedido de encerramento da campanha {{titulo}} não foi aprovado. Motivo: {{justificativa}}.', 1, TRUE),
+('pesquisador_suspenso', 'email', 'pt-BR', 'Seu perfil de pesquisador foi suspenso', 'Olá, {{nome}}. Seu perfil de pesquisador foi suspenso. Motivo: {{motivo}}. Prazo: {{suspenso_ate}}.', 1, TRUE),
+('pesquisador_reativado', 'email', 'pt-BR', 'Seu perfil de pesquisador foi reativado', 'Olá, {{nome}}. Seu perfil de pesquisador está ativo novamente.', 1, TRUE),
+('contestacao_aceita', 'email', 'pt-BR', 'Sua contestação foi aceita', 'Olá, {{nome}}. Sua contestação foi aceita. Justificativa: {{justificativa}}.', 1, TRUE),
+('contestacao_recusada', 'email', 'pt-BR', 'Sua contestação não foi aceita', 'Olá, {{nome}}. Sua contestação foi analisada e não foi aceita. Justificativa: {{justificativa}}.', 1, TRUE)
+ON CONFLICT (tipo_evento, canal, idioma, versao) DO NOTHING;
+
+INSERT INTO modelo_mensagem (tipo_evento, canal, idioma, titulo_template, corpo_texto_template, versao, ativo) VALUES
+('campanha_aprovada', 'interna', 'pt-BR', 'Campanha aprovada', 'Sua campanha {{titulo}} foi aprovada.', 1, TRUE),
+('campanha_rejeitada', 'interna', 'pt-BR', 'Campanha não aprovada', 'Sua campanha {{titulo}} não foi aprovada.', 1, TRUE),
+('nova_campanha_pesquisador', 'interna', 'pt-BR', 'Nova campanha', '{{nome_pesquisador}} publicou a campanha {{titulo}}.', 1, TRUE),
+('nova_atualizacao', 'interna', 'pt-BR', 'Nova atualização', 'A campanha {{titulo}} publicou uma atualização.', 1, TRUE),
+('campanha_sucesso', 'interna', 'pt-BR', 'Meta atingida', 'A campanha {{titulo}} atingiu a meta.', 1, TRUE),
+('campanha_nao_atingida', 'interna', 'pt-BR', 'Meta não atingida', 'A campanha {{titulo}} terminou sem atingir a meta.', 1, TRUE),
+('campanha_encerrada_moderacao', 'interna', 'pt-BR', 'Campanha encerrada', 'A campanha {{titulo}} foi encerrada pela moderação.', 1, TRUE),
+('devolucao_concluida', 'interna', 'pt-BR', 'Contribuição devolvida', 'A devolução da contribuição para {{titulo}} foi concluída.', 1, TRUE),
+('repasse_previsto', 'interna', 'pt-BR', 'Repasse programado', 'O repasse da campanha {{titulo}} foi programado.', 1, TRUE),
+('encerramento_aprovado', 'interna', 'pt-BR', 'Encerramento aprovado', 'O pedido de encerramento de {{titulo}} foi aprovado.', 1, TRUE),
+('encerramento_rejeitado', 'interna', 'pt-BR', 'Encerramento não aprovado', 'O pedido de encerramento de {{titulo}} não foi aprovado.', 1, TRUE),
+('pesquisador_suspenso', 'interna', 'pt-BR', 'Perfil suspenso', 'Seu perfil de pesquisador foi suspenso.', 1, TRUE),
+('pesquisador_reativado', 'interna', 'pt-BR', 'Perfil reativado', 'Seu perfil de pesquisador foi reativado.', 1, TRUE),
+('contestacao_aceita', 'interna', 'pt-BR', 'Contestação aceita', 'Sua contestação foi aceita.', 1, TRUE),
+('contestacao_recusada', 'interna', 'pt-BR', 'Contestação não aceita', 'Sua contestação não foi aceita.', 1, TRUE)
+ON CONFLICT (tipo_evento, canal, idioma, versao) DO NOTHING;
+
+-- E-mails: mantêm os tipos já suportados pelo sistema atual. Verificação/recuperação são apenas e-mail.
+INSERT INTO regra_notificacao (tipo_evento, canal, ativo, obrigatoria, id_modelo_mensagem)
+SELECT v.tipo_evento, 'email', TRUE, v.obrigatoria, m.id_modelo_mensagem
+FROM (VALUES
+ ('verificacao_email', TRUE), -- destinatário: usuario_afetado
+ ('recuperacao_senha', TRUE), -- destinatário: usuario_afetado
+ ('campanha_aprovada', TRUE), -- destinatário: pesquisador
+ ('campanha_rejeitada', TRUE), -- destinatário: pesquisador
+ ('nova_campanha_pesquisador', FALSE), -- destinatário: seguidores
+ ('nova_atualizacao', FALSE), -- destinatário: seguidores
+ ('campanha_sucesso', TRUE), -- destinatário: doadores
+ ('campanha_nao_atingida', TRUE), -- destinatário: doadores
+ ('campanha_encerrada_moderacao', TRUE), -- destinatário: doadores
+ ('devolucao_concluida', TRUE), -- destinatário: usuario_afetado
+ ('repasse_previsto', TRUE), -- destinatário: pesquisador
+ ('encerramento_aprovado', TRUE), -- destinatário: pesquisador
+ ('encerramento_rejeitado', TRUE), -- destinatário: pesquisador
+ ('pesquisador_suspenso', TRUE), -- destinatário: usuario_afetado
+ ('pesquisador_reativado', TRUE), -- destinatário: usuario_afetado
+ ('contestacao_aceita', TRUE), -- destinatário: usuario_afetado
+ ('contestacao_recusada', TRUE) -- destinatário: usuario_afetado
+) AS v(tipo_evento, obrigatoria)
+JOIN modelo_mensagem m ON m.tipo_evento = v.tipo_evento AND m.canal = 'email' AND m.idioma = 'pt-BR' AND m.versao = 1
+ON CONFLICT (tipo_evento, canal) DO NOTHING;
+
+-- Regras do canal interno: não dependem de e-mail nem de endereço de e-mail. Eventos de verificação de conta
+-- e recuperação de senha ficam fora do sino, pois são fluxos de segurança por e-mail.
+INSERT INTO regra_notificacao (tipo_evento, canal, ativo, obrigatoria, id_modelo_mensagem)
+SELECT v.tipo_evento, 'interna', TRUE, v.obrigatoria, m.id_modelo_mensagem
+FROM (VALUES
+ ('campanha_aprovada', TRUE), -- destinatário: pesquisador
+ ('campanha_rejeitada', TRUE), -- destinatário: pesquisador
+ ('nova_campanha_pesquisador', FALSE), -- destinatário: seguidores
+ ('nova_atualizacao', FALSE), -- destinatário: seguidores
+ ('campanha_sucesso', TRUE), -- destinatário: doadores
+ ('campanha_nao_atingida', TRUE), -- destinatário: doadores
+ ('campanha_encerrada_moderacao', TRUE), -- destinatário: doadores
+ ('devolucao_concluida', TRUE), -- destinatário: usuario_afetado
+ ('repasse_previsto', TRUE), -- destinatário: pesquisador
+ ('encerramento_aprovado', TRUE), -- destinatário: pesquisador
+ ('encerramento_rejeitado', TRUE), -- destinatário: pesquisador
+ ('pesquisador_suspenso', TRUE), -- destinatário: usuario_afetado
+ ('pesquisador_reativado', TRUE), -- destinatário: usuario_afetado
+ ('contestacao_aceita', TRUE), -- destinatário: usuario_afetado
+ ('contestacao_recusada', TRUE) -- destinatário: usuario_afetado
+) AS v(tipo_evento, obrigatoria)
+JOIN modelo_mensagem m ON m.tipo_evento = v.tipo_evento AND m.canal = 'interna' AND m.idioma = 'pt-BR' AND m.versao = 1
+ON CONFLICT (tipo_evento, canal) DO NOTHING;
+
 -- Chaves que NÃO existem, de propósito: 'permitir_campanha_anonima' (campanha.id_usuario é NOT NULL, toda
 -- campanha tem um pesquisador identificado, o que a curadoria RF-068/069 exige; contribuição anônima já existe
 -- via contribuicao.token_sessao) e 'limite_denuncias_suspensao' (nenhuma trigger suspende perfil

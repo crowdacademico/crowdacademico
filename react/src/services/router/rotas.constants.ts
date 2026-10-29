@@ -22,11 +22,9 @@ import { ListarRevisoesPagamento } from '../../views/25-pagamento-revisao/listar
 import { ListarReembolsosManuais } from '../../views/25-pagamento-revisao/listar-reembolsos-manuais';
 import { ListarRepassesAtencao } from '../../views/25-pagamento-revisao/listar-repasses-atencao';
 import { ListarAuditoriaFinanceira } from '../../views/25-pagamento-revisao/listar-auditoria-financeira';
-import { ListarContribuicoes } from '../../views/25-pagamento-revisao/listar-contribuicoes';
-import { ListarRepasses } from '../../views/25-pagamento-revisao/listar-repasses';
-import { ListarAnexosAtualizacoes } from '../../views/15-atualizacao-campanha/listar-anexos-atualizacoes';
 import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
 import { PontuacaoScore } from '../../views/11-configuracoes/pontuacao-score';
+import { ConfigurarNotificacoes } from '../../views/27-notificacao/configurar-notificacoes';
 import { campoTestes } from './campo-testes-opcional';
 
 // Fonte única de verdade para "quais páginas existem": App.tsx monta as <Route> daqui e breadcrumb.tsx monta
@@ -142,6 +140,16 @@ export const ROTAS_ADMIN: Rota[] = [
     grupoMenu: 'CONFIGURACOES',
     icone: 'fa-sliders',
   },
+  {
+    caminho: '/admin/notificacoes-configuracao',
+    caminhoRelativo: 'notificacoes-configuracao',
+    elemento: ConfigurarNotificacoes,
+    rotuloMenu: 'Notificações e E-mails',
+    rotuloBreadcrumb: 'Notificações e E-mails',
+    grupoMenu: 'CONFIGURACOES',
+    icone: 'fa-bell-concierge',
+  },
+
   // Pontuação (Score): pesos das dimensões e faixas de reputação (tabelas score_config e score_rotulo).
   {
     caminho: '/admin/pontuacao',
@@ -198,17 +206,6 @@ export const ROTAS_ADMIN: Rota[] = [
     grupoMenu: 'CAMPANHA',
     icone: 'fa-bullhorn',
   },
-  // Só leitura: os arquivos e links das atualizações de campanha (atualizacao_moderar: admin e moderador). No menu,
-  // o nome curto (DS-112).
-  {
-    caminho: '/admin/anexos-atualizacoes',
-    caminhoRelativo: 'anexos-atualizacoes',
-    elemento: ListarAnexosAtualizacoes,
-    rotuloMenu: 'Anexos',
-    rotuloBreadcrumb: 'Anexos das Atualizações',
-    grupoMenu: 'CAMPANHA',
-    icone: 'fa-paperclip',
-  },
 
   // Fila de aprovação: item do grupo MODERAÇÃO.
   {
@@ -233,7 +230,7 @@ export const ROTAS_ADMIN: Rota[] = [
     caminho: '/admin/pedidos-encerramento',
     caminhoRelativo: 'pedidos-encerramento',
     elemento: ListarEncerramentos,
-    rotuloMenu: 'Pedido de Encerramento',
+    rotuloMenu: 'Pedidos de Encerramento',
     rotuloBreadcrumb: 'Pedidos de Encerramento',
     grupoMenu: 'MODERACAO',
     icone: 'fa-flag-checkered',
@@ -269,26 +266,6 @@ export const ROTAS_ADMIN: Rota[] = [
     rotuloBreadcrumb: 'Repasses em Atenção',
     grupoMenu: 'PAGAMENTOS',
     icone: 'fa-hand-holding-dollar',
-  },
-  // Só leitura: todas as contribuições, com a situação do repasse (contribuicao_visualizar_sensivel: admin).
-  {
-    caminho: '/admin/contribuicoes',
-    caminhoRelativo: 'contribuicoes',
-    elemento: ListarContribuicoes,
-    rotuloMenu: 'Contribuições',
-    rotuloBreadcrumb: 'Contribuições',
-    grupoMenu: 'PAGAMENTOS',
-    icone: 'fa-hand-holding-heart',
-  },
-  // Só leitura: todos os repasses ao pesquisador (repasse_aprovar: admin).
-  {
-    caminho: '/admin/repasses',
-    caminhoRelativo: 'repasses',
-    elemento: ListarRepasses,
-    rotuloMenu: 'Repasses',
-    rotuloBreadcrumb: 'Repasses',
-    grupoMenu: 'PAGAMENTOS',
-    icone: 'fa-money-check-dollar',
   },
   // Só leitura: cada mudança de dinheiro com quem fez (auditoria_financeira_visualizar: admin e revisor).
   {

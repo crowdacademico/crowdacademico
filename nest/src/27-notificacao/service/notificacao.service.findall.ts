@@ -35,6 +35,7 @@ export class NotificacaoServiceFindAll {
       .getDb()
       .selectFrom('notificacao')
       .selectAll()
+      .where('canal', '=', 'email')
       .orderBy('criado_em', 'desc')
       .orderBy('id_notificacao', 'desc');
 

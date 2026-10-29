@@ -7,8 +7,9 @@ import {
   type TipoNotificacao,
 } from '../constants/notificacao.constants';
 
-// Para o que só o Nest sabe (o token do link de verificar a conta e de recuperar a senha). O resto dos e-mails nasce
-// nos gatilhos do banco ([05-Q]). Roda na transação da requisição: se a ação for desfeita, o e-mail some junto.
+// Para eventos que só o Nest conhece (token de verificação e recuperação). A função SQL decide, pelas regras ativas,
+// se o evento gera e-mail, notificação interna ou ambos. Roda na transação da requisição: se a ação for desfeita, as
+// entradas dos canais também são desfeitas.
 @Injectable()
 export class NotificacaoServiceEnqueue {
   constructor(private readonly database: DatabaseService) {}

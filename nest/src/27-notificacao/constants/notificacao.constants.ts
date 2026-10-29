@@ -1,5 +1,6 @@
-// Tipos de e-mail que o sistema põe na fila (notificacao.tipo_evento). Os gatilhos de [05-Q] (05_regras_negocio.sql)
-// gravam os mesmos nomes; o texto de cada um mora em 4-mail/modelos. Tipo novo: entra aqui, no gatilho e no modelo.
+// Tipos de evento de notificação (notificacao.tipo_evento). Os gatilhos de [05-Q]
+// (05_regras_negocio.sql) gravam os mesmos nomes. O texto de cada um NÃO fica no código: mora em modelo_mensagem (banco),
+// que o admin edita criando versões. Tipo novo: entra aqui, no gatilho, em modelo_mensagem e em regra_notificacao.
 export const TIPO_NOTIFICACAO = {
   verificacaoEmail: 'verificacao_email',
   recuperacaoSenha: 'recuperacao_senha',

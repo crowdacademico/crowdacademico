@@ -303,19 +303,24 @@ export interface MotivoDenuncia {
 
 export interface Notificacao {
   assunto: string | null;
+  canal: Generated<'email' | 'interna'>;
+  chave_deduplicacao: string | null;
   criado_em: Generated<Timestamp>;
   dados: Generated<Json>;
-  email_destinatario: string;
+  email_destinatario: string | null;
   enviado_em: Timestamp | null;
   id_mensagem_provedor: string | null;
+  id_modelo_mensagem: number | null;
   id_notificacao: Generated<number>;
   id_usuario: number | null;
+  lida_em: Timestamp | null;
   provedor: string | null;
   proxima_tentativa_em: Generated<Timestamp>;
-  status: Generated<StatusNotificacao>;
+  status: StatusNotificacao | null;
   tentativas: Generated<number>;
   tipo_evento: string;
   ultimo_erro: string | null;
+  url_destino: string | null;
 }
 
 export interface OrcamentoCampanha {

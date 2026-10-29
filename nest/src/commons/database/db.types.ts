@@ -476,9 +476,10 @@ export type StatusNotificacao = (typeof STATUS_NOTIFICACAO)[number];
 export interface NotificacaoTable {
   id_notificacao: Generated<number>;
   id_usuario: number | null;
-  email_destinatario: string;
+  canal: Generated<'email' | 'interna'>;
+  email_destinatario: string | null;
   tipo_evento: string;
-  status: Generated<StatusNotificacao>;
+  status: StatusNotificacao | null;
   tentativas: Generated<number>;
   criado_em: Generated<Date>;
   enviado_em: Date | null;
@@ -489,6 +490,10 @@ export interface NotificacaoTable {
   proxima_tentativa_em: Generated<Date>;
   provedor: string | null;
   id_mensagem_provedor: string | null;
+  id_modelo_mensagem: number | null;
+  url_destino: string | null;
+  chave_deduplicacao: string | null;
+  lida_em: Date | null;
 }
 
 // CREATE TYPE meio_pagamento AS ENUM ('pix','cartao_credito','cartao_debito','boleto') - 01

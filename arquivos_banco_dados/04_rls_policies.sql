@@ -13,8 +13,8 @@
 --  em vez de um bloco de ENABLE no topo separado das policies.
 --
 --  Inventário Mapeado:
---  - 43 Tabelas com RLS ativada e forçada
---  - 121 Policies (100% idempotentes - toda CREATE POLICY tem
+--  - 42 Tabelas com RLS ativada e forçada
+--  - 118 Policies (100% idempotentes - toda CREATE POLICY tem
 --    DROP POLICY IF EXISTS correspondente)
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
@@ -22,7 +22,7 @@
 --  [04-A] Visão geral (FORCE ROW LEVEL SECURITY)
 --  [04-B] RBAC (3 tabelas)
 --  [04-C] CONFIG (5 tabelas)
---  [04-D] USUÁRIO (10 tabelas)
+--  [04-D] USUÁRIO (9 tabelas)
 --  [04-E] CAMPANHA (11 tabelas)
 --  [04-F] LINK (3 tabelas)
 --  [04-G] ARQUIVO (2 tabelas)
@@ -52,7 +52,7 @@ ALTER TABLE papel_permissao      FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS pol_papel_select ON papel;
 CREATE POLICY pol_papel_select ON papel FOR SELECT USING (true);
--- [04-B-1b] papel: UPDATE liberado só para o rótulo e a descrição: GRANT UPDATE (nome, descricao), 06_grants.sql [06-B].
+-- [04-B-1b] papel: UPDATE liberado só para o rótulo (`nome`): GRANT UPDATE (nome), 06_grants.sql [06-B].
 -- `codigo`, a coluna estável que as triggers de RBAC leem (01_extensoes_enums_tabelas.sql [01-B]), não tem
 -- GRANT nenhum, então nem chega a ser possível tentar mudá-la por aqui: é isso que torna seguro abrir
 -- esta policy.
@@ -188,7 +188,7 @@ CREATE POLICY pol_arquivo_update ON arquivo FOR UPDATE TO app_nestjs USING (
 );
 
 -- ============================================================
--- [04-D] USUÁRIO (10 tabelas)
+-- [04-D] USUÁRIO (9 tabelas)
 -- ============================================================
 ALTER TABLE usuario              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE usuario              FORCE ROW LEVEL SECURITY;
@@ -202,6 +202,10 @@ ALTER TABLE usuario_termo        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE usuario_termo        FORCE ROW LEVEL SECURITY;
 ALTER TABLE notificacao          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notificacao          FORCE ROW LEVEL SECURITY;
+ALTER TABLE modelo_mensagem      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE modelo_mensagem      FORCE ROW LEVEL SECURITY;
+ALTER TABLE regra_notificacao    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE regra_notificacao    FORCE ROW LEVEL SECURITY;
 
 -- [04-D-1] verificacao_email / recuperacao_senha / sessao: por que RLS sem policy por usuário (ver DOCUMENTACAO_BD.md)
 ALTER TABLE verificacao_email ENABLE ROW LEVEL SECURITY;
@@ -288,18 +292,59 @@ CREATE POLICY pol_usuario_termo_insert ON usuario_termo FOR INSERT TO app_nestjs
 -- 'usuario_visualizar_sensivel' não tem relação semântica com processar notificação.
 DROP POLICY IF EXISTS pol_notificacao_select ON notificacao;
 CREATE POLICY pol_notificacao_select ON notificacao FOR SELECT TO app_nestjs USING (
-    id_usuario = (SELECT public.id_usuario_atual())
-    OR (SELECT public.tem_permissao('usuario_visualizar_sensivel'))
-    OR (SELECT public.tem_permissao('notificacao_processar'))
+    (canal = 'email' AND (
+        id_usuario = (SELECT public.id_usuario_atual())
+        OR (SELECT public.tem_permissao('usuario_visualizar_sensivel'))
+        OR (SELECT public.tem_permissao('notificacao_processar'))
+    ))
+    OR (canal = 'interna' AND (
+        id_usuario = (SELECT public.id_usuario_atual())
+        OR (SELECT public.tem_permissao('notificacao_processar'))
+    ))
 );
--- Escrita liberada para o app_nestjs, controle na aplicação (mesmo padrão de
--- verificacao_email/recuperacao_senha/sessao): toda notificação real é para um terceiro (admin aprova ->
--- avisa pesquisador; sistema avisa doadores) e o worker de envio roda sem usuário logado. Leitura
--- continua restrita ao dono.
+-- O app pode inserir e-mails sob controle dos fluxos da aplicação. Avisos internos só entram pelo enfileirador
+-- SECURITY DEFINER ou por quem tem notificacao_processar. O worker de envio roda sem usuário logado.
 DROP POLICY IF EXISTS pol_notificacao_insert ON notificacao;
-CREATE POLICY pol_notificacao_insert ON notificacao FOR INSERT TO app_nestjs WITH CHECK (true);
+CREATE POLICY pol_notificacao_insert ON notificacao FOR INSERT TO app_nestjs WITH CHECK (
+    canal = 'email'
+    OR (canal = 'interna' AND (SELECT public.tem_permissao('notificacao_processar')))
+);
 DROP POLICY IF EXISTS pol_notificacao_update ON notificacao;
-CREATE POLICY pol_notificacao_update ON notificacao FOR UPDATE TO app_nestjs USING (true) WITH CHECK (true);
+CREATE POLICY pol_notificacao_update ON notificacao FOR UPDATE TO app_nestjs
+USING (
+    canal = 'email'
+    OR (canal = 'interna' AND (
+        id_usuario = (SELECT public.id_usuario_atual())
+        OR (SELECT public.tem_permissao('notificacao_processar'))
+    ))
+)
+WITH CHECK (
+    canal = 'email'
+    OR (canal = 'interna' AND (
+        id_usuario = (SELECT public.id_usuario_atual())
+        OR (SELECT public.tem_permissao('notificacao_processar'))
+    ))
+);
+
+-- Modelos e regras são lidos pelo backend para decidir conteúdo/canal. Edição só por administrador
+-- com configuracao_gerenciar; a aplicação não pode criar eventos/regras livremente por conta de usuário.
+DROP POLICY IF EXISTS pol_modelo_mensagem_select ON modelo_mensagem;
+CREATE POLICY pol_modelo_mensagem_select ON modelo_mensagem FOR SELECT TO app_nestjs USING (true);
+DROP POLICY IF EXISTS pol_modelo_mensagem_insert ON modelo_mensagem;
+CREATE POLICY pol_modelo_mensagem_insert ON modelo_mensagem FOR INSERT TO app_nestjs WITH CHECK ((SELECT public.tem_permissao('configuracao_gerenciar')));
+DROP POLICY IF EXISTS pol_modelo_mensagem_update ON modelo_mensagem;
+CREATE POLICY pol_modelo_mensagem_update ON modelo_mensagem FOR UPDATE TO app_nestjs USING ((SELECT public.tem_permissao('configuracao_gerenciar'))) WITH CHECK ((SELECT public.tem_permissao('configuracao_gerenciar')));
+DROP POLICY IF EXISTS pol_modelo_mensagem_delete ON modelo_mensagem;
+CREATE POLICY pol_modelo_mensagem_delete ON modelo_mensagem FOR DELETE TO app_nestjs USING ((SELECT public.tem_permissao('configuracao_gerenciar')));
+
+DROP POLICY IF EXISTS pol_regra_notificacao_select ON regra_notificacao;
+CREATE POLICY pol_regra_notificacao_select ON regra_notificacao FOR SELECT TO app_nestjs USING (true);
+DROP POLICY IF EXISTS pol_regra_notificacao_insert ON regra_notificacao;
+CREATE POLICY pol_regra_notificacao_insert ON regra_notificacao FOR INSERT TO app_nestjs WITH CHECK ((SELECT public.tem_permissao('configuracao_gerenciar')));
+DROP POLICY IF EXISTS pol_regra_notificacao_update ON regra_notificacao;
+CREATE POLICY pol_regra_notificacao_update ON regra_notificacao FOR UPDATE TO app_nestjs USING ((SELECT public.tem_permissao('configuracao_gerenciar'))) WITH CHECK ((SELECT public.tem_permissao('configuracao_gerenciar')));
+DROP POLICY IF EXISTS pol_regra_notificacao_delete ON regra_notificacao;
+CREATE POLICY pol_regra_notificacao_delete ON regra_notificacao FOR DELETE TO app_nestjs USING ((SELECT public.tem_permissao('configuracao_gerenciar')));
 
 DROP POLICY IF EXISTS pol_seg_pesq_select ON seguir_pesquisador;
 CREATE POLICY pol_seg_pesq_select ON seguir_pesquisador FOR SELECT TO app_nestjs USING (id_usuario = (SELECT public.id_usuario_atual()));

@@ -1,10 +1,12 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { sql } from 'kysely';
+import { Pool } from 'pg';
+import { PG_POOL } from '../../commons/database/database.constants';
 import { DatabaseService } from '../../commons/database/database.service';
 import { AutorizacaoService } from '../../commons/seguranca/autorizacao.service';
 import { FakeEmailAdapter } from '../../4-mail/adapters/fake/fake-email.adapter';
-import { montarMensagem } from '../../4-mail/modelos/montar-mensagem';
+import { montarMensagemBanco } from '../../4-mail/modelos/montar-mensagem-banco';
 import {
   ENVIO_EMAIL,
   type EnvioEmailPort,
@@ -47,6 +49,7 @@ interface LinhaNotificacao {
   enviado_em: Date | null;
   provedor: string | null;
   id_mensagem_provedor: string | null;
+  id_modelo_mensagem: number | null;
   dados: Record<string, unknown>;
 }
 
@@ -59,6 +62,7 @@ interface LinhaNotificacao {
 export class EmailServiceCaixa {
   constructor(
     private readonly database: DatabaseService,
+    @Inject(PG_POOL) private readonly pool: Pool,
     private readonly autorizacao: AutorizacaoService,
     private readonly config: ConfigService,
     @Inject(ENVIO_EMAIL) private readonly envio: EnvioEmailPort,
@@ -67,28 +71,37 @@ export class EmailServiceCaixa {
   async listar(): Promise<EmailDaCaixa[]> {
     const resultado = await sql<LinhaNotificacao>`
       SELECT * FROM notificacao
-      WHERE id_notificacao > public.config_numero(${CHAVE_CAIXA_LIMPA_ATE}, 0)
+      WHERE canal = 'email'
+        AND id_notificacao > public.config_numero(${CHAVE_CAIXA_LIMPA_ATE}, 0)
       ORDER BY id_notificacao DESC
     `.execute(this.database.getDb());
-    return resultado.rows.map((linha) => ({
-      idNotificacao: linha.id_notificacao,
-      para: linha.email_destinatario,
-      tipoEvento: linha.tipo_evento,
-      assunto:
-        linha.assunto ??
-        montarMensagem(linha.tipo_evento, linha.dados, this.urlPainel())
-          ?.assunto ??
-        linha.tipo_evento,
-      status: linha.status,
-      criadoEm: linha.criado_em,
-      enviadoEm: linha.enviado_em,
-      provedor: linha.provedor,
-    }));
+    return Promise.all(
+      resultado.rows.map(async (linha) => {
+        const montada = await montarMensagemBanco(
+          this.pool,
+          linha.tipo_evento,
+          linha.dados,
+          this.urlPainel(),
+          linha.id_modelo_mensagem,
+        ).catch(() => null);
+        return {
+          idNotificacao: linha.id_notificacao,
+          para: linha.email_destinatario,
+          tipoEvento: linha.tipo_evento,
+          assunto: linha.assunto ?? montada?.assunto ?? linha.tipo_evento,
+          status: linha.status,
+          criadoEm: linha.criado_em,
+          enviadoEm: linha.enviado_em,
+          provedor: linha.provedor,
+        };
+      }),
+    );
   }
 
   async previa(idNotificacao: number): Promise<PreviaDoEmail> {
     const resultado = await sql<LinhaNotificacao>`
-      SELECT * FROM notificacao WHERE id_notificacao = ${idNotificacao}
+      SELECT * FROM notificacao
+      WHERE id_notificacao = ${idNotificacao} AND canal = 'email'
     `.execute(this.database.getDb());
     const linha = resultado.rows[0] as LinhaNotificacao | undefined;
     if (!linha) throw new NotFoundException('E-mail não encontrado.');
@@ -107,14 +120,16 @@ export class EmailServiceCaixa {
         exato: true,
       };
     }
-    const montada = montarMensagem(
+    const doBanco = await montarMensagemBanco(
+      this.pool,
       linha.tipo_evento,
       linha.dados,
       this.urlPainel(),
-    );
-    if (montada) return { ...montada, exato: false };
+      linha.id_modelo_mensagem,
+    ).catch(() => null);
+    if (doBanco) return { ...doBanco, exato: false };
     const aviso =
-      'Este e-mail levava um link com código (confirmar a conta ou criar nova senha). O código é apagado do banco assim que o e-mail sai, e o Nest reiniciou depois do envio: não dá para mostrar o texto de novo.';
+      'Não foi possível reconstruir o conteúdo: o modelo não está ativo/disponível e, por segurança, o link com código não é recuperado do banco após o envio.';
     return {
       assunto: linha.assunto ?? linha.tipo_evento,
       texto: aviso,
@@ -129,7 +144,7 @@ export class EmailServiceCaixa {
     await this.autorizacao.exigirPermissao(PERMISSAO, MENSAGEM_SEM_PERMISSAO);
     await sql`
       UPDATE configuracoes
-      SET valor = (SELECT COALESCE(MAX(id_notificacao), 0) FROM notificacao)::text
+      SET valor = (SELECT COALESCE(MAX(id_notificacao), 0) FROM notificacao WHERE canal = 'email')::text
       WHERE chave = ${CHAVE_CAIXA_LIMPA_ATE} AND id_usuario IS NULL
     `.execute(this.database.getDb());
     if (this.envio instanceof FakeEmailAdapter) this.envio.limpar();

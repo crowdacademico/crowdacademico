@@ -8,3 +8,5 @@
 # Memória do provedor de pagamento de teste (PAYMENT_PROVIDER=fake), quando o Nest roda a partir desta pasta.
 .fake-gateway.json
 .fake-gateway.json.tmp
+nest/.env.dados
+nest/.env.example

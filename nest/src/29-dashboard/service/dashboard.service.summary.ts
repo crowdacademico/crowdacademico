@@ -47,6 +47,7 @@ export class DashboardServiceSummary {
       SELECT count(*) FILTER (WHERE status = 'pendente')::int AS pendentes,
              count(*) FILTER (WHERE status = 'falhou')::int AS falhas
       FROM notificacao
+            WHERE canal = 'email'
     `.execute(db);
 
     return {

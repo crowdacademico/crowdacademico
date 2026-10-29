@@ -774,7 +774,7 @@ BEGIN
     FROM score_rotulo WHERE ativo = TRUE;
 
     IF v_min IS DISTINCT FROM 0 OR v_max IS DISTINCT FROM 100 THEN
-        RAISE EXCEPTION 'As faixas ativas precisam cobrir de 0 a 100 (hoje vão de % a %).', v_min, v_max
+        RAISE EXCEPTION 'As faixas ativas de score_rotulo precisam cobrir de 0 a 100 (hoje vão de % a %).', v_min, v_max
             USING ERRCODE = '90018';
     END IF;
 
@@ -6438,6 +6438,8 @@ $$;
 --     atualização publicada). Vale para qualquer caminho: tela, tarefa automática ou função de moderação;
 --   - o Nest, só para verificar a conta e recuperar a senha: o link leva um token que o banco guarda apenas como hash,
 --     então só o Nest o conhece; ele vai cifrado em dados.segredo e é apagado quando o e-mail sai ou é cancelado.
+-- Cada evento gera e-mail, aviso no sino ou os dois, conforme regra_notificacao (canais independentes); o texto vem
+-- de modelo_mensagem, versionado e imutável, e o admin muda o conteúdo criando uma nova versão (sem deploy).
 -- Conta excluída não recebe nada (enfileirar_notificacao devolve NULL). Contribuição sem conta também não: não há
 -- e-mail para onde mandar (RF-080).
 
@@ -6445,10 +6447,17 @@ $$;
 -- Função:     enfileirar_notificacao
 -- Assinatura: (p_id_usuario INT, p_tipo VARCHAR, p_dados JSONB DEFAULT '{}') -> INT
 -- Bloco:      [05-Q]
--- Regra:      Põe um e-mail na fila para uma conta: copia o e-mail e o nome dela NESTE momento (a pessoa pode trocar o
---             nome depois; o histórico mostra para onde foi). Conta inexistente ou excluída: devolve NULL e não grava
---             nada. SECURITY DEFINER, sem autorização: quem chama são os gatilhos deste bloco e o Nest (cadastro e
---             recuperação de senha), sempre por causa de um evento que já passou pelas próprias regras.
+-- Regra:      Decide, NO MOMENTO do evento, quais canais estão ativos em regra_notificacao e grava em cada um:
+--             cada canal ativo => uma linha em notificacao; e-mail fica 'pendente' e interno fica sem status de envio.
+--             Um canal não depende do outro. O texto NÃO é gravado: cada linha guarda o
+--             id do modelo (modelo_mensagem) vigente neste momento + os dados, e o texto é montado na leitura (sino)
+--             ou no envio (e-mail). Como o texto de um modelo nunca muda (fn_protege_modelo_mensagem), editar o
+--             conteúdo depois cria outra versão e não altera o que já foi enfileirado. Copia nome e e-mail NESTE
+--             momento. O sino nunca recebe dados.segredo (token do link de verificação/recuperação). Conta
+--             inexistente ou excluída: devolve NULL e não grava nada. Devolve o id da linha de e-mail ou, se só
+--             houver só canal interno, o id da linha interna (mantém o contrato "NULL = nada foi enfileirado" dos
+--             chamadores). SECURITY DEFINER, sem autorização: quem chama são os gatilhos deste bloco e o Nest
+--             (cadastro e recuperação de senha), sempre por causa de um evento que já passou pelas próprias regras.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.enfileirar_notificacao(p_id_usuario INT, p_tipo VARCHAR, p_dados JSONB DEFAULT '{}'::jsonb)
 RETURNS INT
@@ -6457,22 +6466,115 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-    v_email VARCHAR(255);
-    v_nome  VARCHAR(150);
-    v_id    INT;
+    v_email             VARCHAR(255);
+    v_nome              VARCHAR(150);
+    v_dados             JSONB;
+    v_modelo_email      INT;
+    v_modelo_interna    INT;
+    v_id_email          INT;
+    v_id_interna        INT;
 BEGIN
     SELECT u.email, u.nome INTO v_email, v_nome
     FROM usuario u
     WHERE u.id_usuario = p_id_usuario AND NOT u.deletado;
 
-    IF NOT FOUND OR v_email IS NULL THEN
+    IF NOT FOUND THEN
         RETURN NULL;
     END IF;
 
-    INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, dados)
-    VALUES (p_id_usuario, v_email, p_tipo, jsonb_build_object('nome', v_nome) || COALESCE(p_dados, '{}'::jsonb))
-    RETURNING id_notificacao INTO v_id;
-    RETURN v_id;
+    v_dados := jsonb_build_object('nome', v_nome) || COALESCE(p_dados, '{}'::jsonb);
+
+    -- Canal e-mail: só se a regra estiver ativa, o modelo apontado estiver ativo e houver e-mail para onde mandar.
+    SELECT m.id_modelo_mensagem INTO v_modelo_email
+    FROM regra_notificacao r
+    JOIN modelo_mensagem m ON m.id_modelo_mensagem = r.id_modelo_mensagem
+    WHERE r.tipo_evento = p_tipo AND r.canal = 'email' AND r.ativo AND m.ativo;
+
+    -- Canal interno (sino): não depende de e-mail.
+    SELECT m.id_modelo_mensagem INTO v_modelo_interna
+    FROM regra_notificacao r
+    JOIN modelo_mensagem m ON m.id_modelo_mensagem = r.id_modelo_mensagem
+    WHERE r.tipo_evento = p_tipo AND r.canal = 'interna' AND r.ativo AND m.ativo;
+
+    IF v_modelo_interna IS NOT NULL THEN
+        INSERT INTO notificacao (id_usuario, canal, tipo_evento, id_modelo_mensagem, dados, status)
+        VALUES (p_id_usuario, 'interna', p_tipo, v_modelo_interna, v_dados - 'segredo', NULL)
+        RETURNING id_notificacao INTO v_id_interna;
+    END IF;
+
+    IF v_modelo_email IS NOT NULL AND v_email IS NOT NULL THEN
+        INSERT INTO notificacao (id_usuario, canal, email_destinatario, tipo_evento, dados, id_modelo_mensagem, status)
+        VALUES (p_id_usuario, 'email', v_email, p_tipo, v_dados, v_modelo_email, 'pendente')
+        RETURNING id_notificacao INTO v_id_email;
+    END IF;
+
+    RETURN COALESCE(v_id_email, v_id_interna);
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_protege_modelo_mensagem
+-- Gatilho:    trg_protege_modelo_mensagem (BEFORE UPDATE em modelo_mensagem)
+-- Bloco:      [05-Q]
+-- Regra:      O texto de um modelo é imutável: evento, canal, idioma, versão, título e corpos não podem mudar depois
+--             de criados (só `ativo` e `atualizado_em`). Quem quer mudar o conteúdo cria uma NOVA versão. É o que
+--             garante que um aviso antigo (que guarda só o id do modelo) continue mostrando o texto da época.
+--             Erro 91055.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_protege_modelo_mensagem()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.tipo_evento          IS DISTINCT FROM OLD.tipo_evento
+       OR NEW.canal                IS DISTINCT FROM OLD.canal
+       OR NEW.idioma               IS DISTINCT FROM OLD.idioma
+       OR NEW.versao               IS DISTINCT FROM OLD.versao
+       OR NEW.titulo_template      IS DISTINCT FROM OLD.titulo_template
+       OR NEW.corpo_texto_template IS DISTINCT FROM OLD.corpo_texto_template
+       OR NEW.corpo_html_template  IS DISTINCT FROM OLD.corpo_html_template THEN
+        RAISE EXCEPTION 'O texto de um modelo não pode ser alterado: crie uma nova versão.'
+            USING ERRCODE = '91055';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_protege_modelo_mensagem ON modelo_mensagem;
+CREATE TRIGGER trg_protege_modelo_mensagem
+    BEFORE UPDATE ON modelo_mensagem
+    FOR EACH ROW EXECUTE FUNCTION public.fn_protege_modelo_mensagem();
+
+-- ----------------------------------------------------------------------------
+-- Função:     cancelar_notificacoes_email_desativado
+-- Assinatura: () -> INT
+-- Bloco:      [05-Q]
+-- Regra:      Cancela, em lote, os e-mails 'pendente' cujo canal de e-mail foi desativado depois de entrarem na fila
+--             (regra ou modelo inativo), apagando dados.segredo. Devolve quantos cancelou. Quem chama: o worker de
+--             envio (nest/src/4-mail, @Cron, sem sessão). SECURITY DEFINER, sem autorização.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.cancelar_notificacoes_email_desativado()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_atualizadas INT;
+BEGIN
+    UPDATE notificacao n
+       SET status = 'cancelado',
+           ultimo_erro = 'Canal de e-mail desativado ou sem modelo ativo.',
+           dados = dados - 'segredo'
+     WHERE n.status = 'pendente'
+       AND NOT EXISTS (
+           SELECT 1
+           FROM regra_notificacao r
+           JOIN modelo_mensagem m ON m.id_modelo_mensagem = r.id_modelo_mensagem
+           WHERE r.tipo_evento = n.tipo_evento AND r.canal = 'email' AND r.ativo AND m.ativo
+       );
+    GET DIAGNOSTICS v_atualizadas = ROW_COUNT;
+    RETURN v_atualizadas;
 END;
 $$;
 
@@ -6564,7 +6666,8 @@ $$;
 -- ----------------------------------------------------------------------------
 -- Função:     reservar_proxima_notificacao
 -- Assinatura: (p_ignorar_espera BOOLEAN DEFAULT FALSE) -> TABLE (id_notificacao INT, id_usuario INT,
---             email_destinatario VARCHAR, tipo_evento VARCHAR, dados JSONB, tentativas INT)
+--             email_destinatario VARCHAR, tipo_evento VARCHAR, dados JSONB, tentativas INT,
+--             id_modelo_mensagem INT)
 -- Bloco:      [05-Q]
 -- Regra:      Fila do worker de e-mail. Pega o próximo 'pendente' cuja vez chegou (proxima_tentativa_em <= agora), conta
 --             a tentativa e o RESERVA empurrando proxima_tentativa_em para daqui a email_lease_minutos (padrão 5):
@@ -6572,11 +6675,14 @@ $$;
 --             para a fila quando o prazo vence. FOR UPDATE SKIP LOCKED: duas instâncias nunca reservam o mesmo.
 --             p_ignorar_espera: pega também o que espera uma nova tentativa (só o "Rodar agora" do Campo de Testes,
 --             para testar sem esperar; a tarefa agendada nunca passa TRUE).
+--             Devolve também id_modelo_mensagem (a versão do modelo vigente quando o evento aconteceu), para o worker
+--             montar o e-mail sem ler a tabela por fora (RLS: o worker não tem sessão).
 --             SECURITY DEFINER, SEM AUTORIZAÇÃO DE PROPÓSITO (job de fundo, sem usuário na sessão).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.reservar_proxima_notificacao(p_ignorar_espera BOOLEAN DEFAULT FALSE)
 RETURNS TABLE (
-    id_notificacao INT, id_usuario INT, email_destinatario VARCHAR, tipo_evento VARCHAR, dados JSONB, tentativas INT
+    id_notificacao INT, id_usuario INT, email_destinatario VARCHAR, tipo_evento VARCHAR, dados JSONB, tentativas INT,
+    id_modelo_mensagem INT
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -6601,7 +6707,8 @@ BEGIN
        SET tentativas = n.tentativas + 1,
            proxima_tentativa_em = NOW() + (public.config_numero('email_lease_minutos', 5) * INTERVAL '1 minute')
      WHERE n.id_notificacao = v_id
-    RETURNING n.id_notificacao, n.id_usuario, n.email_destinatario, n.tipo_evento, n.dados, n.tentativas;
+    RETURNING n.id_notificacao, n.id_usuario, n.email_destinatario, n.tipo_evento, n.dados, n.tentativas,
+              n.id_modelo_mensagem;
 END;
 $$;
 
@@ -6707,7 +6814,7 @@ BEGIN
     IF NOT FOUND THEN
         RAISE EXCEPTION 'E-mail não encontrado.' USING ERRCODE = '90039';
     END IF;
-    IF v_status <> 'falhou' THEN
+    IF v_status IS DISTINCT FROM 'falhou' THEN
         RAISE EXCEPTION 'Só um e-mail que falhou pode ser reenviado.' USING ERRCODE = '91054';
     END IF;
 
@@ -6742,7 +6849,7 @@ BEGIN
     IF NOT FOUND THEN
         RAISE EXCEPTION 'E-mail não encontrado.' USING ERRCODE = '90039';
     END IF;
-    IF v_status NOT IN ('pendente', 'falhou') THEN
+    IF v_status IS DISTINCT FROM 'pendente' AND v_status IS DISTINCT FROM 'falhou' THEN
         RAISE EXCEPTION 'Só um e-mail pendente ou que falhou pode ser cancelado.' USING ERRCODE = '91054';
     END IF;
 
