@@ -94,7 +94,7 @@ export function ListarEncerramentos({ auth }: PropsPagina) {
           { chave: 'modelo', rotulo: 'Modelo' },
         ]}
       />
-      <BlocoLogAuditoria buscar={buscarLog} />
+      <BlocoLogAuditoria buscar={buscarLog} chaveRecarga={chaveRecarga} />
 
       {aberto && (
         <ModalDecidirEncerramento

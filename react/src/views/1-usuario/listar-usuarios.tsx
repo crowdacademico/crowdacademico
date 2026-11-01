@@ -112,7 +112,7 @@ export function ListarUsuarios({ auth }: PropsPagina) {
       {/* "De"/"Para": "nome" é o único campo de texto editável de usuario que faz sentido rastrear assim
           (senha nunca entra no log, ver fn_log_auditoria() [strip de senha_hash]; e-mail não é editável pelo
           painel). */}
-      <BlocoLogAuditoria buscar={buscarLogUsuario} />
+      <BlocoLogAuditoria buscar={buscarLogUsuario} chaveRecarga={chaveRecarga} />
 
       {criando && (
         <ModalCriarUsuario auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />

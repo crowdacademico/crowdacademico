@@ -40,6 +40,7 @@ export class LogAuditoriaServiceMyActivity {
       ])
       .where('log_auditoria.id_usuario_responsavel', '=', idUsuario)
       .orderBy('log_auditoria.ocorrido_em', 'desc')
+      .orderBy('log_auditoria.id_log', 'desc')
       .limit(LIMITE_ATIVIDADE_RECENTE)
       .execute();
 

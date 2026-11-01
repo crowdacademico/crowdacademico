@@ -473,10 +473,16 @@ export const STATUS_NOTIFICACAO = [
 ] as const;
 export type StatusNotificacao = (typeof STATUS_NOTIFICACAO)[number];
 
+// Canal de um aviso (notificacao.canal e modelo_mensagem.canal): 'interna' é o sino do painel.
+export const CANAIS_NOTIFICACAO = ['email', 'interna'] as const;
+export type CanalNotificacao = (typeof CANAIS_NOTIFICACAO)[number];
+
 export interface NotificacaoTable {
   id_notificacao: Generated<number>;
   id_usuario: number | null;
-  email_destinatario: string;
+  canal: Generated<CanalNotificacao>;
+  // NULL só no sino (CK_NOTIFICACAO_CANAL).
+  email_destinatario: string | null;
   tipo_evento: string;
   status: Generated<StatusNotificacao>;
   tentativas: Generated<number>;
@@ -489,6 +495,19 @@ export interface NotificacaoTable {
   proxima_tentativa_em: Generated<Date>;
   provedor: string | null;
   id_mensagem_provedor: string | null;
+  lida_em: Date | null;
+}
+
+// O texto de cada aviso, por evento e canal ([01-D]); o admin muda titulo, corpo e ativo.
+export interface ModeloMensagemTable {
+  id_modelo_mensagem: Generated<number>;
+  tipo_evento: string;
+  canal: CanalNotificacao;
+  titulo: string;
+  corpo: string;
+  ativo: Generated<boolean>;
+  obrigatoria: Generated<boolean>;
+  atualizado_em: Generated<Date>;
 }
 
 // CREATE TYPE meio_pagamento AS ENUM ('pix','cartao_credito','cartao_debito','boleto') - 01
@@ -750,6 +769,7 @@ export interface DB {
   recompensa: RecompensaTable;
   contribuicao_recompensa: ContribuicaoRecompensaTable;
   notificacao: NotificacaoTable;
+  modelo_mensagem: ModeloMensagemTable;
   link_atualizacao: LinkAtualizacaoTable;
   link_recompensa: LinkRecompensaTable;
   arquivo: ArquivoTable;
@@ -776,6 +796,7 @@ export type LinkAtualizacaoEntity = Selectable<LinkAtualizacaoTable>;
 export type SeguirCampanhaEntity = Selectable<SeguirCampanhaTable>;
 export type SeguirPesquisadorEntity = Selectable<SeguirPesquisadorTable>;
 export type NotificacaoEntity = Selectable<NotificacaoTable>;
+export type ModeloMensagemEntity = Selectable<ModeloMensagemTable>;
 export type RecompensaEntity = Selectable<RecompensaTable>;
 export type LinkRecompensaEntity = Selectable<LinkRecompensaTable>;
 export type ComentarioEntity = Selectable<ComentarioTable>;

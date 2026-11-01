@@ -9,7 +9,8 @@ import {
   tarefaLigada,
 } from '../../commons/agendamento/tarefa-automatica';
 import { PG_POOL } from '../../commons/database/database.constants';
-import { montarMensagem } from '../modelos/montar-mensagem';
+import { buscarModelosEmail, montarMensagem } from '../modelos/montar-mensagem';
+import type { ModeloEmail } from '../modelos/modelos-email';
 import {
   ENVIO_EMAIL,
   ErroEnvioEmail,
@@ -60,9 +61,10 @@ export class EmailServiceSendPending {
     this.emExecucao = true;
     let tratados = 0;
     try {
+      const modelos = await buscarModelosEmail(this.pool);
       while (
         tratados < LOTE_MAXIMO &&
-        (await this.enviarProximo(opcoes.ignorarEspera ?? false))
+        (await this.enviarProximo(modelos, opcoes.ignorarEspera ?? false))
       ) {
         tratados++;
       }
@@ -80,7 +82,10 @@ export class EmailServiceSendPending {
   }
 
   // false = fila vazia; true = tratou um (enviado, ou falha registrada).
-  private async enviarProximo(ignorarEspera: boolean): Promise<boolean> {
+  private async enviarProximo(
+    modelos: Map<string, ModeloEmail>,
+    ignorarEspera: boolean,
+  ): Promise<boolean> {
     const fila = await this.pool.query<LinhaNotificacao>(
       'SELECT * FROM public.reservar_proxima_notificacao($1::boolean)',
       [ignorarEspera],
@@ -92,6 +97,7 @@ export class EmailServiceSendPending {
       item.tipo_evento,
       item.dados,
       this.config.get<string>('PAINEL_URL'),
+      modelos.get(item.tipo_evento),
     );
     if (!mensagem) {
       await this.falhar(

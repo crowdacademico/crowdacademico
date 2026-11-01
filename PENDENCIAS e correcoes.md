@@ -31,7 +31,7 @@
 
 ## 0. 📌 Para a Alexia ler (conversar antes de fazer)
 
-- **Textos dos e-mails: no código ou em tabela? (aberto em 24-10-2026, ESTUDAR antes de decidir).** Hoje o assunto e o texto de cada e-mail moram no código (`nest/src/4-mail/modelos/modelos-email.ts`), decisão de 19-10-2026 para não aumentar o escopo. A Alexia é a favor de tabelas novas (o admin editaria os textos pelo painel); o Lucas, contra. Não é ajuste leve: mexe no envio, no escopo (o orientador já achou o banco grande) e no que o admin pode quebrar sem querer. Estudar com calma: como os sistemas de referência fazem, o que muda em cada caminho, o custo e o risco de cada um, e só então decidir. Antes, só lembrete: se virar tabela, uma `template_email` entraria sem mexer na fila.
+- **Notificações (branch `notificacao-completa`, 31-10-2026): conversar depois de testar.** A ideia da branch `notificacao` da Alexia foi completada (texto editável em Configurações > Mensagens, sino com aba Notificações). Decisões tomadas pela opção mais enxuta, para revisar juntos: (1) uma tabela só (`modelo_mensagem`), sem versão do texto (o histórico é o log de auditoria); (2) sem campo HTML, só assunto e texto; (3) qual canal sai por padrão: hoje tudo vai por e-mail e sino, menos a campanha nova de quem a pessoa segue, que vai só para o sino; (4) os parâmetros `email_lote_maximo` e `email_intervalo_processamento_minutos` da branch dela não entraram (o lote é ajuste técnico, não regra de negócio, e o intervalo brigaria com o agendamento central das tarefas). Grupo BS no ATUALIZAR.
 
 O "Aguardando" (pagamento que chega depois do fim da campanha) foi decidido e feito em 03-10-2026; a explicação está em `informacoes/HISTORICO/HISTORICO_ACHADOS_PARA_DISCUTIR.md`, seção "Limpeza de 25-10-2026", e o `ACHADOS_PARA_DISCUTIR.md` lista os decididos para a Alexia.
 
@@ -145,6 +145,21 @@ Toda banca de TCC de sistema hoje em dia costuma perguntar sobre segurança logo
 
 **A ideia:** com o sistema pronto, fazer uma auditoria inteira pelos critérios da WCAG 2.2 (nível AA), tela por tela: tempo e movimento (2.2.1 e 2.2.2), navegação só pelo teclado, ordem do foco, textos alternativos, mensagens de erro ligadas ao campo, zoom de 200% e tela de celular. Ferramenta: o axe (já usado em rodadas anteriores) mais conferência manual, porque a ferramenta automática pega só parte dos problemas. **Só começar quando todos os módulos estiverem prontos**, como os testes com Playwright abaixo. Já anotados para ela (24-10-2026): tabela vazia que rola de lado no celular não recebe foco do teclado (axe, `scrollable-region-focusable`; o padrão da `caixa-tabela`, região com `tabIndex=0`, resolve), e o cabeçalho de coluna que ordena a tabela responde ao clique, mas não ao teclado.
 
+#### 🔴 Pendência aberta: auditoria dos logs, tela por tela (anotado em 01-11-2026)
+
+**Em palavras simples:** o "Histórico de alterações" (log) de cada tela mostra o nome de cada campo alterado. Esse nome tem de ser **o mesmo que a tela mostra** no formulário. A banca, o orientador ou um professor vai cobrar se o Alterar diz "Texto" e o log diz "Corpo".
+
+**Por que acontece:** o log traduz o nome técnico da coluna por uma lista única (`react/src/services/28-log-auditoria/constants/log-auditoria-nomes.constants.ts`), **pela coluna, não pela tela**. Coluna que não está na lista aparece com o nome do banco. E uma mesma coluna pode ter nomes diferentes em telas diferentes.
+
+**Já visto (01-11-2026, tela Mensagens):**
+- `corpo` aparecia como "Corpo" e o Alterar diz "Texto". **Corrigido**: entrou na lista.
+- `ativo` aparece como "Ativo" e o Alterar de Mensagens diz "Ligado".
+- `titulo` aparece como "Título" e o Alterar de Mensagens diz "Assunto" (e-mail) ou "Título" (sino).
+
+**A auditoria:** nas 11 telas que têm log (Usuários, Parâmetros do Sistema, Papéis, Pesquisadores, Motivos de Denúncia, Áreas do Conhecimento, Tipos de Link, Denúncias, Pedidos de Encerramento, Campanhas e Mensagens), alterar cada campo do formulário e conferir no log: (1) se a linha aparece logo depois de salvar; (2) se o "Campo alterado" tem o mesmo nome do formulário; (3) se o "De" e o "Para" estão legíveis (sem código, sem `true`/`false`, data formatada). Depois, decidir caso a caso quando o nome muda de uma tela para outra: renomear na tela ou tornar a lista por tabela.
+
+> Já corrigido em 01-11-2026: o log não se atualizava depois de salvar nas telas com Alterar em modal (só ao recarregar a página), e os registros com o mesmo horário trocavam de ordem a cada consulta.
+
 #### 🔴 Pendência aberta: testes automatizados com Playwright no React
 
 O `react/` não tem nenhum teste automatizado hoje (só `build`+`lint`). Um projeto de referência da disciplina (`COCAO_HOTEL_DDL_DML_CRUD_ppw2-main`) tem uma estrutura de testes Playwright organizada em 7 categorias (E2E completo, aceitação/requisito funcional, integração HTTP, API pura, *data-driven*, *snapshot* visual/acessibilidade, interceptação de erro) que pode servir de referência de estrutura, não de conteúdo (os testes deles são específicos do sistema de hotel).
@@ -158,6 +173,18 @@ O `react/` não tem nenhum teste automatizado hoje (só `build`+`lint`). Um proj
 ## 5. Decisões em aberto, sem pressa
 
 ### Segurança
+
+#### 🟡 Login sem e-mail confirmado (anotado em 01-11-2026)
+
+**Em palavras simples:** hoje quem cria conta entra e usa tudo **mesmo sem confirmar o e-mail**. O "E-mail não verificado" é só um selo amarelo em Minha Conta e no Alterar Usuário. O RF-003 pede só que a conta nasça "não verificada" e que o sistema guarde esse estado; não manda bloquear o login.
+
+**Inclinação do Lucas (01-11-2026):** bloquear a entrada de quem não confirmou o e-mail. Com isso, o botão "Reenviar e-mail de confirmação" em Minha Conta (que foi cogitado) fica redundante: quem não confirmou nem chega lá. Não é para fazer agora.
+
+**Antes de decidir, dois cuidados:**
+- **Quem perdeu o e-mail fica preso.** Bloqueando o login, a pessoa sem o link só consegue outro pelo Suporte (o "Reenviar verificação" do Alterar Usuário). O padrão de mercado é a tela de login avisar "confirme o seu e-mail" com um link "reenviar" ali mesmo.
+- **A conta criada pelo painel nasce sem e-mail confirmado** (`usuario.service.create.ts`) e sem receber o link. Bloqueando o login, essa conta não entraria nunca, a não ser que o painel passe a mandar o link ou a criar a conta já confirmada.
+
+**Já pronto para isso:** o aviso vermelho de Configurações > Mensagens ("Se desativado, quem cria conta não recebe o link para confirmar o e-mail. A conta é criada, mas o e-mail fica sem confirmação.") foi escrito para continuar certo se o login passar a exigir e-mail confirmado. As contas da demonstração já nascem confirmadas ([07-D-8]).
 
 #### 🟡 Cláusula da chave Pix no Termo de Pesquisador (RF-026, 24-10-2026)
 

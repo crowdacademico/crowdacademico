@@ -62,7 +62,7 @@ export function ListarTiposLink({ auth }: PropsPagina) {
           chaveRecarga={chaveRecarga}
         acoes={acoesCompletas}
       />
-      <BlocoLogAuditoria buscar={buscarLogTipos} />
+      <BlocoLogAuditoria buscar={buscarLogTipos} chaveRecarga={chaveRecarga} />
 
       {criando && (
         <ModalCriarTipoLink auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />

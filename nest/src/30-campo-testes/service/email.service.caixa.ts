@@ -5,6 +5,7 @@ import { DatabaseService } from '../../commons/database/database.service';
 import { AutorizacaoService } from '../../commons/seguranca/autorizacao.service';
 import { FakeEmailAdapter } from '../../4-mail/adapters/fake/fake-email.adapter';
 import { montarMensagem } from '../../4-mail/modelos/montar-mensagem';
+import type { ModeloEmail } from '../../4-mail/modelos/modelos-email';
 import {
   ENVIO_EMAIL,
   type EnvioEmailPort,
@@ -67,17 +68,22 @@ export class EmailServiceCaixa {
   async listar(): Promise<EmailDaCaixa[]> {
     const resultado = await sql<LinhaNotificacao>`
       SELECT * FROM notificacao
-      WHERE id_notificacao > public.config_numero(${CHAVE_CAIXA_LIMPA_ATE}, 0)
+      WHERE canal = 'email' AND id_notificacao > public.config_numero(${CHAVE_CAIXA_LIMPA_ATE}, 0)
       ORDER BY id_notificacao DESC
     `.execute(this.database.getDb());
+    const modelos = await this.modelos();
     return resultado.rows.map((linha) => ({
       idNotificacao: linha.id_notificacao,
       para: linha.email_destinatario,
       tipoEvento: linha.tipo_evento,
       assunto:
         linha.assunto ??
-        montarMensagem(linha.tipo_evento, linha.dados, this.urlPainel())
-          ?.assunto ??
+        montarMensagem(
+          linha.tipo_evento,
+          linha.dados,
+          this.urlPainel(),
+          modelos.get(linha.tipo_evento),
+        )?.assunto ??
         linha.tipo_evento,
       status: linha.status,
       criadoEm: linha.criado_em,
@@ -88,7 +94,7 @@ export class EmailServiceCaixa {
 
   async previa(idNotificacao: number): Promise<PreviaDoEmail> {
     const resultado = await sql<LinhaNotificacao>`
-      SELECT * FROM notificacao WHERE id_notificacao = ${idNotificacao}
+      SELECT * FROM notificacao WHERE id_notificacao = ${idNotificacao} AND canal = 'email'
     `.execute(this.database.getDb());
     const linha = resultado.rows[0] as LinhaNotificacao | undefined;
     if (!linha) throw new NotFoundException('E-mail não encontrado.');
@@ -111,6 +117,7 @@ export class EmailServiceCaixa {
       linha.tipo_evento,
       linha.dados,
       this.urlPainel(),
+      (await this.modelos()).get(linha.tipo_evento),
     );
     if (montada) return { ...montada, exato: false };
     const aviso =
@@ -129,10 +136,26 @@ export class EmailServiceCaixa {
     await this.autorizacao.exigirPermissao(PERMISSAO, MENSAGEM_SEM_PERMISSAO);
     await sql`
       UPDATE configuracoes
-      SET valor = (SELECT COALESCE(MAX(id_notificacao), 0) FROM notificacao)::text
+      SET valor = (SELECT COALESCE(MAX(id_notificacao), 0) FROM notificacao WHERE canal = 'email')::text
       WHERE chave = ${CHAVE_CAIXA_LIMPA_ATE} AND id_usuario IS NULL
     `.execute(this.database.getDb());
     if (this.envio instanceof FakeEmailAdapter) this.envio.limpar();
+  }
+
+  // Os mesmos modelos que o worker usa (4-mail/modelos/montar-mensagem.ts), lidos pela sessão da requisição.
+  private async modelos(): Promise<Map<string, ModeloEmail>> {
+    const linhas = await this.database
+      .getDb()
+      .selectFrom('modelo_mensagem')
+      .select(['tipo_evento', 'titulo', 'corpo'])
+      .where('canal', '=', 'email')
+      .execute();
+    return new Map(
+      linhas.map((linha) => [
+        linha.tipo_evento,
+        { titulo: linha.titulo, corpo: linha.corpo },
+      ]),
+    );
   }
 
   private urlPainel(): string | undefined {

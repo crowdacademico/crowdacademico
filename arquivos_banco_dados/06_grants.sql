@@ -226,8 +226,15 @@ GRANT INSERT ON usuario_termo TO app_nestjs;
 -- (não há policy de UPDATE).
 GRANT INSERT, DELETE ON usuario_papel, seguir_pesquisador TO app_nestjs;
 
--- [06-D-3] notificacao: por que precisou de GRANT de INSERT/UPDATE (ver DOCUMENTACAO_BD.md)
-GRANT INSERT, UPDATE ON notificacao TO app_nestjs;
+-- [06-D-3] notificacao: por que precisou de GRANT de INSERT (ver DOCUMENTACAO_BD.md). UPDATE só de lida_em (o sino);
+-- o resto da fila muda pelas funções de [05-Q]. O REVOKE limpa o GRANT de tabela inteira de antes.
+GRANT INSERT ON notificacao TO app_nestjs;
+REVOKE UPDATE ON notificacao FROM app_nestjs;
+GRANT UPDATE (lida_em) ON notificacao TO app_nestjs;
+
+-- [06-D-3b] modelo_mensagem: o admin muda o texto e liga/desliga (pol_modelo_mensagem_update, 04). tipo_evento, canal e
+-- obrigatoria ficam sem GRANT: só mudam por SQL.
+GRANT UPDATE (titulo, corpo, ativo, atualizado_em) ON modelo_mensagem TO app_nestjs;
 
 -- [06-D-4] verificacao_email / recuperacao_senha / sessao: por que têm GRANT próprio (ver DOCUMENTACAO_BD.md)
 -- DELETE: mesmo com a policy das 3 sendo FOR ALL, o GRANT precisa dele. Sem ele, um token de recuperação de

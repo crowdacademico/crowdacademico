@@ -55,7 +55,7 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Para achar tudo sobre
 | **N** | MODERAÇÃO SOBRE CONTA (suspensão de usuário e de papel) | `01-D`/`01-B` (colunas), `03-N` |
 | **O** | OPERAÇÕES DE AUTENTICAÇÃO (confirmação de e-mail, bloqueio por tentativas, exclusão de conta) | `03-O` |
 | **P** | MODERAÇÃO E FERRAMENTAS SOBRE PESQUISADOR | `03-P` (suspensão em cascata, RF-084), `03-P-1` (`corrigir_cpf_pesquisador`), `03-P-2` (`criar_perfil_pesquisador_para_outro`), `03-P-3` (`alterar_perfil_pesquisador_de_outro`) |
-| **Q** | NOTIFICAÇÃO (a fila de e-mails, RF-121) | `01-D` (colunas de `notificacao`), `02-D` (`idx_notificacao_fila`), `05-Q`, `06-Q`, `07-D-7` (seed) |
+| **Q** | NOTIFICAÇÃO (a fila de e-mails, RF-121, e o sino do painel) | `01-D` (`modelo_mensagem` e as colunas de `notificacao`), `02-D` (`idx_notificacao_fila`, `idx_notificacao_sino`), `04-D-5`, `04-D-6`, `05-Q`, `06-D-3`, `07-D-9` (modelos), `07-D-7` (seed) |
 
 > 📌 **Por que `J`, `K`, `L`, `M`, `N`, `O` e `P` existem:** nem tudo no banco pertence a um domínio de dado único. `id_usuario_atual()` (`03`) é infraestrutura de sessão usada por tudo. Várias triggers de `05` mexem em tabelas de domínios diferentes ao mesmo tempo (ex.: validar o repasse de uma campanha); forçá-las numa letra só esconderia que são regras de fronteira. `L` (log de auditoria) vale para várias tabelas ao mesmo tempo, com a mesma trigger genérica. `M` agrega números de vários domínios numa função só. `N`, `O` e `P` são operações sobre conta e pesquisador que pedem permissão própria e ficam agrupadas por quem as usa (atendimento e moderação).
 
@@ -163,7 +163,8 @@ A pontuação dos pesquisadores é pública: todo papel a vê, sem permissão pr
   * **`tipo_vinculo`:** `'institucional'` exige `vinculo_institucional` preenchido e não vazio; `'independente'` exige `NULL` (`CK_PERFIL_VINCULO`). Nenhum dos dois aceita ambiguidade: "sem instituição" é um fato declarado e filtrável, não um campo em branco. **Por quê:** obrigar a instituição excluiria o pesquisador independente, justamente um público que a plataforma quer alcançar. ⚠️ `calcular_score_perfil_academico` (`05`) dá pontos pela instituição preenchida, então o pesquisador independente não recebe esses pontos.
   * **CPF cifrado (`cpf_criptografado`) e índice cego (`cpf_hash`):** ver o bloco abaixo.
 * **`termos_de_uso` e `usuario_termo`:** as versões de cada termo e o aceite de cada conta, com IP e data (LGPD). Versão já aceita não se apaga nem se altera ([05-K-3]).
-* **`notificacao`:** a fila e o histórico dos e-mails: snapshot do e-mail do destinatário, tentativas e o texto do último erro ([05-Q]).
+* **`modelo_mensagem`:** o texto de cada aviso, uma linha por evento e canal (`email` ou `interna`, o sino do painel). `ativo` liga ou desliga o canal daquele evento; `obrigatoria` marca o que um fluxo precisa (verificar a conta e recuperar a senha): a tela avisa o que para de funcionar, mas o admin pode desligar. Sem versão: o histórico do texto é o `log_auditoria` (gatilho genérico). **Por quê:** o admin muda o texto sem deploy, e um canal novo (SMS, por exemplo) é mais um valor em `canal`, mais quem envia.
+* **`notificacao`:** a fila e o histórico dos e-mails (snapshot do e-mail do destinatário, tentativas e o texto do último erro) e os avisos do sino, separados por `canal`. O aviso do sino nasce `enviado`, sem e-mail de destino; `lida_em` marca a leitura (`CK_NOTIFICACAO_CANAL`). O texto não é gravado: sai de `modelo_mensagem` na hora de enviar ou de mostrar ([05-Q]). **Caso-limite:** mudar o texto de um modelo muda também como os avisos antigos do sino aparecem.
 * **`verificacao_email` e `recuperacao_senha`:** tokens curtos e temporários de confirmação de conta e de nova senha. O índice parcial `ux_recuperacao_senha_ativo_por_usuario` garante um só token de recuperação ativo por pessoa.
 * **`sessao`:** refresh tokens guardados como hash. Permite sair com segurança, revogar sessões e controlar vários aparelhos numa arquitetura JWT.
   * **`origem`** (`'login'` ou `'refresh'`, `CK_SESSAO_ORIGEM`, `DEFAULT 'refresh'`): toda renovação silenciosa do token (a cada ~15 minutos de uso) também cria uma linha; a coluna separa isso de um login de verdade na tela de histórico de login. O padrão é `'refresh'` de propósito: uma linha sem origem informada nunca aparece como login sem ser.
@@ -516,14 +517,15 @@ O arquivo segue os blocos do `01`.
 * **[04-C-2] `area_conhecimento`, [04-C-3] `motivo_denuncia` e `tipo_link`:** `INSERT`, `UPDATE` e `DELETE` com a permissão do catálogo. As FKs que apontam para eles não têm `CASCADE`: a policy libera a exclusão, mas o banco recusa (`23503`) se o item estiver em uso, e o Nest responde 409 dizendo onde e quantas vezes ele é usado (`DOCUMENTACAO_BACKEND.md`, seção 5.1).
 
 #### [04-D] USUÁRIO
-* **Tabelas:** `usuario`, `perfil_pesquisador`, `usuario_papel`, `termos_de_uso`, `usuario_termo`, `notificacao`, `verificacao_email`, `recuperacao_senha`, `sessao`, `seguir_pesquisador`.
+* **Tabelas:** `usuario`, `perfil_pesquisador`, `usuario_papel`, `termos_de_uso`, `usuario_termo`, `modelo_mensagem`, `notificacao`, `verificacao_email`, `recuperacao_senha`, `sessao`, `seguir_pesquisador`.
 * **[04-D-1] `verificacao_email`, `recuperacao_senha`, `sessao`:** `FOR ALL TO app_nestjs USING (true)` (ver o princípio 3, acima). ⚠️ Em `sessao`, quem decide de quem é a sessão é o Nest (confere o segredo do token e o dono); uma regra por dono, com exceção para login e renovação, fica para o deploy, junto do cookie e do CORS.
 * **[04-D-2] `usuario` (INSERT) com `WITH CHECK (true)`:** o cadastro grava a conta antes de existir sessão. E-mail duplicado é barrado pelo `UNIQUE`; formato e força de senha, pelo Nest.
 * **`usuario` (SELECT):** `pol_usuario_select` libera `deletado = FALSE` para qualquer sessão (o login precisa achar a conta antes de existir alguém logado); quem decide a listagem de usuários é a permissão no Nest (`usuario_visualizar_sensivel` ou `usuario_visualizar_atendimento`).
 * **[04-D-3] `perfil_pesquisador` (INSERT):** o upgrade da própria conta. O upgrade em nome de outra pessoa é por função ([03-P-2]).
 * **[04-D-4] `usuario_papel` (DELETE):** o painel revoga um papel atribuído.
 * **[04-D-4b] `usuario_papel` (SELECT):** `id_usuario = id_usuario_atual() OR tem_permissao('papel_gerenciar') OR tem_permissao('relatorio_visualizar')`. Cada pessoa vê os próprios vínculos (o login e a Minha Conta precisam); a administração vê os de todos (coluna "papel" da lista de Usuários). Ler não exige a permissão de alterar. Suíte 11 do PGlite (admin, pesquisador, moderador e anônimo).
-* **[04-D-5] `notificacao`:** `INSERT` e `UPDATE` abertos ao `app_nestjs` (quem cria uma notificação quase nunca é o destinatário, e o envio roda sem usuário logado). O `SELECT` é restrito: o dono da notificação, `usuario_visualizar_sensivel` ou `notificacao_processar` (a permissão de quem lê a fila de envio).
+* **[04-D-5] `notificacao`:** `INSERT` aberto ao `app_nestjs` (quem cria uma notificação quase nunca é o destinatário). `UPDATE` só do próprio aviso do sino (marcar como lido); a fila, o envio, o reenvio e o cancelamento passam pelas funções de [05-Q]. O `SELECT` é restrito: o dono da notificação, `usuario_visualizar_sensivel` ou `notificacao_processar` (a permissão de quem lê a fila de envio).
+* **[04-D-6] `modelo_mensagem`:** todos leem (o envio roda sem sessão e o sino de qualquer conta monta o texto); só `configuracao_gerenciar` altera. Sem `INSERT`/`DELETE`: evento novo entra por SQL, junto com o gatilho que o enfileira.
 * **[04-D-6] `perfil_pesquisador` (SELECT):** `usuario_visivel(id_usuario)` ([03-D]): público, mas some com a conta excluída.
 
 #### [04-E] CAMPANHA
@@ -864,11 +866,11 @@ Regras conferidas no PGlite com o banco inteiro, usando o papel real `app_nestjs
 
 ### [05-Q] Notificação: a fila de e-mails e os gatilhos que a alimentam
 
-**Em palavras simples:** todo e-mail do sistema nasce como uma linha `pendente` em `notificacao`, na mesma transação do evento (aprovar, rejeitar, encerrar, devolver, suspender). O Nest (`4-mail`) reserva uma linha por vez, monta o texto e envia; o resultado volta para a mesma linha. Se a ação for desfeita, o e-mail some junto; se o servidor cair, nada se perde.
+**Em palavras simples:** todo aviso do sistema nasce em `notificacao`, na mesma transação do evento (aprovar, rejeitar, encerrar, devolver, suspender), por cada canal ligado em `modelo_mensagem`: o e-mail como linha `pendente`, o sino como linha já `enviado`. O Nest (`4-mail`) reserva um e-mail por vez, monta o texto do modelo e envia; o resultado volta para a mesma linha. Se a ação for desfeita, o aviso some junto; se o servidor cair, nada se perde.
 
 | Função | Quem chama | O que faz |
 |---|---|---|
-| `enfileirar_notificacao(id_usuario, tipo, dados)` | gatilhos e o Nest (verificação de conta, nova senha) | Copia o e-mail e o nome da conta; conta excluída ou inexistente: nada gravado |
+| `enfileirar_notificacao(id_usuario, tipo, dados)` | gatilhos e o Nest (verificação de conta, nova senha) | Uma linha por canal ligado do evento; copia o e-mail e o nome da conta; o sino nunca leva `dados.segredo`; conta excluída ou inexistente, ou nenhum canal ligado: nada gravado (`NULL`) |
 | `enfileirar_notificacao_doadores(id_campanha, tipo, dados)` | só gatilhos (sem `EXECUTE` para o `app_nestjs`) | Um e-mail por pessoa com conta que pagou alguma contribuição da campanha |
 | `enfileirar_notificacao_seguidores(id_campanha, tipo, dados)` | só gatilhos | Quem segue a campanha ou o pesquisador dono, uma vez por pessoa, nunca o dono |
 | `reservar_proxima_notificacao(p_ignorar_espera)` | o envio (sem sessão) | A próxima `pendente` vencida (com `TRUE`, só no "Rodar agora" da T6, também a que espera nova tentativa); conta a tentativa e empurra `proxima_tentativa_em` (`email_lease_minutos`); `FOR UPDATE SKIP LOCKED` |
@@ -886,7 +888,7 @@ Regras conferidas no PGlite com o banco inteiro, usando o papel real `app_nestjs
 | `trg_notifica_contestacao` | `denuncia`, contestação decidida | o resultado da contestação |
 | `trg_notifica_atualizacao` | `atualizacao_campanha`, nova e ativa | atualização publicada, para quem segue |
 
-* **Os e-mails nascem nos gatilhos** (só `AFTER`), e o texto é montado no Nest na hora de enviar, a partir de `tipo_evento` + `dados`. **Por quê:** qualquer caminho que mude a situação (tela, tarefa agendada, função de moderação, webhook, o seed) gera o aviso, sem depender de cada service lembrar: o padrão "caixa de saída" (outbox), o mesmo da fila do repasse.
+* **Os avisos nascem nos gatilhos** (só `AFTER`), e o texto é montado no Nest na hora de enviar (e-mail) ou de mostrar (sino), a partir do modelo do evento e canal + `dados`. **Por quê:** qualquer caminho que mude a situação (tela, tarefa agendada, função de moderação, webhook, o seed) gera o aviso, sem depender de cada service lembrar: o padrão "caixa de saída" (outbox), o mesmo da fila do repasse.
 * **O link com token** (verificar conta, nova senha) espera cifrado em `dados.segredo` e é apagado ao enviar ou cancelar. **Por quê:** `verificacao_email` e `recuperacao_senha` guardam o token só como hash; a fila não pode desfazer essa proteção. **Caso-limite:** reenviar um e-mail que falhou manda o mesmo link, que pode ter vencido.
 * **Seed:** o de demonstração chama as funções reais, então gera e-mails de verdade na fila; o `[07-D-7]` os marca como enviados pelo provedor `seed`. O banco de produção nasce sem esses dados.
 
@@ -973,7 +975,8 @@ Concede à role `app_nestjs` (criada no `01`) exatamente os privilégios que a R
 * **[06-D-10] `usuario`, `INSERT` por coluna:** só `nome`, `email`, `senha_hash` e `id_imagem_perfil` (o que o cadastro e a criação pelo admin enviam); o resto nasce do `DEFAULT`. Um `INSERT` com `email_verificado = TRUE` ou já suspenso dá 42501. Suíte 12 do PGlite.
 * **`termos_de_uso`:** `INSERT`, `UPDATE`, `DELETE` (a versão já aceita é protegida por trigger, [05-K-3]). **`usuario_termo`:** só `INSERT` (o aceite não se edita).
 * **`usuario_papel` e `seguir_pesquisador`:** `INSERT`, `DELETE` (não se "edita" uma relação; a suspensão de papel é por função, [03-N]).
-* **[06-D-3] `notificacao`:** `INSERT`, `UPDATE`, com as policies de [04-D-5].
+* **[06-D-3] `notificacao`:** `INSERT`, e `UPDATE` só de `lida_em`, com as policies de [04-D-5].
+* **[06-D-3b] `modelo_mensagem`:** `UPDATE` só de `titulo`, `corpo`, `ativo` e `atualizado_em`; evento, canal e `obrigatoria` só mudam por SQL.
 * **[06-D-4] `verificacao_email`, `recuperacao_senha`, `sessao`:** `SELECT`, `INSERT`, `UPDATE`, `DELETE`, com a policy `FOR ALL` de [04-D-1]. O `DELETE` serve para apagar o pedido de nova senha anterior a cada pedido novo (sem isso, o índice de um só token ativo, [02-D], bloquearia o segundo pedido). ⚠️ Como a policy é `USING (true)`, um `DELETE` vale para qualquer linha: uma limpeza por retenção precisa ser sempre uma consulta fixa por data, nunca um filtro dinâmico.
 * **[06-D-2b] Funções:** as de autenticação e moderação ([03-O], [03-N], [03-P], [03-P-1] a [03-P-3], [03-E-1] e [03-E-2]) com `REVOKE ... FROM PUBLIC` e `GRANT EXECUTE` só para `app_nestjs`.
 
@@ -1081,29 +1084,30 @@ Concede à role `app_nestjs` (criada no `01`) exatamente os privilégios que a R
 | 11 | `configuracoes` (retenção do log) | `[07-L]` |
 | 12 | `configuracoes` (cores da espera) | `[07-I-4]` |
 | 13 | `configuracoes` (limites de upload) | `[07-G]` |
+| 14 | `modelo_mensagem` (o texto de cada aviso, por evento e canal) | `[07-D-9]` |
 | - | **Marcador `[07-DEMONSTRACAO]`**: daqui para baixo, só desenvolvimento e aula | - |
-| 14 | Leitura liberada de desenvolvimento | `[07-B-4]` |
-| 15 | `arquivo` (vazio) | `[07-C-4]` |
-| 16 | `usuario` | `[07-D-1]` |
-| 17 | `usuario_papel` | `[07-D-2]` |
-| 18 | `termos_de_uso` (versões antigas), `usuario_termo` e o parâmetro pessoal do admin | `[07-D-6]` |
-| 19 | `perfil_pesquisador` (com chave Pix e aceite do termo de pesquisador) | `[07-D-3]` |
-| 20 | `verificacao_email` | `[07-D-8]` |
-| 21 | `link_academico` | `[07-F-1]` |
-| 22 | `campanha` | `[07-E-1]` |
-| 23 | `orcamento_campanha` e `marco_cronograma` | `[07-E-1b]` |
-| 24 | `historico_rejeicao` | `[07-E-6]` |
-| 25 | `atualizacao_campanha` | `[07-E-3]` |
-| 26 | `comentario` (e os endossos, como o dono) | `[07-E-7]` |
-| 27 | `seguir_campanha` e `seguir_pesquisador` | `[07-E-2]`, `[07-D-4]` |
-| 28 | `contribuicao` (todas nascem pendentes) | `[07-H-1]` |
-| 29 | `aceite_termo_contribuicao` | `[07-H-3]` |
-| 30 | A vida de cada contribuição pelas funções do sistema: avisos do provedor, auditoria financeira, repasses, denúncias, pedidos de encerramento e contestações | `[07-H-5]` |
-| 31 | `recompensa`, `link_recompensa`, `contribuicao_recompensa` | `[07-E-8]` |
-| 32 | `notificacao` | `[07-D-7]` |
-| 33 | `termos_de_uso` (rascunhos da próxima versão) | `[07-H-4]` |
+| 15 | Leitura liberada de desenvolvimento | `[07-B-4]` |
+| 16 | `arquivo` (vazio) | `[07-C-4]` |
+| 17 | `usuario` | `[07-D-1]` |
+| 18 | `usuario_papel` | `[07-D-2]` |
+| 19 | `termos_de_uso` (versões antigas), `usuario_termo` e o parâmetro pessoal do admin | `[07-D-6]` |
+| 20 | `perfil_pesquisador` (com chave Pix e aceite do termo de pesquisador) | `[07-D-3]` |
+| 21 | `verificacao_email` | `[07-D-8]` |
+| 22 | `link_academico` | `[07-F-1]` |
+| 23 | `campanha` | `[07-E-1]` |
+| 24 | `orcamento_campanha` e `marco_cronograma` | `[07-E-1b]` |
+| 25 | `historico_rejeicao` | `[07-E-6]` |
+| 26 | `atualizacao_campanha` | `[07-E-3]` |
+| 27 | `comentario` (e os endossos, como o dono) | `[07-E-7]` |
+| 28 | `seguir_campanha` e `seguir_pesquisador` | `[07-E-2]`, `[07-D-4]` |
+| 29 | `contribuicao` (todas nascem pendentes) | `[07-H-1]` |
+| 30 | `aceite_termo_contribuicao` | `[07-H-3]` |
+| 31 | A vida de cada contribuição pelas funções do sistema: avisos do provedor, auditoria financeira, repasses, denúncias, pedidos de encerramento e contestações | `[07-H-5]` |
+| 32 | `recompensa`, `link_recompensa`, `contribuicao_recompensa` | `[07-E-8]` |
+| 33 | `notificacao` | `[07-D-7]` |
+| 34 | `termos_de_uso` (rascunhos da próxima versão) | `[07-H-4]` |
 | - | Resumo da demonstração e como entrar no sistema | `[07-D-5]` |
-| 34 | `recalcular_todos_os_scores()` (rede de segurança) | `[07-I-3]` |
+| 35 | `recalcular_todos_os_scores()` (rede de segurança) | `[07-I-3]` |
 
 ### Detalhamento
 
@@ -1225,7 +1229,7 @@ O raciocínio de arquitetura por trás de regras que valem para o banco inteiro.
 
 ## Como conferir este inventário
 
-**Contagem do inventário** (recontada nos `.sql` em 24-10-2026; evite repetir estes números em outros documentos, eles envelhecem): **43 tabelas**, **118 policies**, **108 triggers** no `05` (104 comuns e 4 `CONSTRAINT TRIGGER`), **182 funções** (143 no `05`, 37 no `03`, 1 no `08`, 1 no `01`), **65 índices** no `02` e **131 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (recontada nos `.sql` em 31-10-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **120 policies**, **109 triggers** no `05` (105 comuns e 4 `CONSTRAINT TRIGGER`), **182 funções** (143 no `05`, 37 no `03`, 1 no `08`, 1 no `01`), **66 índices** no `02` e **131 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
 
 Para recontar direto do banco (no SQL Editor do Supabase ou no banco local):
 

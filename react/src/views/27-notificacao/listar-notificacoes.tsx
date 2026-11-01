@@ -72,7 +72,7 @@ export function ListarNotificacoes({ authFetch }: { authFetch: AuthFetch }) {
       <GenericTable
         titulo="Notificações"
         nivelTitulo={2}
-        ajuda="Todos os e-mails do sistema. Os que esperam (na fila ou que falharam) vêm primeiro, o mais antigo no topo; depois os outros, do mais novo para o mais antigo. Na fila: espera o envio (sozinho a cada minuto com a tarefa Enviar os e-mails ligada; desligada, só pelo Rodar agora da T6), ou uma nova tentativa depois de um erro passageiro. Falhou: as tentativas acabaram ou o endereço foi recusado; reenvie depois de corrigir a causa, ou cancele. Os textos de cada tipo de e-mail ficam no código (nest/src/4-mail/modelos)."
+        ajuda="Todos os e-mails do sistema. Os que esperam (na fila ou que falharam) vêm primeiro, o mais antigo no topo; depois os outros, do mais novo para o mais antigo. Na fila: espera o envio (sozinho a cada minuto com a tarefa Enviar os e-mails ligada; desligada, só pelo Rodar agora da T6), ou uma nova tentativa depois de um erro passageiro. Falhou: as tentativas acabaram ou o endereço foi recusado; reenvie depois de corrigir a causa, ou cancele. O texto de cada tipo de e-mail se edita em Configurações > Mensagens."
         colunas={[
           { chave: 'idNotificacao', rotulo: 'id', tipo: 'id' },
           { chave: 'tipo', rotulo: 'tipo', tipo: 'nome', umaLinha: true },

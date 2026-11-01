@@ -1,5 +1,9 @@
 import { listaCompleta } from '../../constant/util/lista-completa.util';
 import type { StatusNotificacao } from '../../constant/type/enums-do-banco.gerado';
+import type { CanalNotificacao } from '../type/modelo-mensagem.type';
+
+// O canal de um aviso (modelo_mensagem.canal): 'interna' é o sino do cabeçalho.
+export const ROTULO_CANAL_NOTIFICACAO: Record<CanalNotificacao, string> = { email: 'E-mail', interna: 'Sino do painel' };
 
 // O que pede atenção primeiro (é a ordem do filtro).
 export const ORDEM_STATUS_NOTIFICACAO = listaCompleta<StatusNotificacao>()(['falhou', 'pendente', 'enviado', 'cancelado'] as const);

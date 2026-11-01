@@ -82,7 +82,7 @@ export function ListarPesquisadores({ auth }: PropsPagina) {
         acoes={acoesCompletas}
         filtrosFacetados={[{ chave: 'statusPesquisador', rotulo: 'Status' }]}
       />
-      <BlocoLogAuditoria buscar={buscarLogPerfil} />
+      <BlocoLogAuditoria buscar={buscarLogPerfil} chaveRecarga={chaveRecarga} />
 
       <ModaisUsuario
         auth={auth}

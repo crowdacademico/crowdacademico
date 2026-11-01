@@ -130,7 +130,7 @@ export function ListarPapeis({ auth }: PropsPagina) {
         />
         {/* "De"/"Para" em vez de "Campos alterados": só nome e descrição mudam em papel (codigo é fixo), mas o recurso
             é genérico (ver LogAuditoriaPainel), não hardcoded aqui além do nome do campo. */}
-        <BlocoLogAuditoria buscar={buscarLogPapel} />
+        <BlocoLogAuditoria buscar={buscarLogPapel} chaveRecarga={chaveRecarga} />
       </div>
       <div className="admin-content-painel">
         <GenericTable
