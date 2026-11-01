@@ -294,6 +294,17 @@ export interface MarcoCronograma {
   titulo: string;
 }
 
+export interface ModeloMensagem {
+  ativo: Generated<boolean>;
+  atualizado_em: Generated<Timestamp>;
+  canal: string;
+  corpo: string;
+  id_modelo_mensagem: Generated<number>;
+  obrigatoria: Generated<boolean>;
+  tipo_evento: string;
+  titulo: string;
+}
+
 export interface MotivoDenuncia {
   ativo: Generated<boolean>;
   descricao: string;
@@ -303,13 +314,15 @@ export interface MotivoDenuncia {
 
 export interface Notificacao {
   assunto: string | null;
+  canal: Generated<string>;
   criado_em: Generated<Timestamp>;
   dados: Generated<Json>;
-  email_destinatario: string;
+  email_destinatario: string | null;
   enviado_em: Timestamp | null;
   id_mensagem_provedor: string | null;
   id_notificacao: Generated<number>;
   id_usuario: number | null;
+  lida_em: Timestamp | null;
   provedor: string | null;
   proxima_tentativa_em: Generated<Timestamp>;
   status: Generated<StatusNotificacao>;
@@ -560,6 +573,7 @@ export interface DB {
   link_recompensa: LinkRecompensa;
   log_auditoria: LogAuditoria;
   marco_cronograma: MarcoCronograma;
+  modelo_mensagem: ModeloMensagem;
   motivo_denuncia: MotivoDenuncia;
   notificacao: Notificacao;
   orcamento_campanha: OrcamentoCampanha;

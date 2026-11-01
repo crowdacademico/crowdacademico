@@ -15,7 +15,7 @@ import { NotificacaoRequestList } from '../dto/request/notificacao.request-list'
 import { NotificacaoResponse } from '../dto/response/notificacao.response';
 
 // A permissão é checada aqui, e não só pela RLS: pol_notificacao_select deixa cada conta ler os próprios e-mails, e
-// esta lista é a do painel, de todos. Mais novo primeiro; paginada de verdade (a tabela cresce a cada evento).
+// esta lista é a do painel, de todos. Só e-mail: o aviso do sino não tem envio para acompanhar. Mais novo primeiro; paginada de verdade (a tabela cresce a cada evento).
 @Injectable()
 export class NotificacaoServiceFindAll {
   constructor(
@@ -35,6 +35,7 @@ export class NotificacaoServiceFindAll {
       .getDb()
       .selectFrom('notificacao')
       .selectAll()
+      .where('canal', '=', 'email')
       .orderBy('criado_em', 'desc')
       .orderBy('id_notificacao', 'desc');
 

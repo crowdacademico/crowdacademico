@@ -1022,7 +1022,7 @@ Somente leitura - a escrita em `log_auditoria` é feita por trigger genérica no
 
 - **`GET /log-auditoria?tabela=<x>`** - histórico de **uma** tabela, para o botão "Ver log" no fundo de cada listagem. Faz `leftJoin` com `usuario` para trazer `nome_responsavel` junto. Usa `paginar()` com `TAMANHO_PADRAO_LOG = 20` próprio. 📌 O comentário explica por que 20 e não o teto de 500: *aqui não é um teto "para nunca baixar tudo por acidente", é o tamanho de verdade do painel* - mostrar as últimas 20 alterações é o caso de uso real.
 - **Retenção do log, sem endpoint:** `LogAuditoriaServiceClean` é um `@Cron` diário (3h) que só chama `limpar_log_auditoria()` (ver `DOCUMENTACAO_BD.md` `[05-L]`); toda a regra, inclusive o prazo lido de `configuracoes`, mora no banco. Se o Nest ficar dormindo (hospedagem gratuita), o job roda na próxima vez que acordar; atrasar só faz a tabela guardar mais um pouco.
-- **`GET /log-auditoria/minha-atividade`** - últimas 10 ações do **próprio** usuário, de **qualquer** tabela, para o sino "Atividade recente" do cabeçalho. Não recebe `tabela`; é *"o que EU fiz"*, não *"o histórico de uma tabela"*.
+- **`GET /log-auditoria/minha-atividade`** - últimas 10 ações do **próprio** usuário, de **qualquer** tabela, para a aba "Minha atividade" do sino do cabeçalho. Não recebe `tabela`; é *"o que EU fiz"*, não *"o histórico de uma tabela"*.
 
 📌 **A autorização é 100% RLS, como sempre.** `pol_log_auditoria_select` exige `tem_permissao('log_visualizar')`; sem ela a query volta **vazia**, não dá erro. O comentário registra a dependência: a policy foi ampliada para deixar qualquer usuário ver as próprias linhas - sem essa mudança aplicada no banco, `minha-atividade` volta vazia para quem não é admin, mesmo sendo autor das próprias linhas.
 
@@ -1239,6 +1239,10 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | GET | `/dashboard/resumo` |
 | AUTH | GET | `/notificacao` · `/notificacao/resumo` *(e-mails do sistema; exige `notificacao_processar`)* |
 | AUTH | POST | `/notificacao/:id/reenviar` · `/notificacao/:id/cancelar` *(RF-121; permissão e situação conferidas no banco)* |
+| AUTH | GET | `/notificacao-interna` · `/notificacao-interna/nao-lidas` *(o sino da própria conta)* |
+| AUTH | PATCH | `/notificacao-interna/:id/lida` · `/notificacao-interna/lidas` *(marca o próprio aviso, ou todos, como lido)* |
+| AUTH | GET | `/modelo-mensagem` *(o texto de cada aviso; exige `configuracao_gerenciar`)* |
+| AUTH | PATCH | `/modelo-mensagem/:id` *(texto e liga/desliga; RLS exige `configuracao_gerenciar`)* |
 | AUTH | GET · DELETE | `/campo-testes/email` *(T6: os e-mails desde a última limpeza que a sessão enxerga, os próprios ou, com `notificacao_processar`, todos; o DELETE é o "Limpar a caixa" e exige essa permissão. Só fora de produção)* |
 | AUTH | GET | `/campo-testes/email/:idNotificacao` *(T6: o e-mail como a pessoa vê, o recebido pelo provedor de teste ou montado agora)* |
 
@@ -1603,11 +1607,14 @@ Testado com o backend rodando de verdade contra o Postgres real (não só compil
 | Porta | `4-mail/ports/envio-email.port.ts` | A "tomada": `enviar(mensagem)`, erro `ErroEnvioEmail` com `recuperavel` |
 | Provedores | `4-mail/adapters/` | `fake` (caixa em memória, a T6), `brevo` (API HTTPS), `smtp` (nodemailer), `nao-configurado`, `redirecionar` (trava de teste) |
 | Escolha | `4-mail/email.config.ts` | `EMAIL_PROVIDER`, com as mesmas regras de `PAYMENT_PROVIDER` |
-| Textos | `4-mail/modelos/` | Um modelo por `tipo_evento`, HTML e texto puro, nunca quebra por dado faltando |
+| Textos | tabela `modelo_mensagem` + `27-notificacao/util/montar-texto-modelo.ts` | Um texto por `tipo_evento` e canal, editável no painel; `{{campo}}`, `{{#campo}}...{{/campo}}` e `{{^campo}}...{{/campo}}`; nunca quebra por dado faltando |
+| Moldura do e-mail | `4-mail/modelos/` | Saudação, botão de cada tipo (`modelos-email.ts`) e o HTML e texto puro (`layout-email.ts`), fixos |
 | Worker | `4-mail/service/email.service.send-pending.ts` | `@Cron` a cada 1 minuto, interruptor `tarefa_envio_email_ligada` (ligado no banco de produção, desligado no de demonstração: o card fica na T6), lote de 20, `PG_POOL` direto |
 | Fila | `notificacao` + funções de `[05-Q]` | `reservar_proxima_notificacao`, `concluir_notificacao`, `falhar_notificacao` (espera crescente) |
 | Enfileirar pelo Nest | `27-notificacao/service/notificacao.service.enqueue.ts` | Só verificação de conta e recuperação de senha (o token só o Nest conhece) |
-| Painel | `27-notificacao` | `GET /notificacao`, `/notificacao/resumo`, `POST /notificacao/:id/reenviar`, `/cancelar` |
+| Painel | `27-notificacao` | `GET /notificacao`, `/notificacao/resumo`, `POST /notificacao/:id/reenviar`, `/cancelar` (só e-mail) |
+| Sino | `27-notificacao/service/notificacao-interna.service.*` | Os avisos do canal `interna` da própria conta, com o texto montado do modelo; marcar como lido |
+| Mensagens | `27-notificacao/service/modelo-mensagem.service.*` | Lista e altera `modelo_mensagem`; recusa campo que o tipo não tem (`CAMPOS_POR_TIPO`) e marca mal fechada (`util/validar-modelo.ts`) |
 | Campo de Testes | `30-campo-testes/service/email.service.caixa.ts` | A T6 lê `notificacao` pela sessão de quem chamou (os próprios e-mails, ou todos com `notificacao_processar`, desde `teste_caixa_email_limpa_ate_id`; só o "Limpar a caixa" avança esse número), e o Consultar monta o e-mail com `4-mail/modelos/montar-mensagem.ts`, o mesmo do envio; o "Rodar agora" do card da T6 chama a tarefa `email` (`POST /campo-testes/pagamento/tarefas/:tarefa`, com `email`), que manda também o que espera uma nova tentativa (`reservar_proxima_notificacao(TRUE)`) |
 
 - Os e-mails nascem nos gatilhos do banco (`[05-Q]`), não espalhados pelos services do Nest; o Nest só enfileira o que só ele sabe (o token do link).
@@ -1622,9 +1629,9 @@ Testado com o backend rodando de verdade contra o Postgres real (não só compil
 - **Por quê:** o seed tem endereços com domínio real; um teste no computador não pode escrever para pessoas que podem existir. Padrão de mercado em homologação ("mail redirect").
 - **Caso-limite:** em produção a trava não existe; o banco de produção nasce sem os dados de demonstração.
 
-- Os textos ficam no código (`4-mail/modelos/modelos-email.ts`), não numa tabela editável.
-- **Por quê:** nenhuma regra do sistema depende do texto; uma tabela `template_email` mais a tela dela aumentariam o escopo do TCC.
-- **Caso-limite:** mudar um texto pede uma alteração de código. Se fizer falta, a tabela entra depois sem mudar a fila.
+- Os textos ficam na tabela `modelo_mensagem`, um por evento e canal (`email` ou `interna`, o sino), e o admin os edita em Configurações > Mensagens. A saudação, o botão e o rodapé do e-mail continuam no código.
+- **Por quê:** mudar uma frase não pede deploy, e um canal novo (SMS, por exemplo) é mais um valor de `canal`, mais quem envia. Só texto é editável, sem HTML: é o padrão de mercado (Stripe, Shopify), e a moldura fixa garante que todo e-mail sai com a cara da plataforma. Sem versão do texto: o histórico de quem mudou o quê é o `log_auditoria`.
+- **Caso-limite:** o texto é montado na hora de enviar (e-mail) ou de mostrar (sino); mudar um modelo muda também como os avisos antigos do sino aparecem. Desligar um canal vale para os próximos avisos: o e-mail que já estava na fila ainda sai. Evento novo entra por SQL (gatilho, `CAMPOS_POR_TIPO` e seed), não pela tela.
 
 ### 21.2 `18-recompensa`
 

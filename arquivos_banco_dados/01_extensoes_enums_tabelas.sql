@@ -8,7 +8,7 @@
 -- ----------------------------------------------------------------------------
 --  Descrição:
 --  Define toda a estrutura de dados do banco: a role de aplicação, a
---  extensão pgcrypto, os tipos ENUM usados pelas colunas de status, e as 42
+--  extensão pgcrypto, os tipos ENUM usados pelas colunas de status, e as 44
 --  tabelas do schema - organizadas por domínio, na ordem exata de
 --  dependência de Foreign Key, para permitir rodar o script do zero sem
 --  erro de referência.
@@ -21,14 +21,14 @@
 --  Inventário Mapeado:
 --  - 1 Role de aplicação (app_nestjs) + 1 Extensão (pgcrypto)
 --  - 14 Tipos ENUM
---  - 43 Tabelas em 9 blocos de domínio
+--  - 44 Tabelas em 9 blocos de domínio
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
 -- ----------------------------------------------------------------------------
 --  [01-A] BOOTSTRAP, EXTENSÕES E ENUMS
 --  [01-B] RBAC (3 tabelas)
 --  [01-C] CONFIG (5 tabelas)
---  [01-D] USUÁRIO (10 tabelas + Índices)
+--  [01-D] USUÁRIO (11 tabelas + Índices)
 --  [01-E] CAMPANHA (11 tabelas)
 --  [01-F] LINK (3 tabelas de associação)
 --  [01-G] ARQUIVO (2 tabelas de associação)
@@ -243,7 +243,7 @@ CREATE TABLE arquivo (
 );
 
 -- ============================================================
--- [01-D] USUÁRIO (10 tabelas + Índices)
+-- [01-D] USUÁRIO (11 tabelas + Índices)
 -- ============================================================
 CREATE TABLE usuario (
     id_usuario       SERIAL,
@@ -453,10 +453,34 @@ CREATE TABLE usuario_termo (
     CONSTRAINT "UK_USUARIO_TERMO_USUARIO_TERMO" UNIQUE (id_usuario, id_termo) -- [melhoria] mesmo usuário não aceita a mesma versão duas vezes
 );
 
+-- O texto de cada aviso, por evento e canal, editável pelo admin no painel. `ativo` liga ou desliga o canal daquele
+-- evento; `obrigatoria` marca o que um fluxo do sistema precisa (o link de verificar a conta e de recuperar a senha):
+-- a tela avisa o que para de funcionar, mas o admin pode desligar. Evento novo entra por SQL, junto com o gatilho que
+-- o enfileira.
+CREATE TABLE modelo_mensagem (
+    id_modelo_mensagem SERIAL,
+    tipo_evento        VARCHAR(100) NOT NULL,                -- o mesmo nome de notificacao.tipo_evento
+    canal              VARCHAR(20)  NOT NULL,                -- 'email' | 'interna' (o sino do painel)
+    titulo             VARCHAR(200) NOT NULL,                -- e-mail: o assunto; sino: o título
+    corpo              TEXT         NOT NULL,                -- parágrafos separados por linha em branco, com {{variáveis}}
+    ativo              BOOLEAN      NOT NULL DEFAULT TRUE,
+    obrigatoria        BOOLEAN      NOT NULL DEFAULT FALSE,
+    atualizado_em      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT "PK_MODELO_MENSAGEM" PRIMARY KEY (id_modelo_mensagem),
+    CONSTRAINT "UK_MODELO_MENSAGEM_EVENTO_CANAL" UNIQUE (tipo_evento, canal),
+    CONSTRAINT "CK_MODELO_MENSAGEM_CANAL" CHECK (canal IN ('email', 'interna')),
+    CONSTRAINT "CK_MODELO_MENSAGEM_TITULO" CHECK (BTRIM(titulo) <> ''),
+    CONSTRAINT "CK_MODELO_MENSAGEM_CORPO" CHECK (BTRIM(corpo) <> '')
+);
+
+-- Uma linha por aviso e canal. E-mail ('email'): entra 'pendente' e o worker envia. Sino ('interna'): entra já
+-- 'enviado' (chegou ao painel na hora) e sem e-mail de destino; lida_em marca quando a pessoa leu.
 CREATE TABLE notificacao (
     id_notificacao     SERIAL,
     id_usuario         INT,                                   -- mantém o histórico de envio mesmo se o usuário for removido
-    email_destinatario VARCHAR(255)       NOT NULL,          -- snapshot do e-mail no momento do envio (usuário pode trocar o e-mail depois)
+    canal              VARCHAR(20)        NOT NULL DEFAULT 'email',
+    email_destinatario VARCHAR(255),                         -- snapshot do e-mail no momento do envio (usuário pode trocar o e-mail depois); NULL no sino
     tipo_evento        VARCHAR(100)       NOT NULL,          -- ex: 'campanha_aprovada', 'doacao_recebida' - texto livre, como "evento" em auditoria_financeira
     status             status_notificacao NOT NULL DEFAULT 'pendente',
     tentativas         INT                NOT NULL DEFAULT 0,
@@ -471,10 +495,15 @@ CREATE TABLE notificacao (
     proxima_tentativa_em TIMESTAMPTZ        NOT NULL DEFAULT NOW(), -- espera entre tentativas e reserva do worker
     provedor             VARCHAR(30),                         -- quem enviou: 'fake', 'brevo', 'smtp'
     id_mensagem_provedor VARCHAR(200),                        -- id que o provedor devolveu, para achar o e-mail no painel dele
+    lida_em              TIMESTAMPTZ,                         -- só no sino: quando a pessoa leu
 
     CONSTRAINT "PK_NOTIFICACAO" PRIMARY KEY (id_notificacao),
     CONSTRAINT "FK_NOTIFICACAO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    CONSTRAINT "CK_NOTIFICACAO_TENTATIVAS" CHECK (tentativas >= 0)
+    CONSTRAINT "CK_NOTIFICACAO_TENTATIVAS" CHECK (tentativas >= 0),
+    CONSTRAINT "CK_NOTIFICACAO_CANAL" CHECK (
+        (canal = 'email' AND email_destinatario IS NOT NULL AND lida_em IS NULL)
+        OR (canal = 'interna' AND email_destinatario IS NULL AND status = 'enviado')
+    )
 );
 
 CREATE TABLE verificacao_email (

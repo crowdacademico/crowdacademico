@@ -27,6 +27,7 @@ import { ListarRepasses } from '../../views/25-pagamento-revisao/listar-repasses
 import { ListarAnexosAtualizacoes } from '../../views/15-atualizacao-campanha/listar-anexos-atualizacoes';
 import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
 import { PontuacaoScore } from '../../views/11-configuracoes/pontuacao-score';
+import { ListarModelosMensagem } from '../../views/27-notificacao/listar-modelos-mensagem';
 import { campoTestes } from './campo-testes-opcional';
 
 // Fonte única de verdade para "quais páginas existem": App.tsx monta as <Route> daqui e breadcrumb.tsx monta
@@ -151,6 +152,16 @@ export const ROTAS_ADMIN: Rota[] = [
     rotuloBreadcrumb: 'Pontuação (Score)',
     grupoMenu: 'CONFIGURACOES',
     icone: 'fa-star-half-stroke',
+  },
+  // Mensagens: o texto de cada aviso (e-mail e sino), por evento e canal (tabela modelo_mensagem).
+  {
+    caminho: '/admin/mensagens',
+    caminhoRelativo: 'mensagens',
+    elemento: ListarModelosMensagem,
+    rotuloMenu: 'Mensagens',
+    rotuloBreadcrumb: 'Mensagens',
+    grupoMenu: 'CONFIGURACOES',
+    icone: 'fa-envelope-open-text',
   },
 
   {

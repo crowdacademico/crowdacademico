@@ -71,7 +71,7 @@ export function ListarMotivosDenuncia({ auth }: PropsPagina) {
         // de um tipo (mesma ideia do filtro de papel em ListarUsuarios).
         filtrosFacetados={[{ chave: 'tipo', rotulo: 'Tipo', ordem: ORDEM_TIPO }]}
       />
-      <BlocoLogAuditoria buscar={buscarLogMotivos} />
+      <BlocoLogAuditoria buscar={buscarLogMotivos} chaveRecarga={chaveRecarga} />
 
       {criando && (
         <ModalCriarMotivoDenuncia auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />

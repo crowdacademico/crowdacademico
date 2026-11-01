@@ -74,7 +74,7 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
       {/* "De"/"Para" no VALOR: é a coluna que mais importa aqui: configuracoes existe para tirar regra de
           negócio hardcoded do .sql, então ver o valor antigo/novo de uma mudança (ex.: taxa, limite, prazo)
           é mais útil que "chave"/"descricao"/"ativo" mudaram. */}
-      <BlocoLogAuditoria buscar={buscarLogConfiguracoes} />
+      <BlocoLogAuditoria buscar={buscarLogConfiguracoes} chaveRecarga={chaveRecarga} />
 
       {alterando && (
         <ModalAlterarConfiguracao

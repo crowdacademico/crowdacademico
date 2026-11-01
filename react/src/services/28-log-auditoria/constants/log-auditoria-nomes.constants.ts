@@ -92,6 +92,13 @@ const NOME_COLUNA: Partial<Record<string, string>> = {
   contestacao_status: 'Situação da contestação',
   contestada_em: 'Contestada em',
   justificativa_contestacao: 'Justificativa da contestação',
+  // Mensagens (modelo_mensagem). `titulo` e `ativo` já estão acima ("Título", "Ativo"), com o nome que as outras
+  // tabelas usam.
+  id_modelo_mensagem: 'Mensagem (id)',
+  tipo_evento: 'Aviso',
+  canal: 'Canal',
+  corpo: 'Texto',
+  obrigatoria: 'Obrigatória',
   // Pontuação
   id_score_config: 'Item da pontuação (id)',
   peso: 'Peso',

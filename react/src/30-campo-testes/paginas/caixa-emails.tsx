@@ -138,7 +138,7 @@ export function CaixaEmails({ auth }: PropsPagina) {
               <SecaoFicha titulo="Como a pessoa vê" colunas={1}>
                 {!aberto.previa.exato && (
                   <p className="legenda texto-fraco">
-                    {aberto.email.status === 'pendente' ? 'Ainda na fila: este é o e-mail que vai sair.' : 'Montado de novo a partir dos dados do e-mail (o Nest reiniciou depois do envio).'}
+                    {aberto.email.status === 'pendente' ? 'Ainda na fila: este é o e-mail que vai sair.' : 'Montado de novo com o texto ATUAL da mensagem (Configurações > Mensagens): se o texto foi alterado depois do envio, pode não ser o que saiu. O histórico do texto está no log da tela Mensagens.'}
                   </p>
                 )}
                 {/* sandbox sem permissões: o HTML do e-mail não roda script nem navega a página do painel. */}

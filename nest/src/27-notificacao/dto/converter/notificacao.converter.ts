@@ -9,7 +9,8 @@ export class NotificacaoConverter {
     return {
       idNotificacao: entity.id_notificacao,
       idUsuario: entity.id_usuario,
-      emailDestinatario: entity.email_destinatario,
+      // A lista é só de e-mail (canal 'email'), que sempre tem destinatário.
+      emailDestinatario: entity.email_destinatario ?? '',
       tipoEvento: entity.tipo_evento,
       status: entity.status,
       tentativas: entity.tentativas,

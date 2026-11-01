@@ -6,6 +6,8 @@ import type { LogAuditoriaResponse } from '../../services/28-log-auditoria/type/
 
 interface BlocoLogAuditoriaProps {
   buscar: (pagina: number, tamanho: number) => Promise<ResultadoPaginado<LogAuditoriaResponse>>;
+  // A mesma chaveRecarga da tabela: salvar num modal não recarrega a página, e sem ela o log aberto ficava velho.
+  chaveRecarga?: number;
 }
 
 // Log de auditoria não é estrutura de tabela: é outra funcionalidade, com dados próprios, paginação própria e
@@ -13,13 +15,13 @@ interface BlocoLogAuditoriaProps {
 // colocado logo abaixo do `<GenericTable>` nas telas que precisam (mesmo `mt-4` que o botão "Ver log" tinha
 // dentro do GenericTable). O teste que importa não é "quantos usam", é "uma tela SEM tabela consegue mostrar
 // log de auditoria hoje?": embutido no GenericTable, não conseguia, sem montar um GenericTable falso.
-export function BlocoLogAuditoria({ buscar }: BlocoLogAuditoriaProps) {
+export function BlocoLogAuditoria({ buscar, chaveRecarga }: BlocoLogAuditoriaProps) {
   const [aberto, setAberto] = useState(false);
 
   return (
     <>
       <BotaoMostrarEsconder aberto={aberto} aoAlternar={() => setAberto((atual) => !atual)} rotulo="log" className="mt-4" />
-      {aberto && <LogAuditoriaPainel buscar={buscar} />}
+      {aberto && <LogAuditoriaPainel buscar={buscar} chaveRecarga={chaveRecarga} />}
     </>
   );
 }

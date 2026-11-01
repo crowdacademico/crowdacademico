@@ -13,8 +13,8 @@
 --  em vez de um bloco de ENABLE no topo separado das policies.
 --
 --  Inventário Mapeado:
---  - 43 Tabelas com RLS ativada e forçada
---  - 121 Policies (100% idempotentes - toda CREATE POLICY tem
+--  - 44 Tabelas com RLS ativada e forçada
+--  - 120 Policies (100% idempotentes - toda CREATE POLICY tem
 --    DROP POLICY IF EXISTS correspondente)
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
@@ -22,7 +22,7 @@
 --  [04-A] Visão geral (FORCE ROW LEVEL SECURITY)
 --  [04-B] RBAC (3 tabelas)
 --  [04-C] CONFIG (5 tabelas)
---  [04-D] USUÁRIO (10 tabelas)
+--  [04-D] USUÁRIO (11 tabelas)
 --  [04-E] CAMPANHA (11 tabelas)
 --  [04-F] LINK (3 tabelas)
 --  [04-G] ARQUIVO (2 tabelas)
@@ -188,7 +188,7 @@ CREATE POLICY pol_arquivo_update ON arquivo FOR UPDATE TO app_nestjs USING (
 );
 
 -- ============================================================
--- [04-D] USUÁRIO (10 tabelas)
+-- [04-D] USUÁRIO (11 tabelas)
 -- ============================================================
 ALTER TABLE usuario              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE usuario              FORCE ROW LEVEL SECURITY;
@@ -202,6 +202,8 @@ ALTER TABLE usuario_termo        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE usuario_termo        FORCE ROW LEVEL SECURITY;
 ALTER TABLE notificacao          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notificacao          FORCE ROW LEVEL SECURITY;
+ALTER TABLE modelo_mensagem      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE modelo_mensagem      FORCE ROW LEVEL SECURITY;
 
 -- [04-D-1] verificacao_email / recuperacao_senha / sessao: por que RLS sem policy por usuário (ver DOCUMENTACAO_BD.md)
 ALTER TABLE verificacao_email ENABLE ROW LEVEL SECURITY;
@@ -292,14 +294,24 @@ CREATE POLICY pol_notificacao_select ON notificacao FOR SELECT TO app_nestjs USI
     OR (SELECT public.tem_permissao('usuario_visualizar_sensivel'))
     OR (SELECT public.tem_permissao('notificacao_processar'))
 );
--- Escrita liberada para o app_nestjs, controle na aplicação (mesmo padrão de
+-- INSERT liberado para o app_nestjs, controle na aplicação (mesmo padrão de
 -- verificacao_email/recuperacao_senha/sessao): toda notificação real é para um terceiro (admin aprova ->
--- avisa pesquisador; sistema avisa doadores) e o worker de envio roda sem usuário logado. Leitura
--- continua restrita ao dono.
+-- avisa pesquisador; sistema avisa doadores). Leitura continua restrita ao dono.
 DROP POLICY IF EXISTS pol_notificacao_insert ON notificacao;
 CREATE POLICY pol_notificacao_insert ON notificacao FOR INSERT TO app_nestjs WITH CHECK (true);
+-- UPDATE: só marcar como lido o aviso do próprio sino (o GRANT é só da coluna lida_em, 06). Fila, envio, reenvio e
+-- cancelamento passam pelas funções SECURITY DEFINER de [05-Q], que não dependem desta policy.
 DROP POLICY IF EXISTS pol_notificacao_update ON notificacao;
-CREATE POLICY pol_notificacao_update ON notificacao FOR UPDATE TO app_nestjs USING (true) WITH CHECK (true);
+CREATE POLICY pol_notificacao_update ON notificacao FOR UPDATE TO app_nestjs
+    USING (canal = 'interna' AND id_usuario = (SELECT public.id_usuario_atual()))
+    WITH CHECK (canal = 'interna' AND id_usuario = (SELECT public.id_usuario_atual()));
+
+-- [04-D-6] modelo_mensagem: todos leem (o worker de e-mail roda sem sessão e o sino de qualquer conta monta o texto);
+-- só quem gerencia a configuração muda texto ou liga/desliga. Sem INSERT/DELETE: evento novo entra por SQL.
+DROP POLICY IF EXISTS pol_modelo_mensagem_select ON modelo_mensagem;
+CREATE POLICY pol_modelo_mensagem_select ON modelo_mensagem FOR SELECT TO app_nestjs USING (true);
+DROP POLICY IF EXISTS pol_modelo_mensagem_update ON modelo_mensagem;
+CREATE POLICY pol_modelo_mensagem_update ON modelo_mensagem FOR UPDATE TO app_nestjs USING ((SELECT public.tem_permissao('configuracao_gerenciar'))) WITH CHECK ((SELECT public.tem_permissao('configuracao_gerenciar')));
 
 DROP POLICY IF EXISTS pol_seg_pesq_select ON seguir_pesquisador;
 CREATE POLICY pol_seg_pesq_select ON seguir_pesquisador FOR SELECT TO app_nestjs USING (id_usuario = (SELECT public.id_usuario_atual()));

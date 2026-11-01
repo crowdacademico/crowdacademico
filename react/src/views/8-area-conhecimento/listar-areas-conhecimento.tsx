@@ -96,7 +96,7 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
         // opção primeiro na lista, o resto continua alfabético.
         filtrosFacetados={[{ chave: 'nomePai', rotulo: 'Grande área', ordem: ['Base'] }]}
       />
-      <BlocoLogAuditoria buscar={buscarLogAreas} />
+      <BlocoLogAuditoria buscar={buscarLogAreas} chaveRecarga={chaveRecarga} />
 
       {criando && (
         <ModalCriarAreaConhecimento auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />

@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Dica } from '../tooltip';
+import { BarraAbasBotoes } from '../barra-abas-botoes';
 import { logAuditoriaApi } from '../../../services/28-log-auditoria/api/log-auditoria.api';
+import { notificacaoInternaApi } from '../../../services/27-notificacao/api/modelo-mensagem.api';
 import { useFecharAoClicarFora } from '../../../services/constant/hook/use-fechar-ao-clicar-fora';
 import { formatarDataHora } from '../../../services/constant/util/formatacao.util';
 import { Carregando } from '../carregando';
 import type { UseAuthReturn } from '../../../services/3-auth/hook/use-auth';
 import type { LogAuditoriaResponse, OperacaoLogAuditoria } from '../../../services/28-log-auditoria/type/log-auditoria.type';
-
-const CHAVE_ULTIMO_VISTO = 'crowdacademico.atividadeUltimoLogVisto';
+import type { NotificacaoInternaResponse } from '../../../services/27-notificacao/type/modelo-mensagem.type';
 
 // Parcial de propósito: 'EXPORT' não tem rótulo próprio aqui - o `??
 // item.operacao.toLowerCase()` na leitura já cobre esse (e qualquer outro)
@@ -18,63 +19,75 @@ const ROTULO_OPERACAO: Partial<Record<OperacaoLogAuditoria, string>> = {
   DELETE: 'excluiu',
 };
 
+type Aba = 'notificacoes' | 'atividade';
+
 interface SinoAtividadeProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
 }
 
-// Sino "Atividade recente" no cabeçalho: lê log_auditoria de verdade, filtrado para o PRÓPRIO usuário (GET
-// /log-auditoria/minha-atividade, RLS ampliada em pol_log_auditoria_select para isso). Sobrevive a F5 e a
-// trocar de dispositivo; toast é feedback de "o que EU acabei de clicar", isto é "o que aconteceu, mesmo
-// enquanto eu não estava olhando".
-//
-// Rotulado "Atividade recente", não "Notificações": quando 27-notificacao existir de verdade, o dropdown ganha
-// uma 2ª aba ("Notificações") e esta vira "Minha atividade".
+// Sino do cabeçalho, com duas abas. Notificações: os avisos do sistema para a própria conta (canal 'interna' de
+// notificacao, texto do modelo em Configurações > Mensagens); o número no sino é o de avisos não lidos, e abrir um
+// aviso o marca como lido. Minha atividade: as últimas ações da própria conta, lidas de log_auditoria (GET
+// /log-auditoria/minha-atividade). As duas são extras: se uma falhar, o sino fica sem ela, sem toast de erro.
 export function SinoAtividade({ auth }: SinoAtividadeProps) {
   const [aberto, setAberto] = useState(false);
+  const [aba, setAba] = useState<Aba>('notificacoes');
   const [carregando, setCarregando] = useState(false);
-  const [carregado, setCarregado] = useState(false);
-  const [itens, setItens] = useState<LogAuditoriaResponse[]>([]);
-  const [naoLidos, setNaoLidos] = useState(0);
+  const [avisos, setAvisos] = useState<NotificacaoInternaResponse[]>([]);
+  const [atividade, setAtividade] = useState<LogAuditoriaResponse[] | null>(null);
+  const [naoLidas, setNaoLidas] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Badge de contagem SEM coluna "lida" no banco: guarda só o maior id_log já visto em localStorage, conta
-  // quantas entradas novas passaram disso.
   useEffect(() => {
-    logAuditoriaApi
-      .minhaAtividade(auth.authFetch)
-      .then((lista) => {
-        const ultimoVisto = Number(localStorage.getItem(CHAVE_ULTIMO_VISTO)) || 0;
-        setNaoLidos(lista.filter((item) => item.idLog > ultimoVisto).length);
-      })
-      .catch(() => {
-        // Sino é um extra, não uma tela crítica - se falhar (ex.: usuário
-        // sem log_visualizar E policy nova ainda não aplicada no banco),
-        // só fica sem badge, sem toast de erro atrapalhando o resto.
-      });
+    notificacaoInternaApi
+      .naoLidas(auth.authFetch)
+      .then(setNaoLidas)
+      .catch(() => {});
   }, [auth.authFetch]);
 
   useFecharAoClicarFora(containerRef, aberto, () => setAberto(false));
 
+  // Os avisos recarregam a cada abertura (chegam a qualquer momento); a atividade, só na primeira vez que a aba abre.
+  const carregar = (qual: Aba) => {
+    if (qual === 'atividade' && atividade !== null) return;
+    setCarregando(true);
+    const pedido =
+      qual === 'notificacoes'
+        ? notificacaoInternaApi.listar(auth.authFetch).then((lista) => {
+            setAvisos(lista);
+            setNaoLidas(lista.filter((aviso) => !aviso.lidaEm).length);
+          })
+        : logAuditoriaApi.minhaAtividade(auth.authFetch).then(setAtividade);
+    pedido.catch(() => {}).finally(() => setCarregando(false));
+  };
+
   const aoAbrir = () => {
     const abrindoAgora = !aberto;
     setAberto(abrindoAgora);
-    if (abrindoAgora && !carregado) {
-      setCarregando(true);
-      logAuditoriaApi
-        .minhaAtividade(auth.authFetch)
-        .then((lista) => {
-          setItens(lista);
-          setCarregado(true);
-          if (lista.length > 0) {
-            localStorage.setItem(CHAVE_ULTIMO_VISTO, String(lista[0].idLog));
-          }
-          setNaoLidos(0);
-        })
-        .catch(() => setItens([]))
-        .finally(() => setCarregando(false));
-    } else if (abrindoAgora) {
-      setNaoLidos(0);
-    }
+    if (abrindoAgora) carregar(aba);
+  };
+
+  const aoTrocarAba = (nova: Aba) => {
+    setAba(nova);
+    carregar(nova);
+  };
+
+  const marcarLido = (idNotificacao?: number) => {
+    const agora = new Date().toISOString();
+    const pedido =
+      idNotificacao === undefined
+        ? notificacaoInternaApi.marcarTodas(auth.authFetch)
+        : notificacaoInternaApi.marcarLida(auth.authFetch, idNotificacao);
+    pedido
+      .then(() => {
+        setAvisos((lista) =>
+          lista.map((aviso) =>
+            idNotificacao === undefined || aviso.idNotificacao === idNotificacao ? { ...aviso, lidaEm: aviso.lidaEm ?? agora } : aviso,
+          ),
+        );
+        setNaoLidas((total) => (idNotificacao === undefined ? 0 : Math.max(0, total - 1)));
+      })
+      .catch(() => {});
   };
 
   return (
@@ -82,47 +95,86 @@ export function SinoAtividade({ auth }: SinoAtividadeProps) {
       <button
         type="button"
         onClick={aoAbrir}
-        aria-label="Atividade recente"
+        aria-label={naoLidas > 0 ? `Notificações (${naoLidas} não lidas)` : 'Notificações'}
+        aria-expanded={aberto}
         className="dica flex items-center justify-center w-9 h-9 borda-padrao border rounded-lg texto-padrao hover-fundo-sutil transition-colors"
       >
         <i className="fa-solid fa-bell" aria-hidden="true"></i>
-        {naoLidos > 0 && (
+        {naoLidas > 0 && (
           <span className="absolute -top-1 -right-1 min-w-4.5 h-4.5 px-1 rounded-full fundo-erro-forte texto-sobre-cor rotulo-leitura texto-herdado flex items-center justify-center">
-            {naoLidos > 9 ? '9+' : naoLidos}
+            {naoLidas > 9 ? '9+' : naoLidas}
           </span>
         )}
-        <Dica texto="Atividade recente" curta baixo direita />
+        {/* Só com a caixa fechada: aberta, a bolha ficava por trás dela e aparecia no canto de cima. */}
+        {!aberto && <Dica texto="Notificações" curta baixo direita />}
       </button>
 
       {aberto && (
-        <div className="absolute right-0 mt-2 w-80 fundo-elevado rounded-xl shadow-2xl border borda-forte overflow-hidden z-50">
-          <div className="px-4 py-3 border-b borda-padrao fundo-sutil">
-            <p className="paragrafo enfase texto-forte">Atividade recente</p>
-            <p className="legenda texto-fraco">Últimas ações feitas por você</p>
+        <div className="absolute -right-12 sm:right-0 mt-2 w-80 fundo-elevado rounded-xl shadow-2xl border borda-forte overflow-hidden z-50">
+          <div className="fundo-sutil">
+            <BarraAbasBotoes<Aba>
+              abas={[
+                { chave: 'notificacoes', rotulo: 'Notificações' },
+                { chave: 'atividade', rotulo: 'Minha atividade' },
+              ]}
+              ativa={aba}
+              aoTrocar={aoTrocarAba}
+              // Meio a meio, texto no centro de cada metade: na caixa estreita, aba do tamanho do texto sobrava à direita.
+              className="[&>[role=tab]]:flex-1 [&>[role=tab]]:justify-center"
+            />
           </div>
 
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-80 overflow-y-auto rolagem-estavel">
             {carregando ? (
               <Carregando className="px-4 py-6 text-center" />
-            ) : itens.length === 0 ? (
-              <p className="paragrafo px-4 py-6 texto-fraco text-center">
-                Nenhuma ação recente sua registrada.
-              </p>
+            ) : aba === 'notificacoes' ? (
+              avisos.length === 0 ? (
+                <p className="paragrafo px-4 py-6 texto-fraco text-center">Nenhuma notificação por enquanto.</p>
+              ) : (
+                avisos.map((aviso) => (
+                  <button
+                    key={aviso.idNotificacao}
+                    type="button"
+                    onClick={() => !aviso.lidaEm && marcarLido(aviso.idNotificacao)}
+                    className="w-full text-left px-4 py-3 border-b borda-padrao last:border-b-0 flex gap-3 hover-fundo-sutil"
+                  >
+                    <span
+                      className={'mt-1.5 w-2 h-2 rounded-full shrink-0 ' + (aviso.lidaEm ? '' : 'fundo-marca')}
+                      aria-hidden="true"
+                    ></span>
+                    <span className="min-w-0">
+                      <span className="block paragrafo enfase texto-forte">
+                        {aviso.titulo}
+                        {!aviso.lidaEm && <span className="sr-only"> (não lida)</span>}
+                      </span>
+                      <span className="block paragrafo texto-padrao mt-0.5">{aviso.mensagem}</span>
+                      <span className="block legenda texto-fraco mt-0.5">{formatarDataHora(aviso.criadoEm)}</span>
+                    </span>
+                  </button>
+                ))
+              )
+            ) : !atividade || atividade.length === 0 ? (
+              <p className="paragrafo px-4 py-6 texto-fraco text-center">Nenhuma ação recente sua registrada.</p>
             ) : (
-              itens.map((item) => (
+              atividade.map((item) => (
                 <div key={item.idLog} className="px-4 py-3 border-b borda-padrao last:border-b-0">
                   <p className="paragrafo texto-forte">
                     Você {ROTULO_OPERACAO[item.operacao] ?? item.operacao.toLowerCase()}{' '}
-                    <span className="enfase">{item.tabela}</span> #
-                    {item.identidadeRegistro}
+                    <span className="enfase">{item.tabela}</span> #{item.identidadeRegistro}
                   </p>
-                  <p className="legenda texto-fraco mt-0.5">
-                    {formatarDataHora(item.ocorridoEm)}
-                  </p>
+                  <p className="legenda texto-fraco mt-0.5">{formatarDataHora(item.ocorridoEm)}</p>
                 </div>
               ))
             )}
           </div>
+
+          {aba === 'notificacoes' && naoLidas > 0 && !carregando && (
+            <div className="px-4 py-2 border-t borda-padrao fundo-sutil text-right">
+              <button type="button" onClick={() => marcarLido()} className="legenda enfase texto-marca hover-texto-forte">
+                Marcar todas como lidas
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -6245,6 +6245,12 @@ CREATE TRIGGER trg_log_auditoria_score_rotulo
 AFTER INSERT OR UPDATE OR DELETE ON score_rotulo
 FOR EACH ROW EXECUTE FUNCTION public.fn_log_auditoria('id_rotulo');
 
+-- modelo_mensagem: o histórico do texto de cada aviso (quem mudou, o antigo e o novo) é este registro.
+DROP TRIGGER IF EXISTS trg_log_auditoria_modelo_mensagem ON modelo_mensagem;
+CREATE TRIGGER trg_log_auditoria_modelo_mensagem
+AFTER INSERT OR UPDATE OR DELETE ON modelo_mensagem
+FOR EACH ROW EXECUTE FUNCTION public.fn_log_auditoria('id_modelo_mensagem');
+
 -- ============================================================
 -- [05-G] ARQUIVO: posse da foto de perfil e dos anexos, e limpeza de órfãos
 -- ============================================================
@@ -6438,6 +6444,8 @@ $$;
 --     atualização publicada). Vale para qualquer caminho: tela, tarefa automática ou função de moderação;
 --   - o Nest, só para verificar a conta e recuperar a senha: o link leva um token que o banco guarda apenas como hash,
 --     então só o Nest o conhece; ele vai cifrado em dados.segredo e é apagado quando o e-mail sai ou é cancelado.
+-- Cada evento sai pelos canais ligados em modelo_mensagem: e-mail, sino do painel ou os dois. O texto também mora lá
+-- e o admin o edita pelo painel, sem deploy.
 -- Conta excluída não recebe nada (enfileirar_notificacao devolve NULL). Contribuição sem conta também não: não há
 -- e-mail para onde mandar (RF-080).
 
@@ -6445,9 +6453,12 @@ $$;
 -- Função:     enfileirar_notificacao
 -- Assinatura: (p_id_usuario INT, p_tipo VARCHAR, p_dados JSONB DEFAULT '{}') -> INT
 -- Bloco:      [05-Q]
--- Regra:      Põe um e-mail na fila para uma conta: copia o e-mail e o nome dela NESTE momento (a pessoa pode trocar o
---             nome depois; o histórico mostra para onde foi). Conta inexistente ou excluída: devolve NULL e não grava
---             nada. SECURITY DEFINER, sem autorização: quem chama são os gatilhos deste bloco e o Nest (cadastro e
+-- Regra:      Avisa uma conta pelos canais ligados do evento (modelo_mensagem.ativo): o e-mail entra 'pendente' na
+--             fila, com o e-mail e o nome da pessoa NESTE momento (ela pode trocar depois; o histórico mostra para onde
+--             foi); o sino entra já 'enviado', sem dados.segredo (o token do link só vai por e-mail). O texto não é
+--             gravado: é montado do modelo na hora de enviar (e-mail) ou de mostrar (sino). Devolve o id do e-mail ou,
+--             sem e-mail, o do sino; NULL = nada gravado (conta inexistente ou excluída, ou nenhum canal ligado).
+--             SECURITY DEFINER, sem autorização: quem chama são os gatilhos deste bloco e o Nest (cadastro e
 --             recuperação de senha), sempre por causa de um evento que já passou pelas próprias regras.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.enfileirar_notificacao(p_id_usuario INT, p_tipo VARCHAR, p_dados JSONB DEFAULT '{}'::jsonb)
@@ -6457,22 +6468,39 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-    v_email VARCHAR(255);
-    v_nome  VARCHAR(150);
-    v_id    INT;
+    v_email    VARCHAR(255);
+    v_nome     VARCHAR(150);
+    v_dados    JSONB;
+    v_id_email INT;
+    v_id_sino  INT;
 BEGIN
     SELECT u.email, u.nome INTO v_email, v_nome
     FROM usuario u
     WHERE u.id_usuario = p_id_usuario AND NOT u.deletado;
 
-    IF NOT FOUND OR v_email IS NULL THEN
+    IF NOT FOUND THEN
         RETURN NULL;
     END IF;
 
-    INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, dados)
-    VALUES (p_id_usuario, v_email, p_tipo, jsonb_build_object('nome', v_nome) || COALESCE(p_dados, '{}'::jsonb))
-    RETURNING id_notificacao INTO v_id;
-    RETURN v_id;
+    v_dados := jsonb_build_object('nome', v_nome) || COALESCE(p_dados, '{}'::jsonb);
+
+    IF v_email IS NOT NULL AND EXISTS (
+        SELECT 1 FROM modelo_mensagem WHERE tipo_evento = p_tipo AND canal = 'email' AND ativo
+    ) THEN
+        INSERT INTO notificacao (id_usuario, canal, email_destinatario, tipo_evento, dados)
+        VALUES (p_id_usuario, 'email', v_email, p_tipo, v_dados)
+        RETURNING id_notificacao INTO v_id_email;
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM modelo_mensagem WHERE tipo_evento = p_tipo AND canal = 'interna' AND ativo
+    ) THEN
+        INSERT INTO notificacao (id_usuario, canal, tipo_evento, dados, status, enviado_em)
+        VALUES (p_id_usuario, 'interna', p_tipo, v_dados - 'segredo', 'enviado', NOW())
+        RETURNING id_notificacao INTO v_id_sino;
+    END IF;
+
+    RETURN COALESCE(v_id_email, v_id_sino);
 END;
 $$;
 
@@ -6686,9 +6714,11 @@ $$;
 -- Função:     reenviar_notificacao
 -- Assinatura: (p_id_notificacao INT) -> VOID
 -- Bloco:      [05-Q]
--- Regra:      Tratamento manual do RF-121: um e-mail 'falhou' volta para a fila agora, com as tentativas zeradas.
---             Exige notificacao_processar (92039); só 'falhou' pode voltar (91054: enviado não se manda de novo por
---             aqui, e cancelado já perdeu o link, se tinha um). SECURITY DEFINER com a checagem por dentro.
+-- Regra:      Tratamento manual do RF-121: um e-mail 'falhou' volta para a fila agora, com as tentativas zeradas e
+--             para o e-mail ATUAL da conta (o de quando falhou pode ser justamente o endereço errado que a pessoa já
+--             corrigiu). Exige notificacao_processar (92039); só 'falhou' pode voltar (91054: enviado não se manda de
+--             novo por aqui, e cancelado já perdeu o link, se tinha um); conta excluída não recebe (91055, a mesma
+--             regra de enfileirar_notificacao). SECURITY DEFINER com a checagem por dentro.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.reenviar_notificacao(p_id_notificacao INT)
 RETURNS VOID
@@ -6697,22 +6727,31 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-    v_status status_notificacao;
+    v_status     status_notificacao;
+    v_id_usuario INT;
+    v_email      VARCHAR(255);
 BEGIN
     IF NOT public.tem_permissao('notificacao_processar') THEN
         RAISE EXCEPTION 'Sem permissão para reenviar e-mails.' USING ERRCODE = '92039';
     END IF;
 
-    SELECT status INTO v_status FROM notificacao WHERE id_notificacao = p_id_notificacao FOR UPDATE;
+    SELECT status, id_usuario INTO v_status, v_id_usuario
+    FROM notificacao WHERE id_notificacao = p_id_notificacao FOR UPDATE;
     IF NOT FOUND THEN
         RAISE EXCEPTION 'E-mail não encontrado.' USING ERRCODE = '90039';
     END IF;
     IF v_status <> 'falhou' THEN
         RAISE EXCEPTION 'Só um e-mail que falhou pode ser reenviado.' USING ERRCODE = '91054';
     END IF;
+    SELECT email INTO v_email FROM usuario WHERE id_usuario = v_id_usuario AND NOT deletado;
+    IF v_email IS NULL THEN
+        RAISE EXCEPTION 'A conta deste e-mail foi excluída: não há para onde reenviar. Cancele o envio.'
+            USING ERRCODE = '91055';
+    END IF;
 
     UPDATE notificacao
-       SET status = 'pendente', tentativas = 0, proxima_tentativa_em = NOW(), ultimo_erro = NULL
+       SET status = 'pendente', tentativas = 0, proxima_tentativa_em = NOW(), ultimo_erro = NULL,
+           email_destinatario = v_email
      WHERE id_notificacao = p_id_notificacao;
 END;
 $$;

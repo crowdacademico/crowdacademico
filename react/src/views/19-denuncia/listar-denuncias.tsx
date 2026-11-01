@@ -102,7 +102,7 @@ export function ListarDenuncias({ auth }: PropsPagina) {
           { chave: 'contestacaoSituacao', rotulo: 'Contestação' },
         ]}
       />
-      <BlocoLogAuditoria buscar={buscarLog} />
+      <BlocoLogAuditoria buscar={buscarLog} chaveRecarga={chaveRecarga} />
 
       {aberta && (
         <ModalJulgarDenuncia

@@ -10,14 +10,16 @@ import type { LogAuditoriaResponse } from '../../services/28-log-auditoria/type/
 
 interface LogAuditoriaPainelProps {
   buscar: (pagina: number, tamanho: number) => Promise<ResultadoPaginado<LogAuditoriaResponse>>;
+  // Mudou (a tela salvou algo): busca de novo, da página 1.
+  chaveRecarga?: number;
 }
 
 // Painel "Ver log": as últimas alterações de UMA tabela física (log_auditoria.tabela), mais recente primeiro. Só
 // busca quando abre (`buscar` já vem amarrada com authFetch e o nome da tabela, pelo componente pai). Paginado pelo
 // servidor, com o mesmo rodapé (Mostrar 10/20/30/todos) do Registro de Chamadas e das tabelas.
-export function LogAuditoriaPainel({ buscar }: LogAuditoriaPainelProps) {
+export function LogAuditoriaPainel({ buscar, chaveRecarga = 0 }: LogAuditoriaPainelProps) {
   const { erro, reportarErro } = useErroToast({ mostraTexto: true });
-  const { dados, total, rodape } = usePaginaServidor(buscar, 'log', reportarErro);
+  const { dados, total, rodape } = usePaginaServidor(buscar, `log-${chaveRecarga}`, reportarErro);
 
   return (
     <div className="mt-4 border-t borda-padrao pt-4">

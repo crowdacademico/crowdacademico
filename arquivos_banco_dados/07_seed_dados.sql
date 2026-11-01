@@ -18,8 +18,8 @@
 -- ============================================================================
 
 -- Todas as datas e horas escritas neste arquivo são do horário de Brasília. Sem isto, o Postgres (o Supabase roda
--- em UTC) lê '2024-01-01 00:00:00' como meia-noite de Londres, que em Brasília é 21h do dia anterior: a conta
--- criada em 01/01/2024 apareceria como "Membro desde 12/2023". SET LOCAL não serve aqui (o arquivo não roda numa
+-- em UTC) lê '2026-01-01 00:00:00' como meia-noite de Londres, que em Brasília é 21h do dia anterior: a conta
+-- criada em 01/01/2026 apareceria como "Membro desde 12/2025". SET LOCAL não serve aqui (o arquivo não roda numa
 -- transação só); o SET vale até o fim da conexão, e o RESET no fim do arquivo devolve o padrão.
 SET TIME ZONE 'America/Sao_Paulo';
 
@@ -446,7 +446,7 @@ INSERT INTO motivo_denuncia (descricao, tipo) VALUES
 
 -- [07-D-6] termos_de_uso / usuario_termo
 -- Sustentam o RF-011 (aceite obrigatório no cadastro). Três versões de cada termo, em ordem de id: 1 e 2 são as
--- antigas (v1, de 2024, aceitas por quem se cadastrou ou fez o upgrade antes da v2), 3 e 4 são as vigentes (v2),
+-- antigas (v1, de 01/2026, aceitas por quem se cadastrou ou fez o upgrade antes da v2), 3 e 4 são as vigentes (v2),
 -- e 5 e 6 são rascunhos da próxima versão (v3), sem aceite. Aqui entram só as vigentes, com id 3 e 4 escritos à
 -- mão para deixar o 1 e o 2 às antigas, que são da demonstração ([07-D-6], versões antigas). Nenhum texto é
 -- jurídico validado: precisa de revisão antes de qualquer uso em produção.
@@ -737,6 +737,79 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'arquivo_intervalo_minimo_segundos',     '5',        'inteiro', 'Intervalo mínimo (em segundos) entre um upload confirmado e o próximo início de upload do mesmo usuário', TRUE, FALSE)
 ON CONFLICT (chave) DO NOTHING;
 
+-- [07-D-9] modelo_mensagem: o texto de cada aviso, por evento e canal (o admin edita em Configurações > Mensagens).
+-- Parágrafos separados por linha em branco; {{campo}} vem de notificacao.dados; {{#campo}}...{{/campo}} só aparece
+-- com o campo preenchido e {{^campo}}...{{/campo}} só sem ele. A saudação, o botão e o rodapé do e-mail são fixos.
+-- O sino não tem verificação de conta nem recuperação de senha: o link com código só vai por e-mail. A campanha nova
+-- de quem a pessoa segue vai só para o sino (aviso de rotina, mesmo padrão das redes sociais); quem quiser também por
+-- e-mail liga na tela.
+INSERT INTO modelo_mensagem (tipo_evento, canal, titulo, corpo, ativo, obrigatoria) VALUES
+('verificacao_email', 'email', 'Confirme o seu e-mail no CrowdAcadêmico',
+ E'Falta só um passo para a sua conta ficar completa: confirmar que este e-mail é seu.\n\nSe não foi você quem criou a conta, ignore este e-mail.', TRUE, TRUE),
+('recuperacao_senha', 'email', 'Crie uma nova senha no CrowdAcadêmico',
+ E'Recebemos um pedido para criar uma nova senha para a sua conta.\n\nO link vale por {{minutos}} minutos e só pode ser usado uma vez.\n\nSe não foi você, ignore este e-mail: a sua senha continua a mesma.', TRUE, TRUE),
+('campanha_aprovada', 'email', 'Sua campanha foi aprovada',
+ E'Boa notícia: "{{titulo}}" foi aprovada e já está visível na plataforma.\n\nA partir da data de início, ela passa a receber contribuições.', TRUE, FALSE),
+('campanha_rejeitada', 'email', 'Sua campanha não foi aprovada',
+ E'"{{titulo}}" não foi aprovada desta vez.\n\n{{#justificativa}}Motivo: {{justificativa}}{{/justificativa}}\n\n{{#reenvios_restantes}}Você pode corrigir e enviar de novo até {{prazo_reenvio_ate}}. Reenvios restantes: {{reenvios_restantes}}.{{/reenvios_restantes}}{{^reenvios_restantes}}Os reenvios desta campanha acabaram. Ela fica só para consulta até {{prazo_reenvio_ate}}, quando é excluída.{{/reenvios_restantes}}', TRUE, FALSE),
+('nova_campanha_pesquisador', 'email', 'Nova campanha de um pesquisador que você segue',
+ E'{{nome_pesquisador}} publicou uma campanha nova: "{{titulo}}".', FALSE, FALSE),
+('nova_atualizacao', 'email', 'Nova atualização numa campanha que você acompanha',
+ E'"{{titulo}}" publicou uma atualização: "{{titulo_atualizacao}}".', TRUE, FALSE),
+('campanha_sucesso', 'email', 'A campanha que você apoiou bateu a meta',
+ E'"{{titulo}}" terminou e bateu a meta. Obrigado por apoiar a pesquisa!\n\nO valor arrecadado vai para o pesquisador depois do prazo de segurança da plataforma.', TRUE, FALSE),
+('campanha_nao_atingida', 'email', 'A campanha que você apoiou não bateu a meta',
+ E'"{{titulo}}" terminou sem bater a meta. Como ela é do modelo tudo ou nada, a sua contribuição vai ser devolvida.\n\nA devolução já começou. Você recebe outro e-mail quando ela for concluída.', TRUE, FALSE),
+('campanha_encerrada_moderacao', 'email', 'A campanha que você apoiou foi encerrada',
+ E'"{{titulo}}" foi encerrada pela moderação da plataforma.\n\nA sua contribuição vai ser devolvida. Você recebe outro e-mail quando a devolução for concluída.', TRUE, FALSE),
+('devolucao_concluida', 'email', 'Sua contribuição foi devolvida',
+ E'A devolução da sua contribuição para "{{titulo}}" foi concluída: {{valor}}.\n\nO prazo para o dinheiro aparecer na sua conta depende do seu banco.', TRUE, FALSE),
+('repasse_previsto', 'email', 'Seu repasse foi programado',
+ E'O repasse de "{{titulo}}" foi programado: {{valor}}, com data prevista para {{data_prevista}}.\n\nO dinheiro vai para a chave Pix cadastrada na sua conta. Confira se ela está certa: a correção da chave é sua responsabilidade.\n\n{{^tem_chave_verificada}}Você ainda não tem chave Pix verificada. Cadastre a chave em Minha Conta; sem ela, o repasse fica esperando.{{/tem_chave_verificada}}', TRUE, FALSE),
+('encerramento_aprovado', 'email', 'Seu pedido de encerramento foi aprovado',
+ E'O pedido para encerrar "{{titulo}}" antes do prazo foi aprovado, e o encerramento já começou.', TRUE, FALSE),
+('encerramento_rejeitado', 'email', 'Seu pedido de encerramento não foi aprovado',
+ E'O pedido para encerrar "{{titulo}}" antes do prazo não foi aprovado, e ela continua ativa.\n\n{{#justificativa}}Motivo: {{justificativa}}{{/justificativa}}', TRUE, FALSE),
+('pesquisador_suspenso', 'email', 'Seu perfil de pesquisador foi suspenso',
+ E'O seu perfil de pesquisador foi suspenso pela moderação{{#suspenso_ate}} até {{suspenso_ate}}{{/suspenso_ate}}.\n\n{{#motivo}}Motivo: {{motivo}}{{/motivo}}\n\nEnquanto durar a suspensão, você não envia campanhas nem publica atualizações.', TRUE, FALSE),
+('pesquisador_reativado', 'email', 'Seu perfil de pesquisador foi reativado',
+ E'O seu perfil de pesquisador está ativo de novo, com todas as permissões.', TRUE, FALSE),
+('contestacao_aceita', 'email', 'Sua contestação foi aceita',
+ E'A sua contestação foi aceita, e a denúncia deixou de contar na sua pontuação.\n\n{{#justificativa}}Justificativa: {{justificativa}}{{/justificativa}}', TRUE, FALSE),
+('contestacao_recusada', 'email', 'Sua contestação não foi aceita',
+ E'A sua contestação foi analisada e não foi aceita.\n\n{{#justificativa}}Justificativa: {{justificativa}}{{/justificativa}}', TRUE, FALSE),
+('campanha_aprovada', 'interna', 'Campanha aprovada',
+ E'"{{titulo}}" foi aprovada e já está visível na plataforma.', TRUE, FALSE),
+('campanha_rejeitada', 'interna', 'Campanha não aprovada',
+ E'"{{titulo}}" não foi aprovada.{{#justificativa}} Motivo: {{justificativa}}{{/justificativa}}', TRUE, FALSE),
+('nova_campanha_pesquisador', 'interna', 'Nova campanha',
+ E'{{nome_pesquisador}} publicou "{{titulo}}".', TRUE, FALSE),
+('nova_atualizacao', 'interna', 'Nova atualização',
+ E'"{{titulo}}" publicou: "{{titulo_atualizacao}}".', TRUE, FALSE),
+('campanha_sucesso', 'interna', 'Meta atingida',
+ E'"{{titulo}}", que você apoiou, bateu a meta.', TRUE, FALSE),
+('campanha_nao_atingida', 'interna', 'Meta não atingida',
+ E'"{{titulo}}" terminou sem bater a meta. A sua contribuição vai ser devolvida.', TRUE, FALSE),
+('campanha_encerrada_moderacao', 'interna', 'Campanha encerrada',
+ E'"{{titulo}}" foi encerrada pela moderação. A sua contribuição vai ser devolvida.', TRUE, FALSE),
+('devolucao_concluida', 'interna', 'Contribuição devolvida',
+ E'A devolução para "{{titulo}}" foi concluída: {{valor}}.', TRUE, FALSE),
+('repasse_previsto', 'interna', 'Repasse programado',
+ E'O repasse de "{{titulo}}" está previsto para {{data_prevista}}.{{^tem_chave_verificada}} Cadastre a sua chave Pix em Minha Conta.{{/tem_chave_verificada}}', TRUE, FALSE),
+('encerramento_aprovado', 'interna', 'Encerramento aprovado',
+ E'O pedido para encerrar "{{titulo}}" foi aprovado.', TRUE, FALSE),
+('encerramento_rejeitado', 'interna', 'Encerramento não aprovado',
+ E'O pedido para encerrar "{{titulo}}" não foi aprovado.', TRUE, FALSE),
+('pesquisador_suspenso', 'interna', 'Perfil suspenso',
+ E'O seu perfil de pesquisador foi suspenso{{#suspenso_ate}} até {{suspenso_ate}}{{/suspenso_ate}}.', TRUE, FALSE),
+('pesquisador_reativado', 'interna', 'Perfil reativado',
+ E'O seu perfil de pesquisador está ativo de novo.', TRUE, FALSE),
+('contestacao_aceita', 'interna', 'Contestação aceita',
+ E'A sua contestação foi aceita.', TRUE, FALSE),
+('contestacao_recusada', 'interna', 'Contestação não aceita',
+ E'A sua contestação não foi aceita.', TRUE, FALSE)
+ON CONFLICT (tipo_evento, canal) DO NOTHING;
+
 -- ============================================================================
 -- [07-DEMONSTRACAO] DAQUI PARA BAIXO: SÓ DESENVOLVIMENTO E AULA
 -- Contas de teste (senha DevTcc123!), campanhas, contribuições e as ferramentas de teste. Num banco de produção,
@@ -800,32 +873,32 @@ ON CONFLICT DO NOTHING;
 --            da conta pendente, para demonstrar a tela de aceite.
 -- Ninguém nasce suspenso: suspender é uma ação do painel, demonstrada ao vivo.
 INSERT INTO usuario (nome, email, senha_hash, id_imagem_perfil, criado_em) VALUES
-('Admin Sistema',            'admin@crowdacademico.com.br',           '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:00'),
-('Admin Sistema 2',          'admin2@crowdacademico.com.br',          '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:01'),
-('Moderador Sistema',        'moderador@crowdacademico.com.br',       '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:02'),
-('Revisor Sistema',          'revisor@crowdacademico.com.br',         '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:03'),
-('Suporte Sistema',          'suporte.sistema@crowdacademico.com.br', '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:04'),
-('Curador Sistema',          'curador@crowdacademico.com.br',         '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:05'),
-('Pesquisador Sistema',      'pesquisador@crowdacademico.com.br',     '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:06'),
+('Admin Sistema',            'admin@crowdacademico.com.br',           '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-01-01 00:00:00'),
+('Admin Sistema 2',          'admin2@crowdacademico.com.br',          '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-01-01 00:00:01'),
+('Moderador Sistema',        'moderador@crowdacademico.com.br',       '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-01-01 00:00:02'),
+('Revisor Sistema',          'revisor@crowdacademico.com.br',         '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-01-01 00:00:03'),
+('Suporte Sistema',          'suporte.sistema@crowdacademico.com.br', '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-01-01 00:00:04'),
+('Curador Sistema',          'curador@crowdacademico.com.br',         '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-01-01 00:00:05'),
+('Pesquisador Sistema',      'pesquisador@crowdacademico.com.br',     '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-01-01 00:00:06'),
 
-('Ana Beatriz Santos',       'ana.santos@usp.br',                     '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-01-10 09:00:00'),
-('Bruno Tavares Costa',      'bruno.tavares@ufrgs.br',                '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-01-20 09:00:00'),
-('Carlos Eduardo Melo',      'carlos.melo@unicamp.br',                '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-02-03 10:30:00'),
-('Renata Vasconcelos Dias',  'renata.vasconcelos@ufpr.br',            '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-02-14 09:00:00'),
-('Eduardo Barbosa Nogueira', 'eduardo.barbosa@ufba.br',               '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-02-25 09:00:00'),
-('Beatriz Lima Alves',       'beatriz.lima@ufmg.br',                  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-03-05 08:45:00'),
-('Juliana Ferreira Paz',     'juliana.ferreira@ufsc.br',              '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-03-18 11:20:00'),
-('Patrícia Rocha Silva',     'patricia.rocha@unifesp.br',             '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-04-02 09:30:00'),
-('Vinícius Almeida Ferraz',  'vinicius.ferraz@gmail.com',             '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-04-20 09:00:00'),
-('Gabriel Souza Martins',    'gabriel.martins@gmail.com',             '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-05-08 10:00:00'),
+('Ana Beatriz Santos',       'ana.santos@usp.br',                     '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-01-10 09:00:00'),
+('Bruno Tavares Costa',      'bruno.tavares@ufrgs.br',                '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-01-20 09:00:00'),
+('Carlos Eduardo Melo',      'carlos.melo@unicamp.br',                '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-02-03 10:30:00'),
+('Renata Vasconcelos Dias',  'renata.vasconcelos@ufpr.br',            '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-02-14 09:00:00'),
+('Eduardo Barbosa Nogueira', 'eduardo.barbosa@ufba.br',               '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-02-25 09:00:00'),
+('Beatriz Lima Alves',       'beatriz.lima@ufmg.br',                  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-03-05 08:45:00'),
+('Juliana Ferreira Paz',     'juliana.ferreira@ufsc.br',              '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-03-18 11:20:00'),
+('Patrícia Rocha Silva',     'patricia.rocha@unifesp.br',             '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-04-02 09:30:00'),
+('Vinícius Almeida Ferraz',  'vinicius.ferraz@gmail.com',             '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-04-20 09:00:00'),
+('Gabriel Souza Martins',    'gabriel.martins@gmail.com',             '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-05-08 10:00:00'),
 
-('Fernanda Souza Lima',      'fernanda.souza@gmail.com',              '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-01-15 10:00:00'),
-('Tiago Ramos Pereira',      'tiago.ramos@gmail.com',                 '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-02-01 14:00:00'),
-('Helena Duarte Campos',     'helena.campos@outlook.com',             '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-02-20 19:30:00'),
+('Fernanda Souza Lima',      'fernanda.souza@gmail.com',              '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-01-15 10:00:00'),
+('Tiago Ramos Pereira',      'tiago.ramos@gmail.com',                 '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-02-01 14:00:00'),
+('Helena Duarte Campos',     'helena.campos@outlook.com',             '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-02-20 19:30:00'),
 
-('Marina Alves Torres',      'marina.torres@gmail.com',               '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-06-10 10:00:00'),
-('Rafael Costa Andrade',     'rafael.costa.andrade@gmail.com',        '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-06-10 10:00:01'),
-('Larissa Mendes Cunha',     'larissa.mendes@gmail.com',              '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2025-06-10 10:00:02');
+('Marina Alves Torres',      'marina.torres@gmail.com',               '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-06-10 10:00:00'),
+('Rafael Costa Andrade',     'rafael.costa.andrade@gmail.com',        '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-06-10 10:00:01'),
+('Larissa Mendes Cunha',     'larissa.mendes@gmail.com',              '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2026-06-10 10:00:02');
 
 -- [07-D-2] usuario_papel
 -- id_usuario é fixo (a tabela usuario está vazia antes deste seed, então os IDs abaixo batem com a ordem de
@@ -859,7 +932,7 @@ ON CONFLICT DO NOTHING;
 -- histórico de aceites aponta para elas pela data). Os rascunhos da próxima versão (id 5 e 6) entram depois de
 -- todos os aceites ([07-H-3]).
 INSERT INTO termos_de_uso (id_termo, tipo, versao, conteudo, ativo, criado_em) VALUES
-(1, 'cadastro', 'v1-2024-01-01', 'TERMOS DE USO E POLÍTICA DE PRIVACIDADE - CROWDACADÊMICO
+(1, 'cadastro', 'v1-2026-01-01', 'TERMOS DE USO E POLÍTICA DE PRIVACIDADE - CROWDACADÊMICO
 
 Estes Termos valem para a conta e para todas as contribuições feitas na plataforma. O aceite é registrado no cadastro e novamente a cada contribuição, com a versão vigente naquele momento.
 
@@ -898,8 +971,8 @@ O usuário pode solicitar o encerramento de sua conta a qualquer momento. Dados 
 Estes Termos podem ser atualizados periodicamente. A versão vigente é sempre a mais recente publicada, e o usuário é notificado para revisar e aceitar o texto atualizado.
 
 11. FORO
-Fica eleito o foro da comarca do domicílio do usuário para dirimir eventuais controvérsias, conforme o Código de Defesa do Consumidor, quando aplicável.', FALSE, '2024-01-01 00:00:00'),
-(2, 'upgrade_pesquisador', 'v1-2024-01-01', 'TERMOS DE UPGRADE DE PERFIL DE PESQUISADOR - CROWDACADÊMICO
+Fica eleito o foro da comarca do domicílio do usuário para dirimir eventuais controvérsias, conforme o Código de Defesa do Consumidor, quando aplicável.', FALSE, '2026-01-01 00:00:00'),
+(2, 'upgrade_pesquisador', 'v1-2026-01-01', 'TERMOS DE UPGRADE DE PERFIL DE PESQUISADOR - CROWDACADÊMICO
 
 1. OBJETO
 Este termo é exibido no momento em que um usuário comum solicita o upgrade de sua conta para perfil de pesquisador, complementando os Termos de Uso gerais aceitos no cadastro.
@@ -917,7 +990,7 @@ O perfil de pesquisador está sujeito ao sistema de pontuação (score) da plata
 O CPF é armazenado de forma cifrada e nunca exibido publicamente em sua forma completa, conforme a Lei 13.709/2018 (LGPD). O vínculo institucional e o título acadêmico são exibidos publicamente no perfil, por serem informações de natureza profissional/acadêmica relevantes para os apoiadores.
 
 6. ALTERAÇÕES DESTE TERMO
-Este termo pode ser atualizado periodicamente; a versão vigente no momento da solicitação do upgrade é a que se aplica.', FALSE, '2024-01-01 00:00:00');
+Este termo pode ser atualizado periodicamente; a versão vigente no momento da solicitação do upgrade é a que se aplica.', FALSE, '2026-01-01 00:00:00');
 
 -- Cada usuário aceitou, no próprio cadastro (aceito_em = pouco depois de usuario.criado_em), a versão do termo
 -- da conta vigente naquele momento.
@@ -962,16 +1035,16 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- chave_pix_verificada_em: a titularidade foi confirmada logo depois do cadastro da chave. A Renata (11) e o
 -- Gabriel (17) não cadastraram chave: o repasse da Renata espera na fila ("aguardando conta").
 INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, cpf_hash, tipo_vinculo, vinculo_institucional, titulo_academico, status_pesquisador, ativado_em, tipo_chave_pix, chave_pix_criptografada, chave_pix_verificada_em) VALUES
-(7,  'v1:uUtOS/UIKkMBczzR:wKf1XU/T4DU7wxlBRIN9XA==:EdujkWtk43mcH08=', 'e44f434dd801bdcb2846daafc2646d428b8b8fe6ef64b37513c8c25ec219b639', 'institucional', 'CrowdAcadêmico (conta de teste)',                   'doutor',   'ativo', '2024-01-01 00:10:00', NULL, NULL, NULL),
-(8,  'v1:mWTFzqRm8FMW14/u:iMiDqsRSTJ4KUyzcmKP18w==:bR7wgOpNkI+vSJ4=', '1610ee8b3555955f9e79eba6efa88324a4c30ced46b4bee5e6f2b6b3ed605797', 'institucional', 'Universidade de São Paulo (USP)',                   'doutor',   'ativo', '2025-01-10 09:05:00', 'email',     'v1:DIg7v8LA7dyr+Hqc:/t3SmH58SpMInR0yfJkHNw==:pHcryKbuuai0kI/pNqU1pOw=', '2025-01-12 10:00:00'),
-(9,  'v1:LEFw0QnUeHqL2X91:6kAh7osqA4mnvClzmJIEpA==:YdQlSK3Dr/mdlFw=', 'a36805b35ddfe2257718bedd4035fd49afa11d5e3602285131419df0827d49f1', 'institucional', 'Universidade Federal do Rio Grande do Sul (UFRGS)', 'doutor',   'ativo', '2025-01-20 09:10:00', 'aleatoria', 'v1:EfKf5Hclz5tm/h+T:KJmGoeQeWZSNRaipD4HNUA==:KVxgWW8ltrfAJpbXZALbopeudEZSFV2yqIM0w9LTrmCP9PwI', '2025-01-22 10:00:00'),
-(10, 'v1:biXIzmT/+Z0OVzgl:y8lT16d44wlXzCKzGAsK9A==:HxBEvdcXcZk8bHY=', 'b3b4544a4ec41edae5514228ab14306250a0fce3bc3f149f8a0ed92be2536dd8', 'institucional', 'Universidade Estadual de Campinas (UNICAMP)',       'mestre',   'ativo', '2025-02-03 10:40:00', 'telefone',  'v1:I+ZcnKpeMi97idPx:NfCZ9KymQMW8UvQMGQu2mA==:8XC0qKatn99KCCOfdXo=', '2025-02-05 10:00:00'),
-(11, 'v1:N0tFgAz4WUtH/Zmi:9c3av62cgJj7CVWQsTTN/Q==:1jWfrfd+IZW7NZI=', '0d491a6df2cd5e6e9fe25c47630ff59d88a6e0a6a3d85f61badb2723a22ff19c', 'institucional', 'Universidade Federal do Paraná (UFPR)',             'mestre',   'ativo', '2025-02-14 09:10:00', NULL, NULL, NULL),
-(12, 'v1:Irign/aW5mMCv4Ug:EQxzkR0lXxnJhmu8xAEhcw==:2lmUgJVYjExvdAM=', 'b5944441f2b1f45294195783812f36bc72c9bf38d2ef3d8a231c1a8d8f538ec5', 'institucional', 'Universidade Federal da Bahia (UFBA)',              'mestre',   'ativo', '2025-02-25 09:10:00', 'email',     'v1:KqxuwtOm724qtOI7:LxuKQ2zTrdCHnZIRCVTZSA==:KVYEoHKuZvIt/Y3uC+Fx7b6M9Q1khBQ=', '2025-03-01 10:00:00'),
-(13, 'v1:/qWUrRI/9fzjm9Kh:uU6qNuQlvvFjghnTLVr8Og==:N5DdmozsScRBV8A=', '93d76c0ae76d371c84ead92cdc597742cd149067fe7f234552e10abe75ee5e7f', 'institucional', 'Universidade Federal de Minas Gerais (UFMG)',       'doutor',   'ativo', '2025-03-05 09:00:00', 'aleatoria', 'v1:TdqU/vNUZWF3B/+j:13UEjgEEINz8P7Q8u+d+YA==:/gDJVLCsBlqUtMvDYXOlfrf1f0ADW7RUBKKQvmCayaTlrLiR', '2025-03-08 10:00:00'),
-(14, 'v1:gRfGHqP2CaS1KfN8:/Ndt5pdWu6A/ZxDBptQipQ==:XXTsLYETudrxeik=', '74fc41e2f0ea9e284b8c1d2379fcc4388988d1b4a18f53c88a626d91b5d4cbc6', 'institucional', 'Universidade Federal de Santa Catarina (UFSC)',     'mestre',   'ativo', '2025-03-18 11:30:00', 'email',     'v1:BktVyX2lb13+pXgw:HAs2NfQY/xfhwkfL0/ew3g==:KkqcgrQXrBTRVaZBeeJCH7C8m17wRUqS', '2025-03-20 10:00:00'),
-(15, 'v1:gH+4XLY9grNC1AAN:f0QkyT8OuWRTKwwbyHhtKQ==:/dE9nq3r7rYxs3k=', '3f022d05c183ecfb64cbb6ac2500e66ad731e684f1c9afd5e2cb801d5576d376', 'institucional', 'Universidade Federal de São Paulo (UNIFESP)',       'doutor',   'ativo', '2025-04-02 09:40:00', 'email',     'v1:UD+7wVPGzE/66K9j:i0IbQ4LVWvBT6wjsi1KUOw==:bIv+5CJ+YHLcwyezRmobW+Y1dadW8TCQ6Q==', '2025-04-05 10:00:00'),
-(16, 'v1:m7z9uq+435l0syBo:wVQB6djPxdi38eWcfpnUAQ==:45Hee0oUAA3IDek=', '469f49af437e577be058f668669a27ec903aa9ddc42895750ef3e1d45f05c380', 'independente',  NULL,                                                'graduado', 'ativo', '2025-04-20 09:10:00', 'aleatoria', 'v1:osAv1z/OK2WZ8RU3:vJDeX+k0L2kD5Q+T4CijEA==:dAVI1j17QB+ioBwcDzGp53tIsEZ6cX8H8FdqhOfJ+69WbX3s', '2025-04-22 10:00:00'),
+(7,  'v1:uUtOS/UIKkMBczzR:wKf1XU/T4DU7wxlBRIN9XA==:EdujkWtk43mcH08=', 'e44f434dd801bdcb2846daafc2646d428b8b8fe6ef64b37513c8c25ec219b639', 'institucional', 'CrowdAcadêmico (conta de teste)',                   'doutor',   'ativo', '2026-01-01 00:10:00', NULL, NULL, NULL),
+(8,  'v1:mWTFzqRm8FMW14/u:iMiDqsRSTJ4KUyzcmKP18w==:bR7wgOpNkI+vSJ4=', '1610ee8b3555955f9e79eba6efa88324a4c30ced46b4bee5e6f2b6b3ed605797', 'institucional', 'Universidade de São Paulo (USP)',                   'doutor',   'ativo', '2026-01-10 09:05:00', 'email',     'v1:DIg7v8LA7dyr+Hqc:/t3SmH58SpMInR0yfJkHNw==:pHcryKbuuai0kI/pNqU1pOw=', '2026-01-12 10:00:00'),
+(9,  'v1:LEFw0QnUeHqL2X91:6kAh7osqA4mnvClzmJIEpA==:YdQlSK3Dr/mdlFw=', 'a36805b35ddfe2257718bedd4035fd49afa11d5e3602285131419df0827d49f1', 'institucional', 'Universidade Federal do Rio Grande do Sul (UFRGS)', 'doutor',   'ativo', '2026-01-20 09:10:00', 'aleatoria', 'v1:EfKf5Hclz5tm/h+T:KJmGoeQeWZSNRaipD4HNUA==:KVxgWW8ltrfAJpbXZALbopeudEZSFV2yqIM0w9LTrmCP9PwI', '2026-01-22 10:00:00'),
+(10, 'v1:biXIzmT/+Z0OVzgl:y8lT16d44wlXzCKzGAsK9A==:HxBEvdcXcZk8bHY=', 'b3b4544a4ec41edae5514228ab14306250a0fce3bc3f149f8a0ed92be2536dd8', 'institucional', 'Universidade Estadual de Campinas (UNICAMP)',       'mestre',   'ativo', '2026-02-03 10:40:00', 'telefone',  'v1:I+ZcnKpeMi97idPx:NfCZ9KymQMW8UvQMGQu2mA==:8XC0qKatn99KCCOfdXo=', '2026-02-05 10:00:00'),
+(11, 'v1:N0tFgAz4WUtH/Zmi:9c3av62cgJj7CVWQsTTN/Q==:1jWfrfd+IZW7NZI=', '0d491a6df2cd5e6e9fe25c47630ff59d88a6e0a6a3d85f61badb2723a22ff19c', 'institucional', 'Universidade Federal do Paraná (UFPR)',             'mestre',   'ativo', '2026-02-14 09:10:00', NULL, NULL, NULL),
+(12, 'v1:Irign/aW5mMCv4Ug:EQxzkR0lXxnJhmu8xAEhcw==:2lmUgJVYjExvdAM=', 'b5944441f2b1f45294195783812f36bc72c9bf38d2ef3d8a231c1a8d8f538ec5', 'institucional', 'Universidade Federal da Bahia (UFBA)',              'mestre',   'ativo', '2026-02-25 09:10:00', 'email',     'v1:KqxuwtOm724qtOI7:LxuKQ2zTrdCHnZIRCVTZSA==:KVYEoHKuZvIt/Y3uC+Fx7b6M9Q1khBQ=', '2026-03-01 10:00:00'),
+(13, 'v1:/qWUrRI/9fzjm9Kh:uU6qNuQlvvFjghnTLVr8Og==:N5DdmozsScRBV8A=', '93d76c0ae76d371c84ead92cdc597742cd149067fe7f234552e10abe75ee5e7f', 'institucional', 'Universidade Federal de Minas Gerais (UFMG)',       'doutor',   'ativo', '2026-03-05 09:00:00', 'aleatoria', 'v1:TdqU/vNUZWF3B/+j:13UEjgEEINz8P7Q8u+d+YA==:/gDJVLCsBlqUtMvDYXOlfrf1f0ADW7RUBKKQvmCayaTlrLiR', '2026-03-08 10:00:00'),
+(14, 'v1:gRfGHqP2CaS1KfN8:/Ndt5pdWu6A/ZxDBptQipQ==:XXTsLYETudrxeik=', '74fc41e2f0ea9e284b8c1d2379fcc4388988d1b4a18f53c88a626d91b5d4cbc6', 'institucional', 'Universidade Federal de Santa Catarina (UFSC)',     'mestre',   'ativo', '2026-03-18 11:30:00', 'email',     'v1:BktVyX2lb13+pXgw:HAs2NfQY/xfhwkfL0/ew3g==:KkqcgrQXrBTRVaZBeeJCH7C8m17wRUqS', '2026-03-20 10:00:00'),
+(15, 'v1:gH+4XLY9grNC1AAN:f0QkyT8OuWRTKwwbyHhtKQ==:/dE9nq3r7rYxs3k=', '3f022d05c183ecfb64cbb6ac2500e66ad731e684f1c9afd5e2cb801d5576d376', 'institucional', 'Universidade Federal de São Paulo (UNIFESP)',       'doutor',   'ativo', '2026-04-02 09:40:00', 'email',     'v1:UD+7wVPGzE/66K9j:i0IbQ4LVWvBT6wjsi1KUOw==:bIv+5CJ+YHLcwyezRmobW+Y1dadW8TCQ6Q==', '2026-04-05 10:00:00'),
+(16, 'v1:m7z9uq+435l0syBo:wVQB6djPxdi38eWcfpnUAQ==:45Hee0oUAA3IDek=', '469f49af437e577be058f668669a27ec903aa9ddc42895750ef3e1d45f05c380', 'independente',  NULL,                                                'graduado', 'ativo', '2026-04-20 09:10:00', 'aleatoria', 'v1:osAv1z/OK2WZ8RU3:vJDeX+k0L2kD5Q+T4CijEA==:dAVI1j17QB+ioBwcDzGp53tIsEZ6cX8H8FdqhOfJ+69WbX3s', '2026-04-22 10:00:00'),
 (17, 'v1:C1Zn4ew8FWLXPe4S:wcLOpqSIBgvH2Genmxlgsw==:RGXCLYPxkIwNTWM=', 'b9569cd5536268347eacea693dc45a92962d3084beca606e73fead8c3723d8fa', 'independente',  NULL,                                                'especialista', 'ativo', NOW() - INTERVAL '40 days', NULL, NULL, NULL);
 
 -- Estes pesquisadores já nascem com perfil pronto acima, então aceitaram o Termo de Upgrade de Pesquisador na
