@@ -876,7 +876,7 @@ Regras conferidas no PGlite com o banco inteiro, usando o papel real `app_nestjs
 | `reservar_proxima_notificacao(p_ignorar_espera)` | o envio (sem sessão) | A próxima `pendente` vencida (com `TRUE`, só no "Rodar agora" da T6, também a que espera nova tentativa); conta a tentativa e empurra `proxima_tentativa_em` (`email_lease_minutos`); `FOR UPDATE SKIP LOCKED` |
 | `concluir_notificacao(...)` | o envio | `enviado`, com assunto, provedor e id da mensagem; apaga `dados.segredo` |
 | `falhar_notificacao(...)` | o envio | Recuperável e com tentativas: volta com espera `email_backoff_base_minutos * 2^(n-1)`, até `email_backoff_max_minutos`; senão, `falhou` |
-| `reenviar_notificacao(id)` / `cancelar_notificacao(id)` | aba Notificações | Exigem `notificacao_processar` (92039); só `falhou` reenvia, só `pendente`/`falhou` cancela (91054); inexistente: 90039 |
+| `reenviar_notificacao(id)` / `cancelar_notificacao(id)` | aba Notificações | Exigem `notificacao_processar` (92039); só `falhou` reenvia, só `pendente`/`falhou` cancela (91054); inexistente: 90039. O reenvio vai para o e-mail **atual** da conta (o endereço errado pode ter sido corrigido); conta excluída não recebe (91055) |
 
 | Gatilho | Tabela e momento | E-mail |
 |---|---|---|
@@ -1229,7 +1229,7 @@ O raciocínio de arquitetura por trás de regras que valem para o banco inteiro.
 
 ## Como conferir este inventário
 
-**Contagem do inventário** (recontada nos `.sql` em 31-10-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **120 policies**, **109 triggers** no `05` (105 comuns e 4 `CONSTRAINT TRIGGER`), **182 funções** (143 no `05`, 37 no `03`, 1 no `08`, 1 no `01`), **66 índices** no `02` e **131 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (recontada nos `.sql` em 01-11-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **120 policies**, **109 triggers** no `05` (105 comuns e 4 `CONSTRAINT TRIGGER`), **182 funções** (143 no `05`, 37 no `03`, 1 no `08`, 1 no `01`), **66 índices** no `02` e **132 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
 
 Para recontar direto do banco (no SQL Editor do Supabase ou no banco local):
 

@@ -211,3 +211,57 @@ ON CONFLICT (tipo_evento, canal) DO NOTHING;
 -- ============================================================================
 
 ALTER TABLE modelo_mensagem DROP CONSTRAINT IF EXISTS "CK_MODELO_MENSAGEM_OBRIGATORIA";
+
+-- ============================================================================
+-- GRUPO BU (01-11-2026) - Reenviar um e-mail que falhou: vai para o e-mail atual da conta. IDEMPOTENTE.
+-- Não precisa parar o Nest: só troca uma função.
+--
+-- O que muda: o Reenviar das Notificações (Dashboard) manda para o e-mail que a conta tem hoje, e não mais para o
+-- endereço da época (que pode ser justamente o errado, já corrigido). Conta excluída: o reenvio é recusado (91055).
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- Função:     reenviar_notificacao
+-- Assinatura: (p_id_notificacao INT) -> VOID
+-- Bloco:      [05-Q]
+-- Regra:      Tratamento manual do RF-121: um e-mail 'falhou' volta para a fila agora, com as tentativas zeradas e
+--             para o e-mail ATUAL da conta (o de quando falhou pode ser justamente o endereço errado que a pessoa já
+--             corrigiu). Exige notificacao_processar (92039); só 'falhou' pode voltar (91054: enviado não se manda de
+--             novo por aqui, e cancelado já perdeu o link, se tinha um); conta excluída não recebe (91055, a mesma
+--             regra de enfileirar_notificacao). SECURITY DEFINER com a checagem por dentro.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.reenviar_notificacao(p_id_notificacao INT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_status     status_notificacao;
+    v_id_usuario INT;
+    v_email      VARCHAR(255);
+BEGIN
+    IF NOT public.tem_permissao('notificacao_processar') THEN
+        RAISE EXCEPTION 'Sem permissão para reenviar e-mails.' USING ERRCODE = '92039';
+    END IF;
+
+    SELECT status, id_usuario INTO v_status, v_id_usuario
+    FROM notificacao WHERE id_notificacao = p_id_notificacao FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'E-mail não encontrado.' USING ERRCODE = '90039';
+    END IF;
+    IF v_status <> 'falhou' THEN
+        RAISE EXCEPTION 'Só um e-mail que falhou pode ser reenviado.' USING ERRCODE = '91054';
+    END IF;
+    SELECT email INTO v_email FROM usuario WHERE id_usuario = v_id_usuario AND NOT deletado;
+    IF v_email IS NULL THEN
+        RAISE EXCEPTION 'A conta deste e-mail foi excluída: não há para onde reenviar. Cancele o envio.'
+            USING ERRCODE = '91055';
+    END IF;
+
+    UPDATE notificacao
+       SET status = 'pendente', tentativas = 0, proxima_tentativa_em = NOW(), ultimo_erro = NULL,
+           email_destinatario = v_email
+     WHERE id_notificacao = p_id_notificacao;
+END;
+$$;

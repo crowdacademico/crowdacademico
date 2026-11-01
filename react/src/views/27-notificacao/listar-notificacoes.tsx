@@ -26,6 +26,15 @@ interface NotificacaoLinha extends NotificacaoResponse {
 
 type Pedido = { acao: 'reenviar' | 'cancelar'; linha: NotificacaoLinha };
 
+// O ⓘ do título, em blocos (a bolha respeita o "\n"): deixa claro que reenviar é exceção, não rotina.
+const AJUDA_NOTIFICACOES = [
+  'Todos os e-mails do sistema. Os que esperam (na fila ou que falharam) vêm primeiro, o mais antigo no topo.',
+  'Na fila: sai sozinho em até 1 minuto, com a tarefa Enviar os e-mails ligada (desligada, só pelo Rodar agora da T6). Se o envio falhar por algo passageiro, a própria tarefa tenta de novo, várias vezes.',
+  'Falhou: a tarefa desistiu (endereço recusado ou tentativas esgotadas). Só aqui alguém precisa agir: corrija a causa e Reenvie (vai para o e-mail atual da conta), ou Cancele.',
+  'Ninguém precisa clicar em Reenviar no dia a dia.',
+  'O texto de cada e-mail se edita em Configurações > Mensagens.',
+].join('\n\n');
+
 // Aba Notificações do Dashboard (RF-121): todo e-mail que o sistema pôs na fila. Fila do SLA (DS-49): primeiro o que
 // espera (na fila ou que falhou), o mais antigo no topo; depois os enviados e cancelados, o mais novo primeiro. O
 // envio é sozinho, a cada minuto (worker do Nest, 4-mail); aqui só se vê e se trata o que falhou: Reenviar põe de volta
@@ -72,7 +81,7 @@ export function ListarNotificacoes({ authFetch }: { authFetch: AuthFetch }) {
       <GenericTable
         titulo="Notificações"
         nivelTitulo={2}
-        ajuda="Todos os e-mails do sistema. Os que esperam (na fila ou que falharam) vêm primeiro, o mais antigo no topo; depois os outros, do mais novo para o mais antigo. Na fila: espera o envio (sozinho a cada minuto com a tarefa Enviar os e-mails ligada; desligada, só pelo Rodar agora da T6), ou uma nova tentativa depois de um erro passageiro. Falhou: as tentativas acabaram ou o endereço foi recusado; reenvie depois de corrigir a causa, ou cancele. O texto de cada tipo de e-mail se edita em Configurações > Mensagens."
+        ajuda={AJUDA_NOTIFICACOES}
         colunas={[
           { chave: 'idNotificacao', rotulo: 'id', tipo: 'id' },
           { chave: 'tipo', rotulo: 'tipo', tipo: 'nome', umaLinha: true },
@@ -126,7 +135,7 @@ export function ListarNotificacoes({ authFetch }: { authFetch: AuthFetch }) {
         >
           {pedido.acao === 'reenviar' ? (
             <p>
-              O e-mail para {pedido.linha.emailDestinatario} volta para a fila, com as tentativas zeradas, e sai na próxima vez que o envio rodar (sozinho a cada minuto com a tarefa Enviar os e-mails ligada; desligada, pelo Rodar agora da T6). Corrija antes a causa do erro, ou ele falha de novo.
+              O e-mail volta para a fila, com as tentativas zeradas, e sai para o e-mail <strong>atual</strong> da conta (se a pessoa corrigiu o endereço, vai para o novo) na próxima vez que o envio rodar (sozinho a cada minuto com a tarefa Enviar os e-mails ligada; desligada, pelo Rodar agora da T6). Corrija antes a causa do erro, ou ele falha de novo.
             </p>
           ) : (
             <p>O e-mail para {pedido.linha.emailDestinatario} não vai mais sair. Se ele tinha um link (confirmar a conta, nova senha), o link é apagado.</p>

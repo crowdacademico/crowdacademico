@@ -48,6 +48,7 @@ Os requisitos são atualizados com a revisão externa; aqui fica só o que preci
   - **Links no upgrade, "Projetos Criados" e validação de domínio dos links:** a resposta da revisão externa à comparação V8 × código tem pontos que vamos revisar com ela.
 - **E-mail pronto (19-10-2026), ideias do mercado de 12-10-2026:** lembretes para quem segue a campanha ("faltam 48 h" e "faltam 8 h" para o fim, como faz o Kickstarter) e o endosso de colegas antes de enviar a campanha para aprovação (como faz o Experiment.com; este só com requisito novo).
 - **Status "repassado" da contribuição (25-10-2026):** o RF-082 (`informacoes/REQUISITOS_V10.md`) lista os status obrigatórios de cada transação: "pendente, confirmado, repassado, a devolver, devolvido...". Queremos tirar o "repassado": a tela Contribuições já mostra a situação do repasse numa coluna própria (que pode estar "Concluído"), então o máximo da contribuição seria "Paga". Apagar o status antes de mudar o requisito deixaria o sistema contra ele. Pedir para tirar do requisito; a mudança no banco (o status é usado nas regras do dinheiro) entra na auditoria dos status (grupo 5).
+- **Notificações (auditoria de 01-11-2026):** (1) o RF-641 diz que o encerramento por moderação devolve tudo em qualquer modelo, e o RF-645 manda orientar o doador do flexível a contestar junto à operadora, porque o ressarcimento seria do pesquisador: os dois não batem (o texto do e-mail segue o 641); (2) nenhum RF avisa o pesquisador quando uma denúncia contra ele é julgada procedente, mas o RF-270 deixa ele contestar: hoje ele só descobre olhando a tela. Perguntar se cabe um aviso "denúncia procedente".
 - **Como queremos esse pedido escrito:** "pegar no pé" da revisão externa, pedir que olhe sistemas de referência e traga ideias próprias, não só responda a lista.
 
 ---
@@ -118,6 +119,7 @@ Ideia detalhada e registrada aqui pra não se perder. **Decisão: não construir
 
 ## 3. No dia do deploy
 
+- **Prazo de guarda das notificações (auditoria de 01-11-2026):** a tabela `notificacao` (e-mails e avisos do sino) cresce para sempre; o `log_auditoria` tem prazo de guarda, ela não. Decidir no deploy se ganha um parâmetro de guarda como o do log.
 - **Banco de produção:** rodar o `07_seed_dados.sql` só até o marcador `[07-DEMONSTRACAO]` e promover a primeira conta a admin uma vez (ver `.Tutorial-rodar-projeto.md`).
 - **Banco depois do deploy: mudança vira arquivo novo numerado** (começando em 09, depois 10, e assim por diante), nunca edição dos arquivos `01` a `08` nem só o `ATUALIZAR`. O executor de migrações (`npm run db:migrate`) aplica só o que é novo e avisa, sem reaplicar, quando um arquivo já aplicado muda. No primeiro deploy: `npm run db:migrate:adotar` no banco que já tem tudo, e `DATABASE_URL_MIGRATIONS` com a credencial de administrador do banco.
 - **Registro de acessos (Marco Civil da Internet, art. 15):** quem opera como empresa precisa guardar IP, data e hora de cada acesso por 6 meses. Hoje o IP fica só nos aceites e no último login. Só vale se o sistema entrar em operação; detalhe em `DOCUMENTACAO_BD.md`, "IP: base legal e anonimato do Pix".
