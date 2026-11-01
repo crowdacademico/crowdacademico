@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { nomeDaColuna } from '../../../services/28-log-auditoria/constants/log-auditoria-nomes.constants';
+import { nomeDaColuna, valorDaColuna } from '../../../services/28-log-auditoria/constants/log-auditoria-nomes.constants';
 import { formatarData, formatarDataHora, textoSeguro } from '../../../services/constant/util/formatacao.util';
 import type { LogAuditoriaResponse, OperacaoLogAuditoria } from '../../../services/28-log-auditoria/type/log-auditoria.type';
 import { CaixaTabela } from './caixa-tabela';
@@ -16,8 +16,8 @@ import { useLinhasVazias } from '../use-linhas-vazias';
 // ou some). Coluna sensível (senha, CPF) nunca é gravada no log: aparece como "(protegido)".
 //
 // O nome da coluna sai em português (`nomeDaColuna`), e o valor como a pessoa leria: "Sim"/"Não" no lugar de
-// true/false e data no formato brasileiro. Os outros valores (texto, número, o id de outro registro, a situação como o
-// banco grava) aparecem como foram gravados.
+// true/false, data no formato brasileiro, e situação, tipo e dinheiro como a tela mostra (`valorDaColuna`, pela tabela
+// e coluna). Os outros valores (texto, número, o id de outro registro) aparecem como foram gravados.
 
 // A coluna "id" com a mesma classe da coluna id das outras tabelas (largura e centralizada). Chave composta aparece
 // como "8,3".
@@ -34,7 +34,7 @@ const ROTULO_OPERACAO: Partial<Record<OperacaoLogAuditoria, string>> = {
 const DATA_HORA = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 const SO_DATA = /^\d{4}-\d{2}-\d{2}$/;
 
-function valor(dados: Record<string, unknown> | null, campo: string): string {
+function valor(dados: Record<string, unknown> | null, campo: string, tabela: string): string {
   if (!dados || !(campo in dados)) {
     return '(protegido)';
   }
@@ -51,7 +51,7 @@ function valor(dados: Record<string, unknown> | null, campo: string): string {
   if (typeof bruto === 'string' && SO_DATA.test(bruto)) {
     return formatarData(bruto);
   }
-  return typeof bruto === 'string' || typeof bruto === 'number' ? String(bruto) : textoSeguro(bruto);
+  return typeof bruto === 'string' || typeof bruto === 'number' ? valorDaColuna(tabela, campo, bruto) : textoSeguro(bruto);
 }
 
 // Uma linha por campo alterado (cortada com reticências; inteira ao passar o mouse).
@@ -132,13 +132,13 @@ export function TabelaHistoricoAlteracoes({ linhas, linhasVazias = 0 }: { linhas
                 <td className={CLASSE_ID}>{linha.identidadeRegistro}</td>
                 <td>{ROTULO_OPERACAO[linha.operacao] ?? linha.operacao}</td>
                 <td>
-                  <CelulaLinhas textos={campos.map(nomeDaColuna)} aberta={aberta} aoAlternar={aoAlternar} />
+                  <CelulaLinhas textos={campos.map((campo) => nomeDaColuna(linha.tabela, campo))} aberta={aberta} aoAlternar={aoAlternar} />
                 </td>
                 <td>
-                  <CelulaLinhas textos={campos.map((campo) => valor(linha.dadosAnteriores, campo))} aberta={aberta} aoAlternar={aoAlternar} />
+                  <CelulaLinhas textos={campos.map((campo) => valor(linha.dadosAnteriores, campo, linha.tabela))} aberta={aberta} aoAlternar={aoAlternar} />
                 </td>
                 <td>
-                  <CelulaLinhas textos={campos.map((campo) => valor(linha.dadosNovos, campo))} aberta={aberta} aoAlternar={aoAlternar} />
+                  <CelulaLinhas textos={campos.map((campo) => valor(linha.dadosNovos, campo, linha.tabela))} aberta={aberta} aoAlternar={aoAlternar} />
                 </td>
                 <td className="tabela-log__uma-linha">{linha.nomeResponsavel ?? 'Sistema'}</td>
                 <td className="tabela-log__uma-linha">{formatarDataHora(linha.ocorridoEm)}</td>

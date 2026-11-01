@@ -432,7 +432,9 @@ export function GenericTable<T extends Linha>({
         }
         const estilo = getComputedStyle(th);
         maior += parseFloat(estilo.paddingLeft) + parseFloat(estilo.paddingRight);
-        const chaveGrupo = th.dataset.tipoCurta ?? '';
+        // Curtas do mesmo tipo ficam com a mesma largura (as Sim/Não lado a lado, meta e arrecadado). Na tabela apertada
+        // (ajustarApertada) cada uma fica com a própria: o espaço que uma pegaria emprestado da vizinha faz falta.
+        const chaveGrupo = wrapper.hasAttribute('data-apertada') ? (th.dataset.chave ?? '') : (th.dataset.tipoCurta ?? '');
         const grupo = grupos.get(chaveGrupo) ?? { cabecalhos: [], largura: 0 };
         grupo.cabecalhos.push(th);
         grupo.largura = Math.max(grupo.largura, maior);
@@ -455,6 +457,29 @@ export function GenericTable<T extends Linha>({
         }
       } else if (wrapper.clientWidth >= larguraComTextoAcoes) {
         wrapper.removeAttribute('data-acoes-icone');
+      }
+    };
+    // Depois das ações só em ícone, se a tabela ainda não cabe, ela se aperta em degraus (5-crud.css,
+    // `data-apertada`): 1 = texto secundário menor e vãos mínimos; 2 = também o nome mais estreito. Sobe só o degrau
+    // de que precisa e desce quando o cartão tiver de novo a largura que ela pedia no degrau de baixo. A cada degrau
+    // as curtas são medidas de novo, porque o vão delas muda.
+    const DEGRAU_MAXIMO = 2;
+    const larguraPedida: number[] = [];
+    const ajustarApertada = () => {
+      let degrau = Number(wrapper.dataset.apertada ?? 0);
+      const aplicar = () => {
+        if (degrau === 0) wrapper.removeAttribute('data-apertada');
+        else wrapper.dataset.apertada = String(degrau);
+        medirCurtas();
+      };
+      while (degrau > 0 && wrapper.clientWidth >= (larguraPedida[degrau] ?? 0)) {
+        degrau--;
+        aplicar();
+      }
+      while (degrau < DEGRAU_MAXIMO && wrapper.hasAttribute('data-acoes-icone') && wrapper.scrollWidth > wrapper.clientWidth) {
+        larguraPedida[degrau + 1] = wrapper.scrollWidth;
+        degrau++;
+        aplicar();
       }
     };
     // Respiro das colunas do meio (texto e curta): o NOME fica com a sobra da tabela (distribuição "direita"),
@@ -532,6 +557,7 @@ export function GenericTable<T extends Linha>({
       wrapper.style.setProperty('--respiro-dados', '0px');
       medirCurtas();
       ajustarTextoAcoes();
+      ajustarApertada();
       ajustarRespiro();
       const colunaId = wrapper.querySelector('th.crud-tabela__col--id');
       const deslocamento = colunaId ? colunaId.getBoundingClientRect().width : 0;
@@ -544,6 +570,12 @@ export function GenericTable<T extends Linha>({
     const tabela = wrapper.querySelector('table');
     if (tabela) {
       observador.observe(tabela);
+    }
+    // A coluna id pode mudar de largura sem a tabela mudar (o vão dela depende da largura da seção): o nome preso
+    // ao lado dela (--deslocamento-nome) precisa ser medido de novo, senão sobra uma faixa entre as duas.
+    const cabecalhoId = wrapper.querySelector('th.crud-tabela__col--id');
+    if (cabecalhoId) {
+      observador.observe(cabecalhoId);
     }
     wrapper.addEventListener('scroll', atualizarRolagem, { passive: true });
     return () => {

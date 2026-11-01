@@ -57,7 +57,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
     useCrudModais<PesquisadorLinha>();
   const [upgrade, setUpgrade] = useState<PesquisadorLinha | null>(null);
   const [denunciando, setDenunciando] = useState<PesquisadorLinha | null>(null);
-  // Os pesquisadores que a conta logada segue (RF-028): o coração alterna, como o de campanha na T2.
+  // Os pesquisadores que a conta logada segue (RF-029): o coração alterna, como o de campanha na T2.
   const [seguidos, setSeguidos] = useState<Set<number>>(new Set());
   const { mostrar } = useToast();
   const { reportarErro } = useErroToast();
@@ -140,7 +140,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
           { chave: 'nome', rotulo: 'nome', tipo: 'nome', umaLinha: true },
           { chave: 'papel', rotulo: 'papel', tipo: 'texto' },
           { chave: 'titulo', rotulo: 'título', tipo: 'texto' },
-          { chave: 'status', rotulo: 'status', tipo: 'status' },
+          { chave: 'status', rotulo: 'situação', tipo: 'status' },
           { chave: 'scoreAtual', rotulo: 'score', tipo: 'numero' },
         ]}
         chavePrimaria="idUsuario"

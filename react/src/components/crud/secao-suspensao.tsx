@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react';
+import { MENSAGEM_MOTIVO_SUSPENSAO_CURTO, MOTIVO_SUSPENSAO_MINIMO_CARACTERES } from '../../services/constant/constants/minimos.constants';
 import { SecaoFicha } from './ficha-consulta';
 import { useErroToast } from '../layout/toast/use-erro-toast';
 import { useToast } from '../layout/toast/use-toast';
@@ -60,7 +61,7 @@ export function SecaoSuspensao({
   const diasNumero = Number(dias);
   const { erroDe, tentarEnviar, limpar } = useErrosFormulario(() => ({
     dias: (!diasNumero || diasNumero <= 0) && 'Escolha um prazo ou digite quantos dias.',
-    motivo: motivo.trim().length < 3 && 'Informe o motivo (pelo menos 3 caracteres).',
+    motivo: motivo.trim().length < MOTIVO_SUSPENSAO_MINIMO_CARACTERES && MENSAGEM_MOTIVO_SUSPENSAO_CURTO,
   }));
 
   const carregar = () => {
@@ -146,7 +147,7 @@ export function SecaoSuspensao({
                 aria-describedby={erroDe('dias') ? idErroDias : undefined}
                 value={dias}
                 onChange={(evento) => setDias(evento.target.value)}
-                className={'input-padrao w-36 py-1.5' + (erroDe('dias') ? ' borda-erro' : '')}
+                className={'input-padrao w-36' + (erroDe('dias') ? ' borda-erro' : '')}
               />
             </div>
             {erroDe('dias') && (

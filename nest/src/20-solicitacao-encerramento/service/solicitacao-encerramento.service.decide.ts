@@ -7,7 +7,7 @@ import { SolicitacaoEncerramentoResponse } from '../dto/response/solicitacao-enc
 import { consultaSolicitacaoComDetalhes } from './solicitacao-encerramento.util.with-details';
 
 // decidir_solicitacao_encerramento() (03): aprova (e encerra a campanha) ou rejeita (com justificativa) um pedido
-// pendente, gravando quem decidiu e quando (RF-065, RF-066).
+// pendente, gravando quem decidiu e quando (RF-068, RF-069).
 @Injectable()
 export class SolicitacaoEncerramentoServiceDecide {
   constructor(private readonly database: DatabaseService) {}

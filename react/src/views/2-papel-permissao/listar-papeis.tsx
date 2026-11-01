@@ -10,7 +10,6 @@ import {
 } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { compararPorPoder, ordemDoFiltroPapel } from '../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
 import { detalhePermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis.constants';
-import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { MatrizPapelPermissao } from './matriz-papel-permissao';
 import { ModalDetalhePermissao } from './modal-detalhe-permissao';
 import { ModalAlterarPapel } from './modal-alterar-papel';
@@ -98,12 +97,6 @@ export function ListarPapeis({ auth }: PropsPagina) {
     [auth.authFetch],
   );
   const [permissaoDetalhada, setPermissaoDetalhada] = useState<PermissaoResponse | null>(null);
-  // 'papel' é o nome FÍSICO da tabela no Postgres (bate com TG_TABLE_NAME em fn_log_auditoria(),
-  // trg_log_auditoria_papel): mesma convenção de buscarLogUsuario em listar-usuarios.tsx.
-  const buscarLogPapel = useCallback(
-    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'papel', pagina, tamanho),
-    [auth.authFetch],
-  );
 
   return (
     <>
@@ -130,7 +123,7 @@ export function ListarPapeis({ auth }: PropsPagina) {
         />
         {/* "De"/"Para" em vez de "Campos alterados": só nome e descrição mudam em papel (codigo é fixo), mas o recurso
             é genérico (ver LogAuditoriaPainel), não hardcoded aqui além do nome do campo. */}
-        <BlocoLogAuditoria buscar={buscarLogPapel} chaveRecarga={chaveRecarga} />
+        <BlocoLogAuditoria authFetch={auth.authFetch} tabela="papel" chaveRecarga={chaveRecarga} />
       </div>
       <div className="admin-content-painel">
         <GenericTable

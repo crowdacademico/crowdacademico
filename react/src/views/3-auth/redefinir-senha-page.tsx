@@ -67,7 +67,7 @@ export function RedefinirSenhaPage() {
             <p className="paragrafo texto-padrao">
               Senha alterada. Por segurança, sua conta foi desconectada de todos os aparelhos.
             </p>
-            <Link to="/login" className="btn btn-primary btn-destaque w-full py-3.5">
+            <Link to="/login" className="btn btn-primary btn-destaque btn-grande w-full">
               Entrar com a senha nova
             </Link>
           </div>
@@ -114,7 +114,7 @@ export function RedefinirSenhaPage() {
                 />
               )}
             </Campo>
-            <button type="submit" disabled={salvando} className="btn btn-primary btn-destaque w-full py-3.5">
+            <button type="submit" disabled={salvando} className="btn btn-primary btn-destaque btn-grande w-full">
               {salvando ? 'Salvando...' : 'Salvar nova senha'}
             </button>
           </form>

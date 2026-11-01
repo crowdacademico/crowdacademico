@@ -8,7 +8,7 @@ import { RecompensaServiceLink } from './service/recompensa.service.link';
 import { RecompensaServiceMine } from './service/recompensa.service.mine';
 import { RecompensaServiceUpdate } from './service/recompensa.service.update';
 
-// Recompensa simbólica (RF-099 a RF-101): nome de quem apoiou no projeto, acesso antecipado, um link especial. Sem
+// Recompensa simbólica (RF-102 a RF-104): nome de quem apoiou no projeto, acesso antecipado, um link especial. Sem
 // estoque e sem entrega. Um módulo para recompensa e link_recompensa (o satélite, como em 15-atualizacao-campanha);
 // a escolha da recompensa numa contribuição grava em contribuicao_recompensa, pelo POST /contribuicao (22).
 @Module({

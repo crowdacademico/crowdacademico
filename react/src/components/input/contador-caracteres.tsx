@@ -1,6 +1,6 @@
 import { contarCaracteres } from '../../services/constant/util/validacao.util';
 
-// Contagem de caracteres de um campo de texto livre, contra o limite que vem de `configuracoes` (RF-072). Conta
+// Contagem de caracteres de um campo de texto livre, contra o limite que vem de `configuracoes` (RF-075). Conta
 // caracteres de verdade, como o `char_length` do banco: um emoji vale 1, e não 2 (o `.length` do JavaScript
 // conta 2). Passou do limite, fica vermelho; quem barra de verdade continua sendo o banco.
 export function ContadorCaracteres({ texto, limite, id }: { texto: string; limite: number; id?: string }) {

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
+import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { ROTULO_MEIO_PAGAMENTO } from '../../services/22-contribuicao/constants/contribuicao.constants';
 import { pagamentoRevisaoApi } from '../../services/25-pagamento-revisao/api/pagamento-revisao.api';
@@ -72,6 +73,7 @@ export function ListarReembolsosManuais({ auth }: PropsPagina) {
         }}
         filtrosFacetados={[{ chave: 'meio', rotulo: 'Meio de pagamento' }]}
       />
+      <BlocoLogAuditoria authFetch={auth.authFetch} tabela="contribuicao" chaveRecarga={chaveRecarga} />
 
       {aberto && (
         <ModalConcluirReembolso

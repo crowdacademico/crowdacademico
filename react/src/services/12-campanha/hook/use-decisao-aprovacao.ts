@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useConfiguracoes } from '../../11-configuracoes/hook/use-configuracoes';
+import { erroLimiteCaracteres } from '../../constant/util/validacao.util';
 import { useToast } from '../../../components/layout/toast/use-toast';
 import { campanhaApi } from '../api/campanha.api';
 import { useEnvio } from '../../constant/hook/use-envio';
@@ -24,9 +26,13 @@ interface OpcoesDecisao {
 export function useDecisaoAprovacao({ authFetch, idCampanha, reportarErro, limparErro, aoConcluido }: OpcoesDecisao) {
   const { mostrar } = useToast();
   const [justificativa, setJustificativa] = useState('');
+  const limite = useConfiguracoes().obterNumero('limite_caracteres_justificativa_rejeicao', 10000);
   const { ocupado, executar } = useEnvio(reportarErro, limparErro);
   const rejeicao = useErrosFormulario(() => ({
-    justificativa: justificativa.trim() === '' && 'Escreva o motivo da rejeição: o pesquisador lê este texto para corrigir.',
+    justificativa:
+      justificativa.trim() === ''
+        ? 'Escreva o motivo da rejeição: o pesquisador lê este texto para corrigir.'
+        : erroLimiteCaracteres(justificativa, limite, 'O motivo'),
   }));
 
   const decidir = async (acao: 'aprovar' | 'rejeitar') => {
@@ -43,7 +49,7 @@ export function useDecisaoAprovacao({ authFetch, idCampanha, reportarErro, limpa
     });
   };
 
-  return { justificativa, setJustificativa, erroMotivo: rejeicao.erroDe('justificativa'), ocupado, decidir };
+  return { justificativa, setJustificativa, limite, erroMotivo: rejeicao.erroDe('justificativa'), ocupado, decidir };
 }
 
 export type DecisaoAprovacao = ReturnType<typeof useDecisaoAprovacao>;

@@ -24,7 +24,7 @@ export class AtualizacaoCampanhaRequestCreate {
   @MaxLength(20000)
   conteudo: string;
 
-  // RF-052: fase e formato obrigatórios (NOT NULL no banco).
+  // RF-053: fase e formato obrigatórios (NOT NULL no banco).
   @IsIn(FASES_ATUALIZACAO)
   fase: FaseAtualizacao;
 

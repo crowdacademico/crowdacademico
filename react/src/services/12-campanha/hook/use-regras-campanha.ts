@@ -9,13 +9,13 @@ export interface RegrasCampanha {
   metaMinima: number;
   prazoMinimoDias: number;
   prazoMaximoDias: number;
-  // Duração que o formulário sugere ao escolher o início (RF-069); sugestão, não regra.
+  // Duração que o formulário sugere ao escolher o início (RF-072); sugestão, não regra.
   prazoSugeridoDias: number;
   minimoItensOrcamento: number;
   minimoMarcosCronograma: number;
-  // Máximo de caracteres da descrição da campanha (RF-072).
+  // Máximo de caracteres da descrição da campanha (RF-075).
   limiteDescricao: number;
-  // Máximo de caracteres de um comentário (RF-092).
+  // Máximo de caracteres de um comentário (RF-095).
   limiteComentario: number;
 }
 

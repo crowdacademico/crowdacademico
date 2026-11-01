@@ -43,7 +43,7 @@ interface TabelaItensOrcamentoProps {
   itens: OrcamentoCampanhaResponse[];
   podeEditar: boolean;
   // Quando presente, mostra acima da tabela o total dos itens em relação à meta, com a barra; em vermelho se não bater
-  // (o banco exige a igualdade exata na aprovação, RF-039/040; isto só adianta o aviso).
+  // (o banco exige a igualdade exata na aprovação, RF-042; isto só adianta o aviso).
   metaFinanceira?: number;
   aoAdicionar: (dados: DadosItemOrcamento) => Promise<boolean>;
   aoSalvar: (item: OrcamentoCampanhaResponse, dados: DadosItemOrcamento) => Promise<boolean>;

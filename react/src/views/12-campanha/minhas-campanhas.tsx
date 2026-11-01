@@ -94,7 +94,7 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
         colunas={[
           { chave: 'idCampanha', rotulo: 'id', tipo: 'id' },
           { chave: 'titulo', rotulo: 'título', tipo: 'nome', umaLinha: true },
-          { chave: 'status', rotulo: 'status', tipo: 'status', renderizar: renderizarStatus, textoExibido: textoStatus },
+          { chave: 'status', rotulo: 'situação', tipo: 'status', renderizar: renderizarStatus, textoExibido: textoStatus },
           { chave: 'metaFinanceira', rotulo: 'meta', tipo: 'dinheiro' },
           { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro', renderizar: renderizarArrecadado },
           { chave: 'dataFim', rotulo: 'termina em', tipo: 'data' },
@@ -111,7 +111,7 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
           chaveRecarga={chaveRecarga}
         acoes={acoesCompletas}
         filtrosFacetados={[
-          { chave: 'status', rotulo: 'Status', ordem: ORDEM_ROTULOS_STATUS_CAMPANHA },
+          { chave: 'status', rotulo: 'Situação', ordem: ORDEM_ROTULOS_STATUS_CAMPANHA },
         ]}
       />
 

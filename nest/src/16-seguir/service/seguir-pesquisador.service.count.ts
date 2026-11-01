@@ -3,7 +3,7 @@ import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 import { SeguidoresPesquisadorResponse } from '../dto/response/seguir-pesquisador.response';
 
-// Contagem de seguidores para a página pública do perfil (RF-028). contar_seguidores_pesquisador (03, [03-E]) é
+// Contagem de seguidores para a página pública do perfil (RF-029). contar_seguidores_pesquisador (03, [03-E]) é
 // SECURITY DEFINER: devolve só o número, nunca quem segue.
 @Injectable()
 export class SeguirPesquisadorServiceCount {

@@ -10,7 +10,7 @@ import type {
 } from '../type/atualizacao-campanha.type';
 
 // Espelha nest/src/15-atualizacao-campanha. Quem publica é o dono da campanha (pol_atualizacao_insert, 04), só em
-// campanha ativa, com sucesso ou não atingida (validar_atualizacao_campanha, 91019; RF-051). Ocultar é `ativo`
+// campanha ativa, com sucesso ou não atingida (validar_atualizacao_campanha, 91019; RF-052). Ocultar é `ativo`
 // falso: a atualização fica guardada (RF-052).
 export const atualizacaoCampanhaApi = {
   // Todos os anexos (arquivos e links) das atualizações, o mais novo primeiro. Exige `atualizacao_moderar` (403 sem ela).

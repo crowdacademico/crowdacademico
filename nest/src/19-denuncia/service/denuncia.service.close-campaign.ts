@@ -7,7 +7,7 @@ import { DenunciaResponse } from '../dto/response/denuncia.response';
 import { consultaDenunciaComDetalhes } from './denuncia.util.with-details';
 
 // encerrar_campanha_por_denuncia() (03): julga a denúncia procedente e encerra a campanha por moderação, as duas
-// coisas juntas (RF-114). Confere as permissões e as regras no banco; a campanha some da página pública pela
+// coisas juntas (RF-117). Confere as permissões e as regras no banco; a campanha some da página pública pela
 // própria RLS (encerrado_moderacao não é status público).
 @Injectable()
 export class DenunciaServiceCloseCampaign {

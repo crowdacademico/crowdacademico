@@ -40,6 +40,12 @@
     background-color: var(--cor-fundo-marca-forte-hover);
   }
 
+  /* Botão grande (o "btn-lg" do Bootstrap): a ação principal das páginas soltas (Login, Cadastro, Esqueci a senha,
+     Criar nova senha). */
+  .btn-grande {
+    padding-block: 0.875rem;
+  }
+
   /* Botão pequeno (o "btn-sm" do Bootstrap): ação secundária dentro de tabela, linha ou bancada. */
   .btn-pequeno {
     font-size: var(--font-size-xs);

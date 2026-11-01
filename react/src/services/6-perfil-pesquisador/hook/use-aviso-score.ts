@@ -21,7 +21,7 @@ export function useAvisoScore(authFetch: AuthFetch, idUsuario: number, nomeUsuar
     const pontos = Math.abs(diferenca) === 1 ? 'ponto' : 'pontos';
     const nome = nomeUsuario ? ` ${nomeUsuario}` : '';
     mostrar(
-      `Usuário #${idUsuario}${nome}: score total ${diferenca < 0 ? '-' : '+'}${Math.abs(diferenca)} ${pontos}`,
+      `Usuário #${idUsuario}${nome}: pontuação total ${diferenca < 0 ? '-' : '+'}${Math.abs(diferenca)} ${pontos}`,
       undefined,
       diferenca < 0 ? 'aviso' : 'sucesso',
     );

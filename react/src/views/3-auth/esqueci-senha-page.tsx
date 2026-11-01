@@ -84,7 +84,7 @@ export function EsqueciSenhaPage() {
                 />
               )}
             </Campo>
-            <button type="submit" disabled={enviando} className="btn btn-primary btn-destaque w-full py-3.5">
+            <button type="submit" disabled={enviando} className="btn btn-primary btn-destaque btn-grande w-full">
               {enviando ? 'Enviando...' : 'Enviar link'}
             </button>
           </form>

@@ -29,7 +29,7 @@ export interface DenunciaResponse {
   idJulgador: number | null;
   nomeJulgador: string | null;
   julgadoEm: string | null;
-  // Contestação do pesquisador penalizado (RF-033), quando houver.
+  // Contestação do pesquisador penalizado (RF-034), quando houver.
   contestacao: string | null;
   contestacaoStatus: StatusContestacao | null;
   contestadaEm: string | null;

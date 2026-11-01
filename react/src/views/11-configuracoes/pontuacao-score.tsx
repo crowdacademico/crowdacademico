@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { ModalConfirmacao } from '../../components/crud/modal-confirmacao';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
@@ -109,6 +110,8 @@ export function PontuacaoScore({ auth }: PropsPagina) {
   const [faixas, setFaixas] = useState<FaixaEditavel[]>([]);
   const [original, setOriginal] = useState<ScoreConfigResponse | null>(null);
   const envioPesos = useEnvio(erros.reportarErro, erros.limparErro);
+  // Depois de salvar, o log aberto recarrega (mesma ideia da chaveRecarga das tabelas).
+  const [chaveRecarga, setChaveRecarga] = useState(0);
   const envioFaixas = useEnvio(erros.reportarErro, erros.limparErro);
   const [confirmando, setConfirmando] = useState<'pesos' | 'faixas' | null>(null);
 
@@ -164,6 +167,7 @@ export function PontuacaoScore({ auth }: PropsPagina) {
         ),
       );
       mostrar('Pesos salvos.', 'A pontuação de todos os pesquisadores foi recalculada.');
+      setChaveRecarga((atual) => atual + 1);
     });
   const salvarFaixas = () =>
     envioFaixas.executar(async () => {
@@ -180,6 +184,7 @@ export function PontuacaoScore({ auth }: PropsPagina) {
         ),
       );
       mostrar('Faixas salvas.', 'O rótulo de todos os pesquisadores foi recalculado.');
+      setChaveRecarga((atual) => atual + 1);
     });
 
   return (
@@ -501,6 +506,7 @@ export function PontuacaoScore({ auth }: PropsPagina) {
           </p>
         </ModalConfirmacao>
       )}
+      <BlocoLogAuditoria authFetch={auth.authFetch} tabela="score_config,score_rotulo" chaveRecarga={chaveRecarga} />
     </div>
   );
 }

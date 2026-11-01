@@ -239,7 +239,7 @@ export const STATUS_DENUNCIA = [
 ] as const;
 export type StatusDenuncia = (typeof STATUS_DENUNCIA)[number];
 
-// CREATE TYPE status_contestacao AS ENUM (...) - 01. A contestação do score (RF-033), na própria denúncia.
+// CREATE TYPE status_contestacao AS ENUM (...) - 01. A contestação do score (RF-034), na própria denúncia.
 export const STATUS_CONTESTACAO = ['pendente', 'aceita', 'recusada'] as const;
 export type StatusContestacao = (typeof STATUS_CONTESTACAO)[number];
 
@@ -260,7 +260,7 @@ export interface DenunciaTable {
   julgado_em: Date | null;
   // Quem decidiu a contestação: só decidir_contestacao (03) grava.
   id_julgador_contestacao: number | null;
-  // Contestação (RF-033): só pelas funções contestar_denuncia e decidir_contestacao (03).
+  // Contestação (RF-034): só pelas funções contestar_denuncia e decidir_contestacao (03).
   contestacao: string | null;
   contestacao_status: StatusContestacao | null;
   contestada_em: Date | null;
@@ -455,7 +455,7 @@ export interface SeguirCampanhaTable {
   seguido_em: Generated<Date>;
 }
 
-// Espelha 01_extensoes_enums_tabelas.sql (tabela seguir_pesquisador). Usada por 16-seguir (RF-028) e pela exportação
+// Espelha 01_extensoes_enums_tabelas.sql (tabela seguir_pesquisador). Usada por 16-seguir (RF-029) e pela exportação
 // de dados do usuário (1-usuario).
 export interface SeguirPesquisadorTable {
   id_seg_pesquisador: Generated<number>;
@@ -644,7 +644,7 @@ export interface RecompensaTable {
   criado_em: Generated<Date>;
 }
 
-// A recompensa que quem apoiou escolheu (RF-101). Simbólica: sem estoque controlado pelo sistema (quantidade sempre 1).
+// A recompensa que quem apoiou escolheu (RF-104). Simbólica: sem estoque controlado pelo sistema (quantidade sempre 1).
 export interface ContribuicaoRecompensaTable {
   id_contrib_recompensa: Generated<number>;
   id_contribuicao: number;

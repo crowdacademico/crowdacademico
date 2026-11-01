@@ -105,7 +105,7 @@ CREATE INDEX idx_contribuicao_reconciliar   ON contribuicao(criado_em) WHERE sta
 CREATE INDEX idx_contribuicao_cancelar_cobranca ON contribuicao(criado_em) WHERE status IN ('expirado', 'erro') AND id_transacao_api IS NOT NULL AND cobranca_cancelada_em IS NULL;
 CREATE INDEX idx_auditoria_financeira_repasse ON auditoria_financeira(id_repasse) WHERE id_repasse IS NOT NULL;
 CREATE INDEX idx_sol_encerramento_campanha  ON solicitacao_encerramento(id_campanha);
--- Um pedido de encerramento pendente por vez em cada campanha (RF-064).
+-- Um pedido de encerramento pendente por vez em cada campanha (RF-067).
 CREATE UNIQUE INDEX uq_solicitacao_encerramento_pendente ON solicitacao_encerramento(id_campanha) WHERE status = 'pendente';
 CREATE INDEX idx_historico_rejeicao_campanha ON historico_rejeicao(id_campanha);
 -- FK sem índice que o score consulta.

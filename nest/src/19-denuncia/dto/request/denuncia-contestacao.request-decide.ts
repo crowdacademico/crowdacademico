@@ -1,6 +1,6 @@
 import { IsBoolean, IsString, Matches, MaxLength } from 'class-validator';
 
-// Decidir uma contestação (RF-033): aceitar (a denúncia vira improcedente) ou recusar, sempre com justificativa.
+// Decidir uma contestação (RF-034): aceitar (a denúncia vira improcedente) ou recusar, sempre com justificativa.
 export class DenunciaContestacaoRequestDecide {
   @IsBoolean({ message: 'Escolha aceitar ou recusar.' })
   aceitar: boolean;

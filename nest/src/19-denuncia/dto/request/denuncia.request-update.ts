@@ -8,7 +8,7 @@ import {
 } from 'class-validator';
 import { STATUS_DENUNCIA_JULGAMENTO } from '../../constants/denuncia.constants';
 
-// Julgar uma denúncia (RF-111): o status e, ao decidir (procedente ou improcedente), o porquê. Quem denunciou não
+// Julgar uma denúncia (RF-114): o status e, ao decidir (procedente ou improcedente), o porquê. Quem denunciou não
 // julga a própria denúncia (92006, 05) e a regra de acesso só abre a quem tem denuncia_responder.
 export class DenunciaRequestUpdate {
   @IsIn(STATUS_DENUNCIA_JULGAMENTO, {

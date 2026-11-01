@@ -335,7 +335,7 @@ CREATE TABLE usuario_papel (  -- fica aqui por depender de usuario; documentada 
     -- preserva o histórico (quando o papel foi atribuído) e volta sozinho no prazo, sem reatribuir
     -- manualmente. tem_permissao() (03, [03-B]) ignora papel com suspenso_ate no futuro.
     suspenso_ate TIMESTAMPTZ,
-    -- Motivo e quem suspendeu (RF-118): mesmo padrão de usuario.suspenso_ate/motivo_suspensao/suspenso_por.
+    -- Motivo e quem suspendeu (RF-121): mesmo padrão de usuario.suspenso_ate/motivo_suspensao/suspenso_por.
     motivo_suspensao TEXT,
     suspenso_por     INT,
 
@@ -402,6 +402,9 @@ CREATE TABLE perfil_pesquisador (
         (suspenso_ate IS NULL AND motivo_suspensao IS NULL)
         OR (suspenso_ate IS NOT NULL AND motivo_suspensao IS NOT NULL)
     ),
+    -- A situação e a data dizem a mesma coisa: suspenso sempre com data, ativo sempre sem. Os 3 caminhos que mudam a
+    -- situação (suspender_pesquisador, reativar_pesquisador, reativar_pesquisadores_vencidos) já mudam as duas juntas.
+    CONSTRAINT "CK_PERFIL_PESQUISADOR_STATUS_SUSPENSAO" CHECK ((status_pesquisador = 'suspenso') = (suspenso_ate IS NOT NULL)),
     -- Tipo e chave andam juntos; verificada só existe com chave.
     CONSTRAINT "CK_PERFIL_PESQUISADOR_CHAVE_PIX" CHECK (
         (tipo_chave_pix IS NULL) = (chave_pix_criptografada IS NULL)
@@ -447,7 +450,7 @@ CREATE TABLE usuario_termo (
 
     CONSTRAINT "PK_USUARIO_TERMO" PRIMARY KEY (id_usuario_termo),
     CONSTRAINT "FK_USUARIO_TERMO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
-    -- Sem CASCADE (RF-091): o aceite é a prova de quem concordou com ESTA versão; a versão aceita não pode ser
+    -- Sem CASCADE (RF-094): o aceite é a prova de quem concordou com ESTA versão; a versão aceita não pode ser
     -- excluída (fn_protege_termo_aceito, 05), e esta FK é a segunda barreira.
     CONSTRAINT "FK_USUARIO_TERMO_TERMO" FOREIGN KEY (id_termo) REFERENCES termos_de_uso(id_termo),
     CONSTRAINT "UK_USUARIO_TERMO_USUARIO_TERMO" UNIQUE (id_usuario, id_termo) -- [melhoria] mesmo usuário não aceita a mesma versão duas vezes
@@ -575,9 +578,9 @@ CREATE TABLE campanha (
     -- (fn_carimba_envio_aprovacao, 05): a fila mostra "esperando há X dias" a partir dela.
     enviado_aprovacao_em TIMESTAMPTZ,
     -- data_fim é a promessa (congelada por fn_congela_regras_campanha, 05); encerrado_em registra quando
-    -- a campanha de fato terminou (natural, antecipado ou por moderação): RF-042/RF-058.
+    -- a campanha de fato terminou (natural, antecipado ou por moderação): RF-064/RF-067.
     encerrado_em         TIMESTAMPTZ,
-    -- RF-033: vídeo de apresentação opcional em destaque na página da campanha. Só a URL (ex.: YouTube/
+    -- RF-056: vídeo de apresentação opcional em destaque na página da campanha. Só a URL (ex.: YouTube/
     -- Vimeo); o arquivo de vídeo em si não é armazenado pela plataforma.
     video_apresentacao_url VARCHAR(500),
     criado_em            TIMESTAMPTZ       NOT NULL DEFAULT NOW(),
@@ -618,7 +621,7 @@ CREATE TABLE atualizacao_campanha (
     titulo         VARCHAR(150)     NOT NULL,
     conteudo       TEXT             NOT NULL,
     publicado_em   TIMESTAMPTZ        NOT NULL DEFAULT NOW(),
-    fase           fase_atualizacao NOT NULL,  -- RF-052: toda atualização registra a fase e o formato
+    fase           fase_atualizacao NOT NULL,  -- RF-053: toda atualização registra a fase e o formato
     tipo           tipo_atualizacao NOT NULL,
     ativo          BOOLEAN          NOT NULL DEFAULT TRUE, -- SOFT DELETE E MODERAÇÃO DAS ATUALIZAÇÕES
 
@@ -768,7 +771,7 @@ CREATE TABLE denuncia (
     julgado_em          TIMESTAMPTZ,
     -- Quem decidiu a contestação (aceitou ou recusou), gravado por decidir_contestacao (03).
     id_julgador_contestacao INT,
-    -- Contestação (RF-033): o pesquisador penalizado pede revisão de uma denúncia procedente, uma vez por denúncia.
+    -- Contestação (RF-034): o pesquisador penalizado pede revisão de uma denúncia procedente, uma vez por denúncia.
     -- Na própria linha porque é 1 para 1: cada denúncia tem no máximo uma contestação. Só pelas funções
     -- contestar_denuncia e decidir_contestacao (03).
     contestacao                TEXT,
@@ -1014,7 +1017,7 @@ CREATE TABLE contribuicao_recompensa (
     CONSTRAINT "UK_CONTRIBUICAO_RECOMPENSA_CONTRIBUICAO_RECOMPENSA" UNIQUE (id_contribuicao, id_recompensa) -- 1 linha por par; quantidade acumula em vez de duplicar linha
 );
 
--- Versão do termo da CONTA ('cadastro') vigente no momento de cada contribuição (RF-081/RF-082): prova, numa
+-- Versão do termo da CONTA ('cadastro') vigente no momento de cada contribuição (RF-085/RF-086): prova, numa
 -- contestação de pagamento, quais regras valiam naquele dia. Vale também para a contribuição anônima, que
 -- nunca passou pelo cadastro.
 CREATE TABLE aceite_termo_contribuicao (
@@ -1026,7 +1029,7 @@ CREATE TABLE aceite_termo_contribuicao (
 
     CONSTRAINT "PK_ACEITE_TERMO_CONTRIBUICAO" PRIMARY KEY (id_aceite_contrib),
     CONSTRAINT "FK_ACEITE_TERMO_CONTRIBUICAO_CONTRIBUICAO" FOREIGN KEY (id_contribuicao) REFERENCES contribuicao(id_contribuicao) ON DELETE CASCADE,
-    -- Sem CASCADE, mesmo motivo de FK_USUARIO_TERMO_TERMO acima (RF-091).
+    -- Sem CASCADE, mesmo motivo de FK_USUARIO_TERMO_TERMO acima (RF-094).
     CONSTRAINT "FK_ACEITE_TERMO_CONTRIBUICAO_TERMO" FOREIGN KEY (id_termo) REFERENCES termos_de_uso(id_termo),
     CONSTRAINT "UK_ACEITE_TERMO_CONTRIBUICAO_CONTRIBUICAO" UNIQUE (id_contribuicao)
 );

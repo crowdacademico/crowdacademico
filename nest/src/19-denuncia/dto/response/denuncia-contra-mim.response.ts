@@ -4,7 +4,7 @@ import type {
 } from '../../../commons/database/db.types';
 
 // Uma denúncia procedente contra o pesquisador logado (contra o perfil ou contra uma campanha dele), sem quem
-// denunciou, com a contestação quando houver (RF-033).
+// denunciou, com a contestação quando houver (RF-034).
 export class DenunciaContraMimResponse {
   idDenuncia: number;
   idCampanhaAlvo: number | null;

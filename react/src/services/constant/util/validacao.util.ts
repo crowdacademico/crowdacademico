@@ -8,7 +8,12 @@ export function emailValido(email: string): boolean {
 }
 
 // Caracteres de verdade, como o `char_length` do banco: um emoji vale 1 (o `.length` do JavaScript conta 2).
-// Usada no contador e na validação dos campos de texto livre com limite (RF-072).
+// Usada no contador e na validação dos campos de texto livre com limite (RF-075).
 export function contarCaracteres(texto: string): number {
   return [...texto].length;
+}
+
+// A mensagem de erro do campo de texto livre que passou do limite, ou false se coube.
+export function erroLimiteCaracteres(texto: string, limite: number, campo: string): string | false {
+  return contarCaracteres(texto) > limite && `${campo} passou do limite de ${limite.toLocaleString('pt-BR')} caracteres.`;
 }

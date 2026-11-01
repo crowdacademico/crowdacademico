@@ -142,7 +142,7 @@ INSERT INTO permissao (nome) VALUES
 ('campanha_rejeitar'),
 ('campanha_editar'),
 ('denuncia_responder'),
--- RF-108: sem esta permissão, encerrar campanha por moderação exigia campanha_aprovar/campanha_rejeitar/
+-- RF-117: sem esta permissão, encerrar campanha por moderação exigia campanha_aprovar/campanha_rejeitar/
 -- solicitacao_encerramento_decidir (só o admin tinha as três), e um moderador que julgava a denúncia procedente
 -- não conseguia agir sobre o próprio julgamento. Permissão estreita de propósito: só a transição ativo ->
 -- encerrado_moderacao, ver fn_valida_transicao_campanha (05, [05-K-2]).
@@ -228,7 +228,7 @@ WHERE (p.nome, perm.nome) IN (
     ('moderador', 'denuncia_responder'),
     ('moderador', 'comentario_moderar'),
     ('moderador', 'atualizacao_moderar'),
-    -- RF-108: fecha o ciclo de julgar uma denúncia e agir sobre ela sem precisar do admin (ver nota em [07-B-2]).
+    -- RF-117: fecha o ciclo de julgar uma denúncia e agir sobre ela sem precisar do admin (ver nota em [07-B-2]).
     ('moderador', 'campanha_encerrar_moderacao'),
     -- revisor: vê tudo do funcionamento (relatórios, pontuação, auditoria financeira e log), sem dados pessoais e sem
     -- alterar nada. Mudar pesos e faixas da pontuação (score_editar) é só do admin.
@@ -582,12 +582,12 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'prazo_minimo_campanha_dias', '15',    'inteiro',  'Duração mínima permitida de uma campanha em dias',     TRUE, TRUE),
 -- Prazo máximo de campanha: 60 dias (decisão de produto: 15 a 60).
 (NULL, 'prazo_maximo_campanha_dias', '60',    'inteiro',  'Duração máxima permitida de uma campanha em dias',     TRUE, TRUE),
--- Lida só pelo React (formulário de criação, RF-069): sugestão, não regra. Fica entre o mínimo e o máximo acima.
+-- Lida só pelo React (formulário de criação, RF-072): sugestão, não regra. Fica entre o mínimo e o máximo acima.
 (NULL, 'prazo_sugerido_campanha_dias', '30', 'inteiro', 'Duração que o formulário de criação de campanha sugere, em dias (a pessoa pode mudar)', TRUE, TRUE),
 (NULL, 'limite_campanhas_simultaneas','2',    'inteiro',  'Nº máximo de campanhas ao mesmo tempo por pesquisador (ativas ou aguardando aprovação)', TRUE, TRUE),
 (NULL, 'limite_endossos_campanha',   '4',     'inteiro',  'Nº máximo de endossos ativos ao mesmo tempo por campanha', TRUE, TRUE),
 (NULL, 'limite_denuncias_24h',       '5',     'inteiro',  'Nº máximo de denúncias que um usuário pode fazer dentro da janela de tempo das denúncias', TRUE, TRUE),
--- Janela de tempo do limite de denúncias (RF-076), lida por validar_denuncia_frequencia() em 05, [05-K-3].
+-- Janela de tempo do limite de denúncias (RF-113), lida por validar_denuncia_frequencia() em 05, [05-K-3].
 (NULL, 'janela_denuncias_horas',     '24',    'inteiro',  'Janela de tempo das denúncias, em horas (usada pelo limite de denúncias por usuário)', TRUE, TRUE),
 -- `comentario` tem limite de frequência como denúncia (par acima), no mesmo padrão de 2 chaves (contagem +
 -- janela) de limite_denuncias_24h/janela_denuncias_horas; 5 comentários por hora é o valor de partida, ajustável
@@ -596,18 +596,20 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'janela_comentarios_horas',    '1',     'inteiro',  'Janela de tempo dos comentários, em horas (usada pelo limite de comentários por usuário)', TRUE, TRUE),
 -- Limite de negócio (menor, configurável) por cima do limite técnico largo das colunas (01): mesmo padrão
 -- config + trigger do prazo de campanha.
-(NULL, 'limite_caracteres_descricao_campanha',     '5000', 'inteiro', 'Nº máximo de caracteres na descrição da campanha',                        TRUE, TRUE),
-(NULL, 'limite_caracteres_conteudo_atualizacao',   '5000', 'inteiro', 'Nº máximo de caracteres no texto de uma atualização de campanha',                  TRUE, TRUE),
-(NULL, 'limite_caracteres_relato_denuncia',        '1000', 'inteiro', 'Nº máximo de caracteres nos detalhes adicionais de uma denúncia',       TRUE, TRUE),
-(NULL, 'limite_caracteres_justificativa_denuncia', '1000', 'inteiro', 'Nº máximo de caracteres na justificativa da decisão sobre uma denúncia', TRUE, TRUE),
-(NULL, 'limite_caracteres_justificativa_encerramento', '2000', 'inteiro', 'Nº máximo de caracteres em cada justificativa do pedido de encerramento antecipado', TRUE, TRUE),
-(NULL, 'limite_caracteres_descricao_recompensa',   '2000', 'inteiro', 'Nº máximo de caracteres na descrição de uma recompensa',                            TRUE, TRUE),
+(NULL, 'limite_caracteres_descricao_campanha',     '5000', 'inteiro', 'Nº máximo de caracteres na descrição da campanha (até 20.000)',                        TRUE, TRUE),
+(NULL, 'limite_caracteres_conteudo_atualizacao',   '5000', 'inteiro', 'Nº máximo de caracteres no texto de uma atualização de campanha (até 20.000)',                  TRUE, TRUE),
+(NULL, 'limite_caracteres_relato_denuncia',        '1000', 'inteiro', 'Nº máximo de caracteres nos detalhes adicionais de uma denúncia (até 5.000)',       TRUE, TRUE),
+(NULL, 'limite_caracteres_justificativa_denuncia', '1000', 'inteiro', 'Nº máximo de caracteres na justificativa da decisão sobre uma denúncia (até 5.000)', TRUE, TRUE),
+(NULL, 'limite_caracteres_justificativa_encerramento', '2000', 'inteiro', 'Nº máximo de caracteres em cada justificativa do pedido de encerramento antecipado (até 10.000)', TRUE, TRUE),
+(NULL, 'limite_caracteres_descricao_recompensa',   '2000', 'inteiro', 'Nº máximo de caracteres na descrição de uma recompensa (até 10.000)',                            TRUE, TRUE),
 (NULL, 'limite_caracteres_comentario',             '500',  'inteiro', 'Nº máximo de caracteres de um comentário (até 500)',                       TRUE, TRUE),
+(NULL, 'limite_caracteres_contestacao',            '5000', 'inteiro', 'Nº máximo de caracteres no pedido de revisão de uma penalidade e na justificativa da decisão (até 5.000)', TRUE, TRUE),
+(NULL, 'limite_caracteres_justificativa_rejeicao', '10000', 'inteiro', 'Nº máximo de caracteres na justificativa da rejeição de uma campanha (até 10.000)', TRUE, TRUE),
 -- Orçamento e cronograma estruturados (01, [01-E]): mudar o mínimo/máximo exigido, ou o limite de texto, é um
 -- UPDATE nesta tabela, não uma migração. Ver fn_valida_completude_campanha e
 -- fn_valida_limite_max_orcamento_campanha/fn_valida_limite_max_marco_cronograma (05, [05-K-2]). Os valores
 -- 10/20 são o TETO (nº máximo por campanha), não o piso para aprovar; os pisos são orcamento_min_itens = 1
--- (RF-039: "valores padrão de 1 (mínimo) e 10 (máximo)") e cronograma_min_marcos = 3 (RF-041).
+-- (RF-042: "valores padrão de 1 (mínimo) e 10 (máximo)") e cronograma_min_marcos = 3 (RF-044).
 (NULL, 'orcamento_min_itens',                      '1',    'inteiro', 'Nº mínimo de itens de orçamento exigido para aprovar uma campanha', TRUE, TRUE),
 (NULL, 'orcamento_max_itens',                      '10',   'inteiro', 'Nº máximo de itens de orçamento permitido por campanha',                    TRUE, TRUE),
 (NULL, 'cronograma_min_marcos',                    '3',    'inteiro', 'Nº mínimo de marcos de cronograma exigido para aprovar uma campanha',       TRUE, TRUE),
@@ -624,15 +626,15 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- expirar_campanhas_rejeitadas() (05).
 (NULL, 'campanha_rejeitada_max_reenvios',          '3',    'inteiro', 'Nº máximo de reenvios de uma campanha rejeitada, depois da 1ª rejeição',       TRUE, TRUE),
 (NULL, 'campanha_rejeitada_prazo_dias',            '30',   'inteiro', 'Dias que uma campanha rejeitada fica disponível para reenvio, contados da última rejeição', TRUE, TRUE),
-(NULL, 'limite_caracteres_descricao_orcamento',    '2000', 'inteiro', 'Nº máximo de caracteres na descrição de um item de orçamento',                    TRUE, TRUE),
-(NULL, 'limite_caracteres_descricao_marco',        '2000', 'inteiro', 'Nº máximo de caracteres na descrição de um marco do cronograma',                      TRUE, TRUE),
+(NULL, 'limite_caracteres_descricao_orcamento',    '2000', 'inteiro', 'Nº máximo de caracteres na descrição de um item de orçamento (até 20.000)',                    TRUE, TRUE),
+(NULL, 'limite_caracteres_descricao_marco',        '2000', 'inteiro', 'Nº máximo de caracteres na descrição de um marco do cronograma (até 20.000)',                      TRUE, TRUE),
 -- Meta 0.00 seria sucesso instantâneo numa campanha all-or-nothing. Mesmo padrão do prazo: limite técnico
 -- largo na constraint (01, > 0), mínimo de negócio de verdade aqui.
 (NULL, 'meta_minima_campanha',       '500.00', 'decimal',  'Valor mínimo de meta financeira aceito para uma campanha, em R$',            TRUE, TRUE),
 -- F
 (NULL, 'limite_links_academicos_perfil', '5', 'inteiro',  'Nº máximo de links acadêmicos por pesquisador', TRUE, TRUE),
 -- H
--- valor_minimo_contribuicao (RF-056): mesmo padrão de meta_minima_campanha, acima. R$5,00 não é piso do gateway
+-- valor_minimo_contribuicao (RF-087): mesmo padrão de meta_minima_campanha, acima. R$5,00 não é piso do gateway
 -- de pagamento (o PIX em si não impõe mínimo), é política de negócio da própria plataforma, por isso
 -- configurável.
 (NULL, 'valor_minimo_contribuicao',  '5.00',  'decimal',  'Valor mínimo aceito por contribuição, em R$',                       TRUE, TRUE),
@@ -689,7 +691,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- bloqueio.
 (NULL, 'score_minimo_campanha',      '25.00', 'decimal',  'Score mínimo para criar campanha (sinal de revisão manual, nunca bloqueio automático)', TRUE, FALSE);
 -- Chaves que NÃO existem, de propósito: 'permitir_campanha_anonima' (campanha.id_usuario é NOT NULL, toda
--- campanha tem um pesquisador identificado, o que a curadoria RF-068/069 exige; contribuição anônima já existe
+-- campanha tem um pesquisador identificado, o que a curadoria RF-105/106 exige; contribuição anônima já existe
 -- via contribuicao.token_sessao) e 'limite_denuncias_suspensao' (nenhuma trigger suspende perfil
 -- automaticamente por denúncias procedentes: suspensão é decisão do Admin via curadoria manual; se um dia isso
 -- mudar, a chave volta junto com a trigger que a usa).
@@ -1118,7 +1120,7 @@ JOIN tipo_link tl ON tl.codigo = v.tipolink_codigo;
 --    9 Eduardo   flexível      encerrada antes do prazo com o pedido aprovado; transferência em andamento
 --   10 Beatriz   flexível      ativa, pedido de encerramento esperando há 40 dias, denúncia pendente
 --   11 Beatriz   flexível      ativa, um pedido rejeitado e outro esperando há 15 dias
---   12 Juliana   tudo-ou-nada  "Em breve" (RF-059): aprovada, começa daqui a 7 dias
+--   12 Juliana   tudo-ou-nada  "Em breve" (RF-060): aprovada, começa daqui a 7 dias
 --   13 Juliana   tudo-ou-nada  rascunho
 --   14 Patrícia  tudo-ou-nada  rejeitada há 5 dias, com reenvio disponível
 --   15 Patrícia  tudo-ou-nada  encerrada antes do prazo, sem a meta, com pedido aprovado: todo o dinheiro voltou
@@ -1456,7 +1458,7 @@ END;
 $$;
 
 -- [07-H-3] aceite_termo_contribuicao
--- Sustenta o RF-054/RF-055: a trilha do aceite dos termos por transação é a defesa da plataforma numa contestação de
+-- Sustenta o RF-085/RF-086: a trilha do aceite dos termos por transação é a defesa da plataforma numa contestação de
 -- pagamento. Cada contribuição aceitou a versão do termo da conta vigente no instante da contribuição.
 INSERT INTO aceite_termo_contribuicao (id_contribuicao, id_termo, aceito_em, ip_aceite)
 SELECT c.id_contribuicao,
@@ -1650,7 +1652,7 @@ BEGIN
 END;
 $$;
 
--- 5. Pedidos de encerramento antes do prazo (RF-064 a RF-066), pelo caminho do painel: o pesquisador pede, o Admin
+-- 5. Pedidos de encerramento antes do prazo (RF-067 a RF-069), pelo caminho do painel: o pesquisador pede, o Admin
 --    Sistema (1) decide com decidir_solicitacao_encerramento (03). Aprovar encerra a campanha e o dinheiro segue
 --    destino_dinheiro_campanha (05): o da campanha 9, flexível, vai para o pesquisador; o da 15, tudo-ou-nada que não
 --    bateu a meta, volta para quem apoiou. A Ana desistiu do pedido dela (cancelado pela dona). O "cancelar o projeto"
@@ -1829,7 +1831,7 @@ BEGIN
 END;
 $$;
 
--- 11. Contestações (RF-033), uma de cada situação: o Eduardo contesta a dele e espera a análise; o Vinícius contestou
+-- 11. Contestações (RF-034), uma de cada situação: o Eduardo contesta a dele e espera a análise; o Vinícius contestou
 --     uma das dele e o Admin recusou; o Gabriel provou que a denúncia era falsa e o Admin aceitou (a denúncia vira
 --     improcedente e a nota se recalcula). Quem julgou a denúncia (o Moderador Sistema) nunca decide a contestação.
 DO $$
@@ -1867,7 +1869,7 @@ END;
 $$;
 
 -- [07-E-8] recompensa, link_recompensa e contribuicao_recompensa
--- Recompensas simbólicas (RF-099 a RF-101), sem estoque: os três tipos, uma desativada e um link especial (que só o
+-- Recompensas simbólicas (RF-102 a RF-104), sem estoque: os três tipos, uma desativada e um link especial (que só o
 -- dono, o admin e quem ganhou enxergam). Cada contribuição paga de quem tem conta ganha a maior recompensa ativa que o
 -- valor dela alcançou; as abaixo de todos os mínimos ficam sem recompensa, como no uso real.
 INSERT INTO recompensa (id_campanha, titulo, descricao, valor_minimo, tipo, ativo, criado_em)

@@ -12,7 +12,8 @@ import { SITUACOES_PENDENTES } from '../../services/25-pagamento-revisao/constan
 import { erroObservacaoRevisao } from '../../services/25-pagamento-revisao/util/observacao-revisao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
-import { formatarDataHora } from '../../services/constant/util/formatacao.util';
+import { ValorEvento } from './valor-evento';
+import { formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { CampoObservacaoRevisao } from './campo-observacao-revisao';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 import type { RevisaoPagamentoResponse } from '../../services/25-pagamento-revisao/type/pagamento-revisao.type';
@@ -80,6 +81,8 @@ export function ModalResolverRevisao({ authFetch, revisao, aoFechar, aoResolvido
             <CampoFicha rotulo="Evento do provedor" valor={revisao.tipoEvento} />
             <CampoFicha rotulo="Provedor" valor={revisao.provedor} />
             <CampoFicha rotulo="Recebido em" valor={formatarDataHora(revisao.recebidoEm)} />
+            <CampoFicha rotulo="Valor" valor={<ValorEvento evento={revisao} />} />
+            <CampoFicha rotulo="Arrecadado da campanha" valor={revisao.arrecadado === null ? null : formatarMoeda(revisao.arrecadado)} />
             {revisao.revisaoManualEm !== null && <CampoFicha rotulo="Em revisão manual desde" valor={formatarDataHora(revisao.revisaoManualEm)} />}
             <CampoFicha rotulo="Contribuição" valor={revisao.idContribuicao === null ? null : `#${revisao.idContribuicao}`} />
             <CampoFicha rotulo="Repasse" valor={revisao.idRepasse === null ? null : `#${revisao.idRepasse}`} />

@@ -12,7 +12,6 @@ import {
   situacaoDenuncia,
   type SituacaoDenuncia,
 } from '../../services/19-denuncia/constants/status-denuncia.constants';
-import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { ModalJulgarDenuncia } from './modal-julgar-denuncia';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { DenunciaResponse } from '../../services/19-denuncia/type/denuncia.type';
@@ -29,8 +28,8 @@ interface DenunciaLinha extends Omit<DenunciaResponse, 'status'> {
   contestacaoSituacao: string;
 }
 
-// Denúncias (moderação): campanhas e perfis denunciados, com motivo, há quanto tempo esperam julgamento e situação (RF-113,
-// RF-116). Alterar abre o julgamento (RF-111) e, para campanha ativa, o encerramento por moderação (RF-114);
+// Denúncias (moderação): campanhas e perfis denunciados, com motivo, há quanto tempo esperam julgamento e situação (RF-116,
+// RF-119). Alterar abre o julgamento (RF-114) e, para campanha ativa, o encerramento por moderação (RF-117);
 // Consultar abre a mesma ficha só para ler.
 export function ListarDenuncias({ auth }: PropsPagina) {
   const [aberta, setAberta] = useState<{ denuncia: DenunciaResponse; somenteLeitura: boolean } | null>(null);
@@ -62,11 +61,6 @@ export function ListarDenuncias({ auth }: PropsPagina) {
       contestacaoSituacao: denuncia.contestacaoStatus ? ROTULO_STATUS_CONTESTACAO[denuncia.contestacaoStatus] : '-',
     }));
   }, [auth.authFetch]);
-
-  const buscarLog = useCallback(
-    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'denuncia', pagina, tamanho),
-    [auth.authFetch],
-  );
 
   return (
     <div className="admin-content-painel">
@@ -102,7 +96,7 @@ export function ListarDenuncias({ auth }: PropsPagina) {
           { chave: 'contestacaoSituacao', rotulo: 'Contestação' },
         ]}
       />
-      <BlocoLogAuditoria buscar={buscarLog} chaveRecarga={chaveRecarga} />
+      <BlocoLogAuditoria authFetch={auth.authFetch} tabela="denuncia" chaveRecarga={chaveRecarga} />
 
       {aberta && (
         <ModalJulgarDenuncia

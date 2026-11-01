@@ -82,14 +82,14 @@ export function ListarAuditoriaFinanceira({ auth }: PropsPagina) {
           { chave: 'registro', rotulo: 'registro', tipo: 'nome', umaLinha: true },
           {
             chave: 'de',
-            rotulo: 'de',
+            rotulo: 'antes',
             tipo: 'status',
             renderizar: (linha: AuditoriaLinha) => <PilulaSituacao ehContribuicao={linha.ehContribuicao} status={linha.statusAnterior} />,
             textoExibido: (linha: AuditoriaLinha) => linha.de,
           },
           {
             chave: 'para',
-            rotulo: 'para',
+            rotulo: 'agora',
             tipo: 'status',
             renderizar: (linha: AuditoriaLinha) => <PilulaSituacao ehContribuicao={linha.ehContribuicao} status={linha.statusNovo} />,
             textoExibido: (linha: AuditoriaLinha) => linha.para,

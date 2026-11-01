@@ -1,5 +1,9 @@
 import { IsInt, IsOptional, IsString, MinLength } from 'class-validator';
 import {
+  MENSAGEM_NOME_CURTO,
+  NOME_MINIMO_CARACTERES,
+} from '../../../commons/validacao/minimos.constants';
+import {
   MENSAGEM_SENHA_CURTA,
   SENHA_MINIMO_CARACTERES,
 } from '../../../commons/seguranca/senha.constants';
@@ -12,7 +16,7 @@ export class UsuarioRequestUpdate {
   // sem criar a função correspondente primeiro.
   @IsOptional()
   @IsString()
-  @MinLength(2, { message: 'Nome precisa ter pelo menos 2 caracteres.' })
+  @MinLength(NOME_MINIMO_CARACTERES, { message: MENSAGEM_NOME_CURTO })
   nome?: string;
 
   // `null` de propósito (botão "Remover foto"): @IsOptional() já pula toda validação quando o valor é null ou

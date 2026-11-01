@@ -28,7 +28,7 @@ export function SecaoFinanceiroCampanha({ campanha, meta, campoMeta, resumoContr
         rotulo="Taxa"
         valor={campanha.taxaPlataforma === null ? 'Ainda não carimbada (não aprovada)' : `${campanha.taxaPlataforma}%`}
       />
-      {/* RF-087: o que o pesquisador receberia hoje, pela mesma conta do repasse (taxa mínima incluída); antes da
+      {/* RF-090: o que o pesquisador receberia hoje, pela mesma conta do repasse (taxa mínima incluída); antes da
           aprovação, com a taxa padrão. */}
       <CampoFicha rotulo="Líquido estimado" valor={formatarMoeda(campanha.valorLiquidoEstimado)} />
       <CampoFicha

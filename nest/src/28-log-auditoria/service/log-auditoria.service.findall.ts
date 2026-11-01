@@ -45,7 +45,12 @@ export class LogAuditoriaServiceFindAll {
         'log_auditoria.dados_novos',
         'log_auditoria.ocorrido_em',
       ])
-      .where('log_auditoria.tabela', '=', query.tabela)
+      // Uma tela pode juntar mais de uma tabela (Pontuação: pesos e faixas), separadas por vírgula.
+      .where(
+        'log_auditoria.tabela',
+        'in',
+        query.tabela.split(',').map((tabela) => tabela.trim()),
+      )
       .orderBy('log_auditoria.ocorrido_em', 'desc')
       // Desempate: o que entra na mesma transação (o seed, uma ação que grava várias linhas) tem o mesmo horário.
       .orderBy('log_auditoria.id_log', 'desc');

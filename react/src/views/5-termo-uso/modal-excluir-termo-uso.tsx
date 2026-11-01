@@ -20,7 +20,7 @@ interface ModalExcluirTermoUsoProps {
 
 // Excluir: como Criar não ativa mais sozinho, um rascunho com muito erro de português pode simplesmente ser
 // apagado (para não sujar o banco). Confirmação simples (sem digitar nada, diferente de ModalExcluirUsuario). A
-// versão vigente e a versão já aceita por alguém nunca são excluídas (RF-091: o aceite é a prova do que a pessoa
+// versão vigente e a versão já aceita por alguém nunca são excluídas (RF-094: o aceite é a prova do que a pessoa
 // aceitou); nesses casos o backend recusa e a mensagem dele aparece aqui.
 export function ModalExcluirTermoUso({ auth, termo, aoFechar, aoExcluido }: ModalExcluirTermoUsoProps) {
   const { mostrar } = useToast();

@@ -2,7 +2,7 @@ import { Kysely } from 'kysely';
 import { DB } from '../../commons/database/db.types';
 import { DENUNCIA_COLUNAS_SELECT } from '../constants/denuncia.constants';
 
-// A denúncia com o que a moderação lê junto (RF-113, RF-116): motivo, quem denunciou (nome e e-mail), a campanha
+// A denúncia com o que a moderação lê junto (RF-116, RF-119): motivo, quem denunciou (nome e e-mail), a campanha
 // ou o pesquisador denunciado, quem julgou e quem decidiu a contestação. LEFT JOIN: conta excluída ou campanha que a RLS não mostra deixam o nome vazio, não
 // somem com a denúncia.
 export function consultaDenunciaComDetalhes(db: Kysely<DB>) {

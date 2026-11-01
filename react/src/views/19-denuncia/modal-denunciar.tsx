@@ -11,7 +11,7 @@ import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
-import { contarCaracteres } from '../../services/constant/util/validacao.util';
+import { erroLimiteCaracteres } from '../../services/constant/util/validacao.util';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 import type { MotivoDenunciaResponse } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
 import type { AlvoDenuncia } from '../../services/19-denuncia/type/denuncia.type';
@@ -27,8 +27,8 @@ interface ModalDenunciarProps {
   aoDenunciado?: () => void;
 }
 
-// Denunciar uma campanha (RF-106) ou o perfil de um pesquisador (RF-029): motivo obrigatório, só os ativos do tipo
-// certo (RF-107), e relato opcional. O banco recusa denúncia repetida, de campanha que não está ativa, contra si
+// Denunciar uma campanha (RF-109) ou o perfil de um pesquisador (RF-030): motivo obrigatório, só os ativos do tipo
+// certo (RF-110), e relato opcional. O banco recusa denúncia repetida, de campanha que não está ativa, contra si
 // mesmo e acima do limite por janela de tempo, e a mensagem dele aparece aqui. Pronto para a página pública.
 export function ModalDenunciar({ authFetch, alvo, nomeAlvo, relatoInicial = '', aoFechar, aoDenunciado }: ModalDenunciarProps) {
   const tipo = alvo.idCampanhaAlvo !== undefined ? 'campanha' : 'perfil';
@@ -47,7 +47,7 @@ export function ModalDenunciar({ authFetch, alvo, nomeAlvo, relatoInicial = '', 
 
   const erros = useErrosFormulario(() => ({
     motivo: idMotivo === '' && 'Escolha o motivo da denúncia.',
-    relato: contarCaracteres(relato) > limite && `O relato passou do limite de ${limite.toLocaleString('pt-BR')} caracteres.`,
+    relato: erroLimiteCaracteres(relato, limite, 'O relato'),
   }));
 
   const denunciar = async () => {

@@ -9,7 +9,7 @@ import {
 } from '../../commons/agendamento/tarefa-automatica';
 import { PG_POOL } from '../../commons/database/database.constants';
 
-// Chama encerrar_campanhas_vencidas() (05_regras_negocio.sql, [05-K-2]) por agendamento (RF-057): sem isso, uma
+// Chama encerrar_campanhas_vencidas() (05_regras_negocio.sql, [05-K-2]) por agendamento (RF-064): sem isso, uma
 // campanha cujo prazo vence continuaria 'ativo' para sempre e aceitando contribuição além do prazo. Antes, vence o
 // Pix pendente que passou da validade (expirar_contribuicoes_pendentes): a campanha vencida só é encerrada quando
 // não sobra Pix pendente válido.

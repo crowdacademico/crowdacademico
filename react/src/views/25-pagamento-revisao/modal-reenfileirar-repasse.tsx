@@ -90,7 +90,7 @@ export function ModalReenfileirarRepasse({ authFetch, repasse, aoFechar, aoReenf
             acao={
               podeReenfileirar
                 ? [
-                    { rotulo: 'Marcar como pago', ocupado, aoClicar: () => pedirConfirmacao('marcarPago') },
+                    { rotulo: 'Marcar como pago', secundaria: true, ocupado, aoClicar: () => pedirConfirmacao('marcarPago') },
                     { rotulo: 'Reenfileirar', ocupado, aoClicar: () => pedirConfirmacao('reenfileirar') },
                   ]
                 : undefined

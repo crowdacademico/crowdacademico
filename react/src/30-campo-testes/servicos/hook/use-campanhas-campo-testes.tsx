@@ -101,7 +101,7 @@ export function useCampanhasCampoTestes(auth: UseAuthReturn, aoMudarSeguidas?: (
       { chave: 'titulo', rotulo: 'título', tipo: 'nome', umaLinha: true },
       {
         chave: 'status',
-        rotulo: 'status',
+        rotulo: 'situação',
         tipo: 'status',
         renderizar: (campanha) => <BadgeStatusCampanha campanha={campanha} />,
         textoExibido: (campanha) => rotuloStatusCampanha(campanha),
@@ -122,7 +122,7 @@ export function useCampanhasCampoTestes(auth: UseAuthReturn, aoMudarSeguidas?: (
     ],
     acaoIndisponivel,
     filtrosFacetados: [
-      { chave: 'status', rotulo: 'Status', rotulos: ROTULO_STATUS_CAMPANHA },
+      { chave: 'status', rotulo: 'Situação', rotulos: ROTULO_STATUS_CAMPANHA },
     ],
   };
 

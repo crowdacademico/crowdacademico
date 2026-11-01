@@ -102,7 +102,7 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
           <div className="lg:col-span-2 space-y-6">
             {campanha.precisaRevisaoScore && (
               <p className="legenda enfase fundo-aviso texto-aviso rounded-lg p-3">
-                O pesquisador está abaixo do score mínimo para campanhas. É só um sinal para revisar com mais cuidado; não impede a aprovação.
+                O pesquisador está abaixo da pontuação mínima para campanhas. É só um sinal para revisar com mais cuidado; não impede a aprovação.
               </p>
             )}
             {!aguardando && (

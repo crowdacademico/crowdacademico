@@ -119,7 +119,7 @@ export function ModalConsultarModeloMensagem({ modelo, aoFechar }: ModalConsulta
     >
       <SecaoFicha titulo="Dados">
         <CampoFicha rotulo="id" valor={modelo.idModeloMensagem} />
-        <CampoFicha rotulo="Tipo" valor={modelo.tipoEvento} />
+        <CampoFicha rotulo="Código" valor={modelo.tipoEvento} />
         <CampoFicha rotulo="Alterado em" valor={formatarDataHora(modelo.atualizadoEm)} />
         <CampoFicha rotulo={modelo.canal === 'email' ? 'Assunto' : 'Título'} valor={modelo.titulo} largura="cheia" />
         <CampoFicha rotulo="Texto" largura="cheia">
@@ -182,7 +182,7 @@ export function ModalAlterarModeloMensagem({ auth, modelo, aoFechar, aoAtualizad
         }
       >
         <SecaoFicha titulo="Dados">
-          <CampoSomenteLeitura rotulo="Tipo" valor={modelo.tipoEvento} />
+          <CampoSomenteLeitura rotulo="Código" valor={modelo.tipoEvento} />
           <CampoSomenteLeitura rotulo="Canal" valor={ROTULO_CANAL[modelo.canal]} />
         </SecaoFicha>
 

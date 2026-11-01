@@ -1,4 +1,5 @@
 import { Campo } from '../../components/input/campo';
+import { ContadorCaracteres } from '../../components/input/contador-caracteres';
 import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
 import { useDecisaoAprovacao, usePronta } from '../../services/12-campanha/hook/use-decisao-aprovacao';
 import type { DecisaoAprovacao } from '../../services/12-campanha/hook/use-decisao-aprovacao';
@@ -37,14 +38,17 @@ export function CampoMotivoRejeicao({ decisao }: { decisao: DecisaoAprovacao }) 
   return (
     <Campo rotulo="Motivo da rejeição (obrigatório para rejeitar)" erro={decisao.erroMotivo}>
       {({ atributos, classeErro }) => (
-        <textarea
-          {...atributos}
-          className={'input-padrao' + classeErro}
-          rows={4}
-          value={decisao.justificativa}
-          onChange={(evento) => decisao.setJustificativa(evento.target.value)}
-          placeholder="O pesquisador lê este texto para corrigir e reenviar."
-        />
+        <>
+          <textarea
+            {...atributos}
+            className={'input-padrao' + classeErro}
+            rows={4}
+            value={decisao.justificativa}
+            onChange={(evento) => decisao.setJustificativa(evento.target.value)}
+            placeholder="O pesquisador lê este texto para corrigir e reenviar."
+          />
+          <ContadorCaracteres texto={decisao.justificativa} limite={decisao.limite} />
+        </>
       )}
     </Campo>
   );

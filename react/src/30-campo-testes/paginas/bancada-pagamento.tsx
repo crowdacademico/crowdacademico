@@ -204,7 +204,7 @@ export function BancadaPagamento({ auth }: PropsPagina) {
             },
             {
               chave: 'status',
-              rotulo: 'status',
+              rotulo: 'situação',
               tipo: 'status',
               renderizar: (linha) => <BadgeStatusContribuicao status={linha.status} />,
               textoExibido: (linha) => ROTULO_STATUS_CONTRIBUICAO[linha.status],
@@ -262,7 +262,7 @@ export function BancadaPagamento({ auth }: PropsPagina) {
             { chave: 'valorLiquido', rotulo: 'líquido', tipo: 'dinheiro' },
             {
               chave: 'status',
-              rotulo: 'status',
+              rotulo: 'situação',
               tipo: 'status',
               renderizar: (linha) => <BadgeStatusRepasse status={linha.status} aguardandoConta={linha.aguardandoConta} />,
               textoExibido: (linha) => rotuloSituacaoRepasse(linha.status, linha.aguardandoConta),

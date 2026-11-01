@@ -3,7 +3,6 @@ import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { emBreve, ORDEM_ROTULOS_STATUS_CAMPANHA, rotuloStatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
-import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { ModalConsultarCampanha } from './modal-consultar-campanha';
 import { renderizarArrecadado, renderizarStatus, textoStatus } from './colunas-campanha';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -42,11 +41,6 @@ export function ListarCampanhas({ auth }: PropsPagina) {
     }));
   }, [auth.authFetch]);
 
-  const buscarLogCampanha = useCallback(
-    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'campanha', pagina, tamanho),
-    [auth.authFetch],
-  );
-
   return (
     <div className="admin-content-painel">
       <GenericTable
@@ -55,7 +49,7 @@ export function ListarCampanhas({ auth }: PropsPagina) {
         colunas={[
           { chave: 'idCampanha', rotulo: 'id', tipo: 'id' },
           { chave: 'titulo', rotulo: 'título', tipo: 'nome', umaLinha: true },
-          { chave: 'status', rotulo: 'status', tipo: 'status', renderizar: renderizarStatus, textoExibido: textoStatus },
+          { chave: 'status', rotulo: 'situação', tipo: 'status', renderizar: renderizarStatus, textoExibido: textoStatus },
           { chave: 'pesquisador', rotulo: 'pesquisador', tipo: 'texto' },
           { chave: 'metaFinanceira', rotulo: 'meta', tipo: 'dinheiro' },
           { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro', renderizar: renderizarArrecadado },
@@ -68,11 +62,11 @@ export function ListarCampanhas({ auth }: PropsPagina) {
         // de listarCampanhas, e o filtro por faceta não depende da coluna existir na tabela, só do campo
         // existir na linha.
         filtrosFacetados={[
-          { chave: 'status', rotulo: 'Status', ordem: ORDEM_ROTULOS_STATUS_CAMPANHA },
+          { chave: 'status', rotulo: 'Situação', ordem: ORDEM_ROTULOS_STATUS_CAMPANHA },
           { chave: 'area', rotulo: 'Área' },
         ]}
       />
-      <BlocoLogAuditoria buscar={buscarLogCampanha} />
+      <BlocoLogAuditoria authFetch={auth.authFetch} tabela="campanha" />
 
       {consultandoId !== null && (
         <ModalConsultarCampanha

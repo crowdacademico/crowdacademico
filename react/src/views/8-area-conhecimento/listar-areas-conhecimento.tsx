@@ -4,7 +4,6 @@ import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { BotaoCriar } from '../../components/crud/botao-criar';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
-import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { ModalCriarAreaConhecimento } from './modal-criar-area-conhecimento';
 import {
   ModalAlterarAreaConhecimento,
@@ -53,14 +52,6 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
       ),
     [auth.authFetch],
   );
-  // 'area_conhecimento' é o nome FÍSICO da tabela (bate com
-  // trg_log_auditoria_area_conhecimento, 05_regras_negocio.sql), não o
-  // nome da rota - mesma convenção de buscarLogConfiguracoes/
-  // buscarLogUsuario.
-  const buscarLogAreas = useCallback(
-    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'area_conhecimento', pagina, tamanho),
-    [auth.authFetch],
-  );
 
   return (
     <div className="admin-content-painel">
@@ -96,7 +87,7 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
         // opção primeiro na lista, o resto continua alfabético.
         filtrosFacetados={[{ chave: 'nomePai', rotulo: 'Grande área', ordem: ['Base'] }]}
       />
-      <BlocoLogAuditoria buscar={buscarLogAreas} chaveRecarga={chaveRecarga} />
+      <BlocoLogAuditoria authFetch={auth.authFetch} tabela="area_conhecimento" chaveRecarga={chaveRecarga} />
 
       {criando && (
         <ModalCriarAreaConhecimento auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />

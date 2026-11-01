@@ -7,7 +7,7 @@ import type {
 } from '../../commons/database/db.types';
 import { DenunciaContraMimResponse } from '../dto/response/denuncia-contra-mim.response';
 
-// denuncias_contra_mim() (03): as denúncias procedentes contra o pesquisador logado e as já contestadas (RF-033).
+// denuncias_contra_mim() (03): as denúncias procedentes contra o pesquisador logado e as já contestadas (RF-034).
 // A função nunca devolve quem denunciou; o pesquisador não lê a tabela de denúncia direto (pol_denuncia_select, 04).
 @Injectable()
 export class DenunciaServiceFindAgainstMe {

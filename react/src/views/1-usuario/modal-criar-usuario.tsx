@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MENSAGEM_NOME_CURTO, NOME_MINIMO_CARACTERES } from '../../services/constant/constants/minimos.constants';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
@@ -48,7 +49,7 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
 
   // "Criar" fica sempre clicável: clicando com algo faltando, cada campo mostra o próprio erro.
   const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
-    nome: nome.trim().length < 2 && 'Nome precisa ter pelo menos 2 caracteres.',
+    nome: nome.trim().length < NOME_MINIMO_CARACTERES && MENSAGEM_NOME_CURTO,
     email: email.trim() === '' && 'Informe o e-mail.',
     senha: senha.length < SENHA_MINIMO_CARACTERES && `A senha precisa ter pelo menos ${SENHA_MINIMO_CARACTERES} caracteres.`,
   }));

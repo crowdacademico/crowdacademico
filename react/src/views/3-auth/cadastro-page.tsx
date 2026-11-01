@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { MENSAGEM_NOME_CURTO, NOME_MINIMO_CARACTERES } from '../../services/constant/constants/minimos.constants';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { ModalTermo } from '../../components/crud/modal-termo';
@@ -65,7 +66,7 @@ export function CadastroPage({ auth }: PropsPagina) {
   // "Criar conta" fica sempre clicável: clicando com algo faltando, cada campo mostra o próprio erro (inclusive o
   // aceite dos Termos, que antes só deixava o botão cinza sem dizer por quê).
   const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
-    nome: nome.trim().length < 2 && 'Nome precisa ter pelo menos 2 caracteres.',
+    nome: nome.trim().length < NOME_MINIMO_CARACTERES && MENSAGEM_NOME_CURTO,
     email: email.trim() === '' ? 'Informe o e-mail.' : !emailEhValido && 'E-mail inválido.',
     senha: senha.length < SENHA_MINIMO_CARACTERES && `A senha precisa ter pelo menos ${SENHA_MINIMO_CARACTERES} caracteres.`,
     confirmar: confirmarSenha === '' ? 'Confirme a senha.' : !senhasIguais && 'As senhas não são iguais.',
@@ -126,7 +127,7 @@ export function CadastroPage({ auth }: PropsPagina) {
         >
           <MensagemErro texto={erro} />
 
-          <Campo rotulo="Nome" erro={erroDe('nome') ?? (tocado.nome && nome.trim().length < 2 && 'Nome precisa ter pelo menos 2 caracteres.')}>
+          <Campo rotulo="Nome" erro={erroDe('nome') ?? (tocado.nome && nome.trim().length < NOME_MINIMO_CARACTERES && MENSAGEM_NOME_CURTO)}>
             {({ atributos, classeErro }) => (
               <input
                 {...atributos}
@@ -258,7 +259,7 @@ export function CadastroPage({ auth }: PropsPagina) {
             type="submit"
             form="form-cadastro"
             disabled={enviando}
-            className="btn btn-primary btn-destaque w-full py-3.5"
+            className="btn btn-primary btn-destaque btn-grande w-full"
           >
             {enviando ? 'Criando conta...' : 'Criar conta'}
           </button>

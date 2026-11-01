@@ -5,7 +5,7 @@ import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { NotificacaoResponse, NotificacaoResumo } from '../type/notificacao.type';
 
 // Espelha nest/src/27-notificacao (rotas /notificacao). Tudo exige `notificacao_processar` (sem ela, 403). Quem ENVIA é
-// o worker do Nest (4-mail), a cada minuto: aqui só se vê a fila e se trata o que falhou (RF-121).
+// o worker do Nest (4-mail), a cada minuto: aqui só se vê a fila e se trata o que falhou (RF-124).
 export const notificacaoApi = {
   // Os e-mails do sistema, do mais novo para o mais antigo. A tela pede o máximo e pagina no navegador, como o resto do
   // painel (desembrulharPaginado avisa no console se vier cortado).

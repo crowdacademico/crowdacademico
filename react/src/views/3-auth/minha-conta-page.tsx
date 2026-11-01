@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { MENSAGEM_NOME_CURTO, NOME_MINIMO_CARACTERES } from '../../services/constant/constants/minimos.constants';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import type { FormEvent } from 'react';
@@ -182,7 +183,7 @@ function FaixaIdentidade({ auth }: FaixaIdentidadeProps) {
             <span className="break-words">{usuario?.email}</span>
             <span
               className={
-                'badge flex gap-1 ' +
+                'badge gap-1 ' +
                 (usuario?.emailVerificado ? 'badge-sucesso' : 'fundo-aviso texto-aviso')
               }
             >
@@ -293,7 +294,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
   const sujo = nome.trim() !== (auth.usuario?.nome ?? '') || idImagemPerfilNovo !== undefined;
   // Nome apagado conta como alteração: "Salvar" fica clicável e o erro aparece embaixo do campo.
   const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
-    nome: nome.trim().length < 2 && 'Nome precisa ter pelo menos 2 caracteres.',
+    nome: nome.trim().length < NOME_MINIMO_CARACTERES && MENSAGEM_NOME_CURTO,
   }));
 
   const aoSalvar = async (evento: FormEvent<HTMLFormElement>) => {
@@ -709,7 +710,7 @@ function AbaPapeis({ auth }: AbaPapeisProps) {
             return (
               <span
                 key={papel.idPapel}
-                className={'badge flex gap-1 ' + (suspenso ? 'fundo-aviso texto-aviso' : 'badge-neutro')}
+                className={'badge gap-1 ' + (suspenso ? 'badge-erro' : 'badge-neutro')}
               >
                 {papel.nomePapel}
                 {suspenso && (
@@ -814,7 +815,7 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
       <SecaoFicha titulo="Perfil de Pesquisador" nivel={2}>
         <CampoFicha rotulo="CPF" valor={perfil.cpf ? formatarCpfExibicao(perfil.cpf) : null} />
         <CampoFicha
-          rotulo="Status"
+          rotulo="Situação"
           valor={
             <BadgeStatusPesquisador status={perfil.statusPesquisador} />
           }
@@ -822,7 +823,7 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
         <CampoFicha rotulo="Título acadêmico" valor={ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico]} />
         <CampoFicha rotulo="Tipo de vínculo" valor={ROTULO_TIPO_VINCULO[perfil.tipoVinculo]} />
         <CampoFicha rotulo="Vínculo institucional" valor={perfil.vinculoInstitucional} />
-        <CampoFicha rotulo="Score atual" valor={perfil.scoreAtual} />
+        <CampoFicha rotulo="Pontuação atual" valor={perfil.scoreAtual} />
       </SecaoFicha>
 
       <SecaoContestacaoScore authFetch={auth.authFetch} />

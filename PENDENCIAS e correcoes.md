@@ -10,8 +10,7 @@
 
 ## ⭐ Para discutir (anotado em 18-10-2026, no topo de propósito)
 
-- **Colunas das tabelas, passo seguinte (largura mínima por tipo e respiro maior).** Medido em 18-10-2026 (20 telas, 1400 e 1920 px): a dança entre páginas acabou (coluna id fixa e `textoExibido`, DS-104), mas **6 tabelas rolam de lado a 1400 px** (Campanhas, Parâmetros, Denúncias, Pedidos de Encerramento, T2 e T5) e o respiro entre colunas é de cerca de 27 px. Aumentar o respiro hoje faria mais tabelas rolarem. Opções: um token de largura mínima por tipo de coluna (`--largura-coluna-status`, `-dinheiro`, `-data`...), tirar colunas das listas mais largas (deixar no Consultar) ou aceitar a rolagem. Decidir antes de mexer.
-  - **Condições (25-10-2026):** não tirar nenhuma coluna por enquanto. O caminho é **apertar** sem valor escrito à mão: por exemplo, o e-mail (`suporte@crowdacademico.com.br`) quebrar no "@" ou ganhar o "ler tudo", para a coluna não ficar tão larga. Fazer olhando as telas com o Playwright, tabela por tabela. Se alguma coluna for muito, muito menos útil e puder ficar só no Consultar, apontar e provar com a tela antes de tirar.
+- **Colunas das tabelas: o que sobrou (01-11-2026; baixa prioridade, decidido pelo Lucas: não é importante agora, talvez conversar no futuro).** As 6 tabelas que rolavam de lado a 1400 px cabem agora, a 1280, 1366, 1400 e 1920 px (DS-120: a tabela que não cabe se aperta em degraus). Ainda rolam a 1400 px **Contribuições (29 px) e Auditoria Financeira (6 px)**; Eventos de Pagamento passou a caber em 01-11-2026, quando as curtas do mesmo tipo deixaram de ter a mesma largura na tabela apertada (DS-120). Decidido pelo Lucas: Eventos de Pagamento não se mexe mais; Auditoria Financeira mantém todas as colunas e os segundos; em Contribuições a coluna REPASSE fica (ela mostra Pendente, Processando, Erro e Aguardando chave Pix, que a situação da contribuição não mostra). Nelas pesam duas regras de propósito, que só mudam com decisão: (1) as curtas do mesmo tipo ficam iguais (em Contribuições, Meio, Situação e Repasse têm 180 px por causa de "Aguardando pagamento"); (2) a data com hora mostra os segundos (163 px; o "sem segundos" já foi cogitado em 25-10-2026, em "Visual e marca"). Opções: soltar a regra (1) só na tabela apertada, tirar os segundos das datas da lista, ou aceitar a rolagem nessas três.
 - **Reorganizar o `DESIGN_SYSTEM.md` (18-10-2026, para o futuro, não agora):** as regras principais (core), como linha e coluna das tabelas (DS-100, DS-104, DS-105), passam para os números de destaque, para serem achadas primeiro. Junto da reorganização numérica de pastas e arquivos (seção de Pagamento).
 
 **Financeiro comparado com o mercado (19-10-2026).** Feitos no mesmo dia: a contestação de cartão vai para revisão manual, e o repasse espera a carência de `repasse_carencia_dias` (15). Fica para decidir:
@@ -29,14 +28,6 @@
 
 ---
 
-## 0. 📌 Para a Alexia ler (conversar antes de fazer)
-
-- **Notificações (branch `notificacao-completa`, 31-10-2026): conversar depois de testar.** A ideia da branch `notificacao` da Alexia foi completada (texto editável em Configurações > Mensagens, sino com aba Notificações). Decisões tomadas pela opção mais enxuta, para revisar juntos: (1) uma tabela só (`modelo_mensagem`), sem versão do texto (o histórico é o log de auditoria); (2) sem campo HTML, só assunto e texto; (3) qual canal sai por padrão: hoje tudo vai por e-mail e sino, menos a campanha nova de quem a pessoa segue, que vai só para o sino; (4) os parâmetros `email_lote_maximo` e `email_intervalo_processamento_minutos` da branch dela não entraram (o lote é ajuste técnico, não regra de negócio, e o intervalo brigaria com o agendamento central das tarefas). Grupo BS no ATUALIZAR.
-
-O "Aguardando" (pagamento que chega depois do fim da campanha) foi decidido e feito em 03-10-2026; a explicação está em `informacoes/HISTORICO/HISTORICO_ACHADOS_PARA_DISCUTIR.md`, seção "Limpeza de 25-10-2026", e o `ACHADOS_PARA_DISCUTIR.md` lista os decididos para a Alexia.
-
----
-
 ## 1. Levar para a revisão externa
 
 Os requisitos são atualizados com a revisão externa; aqui fica só o que precisa ir no próximo pedido. A atualização dos requisitos de 29-09-2026 já absorveu o termo único, o 2FA (fica sem RF, como ideia do fim do projeto), o modelo flexível e o Alterar/Excluir do admin. A atualização de 04-10-2026 absorveu os 12 pontos levados naquele dia (validade do Pix, espera do Pix no encerramento, IP do aceite, contestação, re-aceite dos dois termos, exclusão de conta, taxa de conclusão e os parâmetros novos). Os itens abaixo não foram tratados nela e continuam abertos.
@@ -48,7 +39,8 @@ Os requisitos são atualizados com a revisão externa; aqui fica só o que preci
   - **Links no upgrade, "Projetos Criados" e validação de domínio dos links:** a resposta da revisão externa à comparação V8 × código tem pontos que vamos revisar com ela.
 - **E-mail pronto (19-10-2026), ideias do mercado de 12-10-2026:** lembretes para quem segue a campanha ("faltam 48 h" e "faltam 8 h" para o fim, como faz o Kickstarter) e o endosso de colegas antes de enviar a campanha para aprovação (como faz o Experiment.com; este só com requisito novo).
 - **Status "repassado" da contribuição (25-10-2026):** o RF-082 (`informacoes/REQUISITOS_V10.md`) lista os status obrigatórios de cada transação: "pendente, confirmado, repassado, a devolver, devolvido...". Queremos tirar o "repassado": a tela Contribuições já mostra a situação do repasse numa coluna própria (que pode estar "Concluído"), então o máximo da contribuição seria "Paga". Apagar o status antes de mudar o requisito deixaria o sistema contra ele. Pedir para tirar do requisito; a mudança no banco (o status é usado nas regras do dinheiro) entra na auditoria dos status (grupo 5).
-- **Notificações (auditoria de 01-11-2026):** (1) o RF-641 diz que o encerramento por moderação devolve tudo em qualquer modelo, e o RF-645 manda orientar o doador do flexível a contestar junto à operadora, porque o ressarcimento seria do pesquisador: os dois não batem (o texto do e-mail segue o 641); (2) nenhum RF avisa o pesquisador quando uma denúncia contra ele é julgada procedente, mas o RF-270 deixa ele contestar: hoje ele só descobre olhando a tela. Perguntar se cabe um aviso "denúncia procedente".
+- **Status com o texto do RF atrás do sistema (auditoria dos status, 01-11-2026):** (1) RF-051 diz que "encerrada" é o encerramento antecipado aprovado sem contribuições, mas o RF-067 diz que sem contribuição o pesquisador encerra direto, sem aprovação; o sistema usa "encerrada" para os dois casos. (2) RF-066 diz que o repasse fica "repassado"; o repasse termina em "concluído" (quem fica "repassado" é a contribuição). (3) RF-114 ainda lista "em análise", tirado em 12-10-2026. (4) RF-124 diz "pendente, enviado, falha"; o sistema tem também "cancelado" (tratamento manual do e-mail). Detalhe em informacoes/todas as auditorias/AUDITORIA_STATUS_01-11-2026.md.
+- **Notificações (auditoria de 01-11-2026):** (1) o RF-117 diz que o encerramento por moderação devolve tudo em qualquer modelo, e o RF-118 manda orientar o doador do flexível a contestar junto à operadora, porque o ressarcimento seria do pesquisador: os dois não batem (o texto do e-mail segue o 641); (2) nenhum RF avisa o pesquisador quando uma denúncia contra ele é julgada procedente, mas o RF-034 deixa ele contestar: hoje ele só descobre olhando a tela. Perguntar se cabe um aviso "denúncia procedente".
 - **Como queremos esse pedido escrito:** "pegar no pé" da revisão externa, pedir que olhe sistemas de referência e traga ideias próprias, não só responda a lista.
 
 ---
@@ -147,21 +139,6 @@ Toda banca de TCC de sistema hoje em dia costuma perguntar sobre segurança logo
 
 **A ideia:** com o sistema pronto, fazer uma auditoria inteira pelos critérios da WCAG 2.2 (nível AA), tela por tela: tempo e movimento (2.2.1 e 2.2.2), navegação só pelo teclado, ordem do foco, textos alternativos, mensagens de erro ligadas ao campo, zoom de 200% e tela de celular. Ferramenta: o axe (já usado em rodadas anteriores) mais conferência manual, porque a ferramenta automática pega só parte dos problemas. **Só começar quando todos os módulos estiverem prontos**, como os testes com Playwright abaixo. Já anotados para ela (24-10-2026): tabela vazia que rola de lado no celular não recebe foco do teclado (axe, `scrollable-region-focusable`; o padrão da `caixa-tabela`, região com `tabIndex=0`, resolve), e o cabeçalho de coluna que ordena a tabela responde ao clique, mas não ao teclado.
 
-#### 🔴 Pendência aberta: auditoria dos logs, tela por tela (anotado em 01-11-2026)
-
-**Em palavras simples:** o "Histórico de alterações" (log) de cada tela mostra o nome de cada campo alterado. Esse nome tem de ser **o mesmo que a tela mostra** no formulário. A banca, o orientador ou um professor vai cobrar se o Alterar diz "Texto" e o log diz "Corpo".
-
-**Por que acontece:** o log traduz o nome técnico da coluna por uma lista única (`react/src/services/28-log-auditoria/constants/log-auditoria-nomes.constants.ts`), **pela coluna, não pela tela**. Coluna que não está na lista aparece com o nome do banco. E uma mesma coluna pode ter nomes diferentes em telas diferentes.
-
-**Já visto (01-11-2026, tela Mensagens):**
-- `corpo` aparecia como "Corpo" e o Alterar diz "Texto". **Corrigido**: entrou na lista.
-- `ativo` aparece como "Ativo" e o Alterar de Mensagens diz "Ligado".
-- `titulo` aparece como "Título" e o Alterar de Mensagens diz "Assunto" (e-mail) ou "Título" (sino).
-
-**A auditoria:** nas 11 telas que têm log (Usuários, Parâmetros do Sistema, Papéis, Pesquisadores, Motivos de Denúncia, Áreas do Conhecimento, Tipos de Link, Denúncias, Pedidos de Encerramento, Campanhas e Mensagens), alterar cada campo do formulário e conferir no log: (1) se a linha aparece logo depois de salvar; (2) se o "Campo alterado" tem o mesmo nome do formulário; (3) se o "De" e o "Para" estão legíveis (sem código, sem `true`/`false`, data formatada). Depois, decidir caso a caso quando o nome muda de uma tela para outra: renomear na tela ou tornar a lista por tabela.
-
-> Já corrigido em 01-11-2026: o log não se atualizava depois de salvar nas telas com Alterar em modal (só ao recarregar a página), e os registros com o mesmo horário trocavam de ordem a cada consulta.
-
 #### 🔴 Pendência aberta: testes automatizados com Playwright no React
 
 O `react/` não tem nenhum teste automatizado hoje (só `build`+`lint`). Um projeto de referência da disciplina (`COCAO_HOTEL_DDL_DML_CRUD_ppw2-main`) tem uma estrutura de testes Playwright organizada em 7 categorias (E2E completo, aceitação/requisito funcional, integração HTTP, API pura, *data-driven*, *snapshot* visual/acessibilidade, interceptação de erro) que pode servir de referência de estrutura, não de conteúdo (os testes deles são específicos do sistema de hotel).
@@ -176,7 +153,9 @@ O `react/` não tem nenhum teste automatizado hoje (só `build`+`lint`). Um proj
 
 ### Segurança
 
-#### 🟡 Conta excluída prende o e-mail (anotado em 01-11-2026)
+#### 🟡 Conta excluída prende o e-mail (anotado em 01-11-2026; o Lucas quer fazer, mas por último)
+
+**Ideia do Lucas (01-11-2026):** quem excluiu a conta e se arrependeu volta com o mesmo e-mail, e o que estava ligado a ela (contribuições e o resto) volta a aparecer, uma "reativação" por baixo dos panos, sem RF. Alguns sistemas fazem assim. Antes de fazer: estudar o que a exclusão apaga de verdade (a exclusão anonimiza parte dos dados, pela LGPD) e o que dá para devolver.
 
 **Em palavras simples:** quem exclui a conta não consegue criar outra com o mesmo e-mail: o cadastro responde "Já existe uma conta com esse e-mail.". A exclusão é lógica (`usuario.deletado = TRUE`), a linha fica no banco com o e-mail, e `UK_USUARIO_EMAIL` (01) exige e-mail único **entre todas as contas, inclusive as excluídas**.
 
@@ -225,28 +204,25 @@ Decidimos depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/todas as 
   - **Quantas telas:** 46 arquivos usam `mostraTexto`, 16 usam o aviso flutuante sozinho (ações fora de formulário).
   Mercado (24-10-2026): o Primer, do GitHub, desaconselha o aviso flutuante para erro; o GOV.UK usa duas camadas, um resumo no topo mais o erro em cada campo, as duas na própria página.
 
-#### 🟡 Auditoria de todos os status do sistema (25-10-2026)
+#### 🟡 O que sobrou da auditoria dos status (01-11-2026)
 
-Conferir cada status de cada tabela (campanha, contribuição, repasse, denúncia, encerramento...) contra os requisitos: todo status precisa estar num RF, e nenhum pode sobrar ou repetir o que outra coluna já diz (o caso do "repassado" da contribuição, grupo 1). Maior do que parece: status mexe em regra do banco, em tela e em teste.
+A regra do pesquisador suspenso e a matriz no RF-114 foram feitas em 01-11-2026; reabrir denúncia julgada continua permitido, com aviso e justificativa. Os 4 RFs com texto atrás do sistema estão no grupo 1, para a revisão externa.
 
 ### Visual e marca
 
+- **Modais menores, sem barra de rolagem quando der (01-11-2026, estudar antes).** Alguns modais poderiam ser menores sem perder conteúdo: texto de explicação vira tooltip (regra de 10-10-2026). Exemplo do Lucas, no Julgar Denúncia: o bloco "O que cada decisão faz" ("Aceitar torna esta denúncia improcedente...") caberia num tooltip. A meta é evitar a rolagem só nos modais em que der; o de denúncia é um deles. Estudar modal por modal antes de mexer.
+- **Coluna VALOR de Parâmetros: respondido em 01-11-2026.** Com a tabela apertada (DS-120), o e-mail quebra no "@" (não vira "ler tudo"), e a tabela não rola mais. Custo: as linhas em que a chave ou o e-mail quebram ficam com 53 ou 54 px, e não 51 (DS-100). Se incomodar, a alternativa é o "ler tudo" nessas duas colunas.
+
 - **Outros lugares que podem ganhar as mudanças do Consultar Campanha (25-10-2026), olhar tela por tela antes:** (1) **linhas alinhadas entre seções vizinhas** (`FichaLadoALado`, DS-115) no Consultar e no Alterar Usuário ("Dados da conta" ao lado de Auditoria e Papéis) e no Revisar Campanha: só vale onde os dois lados são campos pareados; (2) **data com hora sem os segundos** (`formatarDataHora(iso, true)`) onde a data fica em meia coluna e quebra: Julgar Denúncia, Decidir Encerramento, Consultar Contribuição, Consultar Notificação, Resolver Revisão; (3) **linha de números de ponta a ponta** (`SecaoFicha centralizada`, DS-116): a Consultar Contribuição (valor, taxa, total) é candidata. Já feitos em 25-10-2026: a barra colada no número no Alterar Campanha e na Consultar Contribuição, e o "Enviar" com cara de indisponível no Alterar Campanha.
-- **Branch `feat/novas-telas-teste` (02-10-2026):** tem o Dashboard em seções ("Precisa de você") e os links acadêmicos em cartões no celular, feitos antes das regras visuais novas. Decidir se entram no main, refeitos com as regras do `DESIGN_SYSTEM.md`, ou se a branch é descartada.
+- **Branch `feat/novas-telas-teste` (02-10-2026):** tem o Dashboard em seções ("Precisa de você") e os links acadêmicos em cartões no celular, feitos antes das regras visuais novas. Decidir se entram no main, refeitos com as regras do `DESIGN_SYSTEM.md`, ou se a branch é descartada. **Contexto (Lucas, 01-11-2026):** o propósito era só deixar a área restrita mais bonita, por isso ficou separada. Para usar, seria preciso atualizar a branch com o main e ver o que dá para aproveitar.
 
 - **Troca do logo e do ícone pelo painel** (aba Identidade Visual do Dashboard, hoje um espaço reservado). Desde 25-10-2026 a marca padrão está no projeto (`DOCUMENTACAO_FRONTEND.md`, seção 12); o envio pelo painel substitui a padrão, e o admin do futuro troca sem mexer no código nem no banco. A análise, os 4 problemas e as duas decisões em aberto estão no topo do `ACHADOS_PARA_DISCUTIR.md`. O envio passa pelo Storage pessoal do Lucas: nos testes, só ele envia.
 
 ### Estrutura e ferramentas
 
-#### 🟡 Para o futuro (25-10-2026): auditoria de classes do Tailwind que anulam o CSS
+#### 🟡 Auditoria do Tailwind que anula o CSS: falta a versão com navegador
 
-**Em palavras simples:** no React, uma classe pronta do Tailwind escrita no componente (`justify-between`, `sm:grid-cols-2`...) sempre vence uma regra do nosso CSS (`4-componentes.css`) que mexa na mesma coisa, e vence em silêncio: a regra existe, mas não faz nada. Aconteceu duas vezes seguidas em 25-10-2026 no Consultar Campanha (o valor do Financeiro não centralizava e a Auditoria caía embaixo de Dados); a regra para não repetir está no DS-115 e no DS-116 do `DESIGN_SYSTEM.md`. A auditoria procuraria outros casos assim no sistema inteiro.
-
-- **Como poderia ser feita (a decidir quando chegar a hora):** (1) **com o Playwright**, tela por tela: para cada elemento que tem uma classe nossa do CSS, comparar o que a regra dela pede com o que o navegador aplicou; diferente = alguma classe do Tailwind está vencendo. (2) **Sem navegador**, mais barata: um script que lê o JSX e o CSS e lista os elementos em que a classe nossa e uma classe do Tailwind mexem na mesma propriedade (colunas, alinhamento, margem, cor), como a ferramenta `valores-escritos-react.mjs` já faz com valores escritos à mão. A (2) acha os candidatos; a (1) prova quais quebram de verdade.
-- **A versão sem navegador, desenhada em 25-10-2026 (talvez na semana seguinte):** um script no estilo do `valores-escritos-react.mjs`, em quatro passos: (1) lê o CSS nosso e anota que propriedades cada classe nossa muda, contando a classe que aparece no fim de um seletor composto (`.ficha-centralizada .campo-ficha__valor`, o caso de 25-10); (2) lê o JSX e, em cada elemento, separa as classes nossas das do Tailwind; (3) traduz as do Tailwind para a propriedade que mudam (`justify-between` = alinhamento, `sm:grid-cols-2` = colunas, `p-4` = espaço interno), cobrindo as famílias que o projeto usa (colunas, alinhamento, espaço, largura, altura, texto, cor, borda, exibição); (4) lista os elementos em que as duas mexem na mesma propriedade. Os dois bugs de 25-10 teriam aparecido.
-  - **Limites:** acha suspeitos, não prova erro (às vezes o utilitário está ali de propósito); cada suspeito é conferido lendo o código, e só os duvidosos vão para o navegador. Classe montada a partir de variável só é pega quando o texto está escrito no arquivo. Classe do Tailwind que o script não sabe traduzir sai numa lista à parte, "não sei traduzir", nunca escondida.
-  - **Custo:** médio. O script é rápido; o tempo vai na conferência dos suspeitos. Muitos suspeitos: trazer a lista organizada antes de mexer em qualquer coisa.
-- **Quando:** sem pressa. A versão sem navegador pode vir antes; a com Playwright, junto da auditoria WCAG ou dos testes com Playwright do fim do projeto (grupo 4).
+A versão sem navegador foi feita em 01-11-2026 (`informacoes/testes-banco/ferramentas/tailwind-x-css.mjs`), e os achados foram corrigidos. Falta a versão com navegador, que prova quais candidatos quebram de verdade: junto da auditoria WCAG ou dos testes com Playwright do fim do projeto (grupo 4).
 
 #### 🟡 Para o futuro (29-09-2026): super auditoria de padrões de mercado
 

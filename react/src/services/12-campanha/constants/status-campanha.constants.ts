@@ -50,7 +50,7 @@ export const ROTULO_MODELO_CAMPANHA: Record<ModeloCampanha, string> = {
   flexivel: 'Flexível',
 };
 
-// "Em breve" (RF-059) não é status do banco: é a campanha aprovada ('ativo') cujo início ainda não chegou. Ela já
+// "Em breve" (RF-060) não é status do banco: é a campanha aprovada ('ativo') cujo início ainda não chegou. Ela já
 // é pública e já recebe comentários; a contagem regressiva fica para a página pública.
 const ROTULO_EM_BREVE = 'Em breve';
 
@@ -71,17 +71,17 @@ export const ORDEM_ROTULOS_STATUS_CAMPANHA = ORDEM_STATUS_CAMPANHA.flatMap((stat
   status === 'ativo' ? [ROTULO_EM_BREVE, ROTULO_STATUS_CAMPANHA[status]] : [ROTULO_STATUS_CAMPANHA[status]],
 );
 
-// Onde o banco aceita comentário novo (fn_valida_comentario_campanha_ativa, 91020; RF-092): campanha publicada,
+// Onde o banco aceita comentário novo (fn_valida_comentario_campanha_ativa, 91020; RF-095): campanha publicada,
 // menos rejeitada e encerrada por moderação. "Em breve" é 'ativo' e entra.
 export const STATUS_ACEITA_COMENTARIO: ReadonlySet<StatusCampanha> = new Set<StatusCampanha>(['ativo', 'sucesso', 'nao_atingido', 'encerrado']);
 
-// Onde o banco aceita atualização nova (validar_atualizacao_campanha, 91019; RF-051).
+// Onde o banco aceita atualização nova (validar_atualizacao_campanha, 91019; RF-052).
 export const STATUS_ACEITA_ATUALIZACAO: ReadonlySet<StatusCampanha> = new Set<StatusCampanha>(['ativo', 'sucesso', 'nao_atingido']);
 
 // Onde o banco aceita seguir (fn_valida_seguir_campanha_publicada, 91034): o que pol_campanha_select mostra a todos.
 export const STATUS_ACEITA_SEGUIR: ReadonlySet<StatusCampanha> = new Set<StatusCampanha>(['ativo', 'sucesso', 'nao_atingido', 'encerrado']);
 
-// Onde o banco aceita denúncia de campanha (fn_valida_denuncia_alvo, 91035; RF-106): só campanha ativa.
+// Onde o banco aceita denúncia de campanha (fn_valida_denuncia_alvo, 91035; RF-109): só campanha ativa.
 export const STATUS_ACEITA_DENUNCIA: ReadonlySet<StatusCampanha> = new Set<StatusCampanha>(['ativo']);
 
 // Campanha que já foi ao ar (aprovada em algum momento): tem comentários e atualizações para mostrar.

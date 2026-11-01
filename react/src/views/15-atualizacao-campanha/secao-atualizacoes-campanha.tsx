@@ -15,7 +15,7 @@ import {
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
-import { contarCaracteres } from '../../services/constant/util/validacao.util';
+import { erroLimiteCaracteres } from '../../services/constant/util/validacao.util';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { AtualizacaoCampanhaResponse } from '../../services/15-atualizacao-campanha/type/atualizacao-campanha.type';
 import type { FaseAtualizacao, TipoAtualizacao } from '../../services/constant/type/enums-do-banco.gerado';
@@ -24,7 +24,7 @@ import { EstadoVazio } from '../../components/crud/estado-vazio';
 interface SecaoAtualizacoesCampanhaProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
   idCampanha: number;
-  // Campanha ativa, com sucesso ou não atingida (RF-051): só nelas o banco aceita atualização nova.
+  // Campanha ativa, com sucesso ou não atingida (RF-052): só nelas o banco aceita atualização nova.
   podePublicar: boolean;
   // Dono: publica e oculta. Quem só lê (Consultar, quem segue): vê a lista, sem formulário nem ações.
   podeGerenciar?: boolean;
@@ -39,9 +39,9 @@ interface FormAtualizacao {
 
 const FORM_VAZIO: FormAtualizacao = { titulo: '', conteudo: '', fase: ORDEM_FASE_ATUALIZACAO[0], tipo: ORDEM_TIPO_ATUALIZACAO[0] };
 
-// Atualizações de progresso do dono da campanha (RF-051, RF-052): publicar (título, texto, fase e formato) e ocultar
+// Atualizações de progresso do dono da campanha (RF-052, RF-053): publicar (título, texto, fase e formato) e ocultar
 // ou mostrar de novo. Elas aparecem na página pública da campanha, e quem segue a campanha recebe aviso por e-mail
-// (RF-053, quando o módulo de e-mail existir).
+// (RF-054, quando o módulo de e-mail existir).
 export function SecaoAtualizacoesCampanha({ auth, idCampanha, podePublicar, podeGerenciar = true }: SecaoAtualizacoesCampanhaProps) {
   const [atualizacoes, setAtualizacoes] = useState<AtualizacaoCampanhaResponse[] | null>(null);
   const [form, setForm] = useState<FormAtualizacao>(FORM_VAZIO);
@@ -56,7 +56,7 @@ export function SecaoAtualizacoesCampanha({ auth, idCampanha, podePublicar, pode
     conteudo:
       form.conteudo.trim() === ''
         ? 'Escreva o conteúdo.'
-        : contarCaracteres(form.conteudo) > limite && `O conteúdo passou do limite de ${limite.toLocaleString('pt-BR')} caracteres.`,
+        : erroLimiteCaracteres(form.conteudo, limite, 'O conteúdo'),
   }));
 
   useEffect(() => {

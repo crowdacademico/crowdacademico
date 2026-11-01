@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { BadgeSituacaoRevisao } from '../../components/crud/badge-situacao-revisao';
+import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { GenericTable } from '../../components/crud/generic-table';
 import { pagamentoRevisaoApi } from '../../services/25-pagamento-revisao/api/pagamento-revisao.api';
 import {
@@ -8,7 +9,8 @@ import {
   SITUACOES_PENDENTES,
 } from '../../services/25-pagamento-revisao/constants/pagamento-revisao.constants';
 import { ModalResolverRevisao } from './modal-resolver-revisao';
-import { formatarMoeda } from '../../services/constant/util/formatacao.util';
+import { textoValorEvento } from '../../services/25-pagamento-revisao/util/valor-evento.util';
+import { ValorEvento } from './valor-evento';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { RevisaoPagamentoResponse } from '../../services/25-pagamento-revisao/type/pagamento-revisao.type';
 import { ordenarFilaSla } from '../../services/constant/util/fila-sla.util';
@@ -28,18 +30,8 @@ interface RevisaoLinha extends RevisaoPagamentoResponse {
 // dinheiro se moveu e o sistema NÃO aplicou de propósito, ex.: pagamento de uma contribuição que já expirou), e "Tentar de
 // novo" foi um erro passageiro. Depois, o histórico, do mais novo para o mais antigo. Abre sem filtro. Alterar abre
 // a baixa (nos que ainda não foram processados); Consultar abre qualquer evento só para ler.
-// O sinal diz para onde o dinheiro andou na conta da plataforma: "+" entrou (verde), "-" saiu (estorno, devolução,
-// repasse; cor normal: sair dinheiro é o sistema funcionando, não um erro). Sem sinal quando nada se moveu.
-const SINAL = { entrada: '+', saida: '-' } as const;
-const CLASSE_SENTIDO = { entrada: 'texto-sucesso enfase', saida: 'enfase' } as const;
-const textoValor = (linha: RevisaoLinha) => {
-  if (linha.valor === null) return '-';
-  return (linha.sentido ? SINAL[linha.sentido] + ' ' : '') + formatarMoeda(linha.valor);
-};
-// Arrecadado atual da campanha do evento; "-" quando o evento não está ligado a nenhuma campanha.
-const textoArrecadado = (linha: RevisaoLinha) => (linha.arrecadado === null ? '-' : formatarMoeda(linha.arrecadado));
-const renderizarValor = (linha: RevisaoLinha) =>
-  linha.sentido ? <span className={CLASSE_SENTIDO[linha.sentido]}>{textoValor(linha)}</span> : textoValor(linha);
+// O valor com o sinal de para onde o dinheiro andou (valor-evento.tsx). O arrecadado da campanha fica no Consultar.
+const renderizarValor = (linha: RevisaoLinha) => <ValorEvento evento={linha} />;
 
 export function ListarRevisoesPagamento({ auth }: PropsPagina) {
   const [aberto, setAberto] = useState<{ revisao: RevisaoPagamentoResponse; somenteLeitura: boolean } | null>(null);
@@ -67,10 +59,10 @@ export function ListarRevisoesPagamento({ auth }: PropsPagina) {
         colunas={[
           { chave: 'idEvento', rotulo: 'id', tipo: 'id' },
           { chave: 'motivoTexto', rotulo: 'erro de processamento', tipo: 'nome', umaLinha: true },
-          { chave: 'tipo', rotulo: 'evento', tipo: 'texto' },
+          // O nome do evento como o provedor manda (PAYMENT_RECEIVED): numa linha só, sem quebrar no "_".
+          { chave: 'tipo', rotulo: 'evento', tipo: 'texto', renderizar: (linha: RevisaoLinha) => linha.tipo },
           { chave: 'recebidoEmData', rotulo: 'recebido em', tipo: 'dataHora' },
-          { chave: 'valor', rotulo: 'valor', tipo: 'dinheiro', renderizar: renderizarValor, textoExibido: textoValor },
-          { chave: 'arrecadado', rotulo: 'arrecadado', tipo: 'dinheiro', renderizar: textoArrecadado, textoExibido: textoArrecadado },
+          { chave: 'valor', rotulo: 'valor', tipo: 'dinheiro', renderizar: renderizarValor, textoExibido: textoValorEvento },
           { chave: 'esperandoDesde', rotulo: 'esperando', tipo: 'espera' },
           {
             chave: 'situacaoRotulo',
@@ -101,6 +93,7 @@ export function ListarRevisoesPagamento({ auth }: PropsPagina) {
           { chave: 'tipo', rotulo: 'Evento' },
         ]}
       />
+      <BlocoLogAuditoria authFetch={auth.authFetch} tabela="evento_pagamento" chaveRecarga={chaveRecarga} />
 
       {aberto && (
         <ModalResolverRevisao

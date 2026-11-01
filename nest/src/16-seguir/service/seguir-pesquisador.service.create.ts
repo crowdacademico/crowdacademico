@@ -4,7 +4,7 @@ import { SeguirPesquisadorConverter } from '../dto/converter/seguir-pesquisador.
 import { SeguirPesquisadorRequestCreate } from '../dto/request/seguir-pesquisador.request-create';
 import { SeguirPesquisadorResponse } from '../dto/response/seguir-pesquisador.response';
 
-// RF-028. O banco barra seguir duas vezes (UK_SEGUIR_PESQUISADOR_USUARIO_PESQUISADOR, 23505) e seguir a si mesmo
+// RF-029. O banco barra seguir duas vezes (UK_SEGUIR_PESQUISADOR_USUARIO_PESQUISADOR, 23505) e seguir a si mesmo
 // (CK_SEGUIR_PESQUISADOR_NAO_AUTOSEGUIR, 23514), traduzidos pelo PostgresExceptionFilter. Aqui só a regra que o banco
 // não tem: o alvo precisa ser um pesquisador (ter perfil), não qualquer conta.
 @Injectable()

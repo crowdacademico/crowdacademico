@@ -35,7 +35,7 @@ const AJUDA_NOTIFICACOES = [
   'O texto de cada e-mail se edita em Configurações > Mensagens.',
 ].join('\n\n');
 
-// Aba Notificações do Dashboard (RF-121): todo e-mail que o sistema pôs na fila. Fila do SLA (DS-49): primeiro o que
+// Aba Notificações do Dashboard (RF-124): todo e-mail que o sistema pôs na fila. Fila do SLA (DS-49): primeiro o que
 // espera (na fila ou que falhou), o mais antigo no topo; depois os enviados e cancelados, o mais novo primeiro. O
 // envio é sozinho, a cada minuto (worker do Nest, 4-mail); aqui só se vê e se trata o que falhou: Reenviar põe de volta
 // na fila, Cancelar tira de vez. Mora em 27-notificacao (o dono do dado), aparece dentro do Dashboard.

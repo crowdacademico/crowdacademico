@@ -78,7 +78,7 @@ export const usuarioPapelApi = {
       method: 'DELETE',
     }).then(tratarResposta<void>),
   // Suspender/revogar UM papel por um tempo, em vez de remover o vínculo: preserva quando foi atribuído, volta
-  // sozinho no prazo. `ate` é ISO string; motivo obrigatório (RF-118), como na suspensão da conta.
+  // sozinho no prazo. `ate` é ISO string; motivo obrigatório (RF-121), como na suspensão da conta.
   suspender: (
     authFetch: AuthFetch,
     idUsuario: number | string,

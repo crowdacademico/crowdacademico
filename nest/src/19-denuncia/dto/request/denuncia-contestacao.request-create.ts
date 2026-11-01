@@ -1,6 +1,6 @@
 import { IsString, Matches, MaxLength } from 'class-validator';
 
-// Contestação do score (RF-033): o pesquisador penalizado explica por que a denúncia procedente é injusta.
+// Contestação do score (RF-034): o pesquisador penalizado explica por que a denúncia procedente é injusta.
 export class DenunciaContestacaoRequestCreate {
   @IsString({ message: 'Escreva por que a penalidade é injusta.' })
   @Matches(/\S/, { message: 'Escreva por que a penalidade é injusta.' })

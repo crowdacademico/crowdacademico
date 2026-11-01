@@ -8,7 +8,6 @@ import {
   ROTULO_TITULO_ACADEMICO,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
-import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { ModaisUsuario } from '../1-usuario/modais-usuario';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
@@ -60,11 +59,6 @@ export function ListarPesquisadores({ auth }: PropsPagina) {
     });
   }, [auth.authFetch]);
 
-  const buscarLogPerfil = useCallback(
-    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'perfil_pesquisador', pagina, tamanho),
-    [auth.authFetch],
-  );
-
   return (
     <div className="admin-content-painel">
       <GenericTable
@@ -73,16 +67,16 @@ export function ListarPesquisadores({ auth }: PropsPagina) {
           { chave: 'idUsuario', rotulo: 'id', tipo: 'id' },
           { chave: 'nome', rotulo: 'nome', tipo: 'nome' },
           { chave: 'tituloAcademico', rotulo: 'título', tipo: 'status' },
-          { chave: 'statusPesquisador', rotulo: 'status', tipo: 'status' },
-          { chave: 'scoreAtual', rotulo: 'score', tipo: 'numero' },
+          { chave: 'statusPesquisador', rotulo: 'situação', tipo: 'status' },
+          { chave: 'scoreAtual', rotulo: 'pontuação', tipo: 'numero' },
         ]}
         chavePrimaria="idUsuario"
         listar={listarPesquisadores}
           chaveRecarga={chaveRecarga}
         acoes={acoesCompletas}
-        filtrosFacetados={[{ chave: 'statusPesquisador', rotulo: 'Status' }]}
+        filtrosFacetados={[{ chave: 'statusPesquisador', rotulo: 'Situação' }]}
       />
-      <BlocoLogAuditoria buscar={buscarLogPerfil} chaveRecarga={chaveRecarga} />
+      <BlocoLogAuditoria authFetch={auth.authFetch} tabela="perfil_pesquisador" chaveRecarga={chaveRecarga} />
 
       <ModaisUsuario
         auth={auth}

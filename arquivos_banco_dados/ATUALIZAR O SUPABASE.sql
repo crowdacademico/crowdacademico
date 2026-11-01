@@ -265,3 +265,332 @@ BEGIN
      WHERE id_notificacao = p_id_notificacao;
 END;
 $$;
+
+-- ============================================================================
+-- GRUPO BV (01-11-2026) - Correções das auditorias de 01-11: log, pesquisador suspenso e limites de texto. IDEMPOTENTE.
+-- ⚠️ PARE O NEST ANTES DE COLAR: a parte 4 faz ALTER TABLE em perfil_pesquisador (dá deadlock com o Nest rodando).
+--
+-- O que muda:
+-- 1. O log não grava mais a chave Pix cifrada (como já não gravava a senha e o CPF): aparece "(protegido)". Os
+--    registros antigos do log perdem esse valor também.
+-- 2. O "Ver log" de Pedidos de Encerramento passa a mostrar quem aprovou, rejeitou ou cancelou cada pedido (antes
+--    ficava sempre vazio: a tabela não tinha trigger de log).
+-- 3. Dois limites de texto novos em Parâmetros: contestação da penalidade (e a justificativa da decisão) e
+--    justificativa da rejeição da campanha. Os valores são os de antes (5.000 e 10.000), agora configuráveis. A
+--    descrição dos limites de texto passa a dizer o teto de cada um ("até 20.000").
+-- 4. Regra nova: pesquisador "suspenso" sempre tem a data da suspensão, e "ativo" nunca tem.
+-- ============================================================================
+
+-- 1. Chave Pix fora do log
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_perfil_atribui_papel_pesquisador ON perfil_pesquisador;
+CREATE TRIGGER trg_perfil_atribui_papel_pesquisador
+AFTER INSERT ON perfil_pesquisador
+FOR EACH ROW EXECUTE FUNCTION public.fn_atribuir_papel_pesquisador();
+
+-- ============================================================
+-- Função:     fn_log_auditoria
+-- Assinatura: (VARIADIC coluna_pk TEXT[]) -> TRIGGER
+-- Bloco:      [05-L]
+-- Regra:      Grava em log_auditoria quem (id_usuario_atual()), o quê (tabela + identidade do registro) e quando
+--             (ocorrido_em, default NOW()) para qualquer INSERT/UPDATE/DELETE nas tabelas com a trigger abaixo. Função
+--             genérica: os argumentos de fn_log_auditoria('coluna_pk_1'[, 'coluna_pk_2']) são a(s) coluna(s) de PRIMARY KEY
+--             da tabela (1 para PK simples, 2 para composta, como usuario_papel/papel_permissao). SECURITY DEFINER: ninguém,
+--             nem app_nestjs, tem GRANT INSERT em log_auditoria (06); a trigger grava com o privilégio de quem a CRIOU.
+--             REDAÇÃO DE COLUNA SENSÍVEL: 'senha_hash' (usuario), 'cpf_criptografado', 'cpf_hash' e 'chave_pix_criptografada' (perfil_pesquisador) nunca
+--             entram em dados_anteriores/dados_novos: são removidas do JSONB (operador `-`) DEPOIS de calcular
+--             campos_alterados, então o NOME da coluna ainda aparece em campos_alterados (saber QUE a senha/CPF mudou é
+--             auditoria válida; o valor, não). Se uma tabela nova entrar na lista de triggers e tiver outra coluna sensível
+--             (ex.: token_hash), acrescente `- 'coluna'` nas duas linhas de v_antigos/v_novos. UPDATE que não muda nenhum
+--             valor de verdade não gera linha (v_campos fica NULL e a função retorna cedo).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_log_auditoria()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_antigos_completo JSONB;
+    v_novos_completo   JSONB;
+    v_antigos          JSONB;
+    v_novos            JSONB;
+    v_campos           TEXT[];
+    v_coluna           TEXT;
+    v_partes           TEXT[] := ARRAY[]::TEXT[];
+    v_identidade       TEXT;
+BEGIN
+    -- v_identidade é montada DENTRO de cada ramo (não antes, com um
+    -- COALESCE(NEW, OLD) genérico) de propósito: NEW não existe em DELETE
+    -- e OLD não existe em INSERT - cada ramo só referencia a variável que
+    -- o Postgres garante estar preenchida naquele TG_OP.
+    IF TG_OP = 'INSERT' THEN
+        FOREACH v_coluna IN ARRAY TG_ARGV LOOP
+            v_partes := v_partes || (to_jsonb(NEW) ->> v_coluna);
+        END LOOP;
+        v_identidade := array_to_string(v_partes, ',');
+
+        v_novos := to_jsonb(NEW) - 'senha_hash' - 'cpf_criptografado' - 'cpf_hash' - 'chave_pix_criptografada';
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, dados_novos)
+        VALUES (TG_TABLE_NAME, v_identidade, TG_OP, public.id_usuario_atual(), v_novos);
+        RETURN NEW;
+
+    ELSIF TG_OP = 'UPDATE' THEN
+        FOREACH v_coluna IN ARRAY TG_ARGV LOOP
+            v_partes := v_partes || (to_jsonb(NEW) ->> v_coluna);
+        END LOOP;
+        v_identidade := array_to_string(v_partes, ',');
+
+        v_antigos_completo := to_jsonb(OLD);
+        v_novos_completo   := to_jsonb(NEW);
+
+        SELECT array_agg(chave) INTO v_campos
+        FROM jsonb_object_keys(v_novos_completo) AS chave
+        WHERE v_antigos_completo -> chave IS DISTINCT FROM v_novos_completo -> chave;
+
+        IF v_campos IS NULL THEN
+            RETURN NEW;
+        END IF;
+
+        -- score_atual/score_atualizado_em (perfil_pesquisador) mudam SOZINHOS toda vez que
+        -- recalcular_score_pesquisador() roda (05, [05-I-4]; disparado por qualquer trigger que mexa em
+        -- campanha/comentário/etc., não por ação direta sobre o PRÓPRIO perfil_pesquisador). Sem este filtro, isso
+        -- viraria a maioria das linhas do log: ruído de motor automático afogando o que o log existe para mostrar
+        -- (ação ADMINISTRATIVA de alguém). Se as ÚNICAS colunas que mudaram forem essas duas, não registra. Qualquer
+        -- outra mudança em perfil_pesquisador (status_pesquisador, tipo_vinculo...) continua registrando, mesmo que
+        -- score também tenha mudado junto.
+        IF TG_TABLE_NAME = 'perfil_pesquisador' AND v_campos <@ ARRAY['score_atual', 'score_atualizado_em'] THEN
+            RETURN NEW;
+        END IF;
+
+        -- registrar_login_sucesso() (03, [03-O]) roda em TODO login bem sucedido, sempre mudando
+        -- ultimo_login_em/ultimo_login_ip: mesmo motivo do filtro de score_atual acima (motor automático, não ação
+        -- administrativa). tentativas_login_falhas/bloqueado_ate (zerados pela mesma função) ficam FORA desta lista de
+        -- propósito: se um login limpa um bloqueio anterior, ou um admin desbloqueia manualmente
+        -- (usuario.service.unlock.ts), isso vale ficar no log; só o "logou normalmente" é ruído. O dado não sumiu,
+        -- só saiu do log: ultimo_login_em está em UsuarioResponseDto/Consultar Usuário (ultimo_login_ip nunca é exposto
+        -- pela API).
+        IF TG_TABLE_NAME = 'usuario' AND v_campos <@ ARRAY['ultimo_login_em', 'ultimo_login_ip'] THEN
+            RETURN NEW;
+        END IF;
+
+        v_antigos := v_antigos_completo - 'senha_hash' - 'cpf_criptografado' - 'cpf_hash' - 'chave_pix_criptografada';
+        v_novos   := v_novos_completo - 'senha_hash' - 'cpf_criptografado' - 'cpf_hash' - 'chave_pix_criptografada';
+
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, campos_alterados, dados_anteriores, dados_novos)
+        VALUES (TG_TABLE_NAME, v_identidade, TG_OP, public.id_usuario_atual(), v_campos, v_antigos, v_novos);
+        RETURN NEW;
+
+    ELSIF TG_OP = 'DELETE' THEN
+        FOREACH v_coluna IN ARRAY TG_ARGV LOOP
+            v_partes := v_partes || (to_jsonb(OLD) ->> v_coluna);
+        END LOOP;
+        v_identidade := array_to_string(v_partes, ',');
+
+        v_antigos := to_jsonb(OLD) - 'senha_hash' - 'cpf_criptografado' - 'cpf_hash' - 'chave_pix_criptografada';
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, dados_anteriores)
+        VALUES (TG_TABLE_NAME, v_identidade, TG_OP, public.id_usuario_atual(), v_antigos);
+        RETURN OLD;
+    END IF;
+
+    RETURN NULL;
+END;
+$$;
+
+UPDATE log_auditoria
+   SET dados_anteriores = dados_anteriores - 'chave_pix_criptografada',
+       dados_novos      = dados_novos - 'chave_pix_criptografada'
+ WHERE tabela = 'perfil_pesquisador'
+   AND (dados_anteriores ? 'chave_pix_criptografada' OR dados_novos ? 'chave_pix_criptografada');
+
+-- 2. Log dos pedidos de encerramento
+-- solicitacao_encerramento: o mesmo da denúncia, só a troca de situação (aprovar, rejeitar, cancelar). É o que o "Ver log"
+-- da tela Pedidos de Encerramento mostra.
+DROP TRIGGER IF EXISTS trg_log_auditoria_solicitacao_encerramento_status ON solicitacao_encerramento;
+CREATE TRIGGER trg_log_auditoria_solicitacao_encerramento_status
+AFTER UPDATE ON solicitacao_encerramento
+FOR EACH ROW
+WHEN (OLD.status IS DISTINCT FROM NEW.status)
+EXECUTE FUNCTION public.fn_log_auditoria('id_solicitacao_encerramento');
+
+-- 3. Limites de texto
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
+(NULL, 'limite_caracteres_contestacao',            '5000', 'inteiro', 'Nº máximo de caracteres no pedido de revisão de uma penalidade e na justificativa da decisão (até 5.000)', TRUE, TRUE),
+(NULL, 'limite_caracteres_justificativa_rejeicao', '10000', 'inteiro', 'Nº máximo de caracteres na justificativa da rejeição de uma campanha (até 10.000)', TRUE, TRUE)
+ON CONFLICT (chave) DO NOTHING;
+
+UPDATE configuracoes SET descricao = 'Nº máximo de caracteres na descrição da campanha (até 20.000)' WHERE chave = 'limite_caracteres_descricao_campanha';
+UPDATE configuracoes SET descricao = 'Nº máximo de caracteres no texto de uma atualização de campanha (até 20.000)' WHERE chave = 'limite_caracteres_conteudo_atualizacao';
+UPDATE configuracoes SET descricao = 'Nº máximo de caracteres nos detalhes adicionais de uma denúncia (até 5.000)' WHERE chave = 'limite_caracteres_relato_denuncia';
+UPDATE configuracoes SET descricao = 'Nº máximo de caracteres na justificativa da decisão sobre uma denúncia (até 5.000)' WHERE chave = 'limite_caracteres_justificativa_denuncia';
+UPDATE configuracoes SET descricao = 'Nº máximo de caracteres em cada justificativa do pedido de encerramento antecipado (até 10.000)' WHERE chave = 'limite_caracteres_justificativa_encerramento';
+UPDATE configuracoes SET descricao = 'Nº máximo de caracteres na descrição de uma recompensa (até 10.000)' WHERE chave = 'limite_caracteres_descricao_recompensa';
+UPDATE configuracoes SET descricao = 'Nº máximo de caracteres na descrição de um item de orçamento (até 20.000)' WHERE chave = 'limite_caracteres_descricao_orcamento';
+UPDATE configuracoes SET descricao = 'Nº máximo de caracteres na descrição de um marco do cronograma (até 20.000)' WHERE chave = 'limite_caracteres_descricao_marco';
+
+-- Contestação da penalidade (o pedido do pesquisador e a justificativa de quem decide) e justificativa da rejeição
+-- da campanha: o mesmo molde dos limites acima.
+DROP TRIGGER IF EXISTS trg_denuncia_valida_limite_contestacao ON denuncia;
+CREATE TRIGGER trg_denuncia_valida_limite_contestacao
+    BEFORE INSERT OR UPDATE ON denuncia
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_limite_texto_livre('contestacao', 'limite_caracteres_contestacao', '5000');
+DROP TRIGGER IF EXISTS trg_denuncia_valida_limite_just_contestacao ON denuncia;
+CREATE TRIGGER trg_denuncia_valida_limite_just_contestacao
+    BEFORE INSERT OR UPDATE ON denuncia
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_limite_texto_livre('justificativa_contestacao', 'limite_caracteres_contestacao', '5000');
+DROP TRIGGER IF EXISTS trg_historico_rejeicao_valida_limite_texto ON historico_rejeicao;
+CREATE TRIGGER trg_historico_rejeicao_valida_limite_texto
+    BEFORE INSERT OR UPDATE ON historico_rejeicao
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_limite_texto_livre('justificativa', 'limite_caracteres_justificativa_rejeicao', '10000');
+
+-- 4. Pesquisador suspenso sempre com data
+ALTER TABLE perfil_pesquisador DROP CONSTRAINT IF EXISTS "CK_PERFIL_PESQUISADOR_STATUS_SUSPENSAO";
+ALTER TABLE perfil_pesquisador ADD CONSTRAINT "CK_PERFIL_PESQUISADOR_STATUS_SUSPENSAO"
+    CHECK ((status_pesquisador = 'suspenso') = (suspenso_ate IS NOT NULL));
+
+-- ============================================================================
+-- GRUPO BW (01-11-2026) - "Ver log" nas telas de pagamento e em Termos de Uso, Pontuação e Aprovar Campanhas. IDEMPOTENTE.
+-- ⚠️ PARE O NEST ANTES DE COLAR: cria gatilhos em contribuicao, repasse e evento_pagamento (dá deadlock com o Nest rodando).
+--
+-- O que muda:
+-- 1. O log passa a registrar a troca de situação de contribuição e de repasse, e a baixa de um aviso do provedor
+--    (Reembolsos Manuais, Repasses em Atenção e Revisões de Pagamento ganham o "Ver log"). A auditoria financeira
+--    continua sendo o registro oficial do dinheiro.
+-- 2. O log nunca grava o token de sessão da contribuição nem o conteúdo inteiro do aviso do provedor.
+-- (Termos de Uso, Pontuação e Aprovar Campanhas usam tabelas que já tinham log: só a tela muda.)
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_perfil_atribui_papel_pesquisador ON perfil_pesquisador;
+CREATE TRIGGER trg_perfil_atribui_papel_pesquisador
+AFTER INSERT ON perfil_pesquisador
+FOR EACH ROW EXECUTE FUNCTION public.fn_atribuir_papel_pesquisador();
+
+-- ============================================================
+-- Função:     fn_log_auditoria
+-- Assinatura: (VARIADIC coluna_pk TEXT[]) -> TRIGGER
+-- Bloco:      [05-L]
+-- Regra:      Grava em log_auditoria quem (id_usuario_atual()), o quê (tabela + identidade do registro) e quando
+--             (ocorrido_em, default NOW()) para qualquer INSERT/UPDATE/DELETE nas tabelas com a trigger abaixo. Função
+--             genérica: os argumentos de fn_log_auditoria('coluna_pk_1'[, 'coluna_pk_2']) são a(s) coluna(s) de PRIMARY KEY
+--             da tabela (1 para PK simples, 2 para composta, como usuario_papel/papel_permissao). SECURITY DEFINER: ninguém,
+--             nem app_nestjs, tem GRANT INSERT em log_auditoria (06); a trigger grava com o privilégio de quem a CRIOU.
+--             REDAÇÃO DE COLUNA SENSÍVEL: 'senha_hash' (usuario), 'cpf_criptografado', 'cpf_hash' e 'chave_pix_criptografada'
+--             (perfil_pesquisador), 'token_sessao' (contribuicao) e 'payload' (evento_pagamento, grande) nunca
+--             entram em dados_anteriores/dados_novos: são removidas do JSONB (operador `-`) DEPOIS de calcular
+--             campos_alterados, então o NOME da coluna ainda aparece em campos_alterados (saber QUE a senha/CPF mudou é
+--             auditoria válida; o valor, não). Se uma tabela nova entrar na lista de triggers e tiver outra coluna sensível
+--             (ex.: token_hash), acrescente `- 'coluna'` nas duas linhas de v_antigos/v_novos. UPDATE que não muda nenhum
+--             valor de verdade não gera linha (v_campos fica NULL e a função retorna cedo).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_log_auditoria()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_antigos_completo JSONB;
+    v_novos_completo   JSONB;
+    v_antigos          JSONB;
+    v_novos            JSONB;
+    v_campos           TEXT[];
+    v_coluna           TEXT;
+    v_partes           TEXT[] := ARRAY[]::TEXT[];
+    v_identidade       TEXT;
+BEGIN
+    -- v_identidade é montada DENTRO de cada ramo (não antes, com um
+    -- COALESCE(NEW, OLD) genérico) de propósito: NEW não existe em DELETE
+    -- e OLD não existe em INSERT - cada ramo só referencia a variável que
+    -- o Postgres garante estar preenchida naquele TG_OP.
+    IF TG_OP = 'INSERT' THEN
+        FOREACH v_coluna IN ARRAY TG_ARGV LOOP
+            v_partes := v_partes || (to_jsonb(NEW) ->> v_coluna);
+        END LOOP;
+        v_identidade := array_to_string(v_partes, ',');
+
+        v_novos := to_jsonb(NEW) - 'senha_hash' - 'cpf_criptografado' - 'cpf_hash' - 'chave_pix_criptografada' - 'token_sessao' - 'payload';
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, dados_novos)
+        VALUES (TG_TABLE_NAME, v_identidade, TG_OP, public.id_usuario_atual(), v_novos);
+        RETURN NEW;
+
+    ELSIF TG_OP = 'UPDATE' THEN
+        FOREACH v_coluna IN ARRAY TG_ARGV LOOP
+            v_partes := v_partes || (to_jsonb(NEW) ->> v_coluna);
+        END LOOP;
+        v_identidade := array_to_string(v_partes, ',');
+
+        v_antigos_completo := to_jsonb(OLD);
+        v_novos_completo   := to_jsonb(NEW);
+
+        SELECT array_agg(chave) INTO v_campos
+        FROM jsonb_object_keys(v_novos_completo) AS chave
+        WHERE v_antigos_completo -> chave IS DISTINCT FROM v_novos_completo -> chave;
+
+        IF v_campos IS NULL THEN
+            RETURN NEW;
+        END IF;
+
+        -- score_atual/score_atualizado_em (perfil_pesquisador) mudam SOZINHOS toda vez que
+        -- recalcular_score_pesquisador() roda (05, [05-I-4]; disparado por qualquer trigger que mexa em
+        -- campanha/comentário/etc., não por ação direta sobre o PRÓPRIO perfil_pesquisador). Sem este filtro, isso
+        -- viraria a maioria das linhas do log: ruído de motor automático afogando o que o log existe para mostrar
+        -- (ação ADMINISTRATIVA de alguém). Se as ÚNICAS colunas que mudaram forem essas duas, não registra. Qualquer
+        -- outra mudança em perfil_pesquisador (status_pesquisador, tipo_vinculo...) continua registrando, mesmo que
+        -- score também tenha mudado junto.
+        IF TG_TABLE_NAME = 'perfil_pesquisador' AND v_campos <@ ARRAY['score_atual', 'score_atualizado_em'] THEN
+            RETURN NEW;
+        END IF;
+
+        -- registrar_login_sucesso() (03, [03-O]) roda em TODO login bem sucedido, sempre mudando
+        -- ultimo_login_em/ultimo_login_ip: mesmo motivo do filtro de score_atual acima (motor automático, não ação
+        -- administrativa). tentativas_login_falhas/bloqueado_ate (zerados pela mesma função) ficam FORA desta lista de
+        -- propósito: se um login limpa um bloqueio anterior, ou um admin desbloqueia manualmente
+        -- (usuario.service.unlock.ts), isso vale ficar no log; só o "logou normalmente" é ruído. O dado não sumiu,
+        -- só saiu do log: ultimo_login_em está em UsuarioResponseDto/Consultar Usuário (ultimo_login_ip nunca é exposto
+        -- pela API).
+        IF TG_TABLE_NAME = 'usuario' AND v_campos <@ ARRAY['ultimo_login_em', 'ultimo_login_ip'] THEN
+            RETURN NEW;
+        END IF;
+
+        v_antigos := v_antigos_completo - 'senha_hash' - 'cpf_criptografado' - 'cpf_hash' - 'chave_pix_criptografada' - 'token_sessao' - 'payload';
+        v_novos   := v_novos_completo - 'senha_hash' - 'cpf_criptografado' - 'cpf_hash' - 'chave_pix_criptografada' - 'token_sessao' - 'payload';
+
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, campos_alterados, dados_anteriores, dados_novos)
+        VALUES (TG_TABLE_NAME, v_identidade, TG_OP, public.id_usuario_atual(), v_campos, v_antigos, v_novos);
+        RETURN NEW;
+
+    ELSIF TG_OP = 'DELETE' THEN
+        FOREACH v_coluna IN ARRAY TG_ARGV LOOP
+            v_partes := v_partes || (to_jsonb(OLD) ->> v_coluna);
+        END LOOP;
+        v_identidade := array_to_string(v_partes, ',');
+
+        v_antigos := to_jsonb(OLD) - 'senha_hash' - 'cpf_criptografado' - 'cpf_hash' - 'chave_pix_criptografada' - 'token_sessao' - 'payload';
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, dados_anteriores)
+        VALUES (TG_TABLE_NAME, v_identidade, TG_OP, public.id_usuario_atual(), v_antigos);
+        RETURN OLD;
+    END IF;
+
+    RETURN NULL;
+END;
+$$;
+
+-- Telas de pagamento (Reembolsos Manuais, Repasses em Atenção, Revisões de Pagamento): só a troca de situação, como a
+-- campanha. Sem isso, a conferência automática (de hora em hora) gravaria uma linha a cada passada.
+DROP TRIGGER IF EXISTS trg_log_auditoria_contribuicao_status ON contribuicao;
+CREATE TRIGGER trg_log_auditoria_contribuicao_status
+AFTER UPDATE ON contribuicao
+FOR EACH ROW
+WHEN (OLD.status IS DISTINCT FROM NEW.status)
+EXECUTE FUNCTION public.fn_log_auditoria('id_contribuicao');
+
+DROP TRIGGER IF EXISTS trg_log_auditoria_repasse_status ON repasse;
+CREATE TRIGGER trg_log_auditoria_repasse_status
+AFTER UPDATE ON repasse
+FOR EACH ROW
+WHEN (OLD.status IS DISTINCT FROM NEW.status)
+EXECUTE FUNCTION public.fn_log_auditoria('id_repasse');
+
+-- evento_pagamento não tem situação: o que uma pessoa faz é dar a baixa (resolvido_em).
+DROP TRIGGER IF EXISTS trg_log_auditoria_evento_pagamento_baixa ON evento_pagamento;
+CREATE TRIGGER trg_log_auditoria_evento_pagamento_baixa
+AFTER UPDATE ON evento_pagamento
+FOR EACH ROW
+WHEN (OLD.resolvido_em IS DISTINCT FROM NEW.resolvido_em)
+EXECUTE FUNCTION public.fn_log_auditoria('id_evento_pagamento');

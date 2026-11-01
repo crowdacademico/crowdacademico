@@ -1,4 +1,4 @@
-// Espelha nest/src/16-seguir/dto/response/seguir-pesquisador.response.ts (RF-028).
+// Espelha nest/src/16-seguir/dto/response/seguir-pesquisador.response.ts (RF-029).
 export interface SeguirPesquisadorResponse {
   idSegPesquisador: number;
   idUsuario: number;

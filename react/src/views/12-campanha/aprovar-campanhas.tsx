@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
+import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { ModalConsultarCampanha } from './modal-consultar-campanha';
 import { ModalRevisarCampanha } from './modal-revisar-campanha';
@@ -30,7 +31,7 @@ export function AprovarCampanhas({ auth }: PropsPagina) {
       ...campanha,
       pesquisador: campanha.nomePesquisador ?? `#${campanha.idUsuario}`,
       area: campanha.nomeArea ?? `#${campanha.idAreaConhecimento}`,
-      atencao: campanha.precisaRevisaoScore ? 'Score baixo' : '',
+      atencao: campanha.precisaRevisaoScore ? 'Pontuação baixa' : '',
     }));
   }, [auth.authFetch]);
 
@@ -58,6 +59,7 @@ export function AprovarCampanhas({ auth }: PropsPagina) {
         acoes={{ alterar: (linha) => setRevisandoId(linha.idCampanha), consultar: (linha) => setConsultandoId(linha.idCampanha) }}
         filtrosFacetados={[{ chave: 'area', rotulo: 'Área' }]}
       />
+      <BlocoLogAuditoria authFetch={auth.authFetch} tabela="campanha" chaveRecarga={chaveRecarga} />
 
       {consultandoId !== null && (
         <ModalConsultarCampanha auth={auth} idCampanha={consultandoId} aoFechar={() => setConsultandoId(null)} />

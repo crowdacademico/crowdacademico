@@ -18,7 +18,7 @@ export class SeguirPesquisadorControllerFindAll {
     return this.service.executar(usuario.idUsuario);
   }
 
-  // Público: é o número que a página do perfil mostra (RF-028), sem dizer quem segue.
+  // Público: é o número que a página do perfil mostra (RF-029), sem dizer quem segue.
   @Get(':idPesquisador/seguidores')
   @Publico()
   contar(@Param('idPesquisador', ParseIntPipe) idPesquisador: number) {

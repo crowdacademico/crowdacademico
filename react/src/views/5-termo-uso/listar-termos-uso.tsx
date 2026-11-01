@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
+import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { BotaoCriar } from '../../components/crud/botao-criar';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { ModalAlterarTermoUso } from './modal-alterar-termo-uso';
@@ -40,6 +41,7 @@ export function ListarTermosUso({ auth }: PropsPagina) {
     recarregar,
     acoesCompletas,
   } = useCrudModais<TermoUsoResponse>();
+
   const listarTermos = useCallback(
     () => termoUsoApi.listar(auth.authFetch),
     [auth.authFetch],
@@ -74,7 +76,7 @@ export function ListarTermosUso({ auth }: PropsPagina) {
           { chave: 'tipo', rotulo: 'Tipo', ordem: TIPOS_TERMO, rotulos: ROTULO_TIPO_TERMO },
         ]}
         acoes={acoesCompletas}
-        // Versão aceita por alguém não se exclui (RF-091), e a vigente nunca (sempre existe uma por tipo): a lixeira fica
+        // Versão aceita por alguém não se exclui (RF-094), e a vigente nunca (sempre existe uma por tipo): a lixeira fica
         // apagada, com o motivo na dica, em vez de abrir o modal e o banco recusar no fim. O lápis fica sempre: o modal
         // de Alterar também é onde se torna vigente uma versão antiga, e lá o texto de versão aceita vem só para leitura.
         acaoIndisponivel={(linha, acao) => {
@@ -85,6 +87,7 @@ export function ListarTermosUso({ auth }: PropsPagina) {
           return linha.ativo ? 'A versão vigente não pode ser excluída. Torne outra versão vigente primeiro.' : undefined;
         }}
       />
+      <BlocoLogAuditoria authFetch={auth.authFetch} tabela="termos_de_uso" chaveRecarga={chaveRecarga} />
 
       {criando && <ModalCriarTermoUso auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />}
 

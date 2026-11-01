@@ -47,13 +47,20 @@
   .crud-tabela {
     --altura-linha-tabela: 51px;
     --respiro-linha-tabela: 0.5rem;
-    --padding-celula: clamp(0.6rem, 1.3cqi, 1.1rem);
+    --padding-celula-minimo: 0.6rem;
+    --padding-celula: clamp(var(--padding-celula-minimo), 1.3cqi, 1.1rem);
     /* Medidas das colunas: coluna id e tipos de coluna (os porquês estão nas regras de cada uma, mais abaixo). */
     --coluna-id-digitos: 3;
-    --coluna-id-respiro-direita: clamp(1.1rem, 2.5vw, 2rem);
+    --coluna-id-respiro-minimo: 1.1rem;
+    --coluna-id-respiro-direita: clamp(var(--coluna-id-respiro-minimo), 2.5vw, 2rem);
     --coluna-nome-min: 12rem;
+    /* O mínimo do nome na tabela apertada e no celular. */
+    --coluna-nome-min-estreita: 9rem;
     --coluna-nome-max: 32rem;
     --coluna-piso-maximo: 28ch;
+    /* O piso do nome na tabela apertada e no celular, e o do texto secundário na seção estreita e na tabela apertada. */
+    --coluna-piso-maximo-estreito: 16ch;
+    --coluna-texto-piso-estreito: 18ch;
     width: 100%;
     font-size: var(--font-size-sm);
   }
@@ -171,7 +178,7 @@
   /* Texto (e-mail, código, pesquisador) tem piso menor que o nome: é ele que quebra a linha primeiro quando a
      tela aperta, o nome continua com o espaço principal. */
   .crud-tabela .crud-tabela__col--texto {
-    --coluna-piso-maximo: 18ch;
+    --coluna-piso-maximo: var(--coluna-texto-piso-estreito);
   }
 
   .crud-tabela .crud-tabela__col--curta {
@@ -449,15 +456,38 @@
     }
   }
 
+  /* Tabela que não coube nem com as ações só em ícone (generic-table.tsx, ajustarApertada), em qualquer largura de
+     tela, em dois degraus. Degrau 1: o texto secundário desce um tamanho de fonte e pode quebrar nos pontos naturais
+     ("@", "_"), e os vãos (entre colunas e depois do id) vão ao mínimo. Degrau 2, só se ainda não coube: o nome aceita
+     ficar mais estreito (corta com reticências e o "ler tudo"). Tabela que cabe não muda nada. */
+  .crud-tabela__wrapper[data-apertada] .crud-tabela {
+    --padding-celula: var(--padding-celula-minimo);
+    --coluna-id-respiro-direita: var(--coluna-id-respiro-minimo);
+  }
+
+  .crud-tabela__wrapper[data-apertada="2"] .crud-tabela {
+    --coluna-nome-min: var(--coluna-nome-min-estreita);
+    --coluna-piso-maximo: var(--coluna-piso-maximo-estreito);
+  }
+
+  .crud-tabela__wrapper[data-apertada] .crud-tabela .crud-tabela__col--texto {
+    --coluna-piso-maximo: var(--coluna-texto-piso-estreito);
+  }
+
+  .crud-tabela__wrapper[data-apertada] .crud-tabela td.crud-tabela__col--texto {
+    font-size: var(--font-size-xs);
+  }
+
   /* Tela estreita (celular): não cabem id, nome e Ações presos ao mesmo tempo, então só o nome fica preso (no
      canto esquerdo), com mínimo e piso de conteúdo menores para sobrar uma janela de verdade para rolar. */
   @container (max-width: 640px) {
     .crud-tabela {
-      --coluna-nome-min: 9rem;
-      --coluna-piso-maximo: 16ch;
+      --coluna-nome-min: var(--coluna-nome-min-estreita);
+      --coluna-piso-maximo: var(--coluna-piso-maximo-estreito);
     }
 
-    .crud-tabela .crud-tabela__col--texto {
+    .crud-tabela .crud-tabela__col--texto,
+    .crud-tabela__wrapper[data-apertada] .crud-tabela .crud-tabela__col--texto {
       --coluna-piso-maximo: 12ch;
     }
 

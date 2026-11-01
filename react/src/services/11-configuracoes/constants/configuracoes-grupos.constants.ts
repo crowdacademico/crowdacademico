@@ -75,6 +75,10 @@ const GRUPO_CONFIGURACAO: Record<string, string> = {
   limite_caracteres_descricao_campanha: 'Campanha',
   limite_caracteres_conteudo_atualizacao: 'Campanha',
   limite_caracteres_relato_denuncia: 'Campanha',
+  limite_caracteres_justificativa_denuncia: 'Campanha',
+  limite_caracteres_contestacao: 'Campanha',
+  limite_caracteres_justificativa_rejeicao: 'Campanha',
+  limite_caracteres_comentario: 'Campanha',
   limite_caracteres_justificativa_encerramento: 'Campanha',
   limite_caracteres_descricao_recompensa: 'Campanha',
   orcamento_min_itens: 'Campanha',
@@ -84,10 +88,10 @@ const GRUPO_CONFIGURACAO: Record<string, string> = {
   limite_caracteres_descricao_orcamento: 'Campanha',
   limite_caracteres_descricao_marco: 'Campanha',
   limite_links_academicos_perfil: 'Campanha',
-  // Score / Reputação
-  score_minimo_campanha: 'Score / Reputação',
-  score_denuncias_para_zerar: 'Score / Reputação',
-  score_frequencia_esperada_mensal: 'Score / Reputação',
+  // Pontuação / Reputação
+  score_minimo_campanha: 'Pontuação / Reputação',
+  score_denuncias_para_zerar: 'Pontuação / Reputação',
+  score_frequencia_esperada_mensal: 'Pontuação / Reputação',
   // Arquivo: limites de upload configuráveis.
   arquivo_tamanho_minimo_bytes: 'Arquivo',
   arquivo_tamanho_maximo_imagem_bytes: 'Arquivo',
@@ -101,7 +105,7 @@ const GRUPO_CONFIGURACAO: Record<string, string> = {
   notificar_novas_campanhas: 'Geral',
 };
 
-const ORDEM_GRUPOS = ['Segurança', 'Financeiro', 'Pagamentos', 'E-mail', 'Tarefas automáticas', 'Campanha', 'Moderação', 'Score / Reputação', 'Arquivo', 'Geral', 'Campo de Testes', 'Outras'];
+const ORDEM_GRUPOS = ['Segurança', 'Financeiro', 'Pagamentos', 'E-mail', 'Tarefas automáticas', 'Campanha', 'Moderação', 'Pontuação / Reputação', 'Arquivo', 'Geral', 'Campo de Testes', 'Outras'];
 
 export function grupoConfiguracao(chave: string): string {
   return GRUPO_CONFIGURACAO[chave] ?? 'Outras';

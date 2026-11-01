@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { BadgeStatusRepasse } from '../../components/crud/badge-status-repasse';
+import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { GenericTable } from '../../components/crud/generic-table';
 import { ROTULO_AGUARDANDO_CONTA, ROTULO_STATUS_REPASSE, rotuloSituacaoRepasse } from '../../services/23-pagamento/constants/status-repasse.constants';
 import { pagamentoRevisaoApi } from '../../services/25-pagamento-revisao/api/pagamento-revisao.api';
@@ -71,6 +72,7 @@ export function ListarRepassesAtencao({ auth }: PropsPagina) {
         }
         filtrosFacetados={[{ chave: 'situacao', rotulo: 'Situação', ordem: ORDEM_SITUACAO }]}
       />
+      <BlocoLogAuditoria authFetch={auth.authFetch} tabela="repasse" chaveRecarga={chaveRecarga} />
 
       {aberto && (
         <ModalReenfileirarRepasse

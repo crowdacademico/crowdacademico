@@ -16,7 +16,7 @@ import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { ContadorCaracteres } from '../../components/input/contador-caracteres';
-import { contarCaracteres } from '../../services/constant/util/validacao.util';
+import { erroLimiteCaracteres } from '../../services/constant/util/validacao.util';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
 import { EtapaRevisaoCampanha } from './etapa-revisao-campanha';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
@@ -156,8 +156,7 @@ export function ModalCriarCampanha({
     inicio: form.dataInicio === '' ? 'Informe a data de início.' : form.dataInicio < hoje && 'O início precisa ser hoje ou depois.',
     fim: (form.dataFim === '' || !duracaoValida) && 'prazo',
     descricao:
-      contarCaracteres(form.descricao) > regras.limiteDescricao &&
-      `A descrição passou do limite de ${regras.limiteDescricao.toLocaleString('pt-BR')} caracteres.`,
+      erroLimiteCaracteres(form.descricao, regras.limiteDescricao, 'A descrição'),
   }));
   const prazoComErro = Boolean(erroDe('fim')) || (duracao !== null && !duracaoValida);
 
@@ -431,7 +430,7 @@ export function ModalCriarCampanha({
                   type="date"
                   value={form.dataInicio}
                   min={hoje}
-                  // Sem data de fim ainda, sugere a duração padrão (RF-069); a pessoa muda o fim se quiser.
+                  // Sem data de fim ainda, sugere a duração padrão (RF-072); a pessoa muda o fim se quiser.
                   onChange={(evento) => {
                     const dataInicio = evento.target.value;
                     const dataFim =

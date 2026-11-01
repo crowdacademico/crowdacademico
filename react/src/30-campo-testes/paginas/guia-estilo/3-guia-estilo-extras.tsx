@@ -214,12 +214,12 @@ export function InterativosGlobais() {
         colunas={[
           { chave: 'id', rotulo: 'id', tipo: 'id' },
           { chave: 'nome', rotulo: 'nome', tipo: 'nome' },
-          { chave: 'status', rotulo: 'status', tipo: 'status' },
+          { chave: 'status', rotulo: 'situação', tipo: 'status' },
         ]}
         chavePrimaria="id"
         listar={listarExemplo}
         acoes={{ consultar: (linha) => mostrar('Consultar', `Linha ${linha.id}: ${linha.nome}`, 'sucesso') }}
-        filtrosFacetados={[{ chave: 'status', rotulo: 'Status' }]}
+        filtrosFacetados={[{ chave: 'status', rotulo: 'Situação' }]}
       />
 
       {modalAberto && (

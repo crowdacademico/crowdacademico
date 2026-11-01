@@ -11,7 +11,7 @@ import { ContribuicaoServiceCreate } from '../service/contribuicao.service.creat
 export class ContribuicaoControllerCreate {
   constructor(private readonly service: ContribuicaoServiceCreate) {}
 
-  // @Publico(): contribuir NÃO exige conta (RF-073). O AuthGuardJwt continua resolvendo `request.user` quando vem
+  // @Publico(): contribuir NÃO exige conta (RF-076). O AuthGuardJwt continua resolvendo `request.user` quando vem
   // Bearer válido, então quem está logado contribui com o próprio id (e pode marcar `anonima`).
   //
   // @SemTransacaoGlobal(): a rota espera o gateway de pagamento no meio; ver o service e

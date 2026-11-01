@@ -22,7 +22,7 @@ import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 // criada (login ou renovação do token) dentro de configuracoes.dashboard_sessao_ativa_minutos. O campo da API
 // continua `sessoesAtivas`.
 export const TEXTO_TOOLTIP_SESSOES_ATIVAS =
-  'Pessoas com login ou renovação recente (janela ajustável nas configurações, padrão 30 minutos). Quem está em vários aparelhos conta uma vez só: uma aproximação de quem está usando o sistema agora.';
+  'Pessoas com login ou renovação recente (a janela de tempo fica em Parâmetros do Sistema). Quem está em vários aparelhos conta uma vez só: uma aproximação de quem está usando o sistema agora.';
 
 // Abas: estrutura em abas em vez de empilhar seção atrás de seção (para o Dashboard não virar uma "tela onde
 // tudo cabe"). "Visão Geral" tem os cards + o resumo dos e-mails; as outras (Regras do Negócio, Notificações,
@@ -199,8 +199,8 @@ export function Dashboard({ auth }: DashboardProps) {
                 <CardMetrica rotulo="Arrecadado (total)" valor={resumo.valorTotalArrecadado} moeda />
               </div>
 
-              {/* Campanhas por status (RF-084): o requisito pede essa quebra, não só o total. "Fila com
-                  score baixo" é a 5ª parte do RF-084: campanha aguardando aprovação cujo pesquisador está
+              {/* Campanhas por status (RF-091): o requisito pede essa quebra, não só o total. "Fila com
+                  score baixo" é a 5ª parte do RF-091: campanha aguardando aprovação cujo pesquisador está
                   abaixo do score mínimo, só um sinal para revisar com mais cuidado. */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <CardMetrica rotulo="Campanhas ativas" valor={resumo.campanhasAtivas} para={campanhasCom('ativo')} />
@@ -216,7 +216,7 @@ export function Dashboard({ auth }: DashboardProps) {
                   para="/admin/aprovar-campanhas"
                 />
                 <CardMetrica
-                  rotulo="Fila com score baixo"
+                  rotulo="Fila com pontuação baixa"
                   valor={resumo.campanhasParaRevisaoScore}
                   para="/admin/aprovar-campanhas"
                 />

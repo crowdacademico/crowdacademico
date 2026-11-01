@@ -193,7 +193,7 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
                 <SecaoFicha titulo="Perfil de Pesquisador">
                   <CampoFicha rotulo="CPF" valor={formatarCpfOuMotivoOculto(perfilPesquisador.cpf)} />
                   <CampoFicha
-                    rotulo="Status"
+                    rotulo="Situação"
                     valor={
                       <BadgeStatusPesquisador status={perfilPesquisador.statusPesquisador} />
                     }
@@ -209,9 +209,9 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
               </div>
             )}
             {perfilPesquisador && (
-              <SecaoFicha titulo="Score" colunas={1}>
+              <SecaoFicha titulo="Pontuação" colunas={1}>
                 <CampoFicha
-                  rotulo="Score atual"
+                  rotulo="Pontuação atual"
                   valor={
                     score ? (
                       <>

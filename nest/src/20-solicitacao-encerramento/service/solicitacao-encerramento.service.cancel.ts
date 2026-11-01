@@ -5,7 +5,7 @@ import { SolicitacaoEncerramentoConverter } from '../dto/converter/solicitacao-e
 import { SolicitacaoEncerramentoResponse } from '../dto/response/solicitacao-encerramento.response';
 import { consultaSolicitacaoComDetalhes } from './solicitacao-encerramento.util.with-details';
 
-// O dono desiste do pedido enquanto está pendente (RF-064); a campanha segue ativa. O banco só deixa o dono ir de
+// O dono desiste do pedido enquanto está pendente (RF-067); a campanha segue ativa. O banco só deixa o dono ir de
 // pendente para cancelado (fn_valida_transicao_solicitacao, 05).
 @Injectable()
 export class SolicitacaoEncerramentoServiceCancel {

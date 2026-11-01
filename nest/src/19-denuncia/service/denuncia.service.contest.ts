@@ -3,7 +3,7 @@ import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 import { DenunciaContestacaoRequestCreate } from '../dto/request/denuncia-contestacao.request-create';
 
-// contestar_denuncia() (03): o pesquisador penalizado contesta uma denúncia procedente (RF-033). O banco recusa quem
+// contestar_denuncia() (03): o pesquisador penalizado contesta uma denúncia procedente (RF-034). O banco recusa quem
 // não é o penalizado (92034), sem texto (90032), denúncia não procedente (91044) ou já contestada (91045), e uma
 // segunda contestação esperando análise (91046).
 @Injectable()

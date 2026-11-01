@@ -15,7 +15,7 @@ import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-ca
 import { useSituacaoPesquisador } from '../../services/6-perfil-pesquisador/hook/use-situacao-pesquisador';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
-import { contarCaracteres } from '../../services/constant/util/validacao.util';
+import { erroLimiteCaracteres } from '../../services/constant/util/validacao.util';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
@@ -55,7 +55,7 @@ export function ModalComentar({ authFetch, usuario, campanha, aoFechar }: ModalC
     conteudo:
       conteudo.trim() === ''
         ? 'Escreva o comentário.'
-        : contarCaracteres(conteudo) > limite && `O comentário passou do limite de ${limite.toLocaleString('pt-BR')} caracteres.`,
+        : erroLimiteCaracteres(conteudo, limite, 'O comentário'),
   }));
 
   const comentar = async () => {

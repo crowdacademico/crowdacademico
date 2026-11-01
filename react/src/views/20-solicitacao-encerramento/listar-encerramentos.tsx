@@ -8,7 +8,6 @@ import {
   ORDEM_STATUS_ENCERRAMENTO,
   ROTULO_STATUS_ENCERRAMENTO,
 } from '../../services/20-solicitacao-encerramento/constants/status-encerramento.constants';
-import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { ModalDecidirEncerramento } from './modal-decidir-encerramento';
 import { celulaArrecadado } from '../12-campanha/colunas-campanha';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -25,7 +24,7 @@ interface PedidoLinha extends Omit<SolicitacaoEncerramentoResponse, 'status'> {
   esperandoDesde: string | null;
 }
 
-// Encerramentos (moderação): os pedidos de encerramento antecipado (RF-065), com pesquisador, campanha, modelo,
+// Encerramentos (moderação): os pedidos de encerramento antecipado (RF-068), com pesquisador, campanha, modelo,
 // arrecadado, contribuições confirmadas e situação; os pendentes pedem decisão. Alterar abre o pedido pendente para
 // aprovar (encerra a campanha) ou rejeitar (com justificativa); Consultar abre qualquer pedido só para ler.
 export function ListarEncerramentos({ auth }: PropsPagina) {
@@ -46,11 +45,6 @@ export function ListarEncerramentos({ auth }: PropsPagina) {
       esperandoDesde: esperandoDesde(pedido),
     }));
   }, [auth.authFetch]);
-
-  const buscarLog = useCallback(
-    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'solicitacao_encerramento', pagina, tamanho),
-    [auth.authFetch],
-  );
 
   return (
     <div className="admin-content-painel">
@@ -94,7 +88,7 @@ export function ListarEncerramentos({ auth }: PropsPagina) {
           { chave: 'modelo', rotulo: 'Modelo' },
         ]}
       />
-      <BlocoLogAuditoria buscar={buscarLog} chaveRecarga={chaveRecarga} />
+      <BlocoLogAuditoria authFetch={auth.authFetch} tabela="solicitacao_encerramento" chaveRecarga={chaveRecarga} />
 
       {aberto && (
         <ModalDecidirEncerramento

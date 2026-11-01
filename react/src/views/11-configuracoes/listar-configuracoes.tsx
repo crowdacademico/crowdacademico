@@ -4,7 +4,6 @@ import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { configuracoesApi } from '../../services/11-configuracoes/api/configuracoes.api';
 import { grupoConfiguracao } from '../../services/11-configuracoes/constants/configuracoes-grupos.constants';
-import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import {
   ModalAlterarConfiguracao,
   ModalConsultarConfiguracao,
@@ -40,12 +39,6 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
         .then((lista) => lista.map((linha) => ({ ...linha, assunto: grupoConfiguracao(linha.chave) }))),
     [auth.authFetch],
   );
-  // 'configuracoes' é o nome FÍSICO da tabela (plural, bate com o CREATE
-  // TABLE em 01_extensoes_enums_tabelas.sql), não o nome da rota.
-  const buscarLogConfiguracoes = useCallback(
-    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'configuracoes', pagina, tamanho),
-    [auth.authFetch],
-  );
 
   return (
     <div className="admin-content-painel">
@@ -74,7 +67,7 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
       {/* "De"/"Para" no VALOR: é a coluna que mais importa aqui: configuracoes existe para tirar regra de
           negócio hardcoded do .sql, então ver o valor antigo/novo de uma mudança (ex.: taxa, limite, prazo)
           é mais útil que "chave"/"descricao"/"ativo" mudaram. */}
-      <BlocoLogAuditoria buscar={buscarLogConfiguracoes} chaveRecarga={chaveRecarga} />
+      <BlocoLogAuditoria authFetch={auth.authFetch} tabela="configuracoes" chaveRecarga={chaveRecarga} />
 
       {alterando && (
         <ModalAlterarConfiguracao

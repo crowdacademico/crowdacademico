@@ -162,7 +162,7 @@ export function SecaoRecebimento({ authFetch }: { authFetch: AuthFetch }) {
           { chave: 'valorLiquido', rotulo: 'você recebe', tipo: 'dinheiro' },
           {
             chave: 'status',
-            rotulo: 'status',
+            rotulo: 'situação',
             tipo: 'status',
             renderizar: (linha) => <BadgeStatusRepasse status={linha.status} aguardandoConta={aguardandoConta(linha)} />,
             textoExibido: (linha) => rotuloSituacaoRepasse(linha.status, aguardandoConta(linha)),

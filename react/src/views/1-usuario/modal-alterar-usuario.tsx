@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
+import { MENSAGEM_MOTIVO_SUSPENSAO_CURTO, MENSAGEM_NOME_CURTO, MOTIVO_SUSPENSAO_MINIMO_CARACTERES, NOME_MINIMO_CARACTERES } from '../../services/constant/constants/minimos.constants';
 import type { CSSProperties, ReactNode } from 'react';
 import { FichaLadoALado, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { FiltroPartes } from '../../components/crud/filtro-partes';
@@ -163,7 +164,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
 
   // Salvar e as ações ficam sempre clicáveis: faltando algo, o erro aparece embaixo do campo.
   const conta = useErrosFormulario(() => ({
-    nome: nome.trim().length < 2 && 'Nome precisa ter pelo menos 2 caracteres.',
+    nome: nome.trim().length < NOME_MINIMO_CARACTERES && MENSAGEM_NOME_CURTO,
     senha: novaSenha !== '' && novaSenha.length < SENHA_MINIMO_CARACTERES && `A nova senha precisa ter pelo menos ${SENHA_MINIMO_CARACTERES} caracteres.`,
   }));
   const perfil = useErrosFormulario(() => ({
@@ -274,7 +275,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
         </span>,
         perfilPesquisador &&
           (pesquisadorSuspensoAte ? (
-            <span key="pesquisador" className="badge badge-aviso">
+            <span key="pesquisador" className="badge badge-erro">
               Pesquisador suspenso até {formatarData(pesquisadorSuspensoAte)}
             </span>
           ) : (
@@ -548,7 +549,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                       </button>
                     </div>
                   </div>
-                  <CaixaSomenteLeitura rotulo="Score atual" valor={scoreNovo ?? perfilPesquisador.scoreAtual} />
+                  <CaixaSomenteLeitura rotulo="Pontuação atual" valor={scoreNovo ?? perfilPesquisador.scoreAtual} />
                   <CamposVinculoPerfil
                     tipoVinculo={formPerfil.tipoVinculo}
                     vinculoInstitucional={formPerfil.vinculoInstitucional}
@@ -649,7 +650,7 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado,
     papel: idPapelParaAtribuir === '' && 'Escolha um papel para atribuir.',
   }));
   const suspensao = useErrosFormulario(() => ({
-    motivo: motivoSuspensao.trim().length < 3 && 'Informe o motivo (pelo menos 3 caracteres).',
+    motivo: motivoSuspensao.trim().length < MOTIVO_SUSPENSAO_MINIMO_CARACTERES && MENSAGEM_MOTIVO_SUSPENSAO_CURTO,
   }));
 
   // Executa a ação, busca a lista nova de papéis e mostra o aviso de sucesso.
@@ -732,7 +733,7 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado,
             const suspenso = papel.suspensoAte && new Date(papel.suspensoAte) > new Date();
             return (
               <span key={papel.idPapel} className="inline-flex flex-col items-start gap-1">
-                <span className={'badge flex gap-2 ' + (suspenso ? 'fundo-aviso texto-aviso' : 'badge-neutro')}>
+                <span className={'badge gap-2 ' + (suspenso ? 'badge-erro' : 'badge-neutro')}>
                   {papel.nomePapel}
                   {suspenso && <i className="fa-solid fa-clock icone-pequeno" aria-hidden="true"></i>}
                   {suspenso ? (
@@ -777,7 +778,7 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado,
                       placeholder="Motivo (obrigatório)"
                       aria-label={`Motivo da suspensão de "${papel.nomePapel}"`}
                       aria-invalid={Boolean(suspensao.erroDe('motivo'))}
-                      className={'input-padrao input-padrao--pequeno py-1' + (suspensao.erroDe('motivo') ? ' borda-erro' : '')}
+                      className={'input-padrao input-padrao--pequeno' + (suspensao.erroDe('motivo') ? ' borda-erro' : '')}
                     />
                     {suspensao.erroDe('motivo') && (
                       <span className="legenda enfase texto-erro">{suspensao.erroDe('motivo')}</span>

@@ -8,7 +8,7 @@ import {
 import { NotificacaoServiceCancel } from '../service/notificacao.service.cancel';
 import { NotificacaoServiceResend } from '../service/notificacao.service.resend';
 
-// Tratamento manual do RF-121. A permissão (notificacao_processar) e a situação são checadas no banco.
+// Tratamento manual do RF-124. A permissão (notificacao_processar) e a situação são checadas no banco.
 @Controller('notificacao')
 export class NotificacaoControllerResend {
   constructor(

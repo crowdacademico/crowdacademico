@@ -44,7 +44,7 @@ export class ContribuicaoRequestCreate {
   @IsBoolean()
   anonima?: boolean;
 
-  // A recompensa simbólica escolhida (RF-101), opcional. Só para quem está logado: a recompensa é para alguém.
+  // A recompensa simbólica escolhida (RF-104), opcional. Só para quem está logado: a recompensa é para alguém.
   @IsOptional()
   @IsInt()
   idRecompensa?: number;

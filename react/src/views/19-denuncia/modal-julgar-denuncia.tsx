@@ -22,7 +22,7 @@ import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-confi
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { formatarDataHora } from '../../services/constant/util/formatacao.util';
-import { contarCaracteres } from '../../services/constant/util/validacao.util';
+import { erroLimiteCaracteres } from '../../services/constant/util/validacao.util';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 import type { DenunciaResponse, StatusDenuncia } from '../../services/19-denuncia/type/denuncia.type';
 
@@ -35,11 +35,11 @@ interface ModalJulgarDenunciaProps {
   somenteLeitura?: boolean;
 }
 
-// Julgar uma denúncia (RF-111): ler o que foi denunciado e decidir. Pendente não pede justificativa;
+// Julgar uma denúncia (RF-114): ler o que foi denunciado e decidir. Pendente não pede justificativa;
 // resolvida (procedente) e improcedente pedem o porquê. Numa denúncia procedente contra campanha ativa, a moderação
-// pode encerrar a campanha na mesma ação (RF-114): a campanha sai da página pública. Quem denunciou não julga a
+// pode encerrar a campanha na mesma ação (RF-117): a campanha sai da página pública. Quem denunciou não julga a
 // própria denúncia; o banco recusa e a mensagem aparece aqui. Com uma contestação do pesquisador esperando análise
-// (RF-033), a decisão é sobre ela: aceitar torna a denúncia improcedente (a nota se recalcula) e recusar a mantém,
+// (RF-034), a decisão é sobre ela: aceitar torna a denúncia improcedente (a nota se recalcula) e recusar a mantém,
 // sempre com justificativa.
 export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, somenteLeitura = false }: ModalJulgarDenunciaProps) {
   const [status, setStatus] = useState<StatusDenuncia>(denuncia.status);
@@ -54,27 +54,41 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { mostrar } = useToast();
   const { ocupado, executar } = useEnvio(reportarErro, limparErro);
-  const limite = useConfiguracoes().obterNumero('limite_caracteres_justificativa_denuncia', 1000);
+  const { obterNumero } = useConfiguracoes();
+  const limite = obterNumero('limite_caracteres_justificativa_denuncia', 1000);
+  const limiteContestacao = obterNumero('limite_caracteres_contestacao', 5000);
   const podeEncerrarCampanha = denuncia.idCampanhaAlvo !== null && denuncia.statusCampanha === 'ativo';
-  const pedeJustificativa = STATUS_DENUNCIA_DECIDIDA.has(status) || confirmandoEncerrar;
+  // Denúncia já julgada: a moderação pode mudar a decisão ou reabrir (o admin decide), mas vê o efeito antes e diz o
+  // porquê, que o log guarda junto de quem mudou.
+  const julgadaAntes = denuncia.status !== 'pendente';
+  const mudandoDecisao = julgadaAntes && status !== denuncia.status;
+  const reabrindo = julgadaAntes && status === 'pendente';
+  const enviaJustificativa = STATUS_DENUNCIA_DECIDIDA.has(status) || reabrindo;
+  const pedeJustificativa = enviaJustificativa || confirmandoEncerrar;
 
   const erros = useErrosFormulario(() => ({
     justificativaContestacao:
       contestacaoPendente &&
       (justificativaContestacao.trim() === ''
         ? 'Escreva a justificativa da decisão.'
-        : contarCaracteres(justificativaContestacao) > limite &&
-          `A justificativa passou do limite de ${limite.toLocaleString('pt-BR')} caracteres.`),
+        : erroLimiteCaracteres(justificativaContestacao, limiteContestacao, 'A justificativa')),
     justificativa:
       !contestacaoPendente && pedeJustificativa && justificativa.trim() === ''
-        ? 'Escreva por que a denúncia foi decidida assim.'
-        : contarCaracteres(justificativa) > limite && `A justificativa passou do limite de ${limite.toLocaleString('pt-BR')} caracteres.`,
+        ? reabrindo
+          ? 'Escreva por que a denúncia está sendo reaberta.'
+          : 'Escreva por que a denúncia foi decidida assim.'
+        : erroLimiteCaracteres(justificativa, limite, 'A justificativa'),
   }));
 
   const salvar = async () => {
     if (!erros.tentarEnviar()) return;
     await executar(async () => {
-      await denunciaApi.julgar(authFetch, denuncia.idDenuncia, status, STATUS_DENUNCIA_DECIDIDA.has(status) ? justificativa.trim() : undefined);
+      await denunciaApi.julgar(
+        authFetch,
+        denuncia.idDenuncia,
+        status,
+        enviaJustificativa ? justificativa.trim() : undefined,
+      );
       mostrar('Denúncia atualizada.', ROTULO_STATUS_DENUNCIA[status]);
       aoJulgada();
       aoFechar();
@@ -227,7 +241,7 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
                       onChange={(evento) => setJustificativaContestacao(evento.target.value)}
                       className={'input-padrao' + classeErro}
                     />
-                    <ContadorCaracteres texto={justificativaContestacao} limite={limite} />
+                    <ContadorCaracteres texto={justificativaContestacao} limite={limiteContestacao} />
                   </>
                 )}
               </Campo>
@@ -240,7 +254,12 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
                     <select
                       {...atributos}
                       value={status}
-                      onChange={(evento) => setStatus(evento.target.value as StatusDenuncia)}
+                      onChange={(evento) => {
+                        const novo = evento.target.value as StatusDenuncia;
+                        setStatus(novo);
+                        // Decisão nova pede um porquê novo: a justificativa antiga só volta se a situação voltar.
+                        setJustificativa(novo === denuncia.status ? (denuncia.justificativaModeracao ?? '') : '');
+                      }}
                       className="input-padrao"
                     >
                       {ORDEM_STATUS_DENUNCIA.map((opcao) => (
@@ -252,8 +271,22 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
                   )}
                 </Campo>
               )}
+              {mudandoDecisao && (
+                <CaixaAviso icone="fa-triangle-exclamation" titulo={reabrindo ? 'Reabrir uma denúncia já julgada' : 'Mudar uma decisão já tomada'}>
+                  A pontuação do pesquisador será recalculada. O histórico de alterações guarda quem mudou e o porquê.
+                </CaixaAviso>
+              )}
               {pedeJustificativa && (
-                <Campo rotulo={confirmandoEncerrar ? 'Por que a campanha está sendo encerrada' : 'Justificativa da decisão'} erro={erros.erroDe('justificativa')}>
+                <Campo
+                  rotulo={
+                    confirmandoEncerrar
+                      ? 'Por que a campanha está sendo encerrada'
+                      : reabrindo
+                        ? 'Por que a denúncia está sendo reaberta'
+                        : 'Justificativa da decisão'
+                  }
+                  erro={erros.erroDe('justificativa')}
+                >
                   {({ atributos, classeErro }) => (
                     <>
                       <textarea

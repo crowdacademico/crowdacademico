@@ -7,7 +7,6 @@ import {
   ROTULO_CANAL_NOTIFICACAO,
   rotuloTipoNotificacao,
 } from '../../services/27-notificacao/constants/notificacao.constants';
-import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { ModalAlterarModeloMensagem, ModalConsultarModeloMensagem } from './modal-modelo-mensagem';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { ModeloMensagemResponse } from '../../services/27-notificacao/type/modelo-mensagem.type';
@@ -31,10 +30,6 @@ export function ListarModelosMensagem({ auth }: PropsPagina) {
       ),
     [auth.authFetch],
   );
-  const buscarLog = useCallback(
-    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'modelo_mensagem', pagina, tamanho),
-    [auth.authFetch],
-  );
 
   return (
     <div className="admin-content-painel">
@@ -54,7 +49,7 @@ export function ListarModelosMensagem({ auth }: PropsPagina) {
         chaveRecarga={chaveRecarga}
         acoes={{ alterar: acoesCompletas.alterar, consultar: acoesCompletas.consultar }}
       />
-      <BlocoLogAuditoria buscar={buscarLog} chaveRecarga={chaveRecarga} />
+      <BlocoLogAuditoria authFetch={auth.authFetch} tabela="modelo_mensagem" chaveRecarga={chaveRecarga} />
 
       {alterando && (
         <ModalAlterarModeloMensagem auth={auth} modelo={alterando} aoFechar={fecharAlterando} aoAtualizado={recarregar} />

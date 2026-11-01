@@ -5,7 +5,7 @@
 // muda junto. Não chama a API e não grava nada.
 //
 // Arquivos desta pasta: 2 cores, 3 componentes globais, 4 painéis de tema,
-// 5 utilitário de contraste.
+// 5 utilitário de contraste, 6 peças do painel e atalhos de cor.
 //
 // Fora da pasta:
 //   - rota: src/30-campo-testes/plugin.ts (só em desenvolvimento, nada daqui
@@ -22,7 +22,9 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { CoresDoSistema } from './2-guia-estilo-cores';
 import { ComparativoTemas } from './4-guia-estilo-temas';
 import { Avatares, BordasComContraste, BotaoDev, CamposExtras, InterativosGlobais } from './3-guia-estilo-extras';
+import { AtalhosEEstrutura, PecasDoPainel } from './6-guia-estilo-pecas';
 import { PilulaCarregandoModal } from '../../../components/crud/modal-ficha';
+import { RodapeAcoes } from '../../../components/crud/rodape-acoes';
 
 // Todas as classes de texto do sistema (2-tipografia.css), na ordem da escala, com o papel de cada uma (DS-10).
 const CLASSES_TIPOGRAFICAS = [
@@ -109,6 +111,7 @@ function Componentes() {
         <div className="flex flex-wrap items-center gap-2 mt-3">
           <button type="button" className="btn btn-primary btn-destaque">Chamada (btn-destaque)</button>
           <button type="button" className="btn btn-secondary btn-pequeno">Pequeno (btn-pequeno)</button>
+          <button type="button" className="btn btn-primary btn-destaque btn-grande">Grande (btn-grande, páginas soltas)</button>
           <button type="button" className="btn-pilula">
             <i className="fa-solid fa-expand" aria-hidden="true"></i> Pílula
           </button>
@@ -116,6 +119,18 @@ function Componentes() {
             <i className="fa-solid fa-expand" aria-hidden="true"></i> Pílula na linha do rótulo
           </button>
         </div>
+        <p className="legenda texto-fraco mt-3 mb-2">
+          Rodapé de modal (RodapeAcoes): a ação principal em verde forte; uma ação positiva que não é a principal em verde claro
+          (`secundaria`); a que desfaz ou recusa em perigo (`perigo`).
+        </p>
+        <RodapeAcoes
+          aoCancelar={() => undefined}
+          acao={[
+            { rotulo: 'Recusar', perigo: true },
+            { rotulo: 'Marcar como pago', secundaria: true },
+            { rotulo: 'Reenfileirar' },
+          ]}
+        />
       </div>
 
       <div>
@@ -265,6 +280,18 @@ export function GuiaEstilo() {
         <Secao titulo="Componentes" descricao="Botões, badges, campos, avisos e cartões como o sistema os usa (4-componentes.css). São só exemplos visuais: os botões não fazem nada, mas hover e foco funcionam.">
           <ComparativoTemas>
             <Componentes />
+          </ComparativoTemas>
+        </Secao>
+
+        <Secao titulo="Peças do painel" descricao="As peças que as telas da área restrita usam: abas, etapas, interruptor, barras, estado vazio, erro de campo, medidor de senha, fichas, linha do tempo, régua de faixas e cartões. Cada uma é o componente de verdade, com dados de exemplo.">
+          <ComparativoTemas>
+            <PecasDoPainel />
+          </ComparativoTemas>
+        </Secao>
+
+        <Secao titulo="Atalhos de cor e estrutura" descricao="Classes que aplicam um token de cor (o token está em Cores do sistema) e as classes de estrutura de página e de modal, que só fazem sentido na tela inteira.">
+          <ComparativoTemas>
+            <AtalhosEEstrutura />
           </ComparativoTemas>
         </Secao>
       </div>

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 
-// Tratamento manual do RF-121: um e-mail que não deve mais sair. Mesmas regras de reenviar (cancelar_notificacao, 05).
+// Tratamento manual do RF-124: um e-mail que não deve mais sair. Mesmas regras de reenviar (cancelar_notificacao, 05).
 @Injectable()
 export class NotificacaoServiceCancel {
   constructor(private readonly database: DatabaseService) {}

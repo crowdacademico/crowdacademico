@@ -38,7 +38,7 @@ export interface CampanhaResponse {
   somenteLeitura: boolean;
   // Só em GET /campanha/:id: campos que o banco não deixa mudar agora (fn_campanha_campos_bloqueados), com os nomes deste tipo.
   camposBloqueados: string[];
-  // Só em GET /campanha/:id (RF-087): o que o pesquisador receberia hoje e a taxa usada. Nas demais respostas, null.
+  // Só em GET /campanha/:id (RF-090): o que o pesquisador receberia hoje e a taxa usada. Nas demais respostas, null.
   valorLiquidoEstimado: number | null;
   taxaAplicada: number | null;
   // Só em GET /campanha/:id e só para quem pode aprovar campanha: quem aprovou. Para os outros, null.

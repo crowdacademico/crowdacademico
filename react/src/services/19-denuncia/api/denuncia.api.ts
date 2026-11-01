@@ -40,7 +40,7 @@ export const denunciaApi = {
     authFetch(`/denuncia/${id}/encerrar-campanha`, { method: 'POST', body: JSON.stringify({ justificativa }) }).then(
       tratarResposta<DenunciaResponse>,
     ),
-  // Contestação do score (RF-033): o pesquisador vê as procedentes contra ele e contesta; a moderação decide.
+  // Contestação do score (RF-034): o pesquisador vê as procedentes contra ele e contesta; a moderação decide.
   contraMim: (authFetch: AuthFetch): Promise<DenunciaContraMimResponse[]> =>
     authFetch('/denuncia/contra-mim').then(tratarResposta<DenunciaContraMimResponse[]>),
   contestar: (authFetch: AuthFetch, id: number, texto: string): Promise<void> =>

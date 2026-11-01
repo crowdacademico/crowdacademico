@@ -1,4 +1,8 @@
 import { Equals, IsEmail, IsString, MinLength } from 'class-validator';
+import {
+  MENSAGEM_NOME_CURTO,
+  NOME_MINIMO_CARACTERES,
+} from '../../../commons/validacao/minimos.constants';
 import { EmailNormalizado } from '../../../commons/validacao/transformacoes.decorator';
 import {
   MENSAGEM_SENHA_CURTA,
@@ -10,7 +14,7 @@ import {
 // mais (aceite de termo) e terminando já logado.
 export class AuthRequestRegister {
   @IsString()
-  @MinLength(2, { message: 'Nome precisa ter pelo menos 2 caracteres.' })
+  @MinLength(NOME_MINIMO_CARACTERES, { message: MENSAGEM_NOME_CURTO })
   nome: string;
 
   @EmailNormalizado()

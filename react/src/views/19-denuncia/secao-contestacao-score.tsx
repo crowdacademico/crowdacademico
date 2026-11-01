@@ -11,20 +11,20 @@ import {
   CLASSE_BADGE_STATUS_CONTESTACAO,
   ROTULO_STATUS_CONTESTACAO,
 } from '../../services/19-denuncia/constants/status-denuncia.constants';
+import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { formatarDataHora } from '../../services/constant/util/formatacao.util';
-import { contarCaracteres } from '../../services/constant/util/validacao.util';
+import { contarCaracteres, erroLimiteCaracteres } from '../../services/constant/util/validacao.util';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 import type { DenunciaContraMimResponse } from '../../services/19-denuncia/type/denuncia.type';
 
-const LIMITE_TEXTO = 5000;
 
 interface SecaoContestacaoScoreProps {
   authFetch: AuthFetch;
 }
 
-// Contestação do score (RF-033), na Minha Conta do pesquisador: as denúncias julgadas procedentes contra ele (contra o
+// Contestação do score (RF-034), na Minha Conta do pesquisador: as denúncias julgadas procedentes contra ele (contra o
 // perfil ou contra uma campanha dele), que tiram pontos da reputação, sem quem denunciou. Cada uma pode ser
 // contestada uma vez, uma esperando análise por vez; a moderação aceita (a denúncia deixa de contar) ou recusa, com
 // justificativa. O resultado aparece aqui (o aviso por e-mail depende do módulo de e-mail).
@@ -35,6 +35,7 @@ export function SecaoContestacaoScore({ authFetch }: SecaoContestacaoScoreProps)
   const [contestando, setContestando] = useState<number | null>(null);
   const [texto, setTexto] = useState('');
   const [tentou, setTentou] = useState(false);
+  const limite = useConfiguracoes().obterNumero('limite_caracteres_contestacao', 5000);
   const { dado: denuncias, recarregar } = useBuscar(() => denunciaApi.contraMim(authFetch), [authFetch], {
     erros,
     mostraTexto: true,
@@ -43,7 +44,7 @@ export function SecaoContestacaoScore({ authFetch }: SecaoContestacaoScoreProps)
   const erroTexto =
     tentou && texto.trim() === ''
       ? 'Escreva por que a penalidade é injusta.'
-      : contarCaracteres(texto) > LIMITE_TEXTO && 'A contestação pode ter no máximo 5.000 caracteres.';
+      : erroLimiteCaracteres(texto, limite, 'A contestação');
 
   const abrir = (idDenuncia: number) => {
     setContestando(idDenuncia);
@@ -52,7 +53,7 @@ export function SecaoContestacaoScore({ authFetch }: SecaoContestacaoScoreProps)
   };
   const enviar = async (idDenuncia: number) => {
     setTentou(true);
-    if (texto.trim() === '' || contarCaracteres(texto) > LIMITE_TEXTO) return;
+    if (texto.trim() === '' || contarCaracteres(texto) > limite) return;
     await executar(async () => {
       await denunciaApi.contestar(authFetch, idDenuncia, texto.trim());
       mostrar('Pedido de revisão enviado.', 'A moderação vai analisar; o resultado aparece aqui.');
@@ -128,7 +129,7 @@ export function SecaoContestacaoScore({ authFetch }: SecaoContestacaoScoreProps)
                               onChange={(evento) => setTexto(evento.target.value)}
                               className={'input-padrao' + classeErro}
                             />
-                            <ContadorCaracteres texto={texto} limite={LIMITE_TEXTO} />
+                            <ContadorCaracteres texto={texto} limite={limite} />
                           </>
                         )}
                       </Campo>

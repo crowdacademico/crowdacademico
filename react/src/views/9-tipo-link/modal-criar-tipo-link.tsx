@@ -102,7 +102,7 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
             ? 'Só letras maiúsculas, números e underscore, sem espaço, minúscula ou acento.'
             : (erroDe('codigo') ?? errosCampo.codigo)
         }
-        dica="Identificador interno, nunca editável depois de criado (usado por regras internas do sistema, ex.: reconhecer Lattes/ORCID no cálculo de score)."
+        dica="Identificador interno, nunca editável depois de criado (usado por regras internas do sistema, ex.: reconhecer Lattes/ORCID no cálculo da pontuação)."
       >
         {({ atributos, classeErro }) => (
           <input

@@ -26,7 +26,7 @@ const paraDados = (form: FormMarco): DadosMarco | null =>
 interface TabelaMarcosCronogramaProps {
   marcos: MarcoCronogramaResponse[];
   podeEditar: boolean;
-  // `min` da data prevista. Só mínimo, de propósito: RF-042/fn_valida_data_marco_cronograma barram data anterior
+  // `min` da data prevista. Só mínimo, de propósito: RF-045/fn_valida_data_marco_cronograma barram data anterior
   // ao início, mas permitem passar do fim (a divulgação de resultado costuma vir depois do prazo).
   dataInicioCampanha?: string;
   // Quando presente, mostra acima da tabela quantos marcos há e o mínimo, em vermelho se faltar.
@@ -55,6 +55,7 @@ export function TabelaMarcosCronograma({
     },
     {
       rotulo: 'Data prevista',
+      centralizada: true,
       exibir: (marco) => formatarData(marco.dataPrevista),
       campo: (form, mudar) => (
         <input

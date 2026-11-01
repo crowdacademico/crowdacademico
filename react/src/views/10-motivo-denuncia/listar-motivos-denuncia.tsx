@@ -4,7 +4,6 @@ import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { BotaoCriar } from '../../components/crud/botao-criar';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
-import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { ModalCriarMotivoDenuncia } from './modal-criar-motivo-denuncia';
 import {
   ModalAlterarMotivoDenuncia,
@@ -41,13 +40,6 @@ export function ListarMotivosDenuncia({ auth }: PropsPagina) {
     () => motivoDenunciaApi.listar(auth.authFetch),
     [auth.authFetch],
   );
-  // 'motivo_denuncia' é o nome FÍSICO da tabela (bate com
-  // trg_log_auditoria_motivo_denuncia, 05_regras_negocio.sql), não o nome
-  // da rota - mesma convenção de buscarLogTipos/buscarLogAreas.
-  const buscarLogMotivos = useCallback(
-    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'motivo_denuncia', pagina, tamanho),
-    [auth.authFetch],
-  );
 
   return (
     <div className="admin-content-painel">
@@ -71,7 +63,7 @@ export function ListarMotivosDenuncia({ auth }: PropsPagina) {
         // de um tipo (mesma ideia do filtro de papel em ListarUsuarios).
         filtrosFacetados={[{ chave: 'tipo', rotulo: 'Tipo', ordem: ORDEM_TIPO }]}
       />
-      <BlocoLogAuditoria buscar={buscarLogMotivos} chaveRecarga={chaveRecarga} />
+      <BlocoLogAuditoria authFetch={auth.authFetch} tabela="motivo_denuncia" chaveRecarga={chaveRecarga} />
 
       {criando && (
         <ModalCriarMotivoDenuncia auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />

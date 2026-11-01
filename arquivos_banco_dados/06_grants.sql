@@ -214,7 +214,7 @@ GRANT EXECUTE ON FUNCTION public.fn_eh_ultimo_admin_ativo(INT)                  
 -- fn_termo_uso_pendente: RF-015, chamada pelo login e pela renovação de sessão.
 REVOKE EXECUTE ON FUNCTION public.fn_termo_uso_pendente(INT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.fn_termo_uso_pendente(INT) TO app_nestjs;
--- contar_aceites_termo: RF-091, a lista de Termos sabe quais versões já foram aceitas (só o número).
+-- contar_aceites_termo: RF-094, a lista de Termos sabe quais versões já foram aceitas (só o número).
 REVOKE EXECUTE ON FUNCTION public.contar_aceites_termo(INT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.contar_aceites_termo(INT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.revogar_suspensao_papel_usuario(INT, INT)      TO app_nestjs;

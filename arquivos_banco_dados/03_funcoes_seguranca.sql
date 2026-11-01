@@ -233,7 +233,7 @@ $$;
 -- Função:     contar_aceites_termo
 -- Assinatura: (p_id_termo INT) -> INT
 -- Bloco:      [03-E]
--- Regra:      RF-091: quantas vezes a versão foi aceita (no cadastro e nas contribuições). A tela de Termos usa para
+-- Regra:      RF-094: quantas vezes a versão foi aceita (no cadastro e nas contribuições). A tela de Termos usa para
 --             apagar Alterar e Excluir de versão aceita (trg_termos_de_uso_protege_aceito recusaria). Pela RLS, o
 --             aceite de contribuição só aparece para quem vê dado sensível de contribuição, e o admin de Termos
 --             veria "ninguém aceitou" sem ser verdade. SECURITY DEFINER e só o número, mesmo motivo das
@@ -543,7 +543,7 @@ $$;
 -- Bloco:      [03-P]
 -- Regra:      Exige 'usuario_suspender'. Marca o perfil como suspenso (com p_ate/p_motivo: motivo obrigatório,
 --             visível para o próprio pesquisador; o login continua normal, só a autoridade de pesquisador é
---             suspensa) e, na mesma transação, aplica a cascata do RF-084: encerra as campanhas ativas e rejeita as
+--             suspensa) e, na mesma transação, aplica a cascata do RF-123: encerra as campanhas ativas e rejeita as
 --             'aguardando_aprovacao' (uma linha em historico_rejeicao por campanha; rascunhos não são tocados).
 --             SECURITY DEFINER bypassa a RLS de campanha, mas NÃO a trg_campanha_valida_transicao (05, [05-K-2]),
 --             que tem um ramo autoverificável para este caso. Expira sozinha via reativar_pesquisadores_vencidos()
@@ -807,8 +807,8 @@ BEGIN
 END;
 $$;
 
--- decidir_solicitacao_encerramento: o administrador aprova ou rejeita um pedido pendente (RF-065). Rejeitar exige
--- justificativa; aprovar encerra a campanha na mesma operação (RF-066) e o dinheiro vai para o pesquisador
+-- decidir_solicitacao_encerramento: o administrador aprova ou rejeita um pedido pendente (RF-068). Rejeitar exige
+-- justificativa; aprovar encerra a campanha na mesma operação (RF-069) e o dinheiro vai para o pesquisador
 -- (trg_campanha_encerrada_destino_dinheiro, 05). Grava quem decidiu e quando. SECURITY DEFINER pelo mesmo motivo: o app_nestjs só muda
 -- o status (o dono, para cancelar).
 CREATE OR REPLACE FUNCTION public.decidir_solicitacao_encerramento(p_id_solicitacao INT, p_aprovar BOOLEAN, p_justificativa TEXT)
@@ -850,7 +850,7 @@ END;
 $$;
 
 -- encerrar_campanha_por_denuncia: julga procedente uma denúncia de campanha e encerra a campanha por moderação
--- (RF-114), as duas coisas juntas. SECURITY DEFINER porque pol_campanha_update (04) não abre a campanha ao
+-- (RF-117), as duas coisas juntas. SECURITY DEFINER porque pol_campanha_update (04) não abre a campanha ao
 -- moderador; a função confere as duas permissões (julgar denúncia e encerrar por moderação), e as triggers continuam
 -- valendo por baixo: fn_valida_transicao_campanha só deixa ativo -> encerrado_moderacao, quem denunciou não julga a
 -- própria denúncia (92006), e o log de auditoria registra a decisão (com a justificativa) e o encerramento.
@@ -891,7 +891,7 @@ BEGIN
 END;
 $$;
 
--- contestar_denuncia: o pesquisador penalizado por uma denúncia procedente pede revisão (RF-033): o alvo da denúncia
+-- contestar_denuncia: o pesquisador penalizado por uma denúncia procedente pede revisão (RF-034): o alvo da denúncia
 -- de perfil ou o dono da campanha denunciada. Uma vez por denúncia e uma esperando análise por vez. SECURITY DEFINER:
 -- o pesquisador não lê nem altera a linha da denúncia (pol_denuncia_select/update, 04).
 CREATE OR REPLACE FUNCTION public.contestar_denuncia(p_id_denuncia INT, p_texto TEXT)
@@ -935,7 +935,7 @@ END;
 $$;
 
 -- decidir_contestacao: a moderação aceita ou recusa uma contestação esperando análise, sempre com justificativa
--- (RF-033). Aceitar corrige o dado que causou a penalidade: a denúncia vira improcedente na mesma operação, e a nota
+-- (RF-034). Aceitar corrige o dado que causou a penalidade: a denúncia vira improcedente na mesma operação, e a nota
 -- se recalcula sozinha (trg_denuncia_recalcula_score, 05). Nunca mexe na nota nem reabre campanha encerrada por
 -- moderação. Quem registrou a denúncia não decide a contestação dela (mesmo conflito de interesse do 92006), e quem
 -- julgou a denúncia também não (92036): o recurso é revisto por outra pessoa, nunca por quem tomou a decisão. Grava
@@ -979,7 +979,7 @@ END;
 $$;
 
 -- denuncias_contra_mim: as denúncias procedentes contra o pesquisador logado (contra o perfil ou contra as
--- campanhas dele) e as já contestadas, para ele ver e contestar (RF-033). Nunca mostra quem denunciou.
+-- campanhas dele) e as já contestadas, para ele ver e contestar (RF-034). Nunca mostra quem denunciou.
 CREATE OR REPLACE FUNCTION public.denuncias_contra_mim()
 RETURNS TABLE (
     id_denuncia INT, id_campanha_alvo INT, titulo_campanha VARCHAR, motivo VARCHAR, status status_denuncia,
@@ -1136,7 +1136,7 @@ $$;
 --             pessoa pode fazer), não de moderação de conta inteira; mesma permissão que governa a matriz Papel x
 --             Permissão. Preferível a REMOVER o vínculo porque preserva quando foi atribuído e volta sozinho no
 --             prazo; tem_permissao() ([03-B]) ignora papel com suspenso_ate no futuro. Motivo obrigatório e quem
---             suspendeu ficam gravados (RF-118, mesmo padrão da suspensão da conta); data no futuro (90023); o papel
+--             suspendeu ficam gravados (RF-121, mesmo padrão da suspensão da conta); data no futuro (90023); o papel
 --             admin do último admin ativo não pode ser suspenso (91030).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.suspender_papel_usuario(p_id_usuario INT, p_id_papel INT, p_ate TIMESTAMPTZ, p_motivo TEXT)

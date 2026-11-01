@@ -4,7 +4,7 @@ import { STATUS_CONTRIBUICAO_PAGA } from '../constants/recompensa.constants';
 import { RecompensaConverter } from '../dto/converter/recompensa.converter';
 import { RecompensaGanhaResponse } from '../dto/response/recompensa.response';
 
-// As recompensas que a própria conta ganhou (RF-101), com o link especial. Só contribuição paga conta.
+// As recompensas que a própria conta ganhou (RF-104), com o link especial. Só contribuição paga conta.
 @Injectable()
 export class RecompensaServiceMine {
   constructor(private readonly database: DatabaseService) {}

@@ -35,7 +35,7 @@ export const ORDEM_SITUACAO_DENUNCIA: readonly SituacaoDenuncia[] = ['pendente',
 // Decidir (resolvida ou improcedente) pede justificativa (denuncia.request-update.ts).
 export const STATUS_DENUNCIA_DECIDIDA: ReadonlySet<StatusDenuncia> = new Set<StatusDenuncia>(['resolvida', 'improcedente']);
 
-// Contestação do score (RF-033): esperando a moderação, aceita (a denúncia virou improcedente) ou recusada.
+// Contestação do score (RF-034): esperando a moderação, aceita (a denúncia virou improcedente) ou recusada.
 export const ROTULO_STATUS_CONTESTACAO: Record<StatusContestacao, string> = {
   pendente: 'Esperando análise',
   aceita: 'Aceita',

@@ -4,7 +4,6 @@ import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { BotaoCriar } from '../../components/crud/botao-criar';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
-import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { ModalCriarTipoLink } from './modal-criar-tipo-link';
 import { ModalAlterarTipoLink, ModalConsultarTipoLink, ModalExcluirTipoLink } from './modal-tipo-link';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -32,13 +31,6 @@ export function ListarTiposLink({ auth }: PropsPagina) {
     () => tipoLinkApi.listar(auth.authFetch),
     [auth.authFetch],
   );
-  // 'tipo_link' é o nome FÍSICO da tabela (bate com
-  // trg_log_auditoria_tipo_link, 05_regras_negocio.sql), não o nome da
-  // rota - mesma convenção de buscarLogAreas/buscarLogConfiguracoes.
-  const buscarLogTipos = useCallback(
-    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'tipo_link', pagina, tamanho),
-    [auth.authFetch],
-  );
 
   return (
     <div className="admin-content-painel">
@@ -62,7 +54,7 @@ export function ListarTiposLink({ auth }: PropsPagina) {
           chaveRecarga={chaveRecarga}
         acoes={acoesCompletas}
       />
-      <BlocoLogAuditoria buscar={buscarLogTipos} chaveRecarga={chaveRecarga} />
+      <BlocoLogAuditoria authFetch={auth.authFetch} tabela="tipo_link" chaveRecarga={chaveRecarga} />
 
       {criando && (
         <ModalCriarTipoLink auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />

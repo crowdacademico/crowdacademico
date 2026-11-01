@@ -128,7 +128,7 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
         <div className="grade-ficha">
           {campanha.precisaRevisaoScore && (
             <p className={'lg:col-span-3 legenda enfase fundo-aviso texto-aviso rounded-lg p-3' + ve('dados')}>
-              O pesquisador está abaixo do score mínimo para campanhas. É só um sinal para revisar esta campanha
+              O pesquisador está abaixo da pontuação mínima para campanhas. É só um sinal para revisar esta campanha
               com mais cuidado; não impede a aprovação.
             </p>
           )}

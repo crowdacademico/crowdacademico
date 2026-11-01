@@ -252,7 +252,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
             <SecaoFicha titulo={statusNaoElegivel ? 'Dados da campanha' : 'O que será excluído'}>
               <CampoFicha rotulo="id" valor={campanhaExcluindo.idCampanha} />
               <CampoFicha rotulo="Título" valor={campanhaExcluindo.titulo} />
-              <CampoFicha rotulo="Status" valor={ROTULO_STATUS_CAMPANHA[campanhaExcluindo.status]} />
+              <CampoFicha rotulo="Situação" valor={ROTULO_STATUS_CAMPANHA[campanhaExcluindo.status]} />
               <CampoFicha rotulo="Dono" valor={campanhaExcluindo.dono} />
               <CampoFicha rotulo="Meta" valor={formatarMoeda(campanhaExcluindo.metaFinanceira)} largura="cheia" />
             </SecaoFicha>

@@ -11,7 +11,6 @@ import {
   ordemDoFiltroPapel,
   PAPEL_SEM_EXTRA,
 } from '../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
-import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { ModaisUsuario } from './modais-usuario';
 import { ModalCriarUsuario } from './modal-criar-usuario';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -77,12 +76,6 @@ export function ListarUsuarios({ auth }: PropsPagina) {
       papel: papeisPorUsuario.get(usuario.idUsuario)?.join(', ') || PAPEL_SEM_EXTRA,
     }));
   }, [auth.authFetch]);
-  // 'usuario' é o nome FÍSICO da tabela no Postgres (bate com
-  // fn_log_auditoria() via TG_TABLE_NAME), não o nome da rota.
-  const buscarLogUsuario = useCallback(
-    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'usuario', pagina, tamanho),
-    [auth.authFetch],
-  );
 
   return (
     <div className="admin-content-painel">
@@ -112,7 +105,7 @@ export function ListarUsuarios({ auth }: PropsPagina) {
       {/* "De"/"Para": "nome" é o único campo de texto editável de usuario que faz sentido rastrear assim
           (senha nunca entra no log, ver fn_log_auditoria() [strip de senha_hash]; e-mail não é editável pelo
           painel). */}
-      <BlocoLogAuditoria buscar={buscarLogUsuario} chaveRecarga={chaveRecarga} />
+      <BlocoLogAuditoria authFetch={auth.authFetch} tabela="usuario" chaveRecarga={chaveRecarga} />
 
       {criando && (
         <ModalCriarUsuario auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />

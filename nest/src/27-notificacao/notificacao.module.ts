@@ -15,7 +15,7 @@ import { NotificacaoServiceFindAll } from './service/notificacao.service.findall
 import { NotificacaoServiceResend } from './service/notificacao.service.resend';
 import { NotificacaoServiceSummary } from './service/notificacao.service.summary';
 
-// Os avisos do sistema: o registro dos e-mails (RF-121) com o tratamento manual, o sino do painel e o texto de cada
+// Os avisos do sistema: o registro dos e-mails (RF-124) com o tratamento manual, o sino do painel e o texto de cada
 // aviso (modelo_mensagem). Quem ENVIA o e-mail é 4-mail; quem enfileira são os gatilhos do banco e, para o que só o
 // Nest sabe, NotificacaoServiceEnqueue (exportado).
 @Module({

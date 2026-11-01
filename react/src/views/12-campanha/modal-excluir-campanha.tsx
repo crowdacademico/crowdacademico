@@ -69,7 +69,7 @@ export function ModalExcluirCampanha({ auth, campanha, aoExcluida, aoFechar }: M
       <SecaoFicha titulo={podeExcluir ? 'O que será excluído' : 'Dados da campanha'}>
         <CampoFicha rotulo="id" valor={campanha.idCampanha} />
         <CampoFicha rotulo="Título" valor={campanha.titulo} />
-        <CampoFicha rotulo="Status" valor={ROTULO_STATUS_CAMPANHA[campanha.status]} />
+        <CampoFicha rotulo="Situação" valor={ROTULO_STATUS_CAMPANHA[campanha.status]} />
         <CampoFicha rotulo="Meta" valor={formatarMoeda(campanha.metaFinanceira)} />
       </SecaoFicha>
 

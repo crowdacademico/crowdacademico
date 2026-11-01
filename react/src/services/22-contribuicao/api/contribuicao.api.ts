@@ -9,7 +9,7 @@ export const contribuicaoApi = {
   // Quantas contribuições estão pagas e quantas existem. Só o dono da campanha ou quem tem a permissão (senão, 403).
   resumoDaCampanha: (authFetch: AuthFetch, idCampanha: number): Promise<ResumoContribuicoes> =>
     authFetch(`${BASE}/campanha/${idCampanha}/resumo`).then(tratarResposta<ResumoContribuicoes>),
-  // O histórico de contribuições da conta logada (RF-009, RF-085), com a recompensa escolhida.
+  // O histórico de contribuições da conta logada (RF-009, RF-088), com a recompensa escolhida.
   minhas: (authFetch: AuthFetch): Promise<MinhaContribuicao[]> =>
     authFetch(`${BASE}/minhas`).then(tratarResposta<MinhaContribuicao[]>),
 };

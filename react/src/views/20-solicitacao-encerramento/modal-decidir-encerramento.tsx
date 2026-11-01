@@ -14,7 +14,7 @@ import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-confi
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
-import { contarCaracteres } from '../../services/constant/util/validacao.util';
+import { erroLimiteCaracteres } from '../../services/constant/util/validacao.util';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 import type { SolicitacaoEncerramentoResponse } from '../../services/20-solicitacao-encerramento/type/solicitacao-encerramento.type';
 
@@ -27,7 +27,7 @@ interface ModalDecidirEncerramentoProps {
   somenteLeitura?: boolean;
 }
 
-// Decidir um pedido de encerramento antecipado (RF-065): o que o pesquisador pediu, com o modelo, o arrecadado e as
+// Decidir um pedido de encerramento antecipado (RF-068): o que o pesquisador pediu, com o modelo, o arrecadado e as
 // contribuições confirmadas. Aprovar encerra a campanha na hora (pede confirmação com ciência); rejeitar exige justificativa e a
 // campanha segue ativa. Pedido já decidido ou cancelado só se consulta.
 export function ModalDecidirEncerramento({ authFetch, pedido, aoFechar, aoDecidido, somenteLeitura = false }: ModalDecidirEncerramentoProps) {
@@ -44,7 +44,7 @@ export function ModalDecidirEncerramento({ authFetch, pedido, aoFechar, aoDecidi
     justificativa:
       rejeitando && justificativa.trim() === ''
         ? 'Escreva por que o pedido foi rejeitado.'
-        : contarCaracteres(justificativa) > limite && `A justificativa passou do limite de ${limite.toLocaleString('pt-BR')} caracteres.`,
+        : erroLimiteCaracteres(justificativa, limite, 'A justificativa'),
   }));
 
   const decidir = async (aprovar: boolean) => {
@@ -76,7 +76,7 @@ export function ModalDecidirEncerramento({ authFetch, pedido, aoFechar, aoDecidi
           acao={
             pendente
               ? [
-                  { rotulo: 'Rejeitar', ocupado, aoClicar: () => void decidir(false) },
+                  { rotulo: 'Rejeitar', perigo: true, ocupado, aoClicar: () => void decidir(false) },
                   { rotulo: 'Aprovar', ocupado, aoClicar: () => setConfirmandoAprovar(true) },
                 ]
               : undefined

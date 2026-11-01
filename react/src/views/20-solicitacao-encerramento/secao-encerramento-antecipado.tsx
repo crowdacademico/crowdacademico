@@ -12,7 +12,7 @@ import { solicitacaoEncerramentoApi } from '../../services/20-solicitacao-encerr
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
-import { contarCaracteres } from '../../services/constant/util/validacao.util';
+import { erroLimiteCaracteres } from '../../services/constant/util/validacao.util';
 import { formatarData } from '../../services/constant/util/formatacao.util';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 import type { SolicitacaoEncerramentoResponse } from '../../services/20-solicitacao-encerramento/type/solicitacao-encerramento.type';
@@ -51,7 +51,7 @@ export function SecaoEncerramentoAntecipado({ authFetch, idCampanha, valorArreca
     justificativa:
       justificativa.trim() === ''
         ? 'Escreva por que a campanha vai ser encerrada.'
-        : contarCaracteres(justificativa) > limite && `A justificativa passou do limite de ${limite.toLocaleString('pt-BR')} caracteres.`,
+        : erroLimiteCaracteres(justificativa, limite, 'A justificativa'),
   }));
 
   if (pedidos === null) {
