@@ -176,6 +176,14 @@ O `react/` não tem nenhum teste automatizado hoje (só `build`+`lint`). Um proj
 
 ### Segurança
 
+#### 🟡 Conta excluída prende o e-mail (anotado em 01-11-2026)
+
+**Em palavras simples:** quem exclui a conta não consegue criar outra com o mesmo e-mail: o cadastro responde "Já existe uma conta com esse e-mail.". A exclusão é lógica (`usuario.deletado = TRUE`), a linha fica no banco com o e-mail, e `UK_USUARIO_EMAIL` (01) exige e-mail único **entre todas as contas, inclusive as excluídas**.
+
+**Padrão de mercado:** e-mail único só entre contas não excluídas (índice único parcial, `WHERE NOT deletado`); a conta antiga guarda o e-mail para o histórico e o endereço fica livre para uma conta nova.
+
+**Cuidado ao fazer:** o login, o "Esqueci minha senha" e qualquer busca por e-mail passam a poder achar duas linhas com o mesmo endereço (uma excluída), e precisam ignorar a excluída. Mexe no 01/02 e pede grupo no ATUALIZAR. O "Reenviar" das Notificações não é afetado: a conta nova tem outro id, e a recusa (91055) vale só para os e-mails da conta excluída.
+
 #### 🟡 Login sem e-mail confirmado (anotado em 01-11-2026)
 
 **Em palavras simples:** hoje quem cria conta entra e usa tudo **mesmo sem confirmar o e-mail**. O "E-mail não verificado" é só um selo amarelo em Minha Conta e no Alterar Usuário. O RF-003 pede só que a conta nasça "não verificada" e que o sistema guarde esse estado; não manda bloquear o login.
