@@ -33,7 +33,7 @@ function LinhaPar({ texto, fundo }: { texto: string; fundo: string }) {
     <div className="fundo-cartao flex items-center gap-3 rounded-lg border borda-padrao p-2">
       <span
         ref={medir}
-        className="rounded px-3 py-1 paragrafo-destaque texto-herdado"
+        className="rounded px-3 py-1 paragrafo enfase texto-herdado"
         style={{ color: `var(${texto})`, backgroundColor: `var(${fundo})` }}
       >
         Aa
@@ -52,7 +52,7 @@ function LinhaPar({ texto, fundo }: { texto: string; fundo: string }) {
 
 const GRUPOS_AMOSTRA: { titulo: string; tokens: string[] }[] = [
   { titulo: 'Superfícies', tokens: ['--cor-fundo-pagina', '--cor-fundo-cartao', '--cor-fundo-elevado', '--cor-fundo-sutil', '--cor-fundo-hover'] },
-  { titulo: 'Marca', tokens: ['--cor-marca', '--cor-marca-escura', '--cor-fundo-marca-forte', '--cor-texto-marca'] },
+  { titulo: 'Marca', tokens: ['--cor-marca', '--cor-fundo-marca-forte', '--cor-texto-marca'] },
   { titulo: 'Bordas', tokens: ['--cor-borda', '--cor-borda-forte', '--cor-borda-erro', '--cor-borda-sucesso'] },
   { titulo: 'Estados (fundo)', tokens: ['--cor-fundo-sucesso', '--cor-fundo-erro', '--cor-fundo-aviso', '--cor-fundo-info'] },
 ];

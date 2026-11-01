@@ -83,7 +83,7 @@ export function ModalDetalhe({
 
         <div className={'px-6 py-4 flex items-start justify-between gap-3 shrink-0' + (rotuloAcao ? '' : ' border-b borda-padrao')}>
           <div className="min-w-0">
-            <h2 id={idTitulo} className="paragrafo-destaque truncate">{titulo}</h2>
+            <h2 id={idTitulo} className="paragrafo enfase truncate">{titulo}</h2>
             {chave && <p className="paragrafo-denso mt-0.5">{chave}</p>}
           </div>
           <div className="flex items-center gap-3 shrink-0">

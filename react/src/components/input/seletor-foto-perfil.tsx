@@ -178,7 +178,7 @@ export function SeletorFotoPerfil({
             {progresso === null ? (
               <i className="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
             ) : (
-              <span className="legenda-destaque texto-herdado" role="status">
+              <span className="legenda enfase texto-herdado" role="status">
                 {progresso}%
               </span>
             )}
@@ -220,7 +220,7 @@ export function SeletorFotoPerfil({
         />
       </div>
 
-      {erroLocal && <p className="legenda-destaque erro-campo max-w-(--largura-legenda-foto)">{erroLocal}</p>}
+      {erroLocal && <p className="legenda enfase erro-campo max-w-(--largura-legenda-foto)">{erroLocal}</p>}
     </div>
   );
 }

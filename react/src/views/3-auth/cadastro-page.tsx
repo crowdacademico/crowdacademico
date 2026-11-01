@@ -246,7 +246,7 @@ export function CadastroPage({ auth }: PropsPagina) {
               </span>
             </label>
             {erroDe('termos') && (
-              <p id={idErroTermos} className="legenda-destaque erro-campo">
+              <p id={idErroTermos} className="legenda enfase erro-campo">
                 {erroDe('termos')}
               </p>
             )}

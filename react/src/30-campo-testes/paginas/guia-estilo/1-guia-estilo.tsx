@@ -30,9 +30,9 @@ const CLASSES_TIPOGRAFICAS = [
   { classe: 'titulo-secao', papel: 'título de lista e de modal; nome da marca', exemplo: 'Título de seção' },
   { classe: 'subtitulo', papel: 'título de bloco grande', exemplo: 'Subtítulo' },
   { classe: 'paragrafo', papel: 'texto corrido (sempre peso normal)', exemplo: 'Parágrafo: texto corrido do sistema.' },
-  { classe: 'paragrafo-destaque', papel: 'texto com destaque: nome, item de menu, mensagem de erro', exemplo: 'Parágrafo com destaque' },
+  { classe: 'paragrafo enfase', papel: 'texto com destaque: nome, item de menu, mensagem de erro', exemplo: 'Parágrafo com destaque' },
   { classe: 'legenda', papel: 'texto de apoio pequeno (sempre peso normal)', exemplo: 'Legenda e texto auxiliar' },
-  { classe: 'legenda-destaque', papel: 'legenda com destaque: erro ou aviso embaixo de um campo', exemplo: 'Legenda com destaque' },
+  { classe: 'legenda enfase', papel: 'legenda com destaque: erro ou aviso embaixo de um campo', exemplo: 'Legenda com destaque' },
   { classe: 'paragrafo-denso', papel: 'texto técnico: chave, id, log', exemplo: 'parágrafo-denso: chave_tecnica_123' },
   { classe: 'titulo-bloco', papel: 'título pequeno de seção (Dados da conta, Metadados)', exemplo: 'Título de bloco' },
   { classe: 'rotulo-campo', papel: 'rótulo de campo de formulário', exemplo: 'Rótulo de campo' },
@@ -52,7 +52,7 @@ function AmostraTipografia({ classe, papel, exemplo }: { classe: string; papel: 
   return (
     <div className="fundo-cartao rounded-lg border borda-padrao p-3">
       <p className="paragrafo-denso mb-1">
-        .{classe} <span className="texto-fraco">({medida})</span>
+        .{classe.replace(/ /g, ' .')} <span className="texto-fraco">({medida})</span>
       </p>
       <p className="legenda mb-2">{papel}</p>
       <p ref={ref} className={classe}>
@@ -184,7 +184,7 @@ function Componentes() {
         <p className="rotulo-leitura mb-2">Avisos</p>
         <div className="space-y-2">
           {AVISOS.map(({ fundo, texto, rotulo }) => (
-            <p key={rotulo} className={`${fundo} ${texto} rounded-lg p-3 legenda-destaque texto-herdado`}>
+            <p key={rotulo} className={`${fundo} ${texto} rounded-lg p-3 legenda enfase texto-herdado`}>
               {rotulo}: mensagem de exemplo para conferir a cor do texto sobre o fundo.
             </p>
           ))}

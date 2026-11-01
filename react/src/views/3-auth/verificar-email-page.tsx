@@ -53,7 +53,7 @@ export function VerificarEmailPage() {
             </div>
             <h1 className="titulo-pagina mb-2">E-mail confirmado</h1>
             <p className="paragrafo texto-fraco mb-6">Sua conta já está com o e-mail verificado.</p>
-            <Link to="/" className="btn btn-primary inline-block">
+            <Link to="/" className="btn btn-primary">
               Ir para o painel
             </Link>
           </>
@@ -65,7 +65,7 @@ export function VerificarEmailPage() {
             </div>
             <h1 className="titulo-pagina mb-2">Não deu certo</h1>
             <p className="paragrafo texto-fraco mb-6">{mensagemErro}</p>
-            <Link to="/" className="btn btn-secondary inline-block">
+            <Link to="/" className="btn btn-secondary">
               Voltar
             </Link>
           </>

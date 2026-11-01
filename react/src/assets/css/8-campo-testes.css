@@ -1,65 +1,49 @@
-/* Estilos só do Campo de Testes (src/30-campo-testes/). Último na ordem dos estilos de propósito. */
+/* Estilos só do Campo de Testes (src/30-campo-testes/). */
+@layer components {
+  /* Registro de Chamadas: gaveta recolhível num cartão próprio no fim das telas do Campo de Testes. */
+  .registro-chamadas__linha {
+    display: grid;
+    grid-template-columns: 5.5rem 1fr 3.5rem 3.5rem 1fr;
+    gap: 0.5rem;
+    padding: 0.3rem 0.5rem;
+    font-size: var(--font-size-xs);
+    font-family: var(--font-mono-dev);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+  }
 
-/* Registro de Chamadas: gaveta recolhível num cartão próprio no fim das telas do Campo de Testes. */
-.registro-chamadas__linha {
-  display: grid;
-  grid-template-columns: 5.5rem 1fr 3.5rem 3.5rem 1fr;
-  gap: 0.5rem;
-  padding: 0.3rem 0.5rem;
-  font-size: var(--font-size-xs);
-  font-family: var(--font-mono-dev);
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-}
+  .registro-chamadas__linha > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-.registro-chamadas__linha > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+  /* Centralizado só nas colunas de valor curto (Hora, Status, ms), por posição: é a mesma coluna em toda linha. */
+  .registro-chamadas__linha > span:nth-child(1),
+  .registro-chamadas__linha > span:nth-child(3),
+  .registro-chamadas__linha > span:nth-child(4) {
+    text-align: center;
+  }
 
-/* Centralizado só nas colunas de valor curto e uniforme (Hora, Status, ms): Chamada e Recebido variam muito
-   de tamanho linha a linha, centralizar essas ficaria estranho. Mesmo raciocínio de
-   crud-tabela__celula--centralizada em 5-crud.css, só que por posição (nth-child) em vez de classe, porque
-   aqui é sempre a mesma coluna em toda linha, cabeçalho incluso. */
-.registro-chamadas__linha > span:nth-child(1),
-.registro-chamadas__linha > span:nth-child(3),
-.registro-chamadas__linha > span:nth-child(4) {
-  text-align: center;
-}
+  /* Cabeçalho e linha vazia (a que completa a última página): sem cursor de clique e sem destaque. */
+  .registro-chamadas__linha.registro-chamadas__linha--vazia,
+  .registro-chamadas__linha.registro-chamadas__linha--vazia:hover,
+  .registro-chamadas__linha.registro-chamadas__linha--cabecalho,
+  .registro-chamadas__linha.registro-chamadas__linha--cabecalho:hover {
+    cursor: default;
+    background: none;
+  }
 
-/* Linha vazia que completa a última página: sem cursor de clique e sem destaque. */
-.registro-chamadas__linha.registro-chamadas__linha--vazia,
-.registro-chamadas__linha.registro-chamadas__linha--vazia:hover {
-  cursor: default;
-  background: none;
-}
+  .registro-chamadas__linha--cabecalho {
+    font-weight: 700;
+    color: var(--cor-texto-fraco);
+  }
 
-.registro-chamadas__linha--cabecalho {
-  cursor: default;
-  font-weight: 700;
-  color: var(--cor-texto-fraco);
-}
+  .registro-chamadas__linha:hover {
+    background-color: var(--cor-fundo-hover);
+  }
 
-.registro-chamadas__linha--cabecalho:hover {
-  background-color: transparent;
-}
-
-.registro-chamadas__linha:hover {
-  background-color: var(--cor-fundo-hover);
-}
-
-.registro-chamadas__linha--erro {
-  color: var(--cor-texto-erro);
-}
-
-/* Cards de tarefa automática (T5 e T6): o título e o texto de cada card reservam o espaço do mais longo de todos os cards
-   (os outros ficam empilhados e invisíveis na mesma célula), então todo card tem a mesma altura em qualquer tela,
-   sozinho ou numa fileira. */
-.cartao-tarefa__pilha {
-  display: grid;
-}
-
-.cartao-tarefa__pilha > * {
-  grid-area: 1 / 1;
+  .registro-chamadas__linha--erro {
+    color: var(--cor-texto-erro);
+  }
 }

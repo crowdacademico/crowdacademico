@@ -1,52 +1,22 @@
 /* ========= PAINEL ADMIN: MENU LATERAL + CONTEÚDO =========
-   Inspirado no Projeto de Interface real (estilos.css:
-   .admin-shell/.admin-sidebar/.admin-content-area/.admin-sidebar-nav-item), mas com visual próprio: em vez
-   de cartão arredondado flutuando com margem, o menu é uma coluna quadrada que encosta no cabeçalho, na
-   parede esquerda e no rodapé (grid de 2 colunas). Na coluna fixa, o menu fica parado logo abaixo do topo preso
-   (sticky em --altura-topo-fixo, altura até o fim da tela) e rola sozinho; a rodinha sobre ele nunca passa para a
-   página (overscroll-contain, também na gaveta). DS-109, classes em admin-sidebar.tsx.
-   Ver components/layout/painel-admin/admin-sidebar.tsx e components/layout/painel-admin/admin-layout.tsx. */
+   O menu é uma coluna quadrada que encosta no cabeçalho, na parede esquerda e no rodapé (grid de 2 colunas). Na
+   coluna fixa, fica parado logo abaixo do topo preso (sticky em --altura-topo-fixo) e rola sozinho; a rodinha
+   sobre ele nunca passa para a página (overscroll-contain, também na gaveta). DS-109.
+   Ver components/layout/painel-admin/admin-sidebar.tsx e admin-layout.tsx.
 
-/* O bug que a gente tinha: .admin-pagina levava max-width+margin:auto, o
-   que centralizava o GRUPO INTEIRO (sidebar+conteúdo) como um bloco só -
-   sobrava espaço em branco simétrico dos dois lados do grupo, e o menu
-   nunca encostava na borda real da tela (só na borda do bloco centralizado).
-   Fix: .admin-pagina/.admin-shell agora ocupam 100% da largura da viewport,
-   sem max-width nem margin:auto nenhum - a sidebar fica de fato grudada na
-   borda esquerda real. Quem centraliza é só .admin-content-area (a coluna
-   da direita), e centraliza só DENTRO do espaço que sobra depois da
-   sidebar - .admin-content-area__inner é quem carrega o max-width.
-
-   Sidebar virou uma coluna vertical de verdade: sem padding/gap ao redor
-   (nada de "flutuar" com margem), cantos quadrados, esticada pra tocar o
-   cabeçalho em cima, a parede esquerda, e o rodapé embaixo. Pra isso, quem
-   ganha padding próprio agora é .admin-content-area (não mais
-   .admin-pagina inteira), e .admin-shell precisa esticar por toda a
-   altura disponível entre header/footer - display:flex em .admin-pagina +
-   align-items:stretch (padrão do flex) força isso.
-
-   Tudo dentro de @layer components: sem isso, estas regras (fora de
-   qualquer @layer) ganhariam de QUALQUER utilitário do Tailwind sozinhas,
-   não importa a especificidade - mesmo bug do reset em 3-base.css. */
+   .admin-pagina e .admin-shell ocupam a largura toda, sem max-width: o menu encosta na borda real da tela. Quem
+   centraliza é só .admin-content-area, dentro do espaço à direita do menu; o max-width fica no __inner.
+   Tudo dentro de @layer components, para o utilitário do Tailwind ganhar. */
 @layer components {
 .admin-pagina {
   width: 100%;
   flex-grow: 1;
   display: flex;
-  /* flex-direction: column: SEM isso, `display:flex` sozinho é `row` por padrão: o botão "☰ Menu" (mobile,
-     xl:hidden, logo abaixo no DOM) e .admin-shell inteiro ficariam lado a lado dividindo a largura da tela
-     ao meio, em vez do botão empilhar ACIMA do shell, e .admin-content-area renderizaria espremido em
-     ~metade da viewport em toda página do painel no celular. .admin-shell em si já tem
-     grid-template-columns: minmax(0, 1fr) certo (o "0" mínimo evita crescer por causa de conteúdo); o
-     problema estaria um nível acima. */
+  /* Coluna: o botão "Menu" do celular fica ACIMA do shell, não ao lado dividindo a largura. */
   flex-direction: column;
 }
 
-/* position: relative: âncora para a faixa do botão "Menu" (admin-layout.tsx), que é `position: absolute` e
-   primeiro filho daqui. Sem isso, o `absolute` se posicionaria relativo à página inteira (o próximo
-   ancestral REALMENTE posicionado, que pode estar bem mais longe), não a este grid: `absolute inset-x-0
-   top-0` só cola "no topo daqui" se "aqui" for uma posição de verdade. Não muda o comportamento do grid em
-   si (`position:relative` não interfere em `display:grid`). */
+/* Âncora da faixa do botão "Menu" (admin-layout.tsx), que é absolute e primeiro filho daqui. */
 .admin-shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -57,11 +27,8 @@
 .admin-sidebar {
   background-color: var(--cor-fundo-cartao);
   border-bottom: 1px solid var(--cor-borda);
-  /* Laterais menores que o topo, e a direita menor que a esquerda: com a barra de rolagem vertical do Windows,
-     1.5rem dos dois lados deixava ~146px para o rótulo, e o negrito do item ativo (2 a 3px mais largo) quebrava
-     "Papéis & Permissões" ao clicar. Com 1rem à esquerda, 0.5rem à direita (o botão fica a 8px da barra de
-     rolagem, folga contra clique errado) e o recuo do ícone abaixo, os rótulos de até ~170px ("Áreas do
-     Conhecimento", "T3 - Minhas Campanhas") cabem numa linha nos dois pesos; nenhum muda de linha ao clicar. */
+  /* Laterais menores que o topo, e a direita menor que a esquerda: com a barra de rolagem do Windows, os rótulos
+     de até ~170px ("Áreas do Conhecimento") cabem numa linha também no negrito do item ativo. */
   padding: 1.5rem 0.5rem 1.5rem 1rem;
 }
 
@@ -86,18 +53,14 @@
 }
 
 .admin-sidebar__grupo-titulo {
-  /* font-size-sm + cor-texto-forte (não preto fixo: o token mais escuro/forte que já existe, continua se
-     adaptando ao tema escuro sozinho, mesmo espírito de nunca hardcodar cor direto neste projeto). */
   font-size: var(--font-size-sm);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--cor-texto-forte);
   margin: 0.5rem 0 0.5rem 0.5rem;
-  /* flex: só entra em jogo para os grupos que passam `dica` (Tooltip do lado direito, ver
-     admin-sidebar.tsx); com 1 filho só (os outros grupos, sem dica), flex não muda nada do visual.
-     `padding-right` igual ao recuo do ícone dentro do item (a borda de 1px + o padding da direita), para o ⓘ do
-     grupo cair na mesma coluna dos ícones dos itens. */
+  /* Flex para o ⓘ do grupo ir à direita; o padding-right igual ao recuo do ícone do item põe o ⓘ na mesma
+     coluna dos ícones. */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -105,8 +68,7 @@
 }
 
 /* A coluna dos ícones: cada ícone (e o ⓘ do grupo) numa caixa de largura fixa, com o desenho centralizado. Sem
-   isso cada ícone encosta na direita com a largura dele, e um largo (a cédula) fica mais à esquerda que um
-   estreito (a bandeira). */
+   isso um ícone largo (a cédula) fica mais à esquerda que um estreito (a bandeira). */
 .admin-sidebar__item > i,
 .admin-sidebar__grupo-titulo > .dica {
   flex: none;
@@ -114,13 +76,8 @@
   text-align: center;
 }
 
-/* O ícone do Tooltip (components/layout/tooltip.tsx) fica encostado na borda DIREITA do grupo "CAMPO DE
-   TESTES" (padding-right acima), mas .dica__bolha (4-componentes.css) centraliza a caixa da dica embaixo do
-   ícone (`left: 50%; transform: translateX(-50%)`): com até 16rem (256px) de largura, isso jogaria boa parte
-   da caixa para FORA da coluna de 260px do menu, inflando o scrollWidth do <aside> (que já é
-   overflow-y-auto, e por regra de CSS um eixo em auto/scroll força o outro a virar auto também: daí a barra
-   horizontal). Ancorando pela direita (em vez de centralizar) e reduzindo o teto de largura, a caixa cresce
-   só para dentro do menu, nunca estoura a borda direita. */
+/* A dica do ⓘ do grupo cresce para dentro do menu (ancorada pela direita, teto menor): centralizada, ela sairia
+   da coluna e criaria uma barra de rolagem horizontal no menu. */
 .admin-sidebar__grupo-titulo .dica__bolha {
   left: auto;
   right: -0.25rem;
@@ -140,29 +97,20 @@
   gap: 0.5rem;
   border-radius: var(--radius-md);
   border: 1px solid transparent;
-  /* 4px reservado para TODOS os itens, ativo ou não (ver comentário completo em --ativo, abaixo, sobre por
-     que a barra é border-left e não box-shadow). Reservar aqui, na base, evita o item pular/desalinhar 3px
-     quando fica ativo. */
+  /* A barra de 4px do item ativo fica reservada em todos: o item não pula ao ficar ativo. */
   border-left-width: 4px;
-  background: none;
   color: var(--cor-texto);
   font-weight: 600;
   font-size: var(--font-size-sm);
   transition: var(--transition-normal);
 }
 
-/* Hover mais visível: slate-200 dá um contraste bem mais visível contra o fundo branco da sidebar do que
-   --cor-fundo-sutil (slate-50), quase imperceptível. */
 .admin-sidebar__item:hover:not(.admin-sidebar__item--desabilitado) {
   background-color: var(--cor-borda);
 }
 
-/* Cor como ACENTO, não preenchimento ("quando tudo é verde, nada se destaca"): fundo neutro + barra de 4px
-   na esquerda, mesmo padrão adotado no toast. A barra é border-left-color (a LARGURA de 4px já é reservada
-   para todo item, ativo ou não, ver `.admin-sidebar__item` acima) e não box-shadow inset: um box-shadow
-   inset num elemento com border-radius às vezes deixa uma frestinha sub-pixel no cantinho arredondado
-   (dependendo de navegador/zoom), enquanto a borda SEMPRE acompanha a curva do border-radius sem costura, e
-   nenhum item pula/desalinha ao ficar ativo. */
+/* Cor como acento, não preenchimento: fundo neutro + barra verde na esquerda (como o aviso). A barra é borda, não
+   box-shadow inset: a borda acompanha o canto arredondado sem fresta. */
 .admin-sidebar__item--ativo {
   background-color: var(--cor-fundo-hover);
   border-left-color: var(--cor-marca);
@@ -170,10 +118,6 @@
   font-weight: 800;
 }
 
-/* Sem isso, passar o mouse no item ATIVO trocava o fundo pro hover comum
-   (a regra de cima tem mais especificidade que .admin-sidebar__item--ativo
-   sozinha) - perdia a barra/aparência de "selecionado" enquanto o mouse
-   estava em cima. */
 .admin-sidebar__item--ativo:hover {
   background-color: var(--cor-borda);
 }
@@ -187,41 +131,22 @@
 
 .admin-content-area {
   min-width: 0;
-  /* Altura da faixa do botão "Menu" (ver padding-top abaixo); 7-responsividade.css soma o mesmo valor ao
-     padding menor do celular, para a faixa nunca cobrir o topo do conteúdo. */
+  /* Altura da faixa do botão "Menu" (absolute, por trás do conteúdo): o padding de cima soma este valor, também
+     no celular, para a faixa nunca cobrir o primeiro cartão. É aqui que se ajusta se sobrar ou faltar espaço. */
   --altura-faixa-menu: 3rem;
   padding: 1.5rem;
-  /* padding-top extra: reserva espaço de VERDADE para a faixa do botão "Menu" (admin-layout.tsx,
-     position:absolute, primeiro filho de .admin-shell), que passa POR TRÁS de tudo e só fica visível aqui,
-     na área de conteúdo (a sidebar cobre ela com o próprio fundo opaco, ver comentário em
-     admin-sidebar.tsx). 1.5rem (padding normal, preservado) + ~3rem (altura natural estimada da faixa: botão
-     em text-sm/ícone ≈ 21px de conteúdo + 0.75rem de padding vertical dos dois lados ≈ 45px ≈ 2.8rem,
-     arredondado com folga) = 4.5rem no topo; as outras 3 direções continuam com o 1.5rem do `padding` acima
-     (longhand só no topo). Estimativa: se sobrar/faltar espaço entre a faixa e o topo do primeiro cartão, é
-     aqui que se ajusta (em --altura-faixa-menu). */
   padding-top: calc(1.5rem + var(--altura-faixa-menu));
-  /* Centraliza o __inner só dentro do espaço que sobra à direita da
-     sidebar - nunca a página inteira. Se a tela for mais larga que o
-     max-width do __inner, a folga fica só aqui, à direita da sidebar. */
+  /* Centraliza o __inner só no espaço à direita do menu. */
   display: flex;
   justify-content: center;
 }
 
 .admin-content-area__inner {
-  /* width:100% é quem faz a adaptação de verdade: em tela pequena (notebook
-     da faculdade, monitor da escola), preenche 100% do espaço que sobrou
-     da sidebar, sem sobrar nem faltar nada. max-width só entra pra não
-     deixar a tabela virar uma linha esparsa gigante num monitor muito
-     largo (ultrawide/4K) - 1600px é bem mais espaço que os 900px de antes,
-     mas ainda é um teto, não um valor fixo que ignora a tela pequena. */
+  /* Ocupa todo o espaço em tela pequena; o teto só impede a tabela de virar uma linha esparsa num monitor largo. */
   width: 100%;
   max-width: 1600px;
-  /* min-width: 0: SEM isso, este `<div>` é item flex de .admin-content-area (que tem min-width:0 para SI
-     MESMO, mas isso não passa para os filhos sozinho) e herda o comportamento padrão min-width:auto, que
-     nunca encolhe abaixo do conteúdo mais largo lá dentro: uma tabela cheia de colunas (id, nome, papel,
-     e-mail, ações...) empurraria a PÁGINA INTEIRA para a largura da tabela em vez de a tabela encolher para
-     caber na tela (mesmo mecanismo de .admin-pagina, Minha Conta, e de w-0/min-w-full em
-     minha-conta-page.tsx). */
+  /* Sem isso, o item flex não encolhe abaixo do conteúdo mais largo, e uma tabela com muitas colunas alargaria a
+     página inteira em vez de rolar dentro dela. */
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -236,25 +161,27 @@
   padding: 2rem;
 }
 
-/* 1377px: as colunas terminam de se espremer confortavelmente até 1377px, e a sidebar some abaixo disso.
-   PRECISA bater exato com `--breakpoint-painel` (tailwind-theme.css), que as telas usam como `painel:`. Este
-   @media é o único outro lugar com o número, porque @media não aceita variável. Dois números DIFERENTES e
-   sem nada em comum visualmente (um `xl:` fixo de 1280px no JSX e outro valor aqui) causariam uma faixa em
-   que a sidebar já virou position:static pelo Tailwind antes de o grid reservar a coluna para ela: ela
-   tentaria esticar para ocupar a única coluna do grid inteiro, empurrando o resto (tela branca/quebrada). Um
-   token `--breakpoint-sidebar` central em @theme (tailwind-theme.css), lido aqui via theme(), não funciona e
-   quebra o build: este arquivo entra pela cadeia de @import de 0-style.css, um pipeline de CSS SEPARADO do
-   de tailwind-theme.css (que tem `@import 'tailwindcss'`); theme()/@utility só resolvem dentro daquele
-   pipeline. Solução: o mesmo número literal escrito por extenso nos dois lugares; ao mudar aqui, busque por
-   "1377px" no projeto para achar o outro lado. */
+@media (max-width: 640px) {
+  .admin-content-area {
+    padding: 1rem;
+    padding-top: calc(1rem + var(--altura-faixa-menu));
+  }
+
+  .admin-content-painel {
+    padding: 1.25rem;
+  }
+}
+
+/* 1377px: o menu vira coluna fixa. PRECISA bater com `--breakpoint-painel` (tailwind-theme.css, o `painel:` das
+   telas): @media não aceita variável, e este arquivo não enxerga o theme() do Tailwind. Números diferentes
+   deixariam uma faixa de larguras com o menu solto esticando o grid. Ao mudar, busque "1377px" no projeto. */
 @media (min-width: 1377px) {
   .admin-shell {
     grid-template-columns: var(--largura-sidebar) minmax(0, 1fr);
   }
 
   .admin-sidebar {
-    /* Lado a lado com o conteúdo agora - a borda de baixo (empilhado no
-       mobile) vira borda da direita (a "parede" entre coluna e conteúdo). */
+    /* Lado a lado com o conteúdo: a borda de baixo vira a parede da direita. */
     border-bottom: none;
     border-right: 1px solid var(--cor-borda);
   }

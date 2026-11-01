@@ -30,7 +30,7 @@ export function FiltroPartes<T extends string>({
             ref.current?.closest('.overflow-y-auto')?.scrollTo({ top: 0 });
           }}
           className={
-            'paragrafo-destaque px-3 py-1.5 rounded-lg texto-herdado ' +
+            'paragrafo enfase px-3 py-1.5 rounded-lg texto-herdado ' +
             (atual === parte.chave ? 'fundo-sutil texto-marca' : 'texto-fraco hover-texto-forte')
           }
         >

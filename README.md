@@ -1,3 +1,7 @@
+> "Faça funcionar, depois faça certo, depois faça rápido."
+>
+> *- Kent Beck*
+
 # crowdacademico
 Projeto de TCC do IFSP Birigui
 

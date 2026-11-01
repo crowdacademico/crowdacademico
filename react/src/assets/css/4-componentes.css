@@ -1,12 +1,6 @@
-/* ========= COMPONENTES REAPROVEITÁVEIS =========
-   Constante para botões, tirando o máximo possível de hardcoded (mesma ideia do banco: valor de negócio vira
-   linha em `configuracoes`, não número solto no `.sql`). O botão "Criar"/"Entrar"/"Salvar" em qualquer tela
-   usa `className="btn btn-primary"`, não uma string gigante de utilitários Tailwind copiada e colada: muda o
-   estilo do botão primário do projeto inteiro num lugar só, aqui.
-
-   @layer components: mesmo motivo do 6-admin-shell.css/5-crud.css: sem isso, estas classes ganhariam de
-   QUALQUER utilitário do Tailwind colocado do lado (`className="btn btn-primary w-full"`: o `w-full` precisa
-   poder vencer, senão a composição classe+utilitário não funciona igual ao resto do Tailwind). */
+/* ========= PEÇAS REAPROVEITÁVEIS =========
+   Botão, campo, selo, dica, barra, ficha: cada peça com uma classe, mudada num lugar só. Dentro de @layer
+   components, para um utilitário ao lado (`btn btn-primary w-full`) poder vencer. */
 @layer components {
   .btn {
     display: inline-flex;
@@ -22,21 +16,21 @@
     cursor: pointer;
   }
 
-  .btn:disabled {
+  .btn:disabled,
+  .interruptor:disabled {
     opacity: var(--opacidade-desabilitado);
     cursor: not-allowed;
   }
 
-  /* Parece indisponível, mas o clique acontece (aria-disabled, não disabled): o sistema responde dizendo o que falta,
-     em vez de um botão morto sem explicação. Ex.: Enviar para aprovação com etapa incompleta. Sem o hover de
-     botão clicável (as regras de hover abaixo pulam o [aria-disabled]). */
-  .btn[aria-disabled="true"] {
+  /* Parece indisponível, mas o clique acontece (aria-disabled): o sistema responde dizendo o que falta. Os hovers
+     abaixo pulam este estado. Nos dois casos, sem o brilho do .btn-destaque. */
+  .btn[aria-disabled="true"],
+  .btn-destaque:disabled {
     opacity: var(--opacidade-desabilitado);
     box-shadow: none;
   }
 
-  /* Botão principal do painel e dos modais: verde sólido, sem brilho (como os painéis de Stripe, Linear e Vercel).
-     O brilho fica só no .btn-destaque, abaixo. */
+  /* Botão principal: verde sólido, sem brilho (o brilho é do .btn-destaque). */
   .btn-primary {
     background-color: var(--cor-fundo-marca-forte);
     color: var(--cor-texto-sobre-cor);
@@ -108,21 +102,16 @@
     line-height: 1;
   }
 
-  /* Botão de CHAMADA (com .btn .btn-primary): o "brilho", degradê verde mais claro no topo e sombra verde suave.
-     Só nos poucos botões que convidam a pessoa a entrar ou submeter (Criar conta, Enviar link, Salvar nova senha,
-     Submeter Pesquisa). Em todo botão ele perdia o destaque e o painel ficava com cara de página de propaganda. */
+  /* Botão de chamada (com .btn-primary): degradê e sombra verde. Só nos poucos botões que convidam a entrar ou
+     enviar (Criar conta, Enviar link); em todo botão ele perderia o destaque. */
   .btn-destaque {
     background-image: var(--cor-degrade-marca);
     box-shadow: var(--cor-sombra-brilho-marca);
   }
 
-  .btn-destaque:hover:not(:disabled) {
+  .btn-destaque:hover:not(:disabled):not([aria-disabled="true"]) {
     background-image: var(--cor-degrade-marca-hover);
     box-shadow: var(--cor-sombra-brilho-marca-hover);
-  }
-
-  .btn-primary:disabled {
-    box-shadow: none;
   }
 
   .btn-secondary {
@@ -131,8 +120,7 @@
     color: var(--cor-texto);
   }
 
-  /* Hover mais escuro que o repouso, igual em todos os hovers do painel. */
-  .btn-secondary:hover:not(:disabled) {
+  .btn-secondary:hover:not(:disabled):not([aria-disabled="true"]) {
     background-color: var(--cor-borda-forte);
   }
 
@@ -141,20 +129,18 @@
     color: var(--cor-texto-erro);
   }
 
-  .btn-danger:hover:not(:disabled) {
+  .btn-danger:hover:not(:disabled):not([aria-disabled="true"]) {
     background-color: var(--cor-fundo-erro-forte);
     color: var(--cor-texto-sobre-cor);
   }
 
-  /* .btn-sucesso: mesmo par de tokens que `.badge-sucesso` usa (--cor-fundo-sucesso/--cor-texto-sucesso, com
-     os 3 tons de tema já resolvidos em 1-cores.css), mesmo padrão de hover sólido que `.btn-danger` (fundo
-     fraco em repouso, cor forte só no hover). */
+  /* Como o .btn-danger: pastel em repouso, cor sólida no hover. */
   .btn-sucesso {
     background-color: var(--cor-fundo-sucesso);
     color: var(--cor-texto-sucesso);
   }
 
-  .btn-sucesso:hover:not(:disabled) {
+  .btn-sucesso:hover:not(:disabled):not([aria-disabled="true"]) {
     background-color: var(--cor-fundo-sucesso-forte);
     color: var(--cor-texto-sobre-cor);
   }
@@ -165,17 +151,13 @@
     align-items: center;
     gap: 0.375rem;
     padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
+    border-radius: var(--radius-full);
     border: 1px solid var(--cor-marca);
     color: var(--cor-texto-marca);
     font-size: var(--font-size-xs);
     font-weight: 600;
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--cor-marca) 15%, transparent);
     transition: var(--transition-normal);
-  }
-
-  .btn-pilula:hover {
-    background-color: color-mix(in srgb, var(--cor-marca) 10%, transparent);
   }
 
   /* Pílula na mesma linha de um rótulo de campo: mesma letra do .rotulo-campo, para as duas palavras casarem. */
@@ -188,12 +170,8 @@
     line-height: 1.5;
   }
 
-  /* Input/select de formulário fora da tabela de CRUD (login, criar
-     usuário) - mesma moldura em todo lugar: borda, fundo levemente cinza,
-     foco em verde. */
-  /* As medidas do campo são variáveis (3-base.css, :root): a lista (select, abaixo) e o botão ao lado do campo
-     (.altura-de-campo) calculam a altura com elas, e quem precisa de um campo mais baixo (a tabela editável) troca
-     só a variável. */
+  /* Campo de formulário. As medidas são variáveis (3-base.css): a lista e o botão ao lado do campo calculam a
+     altura com elas, e quem quer um campo mais baixo (a tabela editável) troca só a variável. */
   .input-padrao {
     width: 100%;
     background-color: var(--cor-fundo-sutil);
@@ -206,16 +184,12 @@
     transition: var(--transition-normal);
   }
 
-  /* A lista com a mesma altura da caixa de texto vizinha. O Chrome ignora a altura da linha num <select> (usa a
-     "normal" da fonte), e a lista saía 2 px mais baixa que o campo de texto ao lado (Nome e Papel, no Alterar
-     Usuário). A altura mínima é a conta da caixa de texto: letra x altura da linha + espaço interno + borda, com as
-     variáveis acima; nenhum número escrito aqui. */
+  /* A lista com a altura da caixa de texto vizinha: o Chrome ignora a altura da linha num <select>. */
   select.input-padrao {
     min-height: calc(1em * var(--campo-altura-linha) + 2 * var(--campo-espaco-vertical) + 2 * var(--campo-borda));
   }
 
-  /* Botão com a altura de um campo de formulário, para ficar ao lado de um sem degrau (Trocar senha e Cancelar, ao lado
-     da caixa "Nova senha" no Alterar Usuário). A mesma conta da lista, com a letra do campo. */
+  /* Botão com a altura de um campo, para ficar ao lado dele sem degrau. */
   .altura-de-campo {
     min-height: calc(var(--font-size-sm) * var(--campo-altura-linha) + 2 * var(--campo-espaco-vertical) + 2 * var(--campo-borda));
   }
@@ -230,39 +204,42 @@
     font-size: var(--font-size-xs);
   }
 
-  /* Placeholder com contraste AA: o padrão do Tailwind é 50% da cor do texto, perto de 2,6:1. */
-  .input-padrao::placeholder {
+  /* Placeholder com contraste AA: o padrão do Tailwind é 50% da cor do texto, perto de 2,6:1. Campo que não é
+     .input-padrao (a busca Ctrl+K, o "Filtrar...") usa .placeholder-fraco. */
+  .input-padrao::placeholder,
+  .placeholder-fraco::placeholder {
     color: var(--cor-texto-fraco);
   }
 
   .input-padrao:focus {
     outline: none;
     border-color: var(--cor-marca);
-    box-shadow: 0 0 0 3px var(--cor-anel-foco);
     background-color: var(--cor-fundo-cartao);
   }
 
-  /* Precisa deste seletor combinado, e precisa estar AQUI (não só `.borda-erro` sozinho em 1-cores.css):
-     `.borda-erro` sozinho tem a MESMA especificidade de `.input-padrao` (uma classe cada, mesma @layer
-     components) e perde por ORDEM DE ARQUIVO (4-componentes.css carrega depois de 1-cores.css, então a borda
-     cinza padrão sempre venceria); e `.input-padrao:focus` tem especificidade MAIOR (classe + pseudo-classe)
-     que sempre venceria enquanto o campo estivesse com foco, escondendo o vermelho bem na hora de digitar.
-     Repetir aqui, com `.input-padrao` na frente, resolve os dois: o campo inválido continua vermelho mesmo
-     focado. */
+  /* O anel verde de foco, igual em toda peça: só trocar a cor da borda era sutil demais para quem usa o teclado. */
+  .input-padrao:focus,
+  .foco-marca:focus-visible,
+  .interruptor:focus-visible,
+  .dica--info:focus-visible {
+    box-shadow: 0 0 0 3px var(--cor-anel-foco);
+  }
+
+  /* Campo inválido continua vermelho, também com foco: `.borda-erro` sozinha perderia para `.input-padrao` (vem
+     depois) e para `:focus` (mais forte). */
   .input-padrao.borda-erro,
   .input-padrao.borda-erro:focus {
     border-color: var(--cor-borda-erro);
   }
 
-  /* Tela "Consultar" (campo-textbox-consulta.tsx) - deixa claro visualmente
-     que o campo é só leitura, não é só um input esquecido sem onChange. */
+  /* Campo só de leitura: fica claro que não é para digitar. */
   .input-padrao:disabled {
     background-color: var(--cor-fundo-hover);
     color: var(--cor-texto);
     cursor: not-allowed;
   }
 
-  /* Badge Sim/Não (GenericTable, coluna booleana) */
+  /* Pílula de status (Sim/Não, situação). */
   .badge {
     --badge-espaco-vertical: 0.125rem;
     display: inline-flex;
@@ -273,9 +250,7 @@
     font-weight: 700;
   }
 
-  /* Pílula dentro de um botão (o contador do filtro marcado, na barra das tabelas): com o espaço interno, ela ficava
-     1 px mais alta que a linha de texto do botão, e o botão crescia (e a barra pulava) ao marcar um filtro. A margem
-     negativa devolve o espaço interno vertical: a pílula continua igual por fora, mas não aumenta o botão. */
+  /* Pílula dentro de um botão (o contador do filtro): a margem negativa impede que ela aumente a altura do botão. */
   .btn .badge {
     margin-block: calc(-1 * var(--badge-espaco-vertical));
   }
@@ -290,35 +265,31 @@
     color: var(--cor-texto);
   }
 
-  /* .badge-aviso: o estado 'aguardando_aprovacao' EXIGE ação do administrador e não pode ter a mesma cor
-     cinza dos estados mortos ('nao_atingido', 'encerrado', que usam `.badge-neutro`). Os tokens de aviso
-     existem nos 3 temas (1-cores.css). */
+  /* Aviso: estado que pede ação do administrador (aguardando aprovação), diferente do cinza dos encerrados. */
   .badge-aviso {
     background-color: var(--cor-fundo-aviso);
     color: var(--cor-texto-aviso);
   }
 
-  /* .badge-info: estado bom que ainda não começou ("Em breve": campanha aprovada com início no futuro). */
+  /* Informação: estado bom que ainda não começou ("Em breve"). */
   .badge-info {
     background-color: var(--cor-fundo-info);
     color: var(--cor-texto-info);
   }
 
-  /* .badge-concluido: terminou e deu certo (campanha "Sucesso"), separado do verde de "no ar" (Ativa). */
+  /* Concluído: terminou e deu certo ("Sucesso"), separado do verde de "no ar". */
   .badge-concluido {
     background-color: var(--cor-fundo-concluido);
     color: var(--cor-texto-concluido);
   }
 
-  /* .badge-erro: utilitário genérico (status rejeitado/encerrado_moderacao das campanhas, entre outros). */
   .badge-erro {
     background-color: var(--cor-fundo-erro);
     color: var(--cor-texto-erro);
   }
 
-  /* Barra de progresso (components/crud/barra-progresso.tsx): largura FIXA do trilho, para caber numa coluna
-     curta da GenericTable sem entrar na medição de largura dela (uma largura em % cresceria junto com a
-     coluna). Completa (100% ou mais): o preenchimento passa para o verde forte. */
+  /* Barra de progresso (barra-progresso.tsx): trilho de largura fixa, para não alargar a coluna da tabela.
+     Completa, passa para o verde forte. */
   .barra-progresso {
     display: inline-flex;
     align-items: center;
@@ -341,10 +312,23 @@
     background-color: var(--cor-marca);
   }
 
-  /* Barra por baixo de um texto numa célula de tabela (TextoComBarraProgresso): fora do fluxo, logo abaixo do texto e
-     com a largura da COLUNA (o bloco ocupa a célula inteira), então tem o mesmo comprimento em todas as linhas, seja o
-     valor R$ 1 ou R$ 100.000: o comprimento representa 0 a 100%, não o tamanho do texto. Fica dentro do respiro da
-     linha: o texto não sai do lugar, a coluna não alarga, a linha não cresce. */
+  .barra-progresso__trilho--completo .barra-progresso__preenchido {
+    background-color: var(--cor-fundo-marca-forte);
+  }
+
+  /* Rótulo pequeno em negrito cinza: porcentagem da barra, nome da etapa, data da linha do tempo. */
+  .barra-progresso__porcentagem, .indicador-etapas__rotulo, .linha-tempo__data {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    color: var(--cor-texto-fraco);
+  }
+
+  .barra-progresso__porcentagem {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Barra por baixo de um valor numa célula (TextoComBarraProgresso): fora do fluxo e com a largura da coluna, o
+     mesmo comprimento em toda linha. Cabe no respiro da linha: nada se mexe. */
   .barra-progresso-sob {
     position: relative;
     display: block;
@@ -361,17 +345,18 @@
     overflow: hidden;
   }
 
-  /* Ficha centralizada (SecaoFicha `centralizada`, ficha-consulta.tsx): a partir de 1024 px, uma linha só, de ponta a
-     ponta. Cada coluna tem a largura do seu campo (auto) e o espaço que sobra vai para entre elas (space-between): o
-     primeiro encosta na borda esquerda, o último na direita, quantos campos houver. Cada rótulo fica centralizado
-     sobre o seu valor; a barra fina do arrecadado tem a largura do número, então vem junto. Abaixo de 1024 px, 2
-     colunas iguais (1 no celular). As colunas moram só aqui, sem `grid-cols-*` do Tailwind, que venceria. */
-  .ficha-centralizada {
+  /* Ficha centralizada (SecaoFicha `centralizada`): a partir de 1024 px, uma linha só, de ponta a ponta, com o
+     espaço que sobra entre os campos e cada rótulo centralizado sobre o valor. Ela e a ficha lado a lado têm as
+     mesmas colunas até 1024 px: 1 no celular, 2 a partir de 640 px. As colunas moram só aqui (um `grid-cols-*`
+     do Tailwind venceria). */
+  .ficha-centralizada,
+  .ficha-lado-a-lado {
     grid-template-columns: minmax(0, 1fr);
   }
 
   @media (min-width: 640px) {
-    .ficha-centralizada {
+    .ficha-centralizada,
+    .ficha-lado-a-lado {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
@@ -393,9 +378,8 @@
     justify-content: center;
   }
 
-  /* A linha do valor de um campo de ficha (CampoFicha): o valor e, se houver, o controle ao lado. No CSS, não em
-     classes do Tailwind: utilitário vence regra de componente, e a ficha centralizada (acima) não conseguiria trocar
-     o alinhamento. */
+  /* O valor de um campo de ficha e o controle ao lado. No CSS (não Tailwind) para a ficha centralizada poder
+     trocar o alinhamento. */
   .campo-ficha__valor {
     display: flex;
     align-items: center;
@@ -403,81 +387,8 @@
     gap: 0.5rem;
   }
 
-  /* Duas seções lado a lado com as linhas alinhadas (FichaLadoALado, ficha-consulta.tsx). Abaixo de 1024 px, uma
-     embaixo da outra: a ordem põe todos os campos da esquerda antes dos da direita (no HTML eles vêm intercalados,
-     linha a linha). A partir de 1024 px, a esquerda tem 2/3 e a direita 1/3, como `.grade-ficha`. */
-  .ficha-lado-a-lado {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  @media (min-width: 640px) {
-    .ficha-lado-a-lado {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  /* Um bloco da esquerda com uma coluna de foto ao lado dos campos (o Alterar Usuário: a foto grande ao lado de Nome,
-     E-mail e senha). A foto atravessa as linhas dos campos (`--linhas-bloco`, a quantidade de campos, vem de quem
-     usa). A partir de 1024 px, as linhas do bloco são as linhas da grade de fora (subgrid): cada campo fica na mesma
-     linha da parte vizinha da direita (o E-mail ao lado da lista de papel). As colunas moram só aqui. */
-  .ficha-bloco-com-foto {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 1rem 1.5rem;
-    align-items: start;
-  }
-
-  /* Item que ocupa a largura toda do bloco, embaixo da foto e dos campos (o medidor de força da senha): o bloco tem uma
-     linha a mais que a foto atravessa (`--linhas-foto` menor que `--linhas-bloco`). Usa as colunas do bloco
-     (subgrid): o que vai embaixo de um campo fica na coluna dos campos (`__campo`), como a barra e a lista de requisitos. */
-  .ficha-bloco-com-foto__largo {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: subgrid;
-    row-gap: 0.375rem;
-  }
-
-  @media (min-width: 640px) {
-    .ficha-bloco-com-foto {
-      grid-template-columns: auto minmax(0, 1fr);
-    }
-
-    .ficha-bloco-com-foto__foto {
-      grid-column: 1;
-      grid-row: span var(--linhas-foto, var(--linhas-bloco));
-    }
-
-
-    .ficha-bloco-com-foto__campo {
-      grid-column: 2;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .ficha-bloco-com-foto {
-      grid-row: span var(--linhas-bloco);
-      grid-template-rows: subgrid;
-    }
-  }
-
-  /* Requisito de senha em duas linhas, na lista em linha (MedidorSenha `emLinha`): a segunda linha transborda para o
-     vão de baixo em vez de aumentar a lista. A margem negativa de uma linha de texto (`1lh`, a altura da linha do
-     próprio texto) faz o item contar como uma linha só: o que vem embaixo não se mexe. */
-  .requisito-transborda {
-    margin-bottom: -1lh;
-  }
-
-  /* Duas versões de um trecho no mesmo lugar, uma em cima da outra (ex.: os botões de senha e a caixa "Nova senha" do
-     Alterar Usuário): o trecho tem sempre a altura da maior, então trocar de uma para a outra não empurra o que vem
-     embaixo. A que não está em uso fica `invisible` (ocupa o lugar) e `inert` (sem clique nem Tab). */
-  .camadas {
-    display: grid;
-  }
-
-  .camadas > * {
-    grid-area: 1 / 1;
-  }
-
+  /* Duas seções lado a lado com as linhas alinhadas (FichaLadoALado). Abaixo de 1024 px, uma embaixo da outra (no
+     HTML os campos vêm intercalados, a ordem separa). Acima, esquerda 2/3 e direita 1/3. */
   .ficha-lado-a-lado__esquerda {
     order: 1;
   }
@@ -497,8 +408,60 @@
     }
   }
 
-  .barra-progresso__trilho--completo .barra-progresso__preenchido {
-    background-color: var(--cor-fundo-marca-forte);
+  /* Bloco com a foto ao lado dos campos (Alterar Usuário). A foto atravessa `--linhas-bloco` linhas; a partir de
+     1024 px as linhas são as da grade de fora (subgrid), alinhadas com a parte da direita. */
+  .ficha-bloco-com-foto {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem 1.5rem;
+    align-items: start;
+  }
+
+  /* Item na largura toda do bloco, embaixo da foto e dos campos (o medidor de força da senha), nas colunas do
+     bloco (subgrid). */
+  .ficha-bloco-com-foto__largo {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+    row-gap: 0.375rem;
+  }
+
+  @media (min-width: 640px) {
+    .ficha-bloco-com-foto {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .ficha-bloco-com-foto__foto {
+      grid-column: 1;
+      grid-row: span var(--linhas-foto, var(--linhas-bloco));
+    }
+
+    .ficha-bloco-com-foto__campo {
+      grid-column: 2;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .ficha-bloco-com-foto {
+      grid-row: span var(--linhas-bloco);
+      grid-template-rows: subgrid;
+    }
+  }
+
+  /* Requisito de senha em duas linhas (MedidorSenha `emLinha`): a margem negativa de uma linha faz o item contar
+     como uma linha só, e a segunda transborda para o vão de baixo sem mexer em nada. */
+  .requisito-transborda {
+    margin-bottom: -1lh;
+  }
+
+  /* Versões de um trecho uma em cima da outra: o trecho tem a altura da maior, e trocar de versão não empurra nada.
+     A que não está em uso fica `invisible` e `inert`. */
+  .camadas {
+    display: grid;
+  }
+
+  .camadas > * {
+    grid-area: 1 / 1;
   }
 
   /* Distribuição do score (Pontuação): uma barra só, dividida pelo peso de cada dimensão ligada, com a legenda
@@ -569,13 +532,6 @@
     box-shadow: var(--shadow-md);
   }
 
-  .barra-progresso__porcentagem {
-    font-size: var(--font-size-xs);
-    font-weight: 700;
-    color: var(--cor-texto-fraco);
-    font-variant-numeric: tabular-nums;
-  }
-
   /* Indicador de etapas (components/crud/indicador-etapas.tsx): número em círculo, rótulo embaixo, linha ligando
      as etapas (o ::before de cada etapa depois da primeira). Feita: verde com ✓; atual: verde forte; futura: cinza. */
   .indicador-etapas {
@@ -614,10 +570,6 @@
     padding: 0 0.25rem;
   }
 
-  button.indicador-etapas__botao {
-    cursor: pointer;
-  }
-
   button.indicador-etapas__botao:hover .indicador-etapas__rotulo {
     color: var(--cor-texto-forte);
     text-decoration: underline;
@@ -648,12 +600,6 @@
     background-image: var(--cor-degrade-marca);
     box-shadow: var(--cor-sombra-brilho-marca);
     color: var(--cor-texto-sobre-cor);
-  }
-
-  .indicador-etapas__rotulo {
-    font-size: var(--font-size-xs);
-    font-weight: 700;
-    color: var(--cor-texto-fraco);
   }
 
   .indicador-etapas__etapa--atual .indicador-etapas__rotulo {
@@ -690,12 +636,6 @@
     left: calc(0.325rem - 1px);
     width: 2px;
     background-color: var(--cor-borda);
-  }
-
-  .linha-tempo__data {
-    font-size: var(--font-size-xs);
-    font-weight: 700;
-    color: var(--cor-texto-fraco);
   }
 
   .linha-tempo__titulo {
@@ -763,24 +703,18 @@
   .estado-vazio__texto {
     font-size: var(--font-size-sm);
     color: var(--cor-texto-fraco);
-    max-width: 28rem;
+    max-width: var(--largura-texto-curto);
   }
 
-  /* Selo <dev>: marca qualquer recurso que existe só para facilitar desenvolvimento/teste (ex.: redefinir
-     senha para um valor conhecido), nunca para ficar disponível em produção de verdade. Roxo + monoespaçada
-     de propósito: nenhuma outra cor/fonte do projeto usa essa combinação, então é visualmente inconfundível
-     com o resto da interface. Usa os tokens `--cor-dev-*` (1-cores.css). */
+  /* Selo <dev>: recurso que existe só para desenvolvimento e teste. Roxo e monoespaçada, uma combinação que
+     nada mais usa. */
   .badge-dev {
     background-color: var(--cor-dev-fundo-selo);
     color: var(--cor-dev-texto);
     font-family: var(--font-mono-dev);
   }
 
-  /* components/layout/dev-login-rapido.tsx: feio DE PROPÓSITO (roxo sólido, borda tracejada, fonte
-     monoespaçada): "roxo feio e em destaque, claramente mostrando que não vai ficar ali". Não é refinamento
-     esquecido, é sinalização visual. */
-  /* Botão de desenvolvimento DENTRO de um formulário, ao lado de um botão comum: mesmo tamanho e mesma letra de
-     .btn-secondary (usa .btn), só que roxo e com a borda tracejada do .btn-dev, para não ser confundido. */
+  /* Botão de desenvolvimento dentro de um formulário: o tamanho do .btn, roxo e tracejado. */
   .btn-dev-acao {
     background-color: var(--cor-dev-texto);
     color: var(--cor-texto-sobre-cor);
@@ -791,6 +725,7 @@
     filter: brightness(1.1);
   }
 
+  /* Login rápido (dev-login-rapido.tsx): feio de propósito, para mostrar que não vai ficar ali. */
   .btn-dev {
     display: inline-flex;
     align-items: center;
@@ -815,13 +750,8 @@
     border-left: none;
   }
 
-  /* Dica (components/layout/tooltip.tsx: exporta `Dica` + `Tooltip`): primitivo ÚNICO de hover-dica do
-     sistema (inclui o que era `.crud-tabela__acao-dica`, quase idêntico: mesmo bottom: 135%, mesma cor,
-     mesmo z-index, mesma transition). `.dica` vai no GATILHO (qualquer elemento: button, span, Link, não só
-     o ⓘ avulso); `.dica__bolha` é o `<Dica>` soltado dentro dele. CSS puro (:hover/:focus), sem JS
-     controlando abrir/fechar. */
-  /* Interruptor liga/desliga (components/input/interruptor.tsx): trilho cinza com a bolinha à esquerda (desligado) e
-     na cor da marca com a bolinha à direita (ligado), com o estado escrito ao lado. Medidas em tokens (3-base.css). */
+  /* Interruptor liga/desliga (interruptor.tsx): trilho cinza e bolinha à esquerda desligado, verde e à direita
+     ligado, com o estado escrito ao lado. */
   .interruptor {
     display: inline-flex;
     align-items: center;
@@ -831,12 +761,6 @@
 
   .interruptor:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px var(--cor-anel-foco);
-  }
-
-  .interruptor:disabled {
-    opacity: var(--opacidade-desabilitado);
-    cursor: not-allowed;
   }
 
   .interruptor__trilho {
@@ -876,13 +800,13 @@
     }
   }
 
-  /* Área que rola dentro de um modal: o espaço da barra de rolagem fica SEMPRE reservado (scrollbar-gutter), tenha
-     barra ou não. Assim o conteúdo não pula para a esquerda quando a barra aparece (ex.: trocar de aba num modal
-     que fica mais comprido). Mesma ideia da regra "modal não pode dançar". */
+  /* Área que rola num modal: o espaço da barra fica sempre reservado, e o conteúdo não pula quando ela aparece. */
   .rolagem-estavel {
     scrollbar-gutter: stable;
   }
 
+  /* Dica (tooltip.tsx: `Dica` e `Tooltip`), a única do sistema. `.dica` vai no gatilho (qualquer elemento);
+     `.dica__bolha` é o balão dentro dele. Abre só com CSS (:hover/:focus). */
   .dica {
     position: relative;
   }
@@ -900,20 +824,16 @@
     font-weight: 500;
     line-height: 1.4;
     text-align: left;
-    /* Reset explícito: sem isso, o TEXTO da dica herdaria uppercase + letter-spacing de um ancestral como
-       .admin-sidebar__grupo-titulo e sairia gritado em CAIXA ALTA, não só o rótulo do grupo. */
+    /* Não herda de quem está em volta: a caixa alta do título do grupo no menu, o nowrap da célula de tabela. A
+       dica quebra dentro do max-width e respeita o "\n" do texto. */
     text-transform: none;
     letter-spacing: normal;
-    /* Mesmo motivo: dentro de uma célula de tabela que não quebra linha (DS-100), a dica herdava o nowrap, saía numa
-       linha só e era cortada pela borda da tabela. A dica sempre quebra dentro do max-width, e respeita a quebra de
-       linha que o texto trouxer ("\n"), para separar assuntos numa dica maior. */
     white-space: pre-line;
     width: max-content;
     max-width: 16rem;
     box-shadow: var(--shadow-md);
-    /* Escondida = display: none, não só opacity 0: uma bolha invisível perto da borda de um container com
-       overflow auto ainda conta como conteúdo e cria barra de rolagem. allow-discrete + @starting-style
-       mantêm o esmaecer ao abrir e ao fechar. */
+    /* Escondida com display: none (só opacity 0 ainda criaria barra de rolagem perto de uma borda);
+       allow-discrete e @starting-style mantêm o esmaecer. */
     display: none;
     opacity: 0;
     transition: var(--transition-normal);
@@ -922,9 +842,8 @@
     z-index: var(--camada-dica);
   }
 
-  /* Foco só abre a bolha quando é de teclado (:focus-visible). Com :focus comum, o botão que abriu um modal
-     recebia o foco de volta ao fechar e a bolha ficava presa na tela. O "ⓘ" avulso continua abrindo com
-     qualquer foco: no celular, tocar nele é o único jeito de ler a dica. */
+  /* Foco só abre a bolha pelo teclado: com :focus comum, a bolha ficava presa no botão que recebe o foco de volta
+     ao fechar um modal. O ⓘ abre com qualquer foco: no celular, tocar é o único jeito de ler. */
   .dica:hover .dica__bolha,
   .dica--info:focus .dica__bolha,
   .dica:focus-visible .dica__bolha,
@@ -941,47 +860,35 @@
     }
   }
 
-  /* Variante --baixo: o cabeçalho do cartão de grupo (ex.: grupo "Arquivo" do dashboard de Regras do
-     Negócio) fica colado no topo de um container com overflow-hidden (para o rounded-xl não vazar canto
-     quadrado), então a dica padrão (para cima) nasceria cortada pela borda arredondada. Esta variante abre
-     para baixo, dentro da área do cartão. */
+  /* --baixo: abre para baixo, para o gatilho colado no topo de um cartão que corta o que passa da borda. */
   .dica__bolha--baixo {
     bottom: auto;
     top: 135%;
   }
 
-  /* Variante --direita: abre alinhada pela borda direita do gatilho, para o gatilho que fica perto da borda direita
-     da tela (centralizada, a bolha aberta passaria da borda). As dicas dos botões de ação de tabela não usam esta
-     variante: são desenhadas fora da tabela (acao-linha.tsx, --solta). */
+  /* --direita: alinhada pela borda direita do gatilho, para o gatilho perto da borda direita da tela. */
   .dica__bolha--direita {
     left: auto;
     right: 0;
     transform: none;
   }
 
-  /* Variante --solta: a bolha desenhada fora da tabela, direto no <body> (a dica dos botões de ação em
-     acao-linha.tsx), fixa na tela. Assim a caixa da tabela, que rola de lado, não a corta. top/left vêm do botão:
-     a bolha fica acima dele e termina na borda direita dele. */
+  /* --solta: desenhada direto no <body> (botões de ação da tabela, acao-linha.tsx), para a tabela que rola de lado
+     não cortar. top/left vêm do botão: fica acima dele, terminando na borda direita. */
   .dica__bolha--solta {
     position: fixed;
     display: block;
     opacity: 1;
     bottom: auto;
-    right: auto;
     transform: translate(-100%, -100%);
     z-index: var(--camada-dica-solta);
   }
 
-  /* Variante --curta: rótulo de 1 palavra (ações de tabela), sem quebra de linha, padding menor que a versão
-     de texto explicativo. */
-  /* Sem limite de largura: numa linha só, um rótulo um pouco maior passava dos 16rem da bolha e era cortado. */
-  /* Variante --alerta (com --baixo): o aviso preso a um campo ("Apenas leitura"), no formato do aviso de validação
-     do navegador: balão claro embaixo do campo, alinhado à esquerda, com seta apontando para ele e ícone de alerta.
-     Só abre pelo estado (.dica--aberta), nunca pelo hover. */
+  /* --alerta (com --baixo): o aviso preso a um campo ("Apenas leitura"), como o aviso de validação do navegador:
+     balão claro embaixo do campo, com seta e ícone. Só abre pelo estado (.dica--aberta), nunca pelo hover. */
   .dica__bolha--alerta {
     left: 0.75rem;
     transform: none;
-    width: max-content;
     max-width: none;
     background-color: var(--cor-fundo-cartao);
     color: var(--cor-texto);
@@ -1018,14 +925,14 @@
     color: var(--cor-fundo-cartao);
   }
 
+  /* --curta: rótulo de uma palavra (ações de tabela), numa linha só e sem limite de largura. */
   .dica__bolha--curta {
     white-space: nowrap;
     max-width: none;
     padding: 0.35rem 0.65rem;
   }
 
-  /* Gatilho ⓘ avulso (ver `Tooltip` em tooltip.tsx) - visual só do ÍCONE,
-     a bolha em si usa `.dica__bolha` acima. */
+  /* O ícone ⓘ (`Tooltip`). */
   .dica--info {
     display: inline-flex;
     align-items: center;
@@ -1043,34 +950,23 @@
 
   /* Pelo teclado, o ⓘ precisa de contorno: só a troca de cor não mostra onde o foco está. */
   .dica--info:focus-visible {
-    border-radius: 9999px;
-    box-shadow: 0 0 0 3px var(--cor-anel-foco);
+    border-radius: var(--radius-full);
   }
 
-  /* Variante --clicavel: o ícone também abre um modal ao clicar (ver prop `aoClicar` em tooltip.tsx); reset
-     dos estilos padrão de <button> (fundo, borda, fonte) para ficar visualmente idêntico à variante só-hover
-     (<span>), só trocando o cursor de "help" para "pointer", que é o sinal certo para algo clicável. */
+  /* O ⓘ que também abre um modal ao clicar (`aoClicar`): só troca o cursor. */
   .dica--clicavel {
-    background: none;
-    border: none;
-    padding: 0;
-    font: inherit;
     cursor: pointer;
   }
 
-  /* Hover suave da cor da marca, derivado do token via color-mix() (não um valor fixo): substitui
-     `hover:bg-primary/10`/`/20` cru do Tailwind, cuja opacidade a biblioteca calcula por baixo sem passar
-     pelo alias `--cor-marca`. `color-mix()` faz à mão o mesmo cálculo (é o que o próprio Tailwind 4 usa por
-     dentro para os modificadores de opacidade); se o verde da marca mudar um dia, isto acompanha sozinho.
-     Nomeada pela INTENÇÃO (hover de item selecionável), não pelo valor: por isso não existe
-     ".fundo-marca-10"/"-20" à parte, só esta e o `.brilho-marca` mais abaixo (2 usos decorativos, opacidade
-     diferente, papel diferente). */
-  .hover-fundo-marca-suave:hover {
+  /* Hover verde clarinho de item escolhível, tirado da cor da marca: acompanha se o verde mudar. */
+  .hover-fundo-marca-suave:hover,
+  .btn-pilula:hover,
+  .dropdown-opcao:hover,
+  .combobox-opcao:hover {
     background-color: color-mix(in srgb, var(--cor-marca) 10%, transparent);
   }
 
-  /* Linha de opção de dropdown/faceta com checkbox múltiplo (facet do GenericTable e das 2 bancadas): a MESMA cadeia de classes Tailwind aparecia idêntica em 3 arquivos (generic-table.tsx,
-     bancada-pesquisador.tsx, bancada-campanha.tsx); é o padrão inteiro, não só a cor. */
+  /* Opção de um filtro com marcação múltipla (barra-filtros.tsx). */
   .dropdown-opcao {
     display: flex;
     align-items: center;
@@ -1082,12 +978,8 @@
     font-weight: 700;
     border-bottom: 1px solid var(--cor-borda);
   }
-  .dropdown-opcao:hover {
-    background-color: color-mix(in srgb, var(--cor-marca) 10%, transparent);
-  }
 
-  /* Linha de opção de combobox de busca (sugestão de pesquisador/campanha): mesmo achado
-     do `.dropdown-opcao` acima, cadeia diferente (sem borda embaixo, com gap de ícone). */
+  /* Opção de uma caixa de busca com sugestões (pesquisador, campanha). */
   .combobox-opcao {
     display: flex;
     align-items: center;
@@ -1096,21 +988,9 @@
     font-size: var(--font-size-sm);
     cursor: pointer;
   }
-  .combobox-opcao:hover {
-    background-color: color-mix(in srgb, var(--cor-marca) 10%, transparent);
-  }
 
-  /* Brilho decorativo (blur de fundo, login e Minha Conta) - só 2 usos,
-     opacidades diferentes (20% e 10%), sem repetição de padrão de
-     layout nenhuma (por isso não vira ".dropdown-opcao"/"combobox-
-     opcao" - aqueles têm cadeia inteira duplicada, este é só decoração
-     solta). Ainda assim ganhou classe própria (não ficou cru) pra manter
-     a regra de ouro sem exceção - `--opacidade-brilho-marca` deixa a
-     tela escolher 10 ou 20 via style inline, sem inventar uma classe por
-     tela. */
-  /* Largura do site: cabeçalho, faixa do "Início >" e rodapé usam a MESMA caixa (largura máxima e margens
-     laterais iguais em cada tamanho de tela), então o logo de cima e o de baixo ficam sempre na mesma linha, e
-     o fim do rodapé no mesmo ponto do fim do cabeçalho. */
+  /* Largura do site: cabeçalho, faixa do "Início >" e rodapé na mesma caixa, então o logo de cima e o de baixo
+     ficam sempre alinhados. */
   .largura-site {
     max-width: 80rem;
     margin-inline: auto;
@@ -1133,7 +1013,8 @@
     box-shadow: var(--shadow-cartao-solto);
   }
 
-  /* Brilho mais forte, atrás do ícone dos cartões soltos (Login, Cadastro, Esqueci a senha, Criar nova senha). */
+  /* Brilho verde decorativo (fundo desfocado, login e Minha Conta): 10%, ou 20% com o -forte (atrás do ícone dos
+     cartões soltos). */
   .brilho-marca-forte {
     --opacidade-brilho-marca: 20%;
   }
@@ -1151,10 +1032,8 @@
     box-shadow: var(--shadow-sm);
   }
 
-  /* Barra de abas (Minha Conta, Dashboard): rola na horizontal no celular. A linha de base é uma sombra
-     interna, não border-bottom: o sublinhado de 2px da aba ativa fica DENTRO da barra e cobre a linha. Com
-     border-bottom, a aba precisaria descer 1px (-mb-px) para cobrir a linha, esse 1px sairia da área de rolagem
-     e o navegador mostraria uma barra de rolagem vertical. */
+  /* Barra de abas (Minha Conta, Dashboard): rola de lado no celular. A linha de base é sombra interna, não borda:
+     o sublinhado da aba ativa cobre a linha sem sair da área de rolagem (senão surgiria uma barra vertical). */
   .barra-abas {
     display: flex;
     overflow-x: auto;
@@ -1162,9 +1041,8 @@
     box-shadow: inset 0 -1px 0 var(--cor-borda);
   }
 
-  /* Barra de carregamento (components/layout/barra-carregamento): faixa fina fixa no topo, acima de tudo, com um
-     trecho da cor da marca correndo da esquerda para a direita. Só aparece depois de 300ms (animation-delay +
-     opacity 0 até lá): requisição rápida não pisca nada. Com "reduzir movimento" do sistema, a faixa fica parada. */
+  /* Barra de carregamento: faixa fina no topo com um trecho verde correndo. Só aparece depois de 300ms (requisição
+     rápida não pisca); com "reduzir movimento", fica parada. */
   .barra-carregamento {
     position: fixed;
     top: 0;
@@ -1201,10 +1079,8 @@
     }
   }
 
-  /* Aviso (toast) saindo da fila: em vez de sumir e os de baixo pularem para cima, a altura dele encolhe até zero
-     (linha da grade de 1fr para 0fr) enquanto some, e os de baixo sobem junto. O React apaga o aviso quando a
-     transição termina (transitionend). Com "reduzir movimento", a transição dura 1ms: sai na hora, e o fim
-     continua sendo avisado. */
+  /* Aviso saindo: a altura encolhe até zero enquanto some, e os de baixo sobem junto, sem pulo. O React apaga no
+     fim da transição; com "reduzir movimento" ela dura 1ms (o fim continua sendo avisado). */
   .aviso-envoltorio {
     display: grid;
     grid-template-rows: 1fr;
@@ -1259,14 +1135,13 @@
     border-bottom: 1px solid var(--cor-borda);
   }
 
-  /* Mensagem de erro embaixo de um campo ou de uma escolha. Vai junto de `.legenda-destaque`, que dá a fonte. */
+  /* Mensagem de erro embaixo de um campo ou de uma escolha. Vai junto de `.legenda enfase`, que dá a fonte. */
   .erro-campo {
     margin-top: 0.25rem;
     color: var(--cor-texto-erro);
   }
 
-  /* As 2 colunas das fichas (modais de Consultar/Alterar e Minha Conta): uma coluna no celular; a partir de
-     1024px, 3 partes, com o conteúdo principal ocupando 2 (`lg:col-span-2`) e os metadados 1. */
+  /* Grade das fichas: uma coluna no celular; a partir de 1024px, 3 partes, o principal em 2 (`lg:col-span-2`). */
   .grade-ficha {
     display: grid;
     gap: 1.5rem;

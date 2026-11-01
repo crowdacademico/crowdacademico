@@ -580,7 +580,7 @@ export function GenericTable<T extends Linha>({
             {aoLadoDaAjuda}
           </div>
         </div>
-        {acaoTopo && <div className="crud-secao__acao-topo">{acaoTopo}</div>}
+        {acaoTopo && <div>{acaoTopo}</div>}
       </div>
 
       {/* Busca sempre visível, inclusive enquanto carrega: se ela aparecesse só depois (ou só em lista com mais

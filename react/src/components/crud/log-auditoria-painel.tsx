@@ -21,7 +21,7 @@ export function LogAuditoriaPainel({ buscar }: LogAuditoriaPainelProps) {
 
   return (
     <div className="mt-4 border-t borda-padrao pt-4">
-      <h2 className="paragrafo-destaque texto-padrao mb-2">
+      <h2 className="paragrafo enfase texto-padrao mb-2">
         Últimas alterações {total > 0 && `(${total} no total)`}
       </h2>
 

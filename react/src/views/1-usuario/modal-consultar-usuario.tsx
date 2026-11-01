@@ -105,7 +105,7 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
     >
       {!usuario ? (
         erro ? (
-          <MensagemErro texto={erro} className="paragrafo-destaque p-6 text-center texto-erro" />
+          <MensagemErro texto={erro} className="paragrafo enfase p-6 text-center texto-erro" />
         ) : (
           <Carregando className="p-6 text-center" />
         )

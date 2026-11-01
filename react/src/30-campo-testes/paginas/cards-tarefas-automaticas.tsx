@@ -79,17 +79,19 @@ export function CardsTarefasAutomaticas({ auth, cards, provedorDeTeste, interval
               : undefined;
           return (
             <div key={card.chave} className="cartao-painel p-4 flex flex-col gap-3">
-              <div className="cartao-tarefa__pilha">
+              {/* Título e texto reservam o espaço do mais longo de todos os cards (os outros, invisíveis, na mesma
+                  célula): todo card tem a mesma altura. */}
+              <div className="camadas">
                 {TODOS_OS_CARDS.map((outro) => (
-                  <span key={outro.chave} className="paragrafo-destaque flex items-center gap-2 invisible" aria-hidden="true">
+                  <span key={outro.chave} className="paragrafo enfase flex items-center gap-2 invisible" aria-hidden="true">
                     <i className={`fa-solid ${outro.icone}`}></i> {outro.rotulo}
                   </span>
                 ))}
-                <span className="paragrafo-destaque texto-forte flex items-center gap-2">
+                <span className="paragrafo enfase texto-forte flex items-center gap-2">
                   <i className={`fa-solid ${card.icone}`} aria-hidden="true"></i> {card.rotulo}
                 </span>
               </div>
-              <div className="cartao-tarefa__pilha flex-1">
+              <div className="camadas flex-1">
                 {TODOS_OS_CARDS.map((outro) => (
                   <p key={outro.chave} className="legenda invisible" aria-hidden="true">
                     {outro.dica}
@@ -98,7 +100,7 @@ export function CardsTarefasAutomaticas({ auth, cards, provedorDeTeste, interval
                 <p className="legenda texto-fraco">{card.dica}</p>
               </div>
               {intervalosMinutos[card.chave] !== undefined && (
-                <span className="legenda-destaque texto-padrao flex items-center gap-2">
+                <span className="legenda enfase texto-padrao flex items-center gap-2">
                   <i className="fa-regular fa-clock" aria-hidden="true"></i>
                   {intervalosMinutos[card.chave] === 1 ? 'A cada 1 minuto' : `A cada ${intervalosMinutos[card.chave]} minutos`}
                 </span>

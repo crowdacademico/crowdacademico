@@ -6,7 +6,7 @@
 // então é este texto que o leitor de tela anuncia. `data-mensagem-erro`: o useErroToast rola a tela até ele.
 export function MensagemErro({
   texto,
-  className = 'paragrafo-destaque texto-erro text-center',
+  className = 'paragrafo enfase texto-erro text-center',
 }: {
   texto?: string | null;
   className?: string;

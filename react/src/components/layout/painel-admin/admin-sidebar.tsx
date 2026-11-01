@@ -72,7 +72,7 @@ export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
           <span className="flex items-center gap-2">
             <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Buscar
           </span>
-          <kbd className="legenda-destaque texto-herdado border borda-forte rounded px-1.5 py-0.5 fundo-cartao">
+          <kbd className="legenda enfase texto-herdado border borda-forte rounded px-1.5 py-0.5 fundo-cartao">
             Ctrl K
           </kbd>
         </button>

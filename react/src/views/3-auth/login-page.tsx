@@ -96,7 +96,7 @@ export function LoginPage({ auth }: PropsPagina) {
         </div>
 
         <form onSubmit={aoEntrar} noValidate className="p-10 space-y-6">
-          <MensagemErro texto={erro || recusa} className="paragrafo-destaque texto-erro text-center whitespace-pre-line" />
+          <MensagemErro texto={erro || recusa} className="paragrafo enfase texto-erro text-center whitespace-pre-line" />
 
           <Campo rotulo="Seu E-mail" erro={erroEmail}>
             {({ atributos, classeErro }) => (
@@ -119,7 +119,7 @@ export function LoginPage({ auth }: PropsPagina) {
           {/* Mesmo desenho do protótipo (link à direita do rótulo), mas o campo vem ANTES do link no HTML: com
               Tab, o e-mail vai direto para a senha. `order` recoloca o link no lugar visual de sempre. */}
           <div className="flex flex-wrap justify-between items-center">
-            <label htmlFor={idSenha} className="rotulo-campo mb-2 order-1">
+            <label htmlFor={idSenha} className="rotulo-campo order-1">
               Sua Senha
             </label>
             <input
@@ -133,16 +133,16 @@ export function LoginPage({ auth }: PropsPagina) {
               required
               aria-invalid={Boolean(erroSenha)}
               aria-describedby={erroSenha ? idErroSenha : undefined}
-              className={'input-padrao order-3 w-full' + (erroSenha ? ' borda-erro' : '')}
+              className={'input-padrao order-3' + (erroSenha ? ' borda-erro' : '')}
               placeholder="••••••••"
               autoComplete="current-password"
             />
             {erroSenha && (
-              <p id={idErroSenha} className="legenda-destaque erro-campo order-4 w-full">
+              <p id={idErroSenha} className="legenda enfase erro-campo order-4 w-full">
                 {erroSenha}
               </p>
             )}
-            <Link to="/esqueci-senha" className="legenda-destaque texto-marca hover:underline mb-2 order-2">
+            <Link to="/esqueci-senha" className="legenda enfase texto-marca hover:underline mb-2 order-2">
               Esqueceu a senha?
             </Link>
           </div>
@@ -172,7 +172,7 @@ export function LoginPage({ auth }: PropsPagina) {
           <button
             type="button"
             onClick={() => window.alert('Login social com Google simulado no protótipo.')}
-            className="paragrafo-destaque w-full border-2 borda-padrao fundo-cartao texto-forte py-3.5 rounded-xl hover-fundo-sutil transition flex items-center justify-center gap-3"
+            className="paragrafo enfase w-full border-2 borda-padrao fundo-cartao texto-forte py-3.5 rounded-xl hover-fundo-sutil transition flex items-center justify-center gap-3"
           >
             <IconeGoogle /> Continuar com Google
           </button>

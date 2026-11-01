@@ -43,7 +43,7 @@ export function EscoposTipoLink({
         />
       </div>
       {nenhumMarcado && (
-        <p className="legenda-destaque erro-campo">Pelo menos uma opção precisa ficar marcada.</p>
+        <p className="legenda enfase erro-campo">Pelo menos uma opção precisa ficar marcada.</p>
       )}
     </fieldset>
   );

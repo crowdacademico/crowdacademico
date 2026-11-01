@@ -154,7 +154,7 @@ function CardTermoUso({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
               className="px-5 py-3 flex items-center justify-between gap-4 border-b borda-padrao last:border-b-0"
             >
               <div className="min-w-0">
-                <p className="paragrafo-destaque texto-padrao">{ROTULO_TIPO_TERMO[tipo]}</p>
+                <p className="paragrafo enfase texto-padrao">{ROTULO_TIPO_TERMO[tipo]}</p>
                 <p className="paragrafo-denso truncate">{DESCRICAO_TIPO_TERMO[tipo]}</p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
@@ -170,7 +170,7 @@ function CardTermoUso({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
                   </button>
                 ) : (
                   <>
-                    <span className="paragrafo-destaque texto-forte">{termo.versao}</span>
+                    <span className="paragrafo enfase texto-forte">{termo.versao}</span>
                     <button
                       type="button"
                       onClick={() => setTipoAlterando(tipo)}
@@ -259,11 +259,11 @@ export function DashboardRegrasNegocio({ auth }: DashboardRegrasNegocioProps) {
                   className="px-5 py-3 flex items-center justify-between gap-4 border-b borda-padrao last:border-b-0"
                 >
                   <div className="min-w-0">
-                    <p className="paragrafo-destaque texto-padrao">{config.descricao || config.chave}</p>
+                    <p className="paragrafo enfase texto-padrao">{config.descricao || config.chave}</p>
                     <p className="paragrafo-denso truncate">{config.chave}</p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="paragrafo-destaque texto-forte">
+                    <span className="paragrafo enfase texto-forte">
                       {config.valor ?? '-'}
                     </span>
                     <button

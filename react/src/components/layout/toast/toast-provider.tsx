@@ -221,7 +221,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
                       {/* whitespace-pre-line: a mensagem de conta suspensa/bloqueada embute \n\n para separar a
                           data do "Motivo:" e, sem isto, <p> normal colapsa quebra de linha num espaço só.
                           Inofensivo para todo o resto (só afeta strings que já têm \n de propósito). */}
-                      <p className="paragrafo-destaque texto-forte whitespace-pre-line">
+                      <p className="paragrafo enfase texto-forte whitespace-pre-line">
                         {toast.titulo}
                       </p>
                       {toast.descricao && (

@@ -101,12 +101,12 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
         <div className="grade-ficha">
           <div className="lg:col-span-2 space-y-6">
             {campanha.precisaRevisaoScore && (
-              <p className="legenda-destaque fundo-aviso texto-aviso rounded-lg p-3">
+              <p className="legenda enfase fundo-aviso texto-aviso rounded-lg p-3">
                 O pesquisador está abaixo do score mínimo para campanhas. É só um sinal para revisar com mais cuidado; não impede a aprovação.
               </p>
             )}
             {!aguardando && (
-              <p className="paragrafo-destaque fundo-info texto-info rounded-lg p-3">
+              <p className="paragrafo enfase fundo-info texto-info rounded-lg p-3">
                 Esta campanha não está mais aguardando aprovação ({ROTULO_STATUS_CAMPANHA[campanha.status]}).
               </p>
             )}

@@ -83,7 +83,7 @@ export function SinoAtividade({ auth }: SinoAtividadeProps) {
         type="button"
         onClick={aoAbrir}
         aria-label="Atividade recente"
-        className="dica relative flex items-center justify-center w-9 h-9 borda-padrao border rounded-lg texto-padrao hover-fundo-sutil transition-colors"
+        className="dica flex items-center justify-center w-9 h-9 borda-padrao border rounded-lg texto-padrao hover-fundo-sutil transition-colors"
       >
         <i className="fa-solid fa-bell" aria-hidden="true"></i>
         {naoLidos > 0 && (
@@ -97,7 +97,7 @@ export function SinoAtividade({ auth }: SinoAtividadeProps) {
       {aberto && (
         <div className="absolute right-0 mt-2 w-80 fundo-elevado rounded-xl shadow-2xl border borda-forte overflow-hidden z-50">
           <div className="px-4 py-3 border-b borda-padrao fundo-sutil">
-            <p className="paragrafo-destaque texto-forte">Atividade recente</p>
+            <p className="paragrafo enfase texto-forte">Atividade recente</p>
             <p className="legenda texto-fraco">Últimas ações feitas por você</p>
           </div>
 

@@ -55,7 +55,7 @@ export function ModalConfirmacao({
         onClick={(evento) => evento.stopPropagation()}
       >
         <div className="px-6 py-4 border-b borda-padrao">
-          <h2 id={idTitulo} className="paragrafo-destaque">
+          <h2 id={idTitulo} className="paragrafo enfase">
             {titulo}
           </h2>
         </div>

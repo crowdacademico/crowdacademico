@@ -228,7 +228,7 @@ export function PontuacaoScore({ auth }: PropsPagina) {
                     <span className="enfase">{pesoValido(dimensao.peso) ? formatarPontos(numero(dimensao.peso)) : '-'}</span>
                   </li>
                 ))}
-                <li className={'distribuicao-score__item legenda-destaque' + (Math.abs(somaDimensoes - 100) < 0.001 ? '' : ' texto-erro')}>
+                <li className={'distribuicao-score__item legenda enfase' + (Math.abs(somaDimensoes - 100) < 0.001 ? '' : ' texto-erro')}>
                   Total: {somaDimensoes.toLocaleString('pt-BR')} de 100 pontos{diferencaDoTotal(somaDimensoes)}
                 </li>
               </ul>
@@ -271,7 +271,7 @@ export function PontuacaoScore({ auth }: PropsPagina) {
                       </div>
                     </div>
                     {problema && (
-                      <p className="legenda-destaque erro-campo mb-3" role="alert">
+                      <p className="legenda enfase erro-campo mb-3" role="alert">
                         {problema}
                       </p>
                     )}
@@ -346,7 +346,7 @@ export function PontuacaoScore({ auth }: PropsPagina) {
             <div className={'mt-3 mb-8' + (pesosMudaram ? ' barra-salvar--fixa' : '')}>
               {pesosMudaram && (
                 <p
-                  className={'legenda-destaque mb-2' + (problemaPesos ? ' erro-campo' : ' texto-fraco')}
+                  className={'legenda enfase mb-2' + (problemaPesos ? ' erro-campo' : ' texto-fraco')}
                   role={problemaPesos ? 'alert' : undefined}
                 >
                   {problemaPesos ?? 'Pesos alterados, ainda não salvos.'}
@@ -463,7 +463,7 @@ export function PontuacaoScore({ auth }: PropsPagina) {
             <div className={'mt-3' + (faixasMudaram ? ' barra-salvar--fixa' : '')}>
               {faixasMudaram && (
                 <p
-                  className={'legenda-destaque mb-2' + (problemaFaixas ? ' erro-campo' : ' texto-fraco')}
+                  className={'legenda enfase mb-2' + (problemaFaixas ? ' erro-campo' : ' texto-fraco')}
                   role={problemaFaixas ? 'alert' : undefined}
                 >
                   {problemaFaixas ?? 'Faixas alteradas, ainda não salvas.'}

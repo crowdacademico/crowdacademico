@@ -324,7 +324,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
       {carregando ? (
         <Carregando className="p-6 text-center" />
       ) : !usuario ? (
-        <MensagemErro texto={erro} className="paragrafo-destaque p-6 text-center texto-erro" />
+        <MensagemErro texto={erro} className="paragrafo enfase p-6 text-center texto-erro" />
       ) : (
         <>
           <FiltroPartes partes={partes} atual={parte} aoEscolher={setParte} />
@@ -732,7 +732,7 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado,
             const suspenso = papel.suspensoAte && new Date(papel.suspensoAte) > new Date();
             return (
               <span key={papel.idPapel} className="inline-flex flex-col items-start gap-1">
-                <span className={'badge flex items-center gap-2 ' + (suspenso ? 'fundo-aviso texto-aviso' : 'badge-neutro')}>
+                <span className={'badge flex gap-2 ' + (suspenso ? 'fundo-aviso texto-aviso' : 'badge-neutro')}>
                   {papel.nomePapel}
                   {suspenso && <i className="fa-solid fa-clock icone-pequeno" aria-hidden="true"></i>}
                   {suspenso ? (
@@ -780,7 +780,7 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado,
                       className={'input-padrao input-padrao--pequeno py-1' + (suspensao.erroDe('motivo') ? ' borda-erro' : '')}
                     />
                     {suspensao.erroDe('motivo') && (
-                      <span className="legenda-destaque texto-erro">{suspensao.erroDe('motivo')}</span>
+                      <span className="legenda enfase texto-erro">{suspensao.erroDe('motivo')}</span>
                     )}
                     <span className="flex gap-1">
                       {opcoesDiasSuspensao.map((dias) => (
@@ -789,7 +789,7 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado,
                           type="button"
                           onClick={() => void aoSuspender(papel, dias)}
                           disabled={ocupado === papel.idPapel}
-                          className="legenda-destaque texto-padrao hover-fundo-sutil px-1.5 py-0.5 rounded"
+                          className="legenda enfase texto-padrao hover-fundo-sutil px-1.5 py-0.5 rounded"
                         >
                           {dias}d
                         </button>

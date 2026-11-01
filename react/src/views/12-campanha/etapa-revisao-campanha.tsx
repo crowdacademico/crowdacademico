@@ -78,7 +78,7 @@ export function EtapaRevisaoCampanha({
   return (
     <div className="space-y-6">
       <div className={'rounded-lg border p-4 ' + (tudoPronto ? 'fundo-sucesso borda-sucesso' : 'fundo-aviso borda-padrao')}>
-        <p className="paragrafo-destaque mb-2 texto-herdado">
+        <p className="paragrafo enfase mb-2 texto-herdado">
           {tudoPronto ? 'Tudo pronto para enviar.' : 'Antes de enviar, confira o que ainda falta:'}
         </p>
         <ul className="space-y-1">

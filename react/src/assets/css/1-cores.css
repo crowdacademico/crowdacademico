@@ -1,28 +1,13 @@
 /* ========= CORES =========
-   Escopo: TODA cor do sistema, incluindo os alias das 4 cores da marca (ver bloco logo abaixo): paleta crua,
-   tokens semânticos, os dois blocos de tema escuro, e as classes utilitárias de cor
-   (`.fundo-*`/`.texto-*`/`.borda-*`).
-
-   NÃO entra aqui (fica em 3-base.css, mesmo raciocínio da separação da tipografia): o reset de tag crua
-   (`body`/`h1-h3`/`button` dentro de `@layer base`). Aquele bloco usa `color`/`background-color` em algumas
-   linhas, mas é o RESET (box-model + defaults de tag), com uma história própria (o bug de `@layer`
-   documentado lá), e continua inteiro num lugar só em vez de fragmentado. */
-/* [data-tema-local]: só o Guia de Estilo (área de testes, só em desenvolvimento) usa, pra mostrar os dois
-   temas lado a lado na mesma tela. Mesmos valores, mesma fonte: o seletor extra não duplica nenhum token. */
+   Toda cor do sistema: paleta crua, tokens por papel (`--cor-*`), o tema escuro e as classes de cor
+   (`.fundo-*`/`.texto-*`/`.borda-*`). Componente usa só `--cor-*`, nunca a paleta direto. */
+/* [data-tema-local]: o Guia de Estilo mostra os dois temas lado a lado com os mesmos tokens. */
 :root,
 [data-tema-local='claro'] {
-  /* Alias das 4 cores da MARCA: as 4 cores mais fundamentais do site (o verde de marca e as 3 de base)
-     precisam de representação aqui. O valor BRUTO das 4 continua em `tailwind-theme.css` (`@theme`), por
-     restrição técnica real: o `@import 'tailwindcss'` precisa ficar sozinho no arquivo, não pode dividir
-     espaço com nenhum outro `@import` (ver o comentário de lá). O que resolve o problema é fazer qualquer
-     componente nunca precisar referenciar `--color-primary`/`--color-surface`/`--color-dark` direto: só o
-     alias `--cor-*` abaixo, mesma regra de ouro que vale para o resto da paleta. */
+  /* Apelidos das 4 cores da marca, cujo valor fica no `@theme` (tailwind-theme.css). */
   --cor-marca: var(--color-primary);
-  --cor-marca-escura: var(--color-primary-dark);
-  /* Contraste WCAG AA: branco sobre a marca (#0f9b58) dá 3,59:1, e o mínimo para texto normal é 4,5:1. A
-     marca continua sendo a cor de identidade (borda, foco, ícone, brilho, texto grande, onde 3:1 basta);
-     estes 3 tokens são só para FUNDO SÓLIDO COM TEXTO e para TEXTO VERDE sobre fundo claro. #0b7a45 dá
-     5,41:1 com branco. */
+  /* Branco sobre a marca dá 3,59:1 (o mínimo para texto é 4,5:1): a marca fica para borda, foco, ícone e texto
+     grande; fundo sólido com texto e texto verde usam o tom forte (5,41:1 com branco). */
   --cor-fundo-marca-forte: var(--color-primary-dark);
   --cor-fundo-marca-forte-hover: color-mix(in srgb, var(--color-primary-dark) 85%, black);
   /* "Brilho" do botão principal: degradê de um verde um pouco mais claro no topo para o tom forte embaixo, e
@@ -71,21 +56,14 @@
   --color-red-800: #991b1b;
   --color-blue-100: #dbeafe;
   --color-blue-600: #2563eb;
-  /* --color-purple-50/-300: mesma família de -100/600/700 abaixo (na verdade "violet" do Tailwind, apelidada
-     de "purple" neste projeto: um nome que não bate 1-para-1 com a paleta real do Tailwind). Usar o "purple"
-     de VERDADE do Tailwind para os tons que faltavam criaria uma inconsistência (família diferente da que
-     .badge-dev usa); por isso os valores aqui são de violet-50/300, para completar a MESMA família já em
-     uso. */
+  /* "purple" aqui é o violet do Tailwind, nos 5 tons: uma família só. */
   --color-purple-50: #f5f3ff;
   --color-purple-100: #ede9fe;
   --color-purple-300: #c4b5fd;
   --color-purple-600: #7c3aed;
   --color-purple-700: #6d28d9;
 
-  /* Tokens SEMÂNTICOS: em vez de cada CSS novo escolher um tom de slate na mão (--color-slate-700? -800?
-     -600?), usa o papel que a cor está cumprindo. São só apelidos para os mesmos tons de slate acima (nenhum
-     valor novo, nenhuma paleta nova): dão nome ao USO, não trocam a cor. Qualquer CSS novo de painel deve
-     preferir estes em vez de --color-slate-* direto. */
+  /* Tokens por PAPEL: o nome diz o uso, o valor é um tom da paleta acima. */
   --cor-texto-forte: var(--color-slate-800); /* título, valor de dado */
   --cor-texto: var(--color-slate-700); /* corpo */
   --cor-texto-fraco: var(--color-slate-500); /* rótulo, texto auxiliar */
@@ -98,43 +76,21 @@
   /* Anel em volta do campo com foco, além da borda verde: o foco de teclado fica fácil de achar. */
   --cor-anel-foco: color-mix(in srgb, var(--cor-marca) 30%, transparent);
 
-  /* Tokens de FUNDO (base do dark mode): o fundo branco das telas/cartões não pode ficar implícito (bg-white
-     do Tailwind direto no JSX), porque é exatamente o que precisa inverter no escuro. Cada um marca uma
-     "camada" de profundidade: página (mais fundo) < cartão < elevado (dropdown/modal, precisa se destacar do
-     cartão que está atrás dele).
-
-     `--cor-fundo-pagina` usa o alias `--cor-superficie`, não `var(--color-surface)` direto. Variável CSS
-     resolve no momento do USO, não da declaração, então não importa que o alias apareça depois no arquivo. */
+  /* Fundos por profundidade: página < cartão < elevado (menu suspenso, modal). */
   --cor-fundo-pagina: var(--cor-superficie);
   --cor-fundo-cartao: var(--color-white);
   --cor-fundo-elevado: var(--color-white);
   --cor-fundo-hover: var(--color-slate-100);
 
-  /* Tokens de STATUS (mesma rodada): badge/alerta de sucesso/erro/aviso/
-     info. Existiam direto como --color-emerald-100/--color-red-100 etc.
-     espalhados pelo CSS - motivo de existirem à parte dos tokens de texto
-     e fundo genéricos acima: sucesso/erro têm significado próprio (não é
-     "texto fraco", é "isto deu certo/errado"), então precisam de override
-     próprio no escuro (fundo pastel claro fica praticamente ilegível em
-     tema escuro - vira 15 por cento de opacidade sobre a cor sólida, não
-     um tom pastel). */
+  /* Status (sucesso, erro, aviso, informação): no escuro o fundo pastel vira a cor translúcida. */
   --cor-fundo-sucesso: var(--color-emerald-100);
   --cor-texto-sucesso: #047857; /* emerald-700, 4,84:1 sobre emerald-100 */
   --cor-fundo-erro: var(--color-red-100);
   --cor-texto-erro: #b91c1c; /* red-700, 5,30:1 sobre red-100 */
-  /* --cor-texto-erro-forte: mesmo papel que `--cor-texto-forte` cumpre para `--cor-texto-fraco`
-     (intensificar ao passar o mouse), só que na família vermelha. Sem ele, um botão com `texto-erro` +
-     `hover:text-red-800` cru do Tailwind não responderia ao tema escuro. */
-  --cor-texto-erro-forte: var(--color-red-800);
-  /* --cor-borda-erro: campo de código/regex inválido (Criar/Alterar Configuração, Área do Conhecimento, Tipo
-     de Link). Mesmo motivo dos outros tokens de erro: precisa de override no escuro; `border-red-500` cru
-     não passa pelo tema. */
-  --cor-borda-erro: var(--color-red-500);
-  /* --cor-borda-sucesso: barra lateral do toast de sucesso, equivalente ao `--cor-borda-erro` acima. Mesmo
-     padrão: um tom mais claro (500) que o de texto (600), igual o erro já fazia. */
-  --cor-borda-sucesso: var(--color-emerald-500);
-  /* --cor-borda-aviso: barra lateral do toast de aviso (deu certo, mas pede atenção: pontos perdidos). */
-  --cor-borda-aviso: var(--color-amber-600);
+  --cor-texto-erro-forte: var(--color-red-800); /* o vermelho ao passar o mouse */
+  --cor-borda-erro: var(--color-red-500); /* campo inválido */
+  --cor-borda-sucesso: var(--color-emerald-500); /* barra lateral do aviso de sucesso */
+  --cor-borda-aviso: var(--color-amber-600); /* barra lateral do aviso de atenção */
   --cor-fundo-aviso: var(--color-amber-100);
   --cor-texto-aviso: #92400e; /* amber-800, 6,37:1 sobre amber-100 (o 700 dá 4,51, no limite) */
   --cor-fundo-info: var(--color-blue-100);
@@ -143,38 +99,24 @@
      <dev>, que só aparece no Campo de Testes; o texto é um tom mais escuro. */
   --cor-fundo-concluido: var(--color-purple-100);
   --cor-texto-concluido: var(--color-purple-700);
-  /* --cor-texto-sobre-cor: texto em cima de uma superfície colorida SÓLIDA (.btn-primary, .btn-danger:hover,
-     .btn-sucesso:hover, .btn-dev, a bolha de dica). Fica de fora dos 2 blocos de tema, de propósito: o verde
-     da marca, o vermelho de perigo e o roxo de dev continuam a MESMA cor sólida no tema escuro, então o
-     texto por cima continua branco; inverter para preto no escuro quebraria o contraste. Mesmo espírito de
-     --cor-dev-* (acima), que também não tem bloco de tema. */
+  /* Texto sobre cor sólida (botão verde, hover do vermelho, dica): branco nos dois temas, porque a cor sólida
+     não muda. */
   --cor-texto-sobre-cor: var(--color-white);
-  /* --cor-fundo-erro-forte/--cor-fundo-sucesso-forte: fundo SÓLIDO no hover de um botão que em repouso usa o
-     pastel (--cor-fundo-erro/--cor-fundo-sucesso, acima). Precisam de override no escuro, diferente de
-     --cor-texto-sobre-cor: aqui o valor claro (600) é ESCURECIDO para o tom 700 no tema escuro (não
-     clareado), porque o botão continua carregando --cor-texto-sobre-cor (branco) por cima; clarear quebraria
-     o contraste. Reusar --cor-texto-erro/--cor-texto-sucesso seria errado: no escuro eles valem um
-     vermelho/verde CLARO (pensado para texto sobre fundo escuro, não para ser fundo). */
+  /* Fundo sólido no hover de um botão pastel; no escuro escurece (não clareia), para o texto branco continuar
+     legível. */
   --cor-fundo-erro-forte: var(--color-red-600);
   --cor-fundo-sucesso-forte: #047857; /* emerald-700 (era emerald-600, 3,77:1 com branco) */
 
-  /* Tokens de "ferramenta dev": `.badge-dev`/`.btn-dev` (4-componentes.css) e
-     `.borda-dev`/`.fundo-dev-sutil` (abaixo, mesmo arquivo) usam estes, e não `--color-purple-*` cru, para
-     passar pela camada semântica `--cor-*` que todo o resto do projeto usa. Deliberadamente SEM bloco de
-     tema escuro: "roxo feio e em destaque" é para continuar do mesmo jeito nos dois temas, nunca suavizar
-     (mesmo espírito de `--font-mono-dev`: marca visual de "isto não é produção", não decoração de tema). */
+  /* Ferramenta de desenvolvimento (selo <dev>, login rápido): roxo igual nos dois temas, de propósito, para
+     marcar "isto não é produção". */
   --cor-dev-fundo-sutil: var(--color-purple-50); /* fundo bem claro - dropdown, card informativo */
   --cor-dev-fundo-selo: var(--color-purple-100); /* fundo do selo <dev>, borda do botão sólido */
   --cor-dev-texto: var(--color-purple-600); /* texto do selo, fundo do botão sólido */
   --cor-dev-borda: var(--color-purple-300); /* borda tracejada dos cards/dropdowns "dev" */
   --cor-dev-hover: var(--color-purple-700); /* hover do botão sólido */
 
-  /* Paleta do avatar-iniciais (bolinha com a inicial do nome quando não há foto): cor de fundo
-     DETERMINÍSTICA a partir do nome (hash simples → índice aqui, ver avatar-usuario.tsx), nunca aleatória: a
-     mesma pessoa precisa sempre cair na mesma cor, em qualquer tela. Token em vez de hardcoded no
-     componente, para ajustar a paleta inteira num lugar só. Tons -600 de propósito: contraste alto o
-     bastante para texto branco em cima, em claro e escuro igual (não precisa de bloco de tema separado: é
-     uma cor de acento, não de superfície). */
+  /* Bolinha com a inicial quando não há foto (avatar-usuario.tsx): a cor sai do nome, então a mesma pessoa tem
+     sempre a mesma cor. Tons escuros o bastante para o texto branco, iguais nos dois temas. */
   --cor-avatar-1: #dc2626;
   --cor-avatar-2: #c2410c;
   --cor-avatar-3: #15803d;
@@ -198,13 +140,8 @@
 }
 
 /* ========= TEMA ESCURO =========
-   components/layout/cabecalho/controle-tema.tsx escolhe o tema ("claro", "escuro" ou "sistema", guardado em
-   localStorage['crowdacademico.tema']) e escreve em <html> o atributo data-tema-efetivo, que só vale "claro"
-   ou "escuro": quando a escolha é "sistema", o próprio controle resolve com matchMedia e acompanha a mudança
-   do sistema. Por isso o CSS tem UM bloco escuro só (uma segunda cópia com @media (prefers-color-scheme) e
-   os mesmos valores deixaria um token faltando numa das cópias). Só redefine os MESMOS nomes de token do
-   projeto inteiro: nenhum componente precisa saber que o tema mudou. "claro" não precisa de bloco próprio: é
-   o valor do :root de cima. */
+   controle-tema.tsx escreve em <html> o data-tema-efetivo ("claro" ou "escuro"; a opção "sistema" ele mesmo
+   resolve). Por isso há um bloco escuro só, que redefine os mesmos tokens: nenhum componente sabe do tema. */
 :root[data-tema-efetivo='escuro'],
 [data-tema-local='escuro'] {
   --cor-texto-forte: #f1f5f9;
@@ -235,24 +172,16 @@
   --cor-texto-info: #60a5fa;
   --cor-fundo-concluido: rgba(139, 92, 246, 0.18);
   --cor-texto-concluido: #c4b5fd;
-  /* Verde do texto no tema escuro, decidido em 02-10-2026: o mais perto da marca entre os que passam do 4,5:1
-     (WCAG AA) nos três fundos escuros: página 7,49:1, cartão 6,14:1, elevado 5,33:1. */
+  /* O verde mais perto da marca que passa de 4,5:1 nos três fundos escuros (5,33:1 no mais claro). */
   --cor-texto-marca: #2fbf71;
-  --cor-fundo-erro-forte: #b91c1c; /* red-700 - escurece, não clareia (ver comentário em :root) */
+  --cor-fundo-erro-forte: #b91c1c; /* red-700 */
   --cor-fundo-sucesso-forte: #047857; /* emerald-700 */
 }
 
-/* ========= UTILITÁRIOS DE COR =========
-   Substitutos das classes Tailwind cruas de cor (bg-white, text-slate-600,
-   border-slate-200...) espalhadas pelo JSX - aquelas não respondem a
-   data-tema porque são cor FIXA do Tailwind, não var(--cor-*). Nome em
-   português de propósito: não colide com nenhum utilitário nativo do
-   Tailwind (bg, text, border dele continuam existindo pra tamanho,
-   espaçamento, etc. - só cor de tema migra pra cá). Não usam @utility do
-   Tailwind v4 (não teriam efeito aqui: este arquivo não passa pelo mesmo
-   pipeline de tailwind-theme.css, que é quem tem @import 'tailwindcss') -
-   por isso hover vem embutido na própria classe, não como variante
-   hover:. */
+/* ========= CLASSES DE COR =========
+   No lugar das cores fixas do Tailwind (bg-white, text-slate-600), que não mudam com o tema. Nome em português
+   para não colidir com o Tailwind. O Tailwind não aplica variante (`hover:`) a estas classes, por isso o hover
+   vem numa classe própria (`.hover-*`). */
 @layer components {
   .fundo-pagina {
     background-color: var(--cor-fundo-pagina);
@@ -274,16 +203,12 @@
     background-color: var(--cor-fundo-hover);
   }
 
-  /* Estático (não só :hover) - item selecionado por teclado/mouse em
-     lista (ex.: busca-global.tsx), não só passagem do mouse. */
+  /* Item selecionado numa lista (pelo teclado ou mouse), como na busca Ctrl+K. */
   .fundo-realce {
     background-color: var(--cor-fundo-hover);
   }
 
-  /* Utilitários da cor da MARCA: mesmo papel de `.fundo-cartao`/`.texto-forte`/`.borda-padrao` acima, só que
-     para a cor de marca em vez de neutra (substituem `bg-primary`/`text-primary`/`border-primary` cru do
-     Tailwind, via alias `--cor-marca`). O verde da marca é o MESMO nos dois temas (nenhum bloco de tema
-     escuro redefine `--cor-marca`/`--color-primary`). */
+  /* Cor da marca (igual nos dois temas). */
   .fundo-marca {
     background-color: var(--cor-marca);
   }
@@ -296,9 +221,7 @@
     color: var(--cor-texto-marca);
   }
 
-  /* Fundo verde COM TEXTO por cima (botão, chip selecionado): a versão que
-     passa no contraste. `.fundo-marca` continua pra ícone, barra e texto
-     grande. */
+  /* Fundo verde com texto por cima: a versão que passa no contraste. */
   .fundo-marca-forte {
     background-color: var(--cor-fundo-marca-forte);
   }
@@ -307,16 +230,10 @@
     border-color: var(--cor-marca);
   }
 
-  /* Campo de busca/filtro fora de `.input-padrao` (que já tem seu
-     próprio `:focus` embutido) - mesmo destaque visual de foco em verde,
-     aplicado junto de `outline-none` no JSX. */
-  /* Mesmo anel do `.input-padrao:focus`: só trocar a cor da borda era sutil demais para quem navega pelo teclado. */
+  /* Foco verde de um campo que não é .input-padrao (junto de `outline-none`). O anel mora com os outros, em
+     4-componentes.css. */
   .foco-marca:focus {
     border-color: var(--cor-marca);
-  }
-
-  .foco-marca:focus-visible {
-    box-shadow: 0 0 0 3px var(--cor-anel-foco);
   }
 
   .texto-forte {
@@ -343,18 +260,11 @@
     border-color: var(--cor-borda-forte);
   }
 
-  /* Campo com valor inválido (código/regex, ver os `*Invalido` de Criar/Alterar Configuração/Área do
-     Conhecimento/Tipo de Link). Sozinha, esta classe NÃO ganha de `.input-padrao`/`.input-padrao:focus`
-     (mesma @layer components, especificidade igual ou menor): o par
-     `.input-padrao.borda-erro`/`.input-padrao.borda-erro:focus` que faz o vermelho aparecer de verdade mora
-     em 4-componentes.css, perto de `.input-padrao`. */
+  /* Num .input-padrao, quem pinta o vermelho é `.input-padrao.borda-erro` (4-componentes.css): esta sozinha perde. */
   .borda-erro {
     border-color: var(--cor-borda-erro);
   }
 
-  /* Barra de acento do toast de sucesso (ver comentário de --cor-borda-sucesso, acima): único consumidor é
-     toast-provider.tsx, mas fica aqui junto de `.borda-erro` por simetria, não escondida como código de uso
-     único. */
   .borda-sucesso {
     border-color: var(--cor-borda-sucesso);
   }
@@ -375,8 +285,6 @@
     background-color: var(--cor-fundo-erro);
   }
 
-  /* Hover pastel de sucesso: mesmo espírito de .hover-fundo-sutil (acima); usado
-     por matriz-papel-permissao.tsx na célula com permissão concedida. */
   .hover-fundo-sucesso:hover {
     background-color: var(--cor-fundo-sucesso);
   }
@@ -385,8 +293,6 @@
     color: var(--cor-texto-erro);
   }
 
-  /* Utilitários para JSX compor com Tailwind, mesmo espírito de .fundo-erro/.texto-erro acima (ver os tokens
-     em :root para o porquê). */
   .fundo-erro-forte {
     background-color: var(--cor-fundo-erro-forte);
   }
@@ -428,8 +334,6 @@
     border-color: var(--cor-fundo-cartao);
   }
 
-  /* Par de .texto-erro, mesmo papel de .hover-texto-forte para .texto-fraco: intensifica ao passar o mouse,
-     respeitando o tema escuro. */
   .hover-texto-erro:hover {
     color: var(--cor-texto-erro-forte);
   }
@@ -450,10 +354,7 @@
     color: var(--cor-texto-info);
   }
 
-  /* Bolinha de status de conexão: `dashboard.tsx`/`dashboard-saude.tsx` usam a MESMA lógica de 3 estados.
-     Reaproveita os tokens de status já existentes (--cor-texto-sucesso/--cor-texto-erro, os mesmos usados
-     nos badges) em vez de inventar uma paleta nova; o estado "verificando" usa --cor-borda-forte. Ver
-     `PontoStatusConexao` em `views/29-dashboard/dashboard.tsx`, componente compartilhado que usa estas 3 classes. */
+  /* Bolinha de status de conexão (PontoStatusConexao, dashboard.tsx): verificando, ok, erro. */
   .ponto-status--neutro {
     background-color: var(--cor-borda-forte);
   }
@@ -466,15 +367,9 @@
     background-color: var(--cor-texto-erro);
   }
 
-  /* "Ferramenta dev": `dev-login-rapido.tsx`/`alterar-usuario.tsx` usam os tokens SEMÂNTICOS `--cor-dev-*`
-     (definidos acima), não `--color-purple-*` direto, mesmo padrão que `.badge-dev` (`4-componentes.css`)
-     segue. */
+  /* Ferramenta de desenvolvimento (login rápido, modal-alterar-usuario.tsx). */
   .borda-dev {
     border-color: var(--cor-dev-borda);
-  }
-
-  .fundo-dev-sutil {
-    background-color: var(--cor-dev-fundo-sutil);
   }
 
   .hover-fundo-dev-sutil:hover {

@@ -244,9 +244,9 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
             onChange={(evento) => setTermo(evento.target.value)}
             onKeyDown={aoTeclarInput}
             placeholder="Buscar usuário, papel, permissão, parâmetro..."
-            className="paragrafo flex-1 outline-none texto-forte bg-transparent placeholder:texto-fraco"
+            className="paragrafo flex-1 outline-none texto-forte bg-transparent placeholder-fraco"
           />
-          <kbd className="legenda-destaque texto-fraco border borda-forte rounded px-1.5 py-0.5">
+          <kbd className="legenda enfase texto-fraco border borda-forte rounded px-1.5 py-0.5">
             Esc
           </kbd>
         </div>

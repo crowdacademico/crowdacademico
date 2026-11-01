@@ -71,7 +71,7 @@ export function SecaoContestacaoScore({ authFetch }: SecaoContestacaoScoreProps)
         injusta, peça a revisão: a moderação analisa e, se você tiver razão, ela deixa de contar e a sua pontuação se
         recalcula. Cada denúncia pode ser contestada uma vez, e uma por vez.
       </p>
-      <MensagemErro texto={erros.erro} className="legenda-destaque texto-erro mb-3" />
+      <MensagemErro texto={erros.erro} className="legenda enfase texto-erro mb-3" />
       {denuncias === null ? (
         <p className="legenda texto-fraco">carregando...</p>
       ) : denuncias.length === 0 ? (
@@ -79,7 +79,7 @@ export function SecaoContestacaoScore({ authFetch }: SecaoContestacaoScoreProps)
       ) : (
         <>
           {temEsperando && (
-            <p className="legenda-destaque fundo-aviso texto-aviso rounded-lg p-3 mb-3">
+            <p className="legenda enfase fundo-aviso texto-aviso rounded-lg p-3 mb-3">
               Você já tem uma contestação esperando análise. Quando a moderação decidir, você pode contestar outra.
             </p>
           )}

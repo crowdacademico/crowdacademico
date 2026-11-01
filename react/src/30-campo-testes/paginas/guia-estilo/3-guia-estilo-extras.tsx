@@ -98,7 +98,7 @@ export function Avatares() {
         {[1, 2, 3, 4, 5, 6, 7].map((n) => (
           <span
             key={n}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full paragrafo-destaque texto-sobre-cor"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full paragrafo enfase texto-sobre-cor"
             style={{ backgroundColor: `var(--cor-avatar-${n})` }}
             title={`--cor-avatar-${n}`}
           >

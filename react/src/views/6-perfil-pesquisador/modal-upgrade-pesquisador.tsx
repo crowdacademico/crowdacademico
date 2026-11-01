@@ -199,7 +199,7 @@ export function ModalUpgradePesquisador({
               telaCheia={termoTelaCheia}
               aoSairTelaCheia={() => setTermoTelaCheia(false)}
             />
-            <label className="paragrafo-destaque flex items-center gap-2 texto-padrao mt-4">
+            <label className="paragrafo enfase flex items-center gap-2 texto-padrao mt-4">
               <input
                 type="checkbox"
                 checked={aceitou}
@@ -209,7 +209,7 @@ export function ModalUpgradePesquisador({
               Li e aceito o Termo de Uso acima.
             </label>
             {aceite.erroDe('aceite') && (
-              <p className="legenda-destaque erro-campo">{aceite.erroDe('aceite')}</p>
+              <p className="legenda enfase erro-campo">{aceite.erroDe('aceite')}</p>
             )}
           </>
         )

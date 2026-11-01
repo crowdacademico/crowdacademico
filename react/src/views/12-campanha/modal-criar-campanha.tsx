@@ -341,7 +341,7 @@ export function ModalCriarCampanha({
       ) : (
         <>
           {camposExtras}
-          {erroDe('extras') && <p className="legenda-destaque texto-erro -mt-2 mb-3">{erroDe('extras')}</p>}
+          {erroDe('extras') && <p className="legenda enfase texto-erro -mt-2 mb-3">{erroDe('extras')}</p>}
           <SecaoFicha titulo="Dados">
             <Campo rotulo="Título" className="sm:col-span-2" erro={erroDe('titulo')}>
               {({ atributos, classeErro }) => (

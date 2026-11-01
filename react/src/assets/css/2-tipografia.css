@@ -1,12 +1,6 @@
-/* ========= SISTEMA DE TIPOGRAFIA =========
-   Escopo: a escala tipográfica nomeada do painel inteiro: tokens de tamanho/fonte + as classes
-   `.titulo-*`/`.subtitulo`/`.paragrafo*`/`.legenda`/`.rotulo-*`.
-
-   NÃO entra aqui: as variáveis de cor (`--cor-*`/`--color-*`) e os utilitários
-   `.fundo-*`/`.texto-*`/`.borda-*`, que moram em 1-cores.css; e o reset de tag crua
-   (`body`/`h1-h3`/`button`/`input,select,textarea` dentro de `@layer base`, em 3-base.css): aquele bloco
-   mistura tipografia (e cor) com box-model e tem uma história própria (o bug de `@layer` documentado lá),
-   então continua inteiro num lugar só em vez de fragmentado entre arquivos. */
+/* ========= TIPOGRAFIA =========
+   Tamanhos, fontes e as classes de texto do painel (`.titulo-*`, `.subtitulo`, `.paragrafo*`, `.legenda*`,
+   `.rotulo-*`). Cor mora em 1-cores.css; o estilo de tag crua, em 3-base.css. */
 :root {
   /* Rótulo de campo (.rotulo-campo) e o que precisa casar com ele na mesma linha (.btn-pilula-rotulo). */
   --font-size-rotulo: 11px;
@@ -18,31 +12,18 @@
   --font-size-2xl: 1.5rem;
   --font-size-3xl: 1.875rem;
 
-  /* Fonte só para o selo <dev> (.badge-dev, 4-componentes.css): qualquer coisa marcada como "só para
-     desenvolvimento" usa essa combinação (roxo + monoespaçada), nunca hardcoded caso a caso. */
+  /* Fonte do que é "só para desenvolvimento" (selo <dev>), sempre junto do roxo. */
   --font-mono-dev: 'Courier New', monospace;
   /* Monoespaçada de leitura (código, chave, padrão de domínio): a do sistema operacional, não a "de dev". */
   --font-codigo: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-/* Escala tipográfica única do painel: 3 títulos + 1 subtítulo + 1-2 parágrafos (mesma lógica do protótipo de
-   interface), com os valores que já são reais neste sistema (ex.: body é 14px, não 16px); nenhum token de
-   tamanho/fonte novo, só nomear o que já existe. Aplicar direto na tag (`className="titulo-secao"` etc.),
-   não depender de um wrapper ancestral para "ganhar" da regra global h1,h2,h3{font-family:serif} (é o que
-   causava título saindo em serif sem querer); essa regra global continua em 3-base.css (@layer base), fora
-   deste arquivo de propósito (ver comentário no topo).
-
-   `.titulo-bloco`: o rótulo pequeno/maiúsculo que `SecaoFicha` (ficha-consulta.tsx) usa, também em Minha
-   Conta e na área de testes. Só a parte tipográfica mora aqui (mesma regra dos outros tokens desta escala):
-   espaçamento/borda (`mb-3 pb-2 border-b borda-padrao`) continuam como utilitário solto em cada lugar que
-   usa, porque isso é decisão de LAYOUT de quem chama, não de tipografia. */
+/* A escala do painel. A classe vai direto na tag: assim um h1-h3 não herda a serifada do estilo de tag crua.
+   Só tipografia aqui; espaço e borda ficam com quem usa. */
 @layer components {
-  /* Rótulo de campo (label pequeno maiúsculo): a mesma string Tailwind se repetia em quase toda tela de
-     Criar/Alterar ("text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2"). Centralizar aqui
-     facilita tanto o dark mode (troca 1 lugar, não 15) quanto qualquer ajuste futuro de estilo do rótulo. */
+  /* Rótulo de campo de formulário. */
   .rotulo-campo {
     display: block;
-    font-family: var(--font-sans);
     font-size: var(--font-size-rotulo);
     font-weight: 800;
     text-transform: uppercase;
@@ -50,20 +31,16 @@
     margin-bottom: 0.5rem;
   }
 
-  /* `.rotulo-leitura`: mesma ideia de `.rotulo-campo` (rótulo pequeno/maiúsculo), mas mais leve (font-bold,
-     não font-black) e sem margem embutida; usado quando o rótulo acompanha um VALOR sendo EXIBIDO
-     (CampoFicha, card de métrica do Dashboard, cabeçalho de categoria da Busca Global), nunca um campo de
-     formulário editável (isso continua sendo `.rotulo-campo`). */
+  /* Rótulo de um valor só exibido (ficha, cartão do Dashboard): mais leve e sem margem. */
   .rotulo-leitura {
-    font-family: var(--font-sans);
     font-size: var(--font-size-rotulo);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
   }
 
+  /* Título de seção de ficha (SecaoFicha), pequeno e maiúsculo. */
   .titulo-bloco {
-    font-family: var(--font-sans);
     font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
@@ -77,121 +54,65 @@
   }
 
   .titulo-secao {
-    font-family: var(--font-sans);
     font-size: var(--font-size-2xl);
     font-weight: 800;
   }
 
   .subtitulo {
-    font-family: var(--font-sans);
     font-size: var(--font-size-xl);
     font-weight: 700;
   }
 
   .paragrafo {
-    font-family: var(--font-sans);
     font-size: var(--font-size-sm);
     font-weight: 400;
   }
 
-  /* Texto técnico denso (chave, log, id): padrão de fato em ModalDetalhe e dashboard-regras-negocio.tsx. */
+  /* Texto técnico denso (chave, log, id). */
   .paragrafo-denso {
     font-family: var(--font-mono-dev);
     font-size: var(--font-size-xs);
   }
 
   .legenda {
-    font-family: var(--font-sans);
     font-size: var(--font-size-xs);
     font-weight: 400;
   }
 
-  /* Ênfase DENTRO de um texto (um valor, um nome, um link, a parte em erro de uma frase): só o peso. O tamanho
-     e a cor continuam os do texto em volta, por isso não tem cor padrão. */
+  /* Semi-negrito: só o peso; o tamanho e a cor continuam os do texto em volta, por isso não tem cor padrão.
+     Serve dentro de um texto (um valor, um nome, um link) e como destaque do texto inteiro, junto da classe
+     dele: "paragrafo enfase" (nome no menu, item de lista), "legenda enfase" (erro ou aviso embaixo de um campo). */
   .enfase {
     font-weight: 600;
   }
 
-  /* Texto com destaque: o mesmo .paragrafo / .legenda em semi-negrito (nome no menu, item de lista, mensagem de
-     erro, aviso embaixo de um campo). */
-  .paragrafo-destaque {
+  /* A fonte da escala, menos o título de página (serifada) e o texto denso (monoespaçada). */
+  .rotulo-campo, .rotulo-leitura, .titulo-bloco, .titulo-secao, .subtitulo, .paragrafo, .legenda {
     font-family: var(--font-sans);
-    font-size: var(--font-size-sm);
-    font-weight: 600;
   }
 
-  .legenda-destaque {
-    font-family: var(--font-sans);
-    font-size: var(--font-size-xs);
-    font-weight: 600;
-  }
-
-  /* COR PADRÃO de cada classe de tipografia, com prioridade zero (:where). Uma classe de cor ao lado sempre
-     ganha (ex.: "legenda texto-erro" sai vermelha), em qualquer ordem de carregamento. Sem isto, a cor da classe
-     de tipografia (que carrega depois de 1-cores.css, na mesma camada) vencia a classe de cor. */
-  :where(.rotulo-campo) {
-    color: var(--cor-texto-fraco);
-  }
-
-  :where(.rotulo-leitura) {
-    color: var(--cor-texto-fraco);
-  }
-
-  :where(.titulo-bloco) {
-    color: var(--cor-texto-fraco);
-  }
-
-  :where(.titulo-pagina) {
+  /* Cor padrão de cada classe, com prioridade zero (:where): uma classe de cor ao lado sempre ganha
+     ("legenda texto-erro" sai vermelha). */
+  :where(.titulo-pagina, .titulo-secao, .subtitulo, .paragrafo) {
     color: var(--cor-texto-forte);
   }
 
-  :where(.titulo-secao) {
-    color: var(--cor-texto-forte);
-  }
-
-  :where(.subtitulo) {
-    color: var(--cor-texto-forte);
-  }
-
-  :where(.paragrafo) {
-    color: var(--cor-texto-forte);
-  }
-
-  :where(.paragrafo-denso) {
+  :where(.rotulo-campo, .rotulo-leitura, .titulo-bloco, .paragrafo-denso, .legenda) {
     color: var(--cor-texto-fraco);
   }
 
-  :where(.legenda) {
-    color: var(--cor-texto-fraco);
-  }
-
-  :where(.paragrafo-destaque) {
-    color: var(--cor-texto-forte);
-  }
-
-  :where(.legenda-destaque) {
-    color: var(--cor-texto-fraco);
-  }
-
-  /* `texto-herdado`: usa a cor de quem está em volta (texto dentro de botão, de aviso colorido, de aba que troca
-     de cor). Também com prioridade zero e depois das cores padrão acima: vence só a cor padrão da classe de
-     tipografia, nunca uma classe de cor de verdade (ex.: o verde da aba ativa, posto por outro pedaço do código). */
+  /* Usa a cor de quem está em volta (botão, aviso colorido). Prioridade zero e depois das cores acima: vence só
+     a cor padrão, nunca uma classe de cor. */
   :where(.texto-herdado) {
     color: inherit;
   }
 }
 
-/* `input`/`select`/`textarea` sempre herdando fonte do body em vez do
-   padrão do navegador (que costuma usar a fonte de sistema, diferente
-   da tipografia do painel) - as duas propriedades aqui são 100%
-   tipografia (nada de box-model), por isso saíram do reset em
-   3-base.css pra cá, diferente de `body`/`h1-h3`/`button` (que ficaram
-   lá, ver comentário no topo deste arquivo). */
+/* Campos no tamanho do texto do painel (a fonte o Tailwind já herda). */
 @layer base {
   input,
   select,
   textarea {
-    font-family: inherit;
     font-size: var(--font-size-sm);
   }
 }

@@ -91,7 +91,7 @@ export function BarraFiltros({
             onChange={(evento) => aoMudarBusca(evento.target.value)}
             // py-2.5: mesma altura do botão de filtro ao lado (.btn), para a barra (e a tabela abaixo) ficar na
             // mesma altura com ou sem filtro de lista.
-            className="paragrafo w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2.5 px-3 outline-none foco-marca texto-herdado"
+            className="paragrafo w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2.5 px-3 outline-none foco-marca texto-herdado placeholder-fraco"
           />
         )}
 
@@ -107,7 +107,7 @@ export function BarraFiltros({
                     onClick={() =>
                       setFacetaAbertaChave((atual) => (atual === faceta.chave ? null : faceta.chave))
                     }
-                    className="btn btn-secondary flex items-center gap-2"
+                    className="btn btn-secondary flex"
                   >
                     <i className="fa-solid fa-filter" aria-hidden="true"></i>
                     {faceta.rotulo}
@@ -172,7 +172,7 @@ export function BarraFiltros({
             </button>
           ))}
           {chips.length > 1 && (
-            <button type="button" onClick={limparTudo} className="legenda-destaque texto-marca foco-marca">
+            <button type="button" onClick={limparTudo} className="legenda enfase texto-marca foco-marca">
               Limpar filtros
             </button>
           )}

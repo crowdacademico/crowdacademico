@@ -42,7 +42,7 @@ export function Campo({ rotulo, dica, erro, className, children }: CampoProps) {
         classeErro: temErro ? ' borda-erro' : '',
       })}
       {temErro ? (
-        <p id={idMensagem} className="legenda-destaque erro-campo">
+        <p id={idMensagem} className="legenda enfase erro-campo">
           {erro}
         </p>
       ) : (

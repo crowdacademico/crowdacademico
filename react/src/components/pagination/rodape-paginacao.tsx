@@ -45,7 +45,7 @@ export function RodapePaginacao({
       aoMudarPagina={aoMudarPagina}
       className={className}
     >
-      <label className="legenda-destaque flex items-center gap-2 texto-padrao">
+      <label className="legenda enfase flex items-center gap-2 texto-padrao">
         Mostrar
         <select
           value={tamanhoPagina}

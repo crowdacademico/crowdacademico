@@ -143,7 +143,7 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
 
       {/* Prévia: é assim que o papel aparece no cabeçalho das fichas de quem o tem. */}
       <div className="space-y-1.5">
-        <p className="legenda-destaque texto-fraco">Como aparece nas fichas</p>
+        <p className="legenda enfase texto-fraco">Como aparece nas fichas</p>
         <div className="paragrafo flex flex-wrap items-center gap-2 texto-herdado">
           {sujo && (
             <>

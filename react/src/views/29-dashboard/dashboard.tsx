@@ -229,7 +229,7 @@ export function Dashboard({ auth }: DashboardProps) {
               <h2 className="subtitulo mb-3">Acessados recentemente</h2>
               <div className="flex flex-wrap gap-2">
                 {acessados.map((rota) => (
-                  <Link key={rota.caminho} to={rota.caminho} className="btn btn-secondary flex items-center gap-2">
+                  <Link key={rota.caminho} to={rota.caminho} className="btn btn-secondary flex">
                     {rota.icone && <i className={'fa-solid ' + rota.icone} aria-hidden="true"></i>}
                     {rota.rotuloMenu}
                   </Link>

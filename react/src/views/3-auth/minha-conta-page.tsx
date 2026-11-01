@@ -182,7 +182,7 @@ function FaixaIdentidade({ auth }: FaixaIdentidadeProps) {
             <span className="break-words">{usuario?.email}</span>
             <span
               className={
-                'badge flex items-center gap-1 ' +
+                'badge flex gap-1 ' +
                 (usuario?.emailVerificado ? 'badge-sucesso' : 'fundo-aviso texto-aviso')
               }
             >
@@ -233,7 +233,7 @@ function BarraAbas({ abaAtiva }: BarraAbasProps) {
           key={item.chave}
           to={`/admin/minha-conta/${item.chave}`}
           className={
-            'paragrafo-destaque flex items-center gap-2 px-4 py-3.5 whitespace-nowrap border-b-2 transition-colors texto-herdado ' +
+            'paragrafo enfase flex items-center gap-2 px-4 py-3.5 whitespace-nowrap border-b-2 transition-colors texto-herdado ' +
             (item.chave === abaAtiva
               ? 'borda-marca texto-marca'
               : 'border-transparent texto-fraco hover-texto-forte')
@@ -607,7 +607,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
               type="button"
               onClick={aoEncerrarTodas}
               disabled={encerrandoTodas}
-              className="legenda-destaque texto-erro hover:underline"
+              className="legenda enfase texto-erro hover:underline"
             >
               {encerrandoTodas ? 'Encerrando...' : 'Encerrar todas as outras'}
             </button>
@@ -709,7 +709,7 @@ function AbaPapeis({ auth }: AbaPapeisProps) {
             return (
               <span
                 key={papel.idPapel}
-                className={'badge flex items-center gap-1 ' + (suspenso ? 'fundo-aviso texto-aviso' : 'badge-neutro')}
+                className={'badge flex gap-1 ' + (suspenso ? 'fundo-aviso texto-aviso' : 'badge-neutro')}
               >
                 {papel.nomePapel}
                 {suspenso && (
@@ -800,7 +800,7 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
     <div className="px-6 sm:px-8 py-8 space-y-6">
       {suspensoAgora && (
         <div className="rounded-lg border borda-forte fundo-erro p-4">
-          <p className="paragrafo-destaque texto-erro">
+          <p className="paragrafo enfase texto-erro">
             Seu poder de pesquisador está suspenso até {formatarDataHora(suspensoAte)}
           </p>
           <p className="legenda texto-erro mt-1">Motivo: {suspensao?.motivoSuspensao}</p>
@@ -885,12 +885,12 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
     <div className="px-6 sm:px-8 py-8 space-y-6">
       <div className="flex items-center justify-between gap-3 rounded-lg border borda-padrao p-4">
         <div>
-          <p className="paragrafo-destaque texto-padrao">Exportar meus dados</p>
+          <p className="paragrafo enfase texto-padrao">Exportar meus dados</p>
           <p className="legenda texto-fraco">
             Direito de portabilidade (LGPD Art. 18): baixa um arquivo com os dados da sua conta. Uma vez por
             hora.
           </p>
-          <MensagemErro texto={erroExportar} className="legenda-destaque erro-campo" />
+          <MensagemErro texto={erroExportar} className="legenda enfase erro-campo" />
         </div>
         <button type="button" onClick={() => void aoExportar()} disabled={exportando} className="btn btn-secondary">
           {exportando ? 'Exportando...' : 'Exportar'}
@@ -898,12 +898,12 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
       </div>
 
       <div className="rounded-lg border borda-forte fundo-erro p-4">
-        <p className="paragrafo-destaque texto-erro mb-2">Excluir minha conta</p>
+        <p className="paragrafo enfase texto-erro mb-2">Excluir minha conta</p>
         <p className="legenda texto-erro mb-3">
           Marca sua conta como excluída (exclusão lógica), o login para de funcionar na hora.
           Não existe desfazer pelo painel.
         </p>
-        <MensagemErro texto={erro} className="legenda-destaque texto-erro mb-2" />
+        <MensagemErro texto={erro} className="legenda enfase texto-erro mb-2" />
         <div className="mb-3">
           <ConfirmacaoDigitada
             oQue="o e-mail"

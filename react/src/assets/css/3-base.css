@@ -1,13 +1,7 @@
-/* Tailwind (import + @theme com as cores/fontes) vive em tailwind-theme.css, não aqui: @import só pode ser a
-   primeira coisa num arquivo CSS. Ver o comentário lá para o porquê.
-
-   ========= VARIÁVEIS GLOBAIS (CSS próprio, não Tailwind) =========
-   `--color-primary`/`--color-primary-dark`/`--color-surface`/`--color-dark`/`--font-sans`/`--font-serif` NÃO
-   são redeclaradas aqui: o `@theme` já expõe elas como variável CSS normal em `:root`, disponível para
-   qualquer regra do projeto (Tailwind v4 faz isso automaticamente). Aqui só entra o que o `@theme` não cobre
-   e que NÃO é cor nem tipografia: raio de borda, sombra, escala de acessibilidade, e o reset de tag crua.
-   Cor (paleta, tokens semânticos, tema escuro, utilitários `.fundo-*`/`.texto-*`/`.borda-*`) mora em
-   1-cores.css; tamanho de fonte e a escala tipográfica nomeada (`.titulo-*` etc.) moram em 2-tipografia.css. */
+/* ========= VARIÁVEIS GLOBAIS =========
+   As cores e fontes do `@theme` (tailwind-theme.css) já viram variável em :root sozinhas. Aqui entram as medidas
+   (raio, sombra, camadas, larguras, escala de fonte) e o estilo de tag crua. Cor mora em 1-cores.css; texto em
+   2-tipografia.css. */
 :root {
   /* Medidas do campo de formulário (.input-padrao, 4-componentes.css). Na raiz para servir também a quem precisa da
      mesma altura do campo (a lista, DS-117; um botão ao lado do campo, .altura-de-campo). Quem quer um campo mais
@@ -15,6 +9,7 @@
   --campo-espaco-vertical: 0.875rem;
   --campo-borda: 2px;
   --campo-altura-linha: 1.5;
+  /* O Tailwind também lê estas (`rounded-lg` = 12px): mudar uma muda os cantos das telas. */
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
@@ -23,11 +18,11 @@
 
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
   --shadow-md: 0 10px 20px rgba(15, 23, 42, 0.05);
-  --shadow-lg: 0 18px 45px rgba(15, 23, 42, 0.08);
   /* Cartão solto no meio da página (login, cadastro): sombra embaixo E em cima, para o cabeçalho também se
      separar do fundo. */
-  /* Medidas que as telas escreviam entre colchetes: usadas no JSX como `z-(--camada-modal)`, `h-(--altura-modal)`. */
-  /* Ordem das camadas, de baixo para cima (a ordem importa: a dica tem de ficar acima do modal e dos avisos). */
+  --shadow-cartao-solto: 0 -12px 40px -12px rgba(15, 23, 42, 0.2), 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  /* Medidas usadas no JSX como `z-(--camada-modal)`, `h-(--altura-modal)`. Camadas de baixo para cima: a dica
+     fica acima do modal e dos avisos. */
   --camada-dica: 20;
   --camada-barra-salvar: 15;
   --camada-pular-para-conteudo: 100;
@@ -41,10 +36,13 @@
   --altura-cartao-solto: calc(100vh - 2rem);
   --largura-sidebar: 260px;
   --largura-icone-menu: 1.25rem; /* caixa de cada ícone do menu lateral: todos centralizados na mesma coluna */
-  /* Barra de progresso (arrecadado em relação à meta, components/crud/barra-progresso.tsx). `--barra-progresso-*`: a
-     barra ao lado do texto (Consultar), trilho de comprimento fixo e o vão até a porcentagem. `--barra-progresso-sob-*`:
-     a barra fina por baixo do valor numa célula de tabela, a espessura e a distância do texto. */
+  /* Barra de progresso (barra-progresso.tsx): `--barra-progresso-*` é a barra ao lado do texto (trilho e vão até
+     a porcentagem); `--barra-progresso-sob-*` é a barra fina por baixo do valor numa célula de tabela. */
   --barra-progresso-largura: 5rem;
+  --barra-progresso-altura: 0.375rem;
+  --barra-progresso-vao: 0.5rem;
+  --barra-progresso-sob-altura: 0.25rem;
+  --barra-progresso-sob-distancia: 0.125rem;
   /* Controle que não pode ser usado agora (botão, interruptor): fica apagado nesta medida. */
   --opacidade-desabilitado: 0.6;
   /* Interruptor liga/desliga (components/input/interruptor.tsx): trilho, bolinha e o vão até o texto do estado. */
@@ -52,13 +50,8 @@
   --interruptor-altura: 1.25rem;
   --interruptor-bolinha: 0.875rem;
   --interruptor-vao: 0.5rem;
-  --barra-progresso-altura: 0.375rem;
-  --barra-progresso-vao: 0.5rem;
-  --barra-progresso-sob-altura: 0.25rem;
-  --barra-progresso-sob-distancia: 0.125rem;
-  /* Larguras máximas por PAPEL (usadas no JSX como `max-w-(--largura-ficha)`): mudar a largura de todos os modais
-     é mudar uma linha aqui. Toda largura máxima vira variável, mesmo usada uma vez só: o nome diz o papel, e a
-     tela nova (do painel ou da área pública) reaproveita o papel em vez de escolher outro degrau. */
+  /* Larguras máximas por PAPEL (no JSX: `max-w-(--largura-ficha)`). Toda largura máxima vira variável, mesmo usada
+     uma vez só: a tela nova reaproveita o papel em vez de escolher outro degrau. */
   --largura-ficha: 64rem; /* modal de Consultar/Alterar e a página Minha Conta */
   --largura-janela-estreita: 32rem; /* modal de detalhe, janela da busca, coluna dos avisos */
   --largura-cartao-solto: 28rem; /* Login, Cadastro, Esqueci a senha, Criar nova senha, Verificar e-mail */
@@ -69,19 +62,11 @@
   --largura-texto-curto: 28rem; /* parágrafo curto centralizado: aviso de espaço reservado */
   --largura-coluna-rodape: 20rem; /* colunas de texto do rodapé do site, em tela larga */
   --largura-legenda-foto: 10rem; /* aviso embaixo da foto de perfil, na largura dela */
-  --shadow-cartao-solto: 0 -12px 40px -12px rgba(15, 23, 42, 0.2), 0 25px 50px -12px rgba(15, 23, 42, 0.25);
 
   --transition-normal: all 0.2s ease;
 
-  /* Controle de fonte (acessibilidade, "botão de aumentar e diminuir fonte"):
-     components/layout/controle-fonte.tsx muda este valor via document.documentElement.style.setProperty().
-     Aplicado no `html` (ver @layer base abaixo), não em cada elemento: como o projeto inteiro é rem-based
-     (Tailwind v4 por padrão, mais as variáveis de tamanho de fonte, raio de borda e sombra), mudar o
-     font-size da RAIZ reescala texto E espaçamento juntos, com uma variável só; reescalar só o texto, sem o
-     resto, quebraria layout (botão menor que o próprio texto dentro dele). Mesmo princípio do "zoom" que a
-     maioria dos sites usa para esse tipo de controle.
-     Padrão 1 = 100% (nenhuma mudança): só existe para ControleFonte ter algo para ler/escrever; qualquer CSS
-     aqui pode ignorá-la de propósito. */
+  /* Aumentar e diminuir fonte (controle-fonte.tsx muda este valor). Vale no `html`: como tudo é medido em rem,
+     texto e espaçamento crescem juntos, como um zoom. 1 = 100%. */
   --escala-fonte: 1;
   /* Altura do que fica preso no topo ao rolar (cabeçalho + trilha "Início > ..."), medida pelo navegador
      (useAlturaTopoFixo, DS-109): nunca escrever o número à mão. 0 só até a primeira medida. */
@@ -90,27 +75,10 @@
   --altura-menu-lateral: calc(100dvh - var(--altura-topo-fixo));
 }
 
-/* ========= RESET =========
-   Este reset (e o resto deste arquivo) fica DENTRO de `@layer base`, o mesmo nome que o Tailwind declara.
-   Regra da cascata de CSS: estilo sem @layer sempre GANHA de qualquer estilo QUE ESTEJA em @layer, não
-   importa a especificidade, e o Tailwind v4 embrulha TUDO que ele gera (`.mx-auto`, `.px-4`, `.py-2` etc.)
-   dentro de `@layer utilities`. Fora de @layer, o `margin:0; padding:0` universal abaixo venceria
-   `.mx-auto`/`.px-4`/`.py-10` de QUALQUER elemento no projeto inteiro (cabeçalho/rodapé desalinhados,
-   breadcrumb colado na borda). Declarando @layer base, as regras se juntam na posição certa, antes de @layer
-   utilities, e o `.mx-auto` ganha do reset.
-   Este bloco mistura box-model com `color`/`background-color` em algumas linhas (body, h1-h3) e fica inteiro
-   aqui de propósito: fragmentar um reset de tag para seguir a separação de arquivo à risca perderia a
-   explicação de por que cada propriedade está do jeito que está, mais do que ganharia em pureza
-   organizacional. */
+/* ========= ESTILO DE TAG CRUA =========
+   Dentro de `@layer base`, o mesmo do Tailwind: assim qualquer utilitário (`.mx-auto`, `.px-4`) ganha destas
+   regras. O zerar de margem e espaço interno de toda tag vem do próprio Tailwind. */
 @layer base {
-  *,
-  *::before,
-  *::after {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-  }
-
   html,
   body,
   #root {
@@ -125,12 +93,8 @@
     font-family: var(--font-sans);
     font-size: var(--font-size-sm);
     line-height: 1.5;
-    /* Token de tema (--cor-fundo-pagina), não --color-surface direto: precisa inverter junto com o resto no
-       escuro; no tema claro os dois valem o mesmo. */
     background-color: var(--cor-fundo-pagina);
-    /* --cor-texto-forte (não --cor-texto): o corpo do texto é slate-800, escurecido de propósito para
-       monitor não calibrado; manter o token que bate com o valor real, não com o rótulo "corpo" ao pé da
-       letra. */
+    /* Forte, não --cor-texto: o corpo é escurecido de propósito, para monitor não calibrado. */
     color: var(--cor-texto-forte);
     -webkit-font-smoothing: antialiased;
     transition: background-color 0.15s ease, color 0.15s ease;
@@ -145,15 +109,11 @@
   h2,
   h3 {
     font-family: var(--font-serif);
-    /* Token de tema em vez de --color-dark direto (#0f172a fixo): em tema escuro isso ficaria quase
-       invisível (texto quase preto sobre fundo quase preto). No claro, --cor-texto-forte = slate-800 é
-       próximo o bastante de --color-dark para não mudar nada visualmente. */
     color: var(--cor-texto-forte);
     font-weight: 700;
   }
 
   button {
-    font-family: inherit;
     cursor: pointer;
   }
 

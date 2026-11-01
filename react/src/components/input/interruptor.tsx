@@ -35,7 +35,7 @@ export function Interruptor({
       <span className="interruptor__trilho" aria-hidden="true">
         <span className="interruptor__bolinha"></span>
       </span>
-      <span className="interruptor__texto legenda-destaque">{ligado ? textoLigado : textoDesligado}</span>
+      <span className="legenda enfase">{ligado ? textoLigado : textoDesligado}</span>
     </button>
   );
 }

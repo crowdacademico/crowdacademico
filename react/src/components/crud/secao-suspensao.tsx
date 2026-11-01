@@ -106,11 +106,11 @@ export function SecaoSuspensao({
   return (
     <SecaoFicha titulo={titulo}>
       <div className="sm:col-span-2 space-y-3">
-        <MensagemErro texto={erro} className="legenda-destaque texto-erro" />
+        <MensagemErro texto={erro} className="legenda enfase texto-erro" />
 
         {suspensoAgora ? (
           <div className="rounded-lg border borda-forte fundo-erro p-4">
-            <p className="paragrafo-destaque texto-erro">
+            <p className="paragrafo enfase texto-erro">
               {rotuloSuspenso} {formatarDataHora(suspensoAte)}
             </p>
             <p className="legenda texto-erro mt-1">Motivo: {suspensao?.motivoSuspensao}</p>
@@ -128,7 +128,7 @@ export function SecaoSuspensao({
                   type="button"
                   onClick={() => setDias(String(d))}
                   className={
-                    'legenda-destaque px-3 py-1.5 rounded-lg border texto-herdado ' +
+                    'legenda enfase px-3 py-1.5 rounded-lg border texto-herdado ' +
                     (dias === String(d)
                       ? 'fundo-marca-forte texto-sobre-cor borda-marca'
                       : 'texto-padrao borda-forte hover-fundo-sutil')
@@ -150,7 +150,7 @@ export function SecaoSuspensao({
               />
             </div>
             {erroDe('dias') && (
-              <p id={idErroDias} className="legenda-destaque texto-erro -mt-1">
+              <p id={idErroDias} className="legenda enfase texto-erro -mt-1">
                 {erroDe('dias')}
               </p>
             )}
@@ -165,7 +165,7 @@ export function SecaoSuspensao({
               rows={2}
             />
             {erroDe('motivo') && (
-              <p id={idErroMotivo} className="legenda-destaque texto-erro -mt-1">
+              <p id={idErroMotivo} className="legenda enfase texto-erro -mt-1">
                 {erroDe('motivo')}
               </p>
             )}

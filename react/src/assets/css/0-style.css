@@ -1,13 +1,9 @@
-/* Manifesto do CSS: um arquivo por responsabilidade, importado aqui em ordem.
-   main.tsx importa este arquivo + tailwind-theme.css (esse fica separado, ver o comentário lá para o
-   porquê).
-
-   MAPA: a numeração não é uma sequência de passos, são 3 grupos de natureza diferente:
-   - 1 a 3: FUNDAÇÃO: tokens de cor, tokens de tipografia, reset de tag crua. Nada aqui depende de nenhum
-   componente existir.
-   - 4 a 6: COMPONENTES: painel admin de verdade (botão/input/badge, tela de CRUD, casca do admin).
-   - 7 a 8: TRANSVERSAL/FERRAMENTA: 7 (responsividade) se aplica por CIMA de tudo que já veio antes, não é um
-   passo posterior; 8 é só a área de testes (ferramenta interna, não é tela de produto). */
+/* Um arquivo por responsabilidade, nesta ordem (main.tsx importa este e o tailwind-theme.css):
+   - 1 a 3: fundação (cores, tipografia, variáveis e tag crua);
+   - 4 a 6: peças (botão, campo, selo; tabelas e modais; menu lateral e área do painel);
+   - 8: só o Campo de Testes.
+   O ajuste de celular de cada peça mora junto da peça. Toda regra de peça fica dentro de @layer: o utilitário
+   do Tailwind sempre ganha. */
 
 @import url('./1-cores.css');
 @import url('./2-tipografia.css');
@@ -15,5 +11,4 @@
 @import url('./4-componentes.css');
 @import url('./5-crud.css');
 @import url('./6-admin-shell.css');
-@import url('./7-responsividade.css');
 @import url('./8-campo-testes.css');
