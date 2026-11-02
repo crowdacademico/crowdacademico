@@ -16,7 +16,7 @@ export const TAREFAS_AUTOMATICAS: TarefaAutomatica[] = [
     tarefa: 'encerrar',
     rotulo: 'Fechar campanhas vencidas',
     icone: 'fa-flag-checkered',
-    dica: 'Vence os Pix pendentes que passaram do prazo e encerra as campanhas cujo prazo acabou.',
+    dica: 'Vence os Pix pendentes que passaram do prazo, encerra as campanhas cujo prazo acabou e lembra quem segue uma campanha perto do fim e ainda não contribuiu.',
   },
   {
     chave: 'tarefa_repasse_ligada',

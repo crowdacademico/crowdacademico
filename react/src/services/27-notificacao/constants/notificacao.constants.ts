@@ -23,6 +23,10 @@ export const CLASSE_BADGE_STATUS_NOTIFICACAO: Record<StatusNotificacao, string> 
   cancelado: 'badge-concluido',
 };
 
+// O sino não tem envio: a situação dele é ter sido lido ou não (é a ordem do filtro, depois das do e-mail).
+export const ROTULO_LEITURA_SINO = { naoLida: 'Não lida', lida: 'Lida' } as const;
+export const CLASSE_BADGE_LEITURA_SINO = { naoLida: 'badge-neutro', lida: 'badge-concluido' } as const;
+
 // Espelha nest/src/27-notificacao/constants/notificacao.constants.ts (TIPO_NOTIFICACAO). Tipo fora do dicionário (um
 // seed antigo, por exemplo) aparece como veio: nunca quebra, só fica menos bonito.
 const ROTULO_TIPO_NOTIFICACAO: Partial<Record<string, string>> = {
@@ -43,6 +47,10 @@ const ROTULO_TIPO_NOTIFICACAO: Partial<Record<string, string>> = {
   pesquisador_reativado: 'Pesquisador reativado',
   contestacao_aceita: 'Contestação aceita',
   contestacao_recusada: 'Contestação recusada',
+  denuncia_procedente: 'Denúncia procedente',
+  moderacao_encerrou_campanha: 'Campanha encerrada pela moderação (ao dono)',
+  campanha_encerrada_antes: 'Campanha apoiada encerrada antes do prazo',
+  lembrete_fim_campanha: 'Campanha seguida perto do fim',
 };
 
 export const rotuloTipoNotificacao = (tipo: string): string => ROTULO_TIPO_NOTIFICACAO[tipo] ?? tipo;

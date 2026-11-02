@@ -9,6 +9,7 @@
 // controle ("Encerrar sessão"), não uma descrição adicional dele.
 //
 // `direita`: abre alinhada pela borda direita do gatilho (gatilho na última coluna de uma tabela).
+// `esquerda`: abre a partir do gatilho, para a direita (gatilho perto da borda esquerda, como o rótulo de uma ficha).
 // `alerta`: aviso preso a um campo ("Apenas leitura"), no formato do aviso de validação do navegador: balão claro
 // embaixo do campo, com seta e ícone de alerta.
 interface DicaProps {
@@ -16,15 +17,17 @@ interface DicaProps {
   baixo?: boolean;
   curta?: boolean;
   direita?: boolean;
+  esquerda?: boolean;
   alerta?: boolean;
 }
 
-export function Dica({ texto, baixo, curta, direita, alerta }: DicaProps) {
+export function Dica({ texto, baixo, curta, direita, esquerda, alerta }: DicaProps) {
   const classe =
     'dica__bolha' +
     (baixo ? ' dica__bolha--baixo' : '') +
     (curta ? ' dica__bolha--curta' : '') +
     (direita ? ' dica__bolha--direita' : '') +
+    (esquerda ? ' dica__bolha--esquerda' : '') +
     (alerta ? ' dica__bolha--baixo dica__bolha--alerta' : '');
   return (
     <span className={classe} aria-hidden="true">
@@ -51,11 +54,12 @@ export function Dica({ texto, baixo, curta, direita, alerta }: DicaProps) {
 interface TooltipProps {
   texto: string;
   baixo?: boolean;
+  esquerda?: boolean;
   aoClicar?: () => void;
   icone?: string;
 }
 
-export function Tooltip({ texto, baixo = false, aoClicar, icone = 'fa-solid fa-circle-info' }: TooltipProps) {
+export function Tooltip({ texto, baixo = false, esquerda = false, aoClicar, icone = 'fa-solid fa-circle-info' }: TooltipProps) {
   const classe = 'dica dica--info' + (aoClicar ? ' dica--clicavel' : '');
   const Elemento = aoClicar ? 'button' : 'span';
 
@@ -69,7 +73,7 @@ export function Tooltip({ texto, baixo = false, aoClicar, icone = 'fa-solid fa-c
       aria-label={texto}
     >
       <i className={icone} aria-hidden="true"></i>
-      <Dica texto={texto} baixo={baixo} />
+      <Dica texto={texto} baixo={baixo} esquerda={esquerda} />
     </Elemento>
   );
 }

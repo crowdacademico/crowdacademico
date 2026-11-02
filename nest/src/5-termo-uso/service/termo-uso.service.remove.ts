@@ -11,7 +11,7 @@ import { DatabaseService } from '../../commons/database/database.service';
 //
 // - `ativo = TRUE` bloqueia sempre (não dá para apagar a versão vigente: quebraria a garantia de "sempre existe 1
 // termo vigente por tipo" de que Cadastro/Contribuição/Upgrade dependem).
-// - Versão já aceita (cadastro, upgrade ou contribuição) não pode ser excluída, RF-094: quem recusa é o banco
+// - Versão já aceita (cadastro, upgrade ou contribuição) não pode ser excluída, RF-095: quem recusa é o banco
 // (fn_protege_termo_aceito, 91032 -> 409), porque o aceite é a prova do que a pessoa aceitou.
 @Injectable()
 export class TermoUsoServiceRemove {

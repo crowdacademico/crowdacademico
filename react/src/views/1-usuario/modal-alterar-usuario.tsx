@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
+import { pedirConfirmacao } from '../../components/crud/confirmacao';
 import { MENSAGEM_MOTIVO_SUSPENSAO_CURTO, MENSAGEM_NOME_CURTO, MOTIVO_SUSPENSAO_MINIMO_CARACTERES, NOME_MINIMO_CARACTERES } from '../../services/constant/constants/minimos.constants';
 import type { CSSProperties, ReactNode } from 'react';
 import { FichaLadoALado, SecaoFicha } from '../../components/crud/ficha-consulta';
@@ -710,9 +711,15 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado,
       `"${papel.nomePapel}" voltou a valer normalmente`,
     );
 
-  const aoRevogar = (papel: UsuarioPapelResponse) => {
+  const aoRevogar = async (papel: UsuarioPapelResponse) => {
     // O "×" é pequeno e fica colado no nome do papel: um clique sem querer tirava o papel na hora.
-    if (!window.confirm(`Revogar o papel "${papel.nomePapel}"? A conta perde na hora o que este papel permite.`)) {
+    const confirmou = await pedirConfirmacao({
+      titulo: `Revogar o papel "${papel.nomePapel}"?`,
+      texto: 'A conta perde na hora o que este papel permite.',
+      rotuloConfirmar: 'Revogar papel',
+      perigo: true,
+    });
+    if (!confirmou) {
       return;
     }
     void executar(

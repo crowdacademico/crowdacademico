@@ -7,39 +7,50 @@ import { useToast } from '../../components/layout/toast/use-toast';
 import { notificacaoApi } from '../../services/27-notificacao/api/notificacao.api';
 import {
   ORDEM_STATUS_NOTIFICACAO,
+  ROTULO_CANAL_NOTIFICACAO,
+  ROTULO_LEITURA_SINO,
   ROTULO_STATUS_NOTIFICACAO,
   rotuloTipoNotificacao,
 } from '../../services/27-notificacao/constants/notificacao.constants';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { ModalConsultarNotificacao } from './modal-consultar-notificacao';
-import type { AuthFetch } from '../../services/3-auth/type/auth.type';
+import type { PropsPagina } from '../../services/router/pagina.type';
 import type { NotificacaoResponse } from '../../services/27-notificacao/type/notificacao.type';
 import { ordenarFilaSla } from '../../services/constant/util/fila-sla.util';
 
 interface NotificacaoLinha extends NotificacaoResponse {
   tipo: string;
+  canalRotulo: string;
+  // O e-mail; no sino, o nome da conta.
+  para: string;
   statusRotulo: string;
-  assuntoTexto: string;
   // "Esperando" só no que ainda pede algo (na fila ou falhou).
   esperandoDesde: string | null;
 }
 
 type Pedido = { acao: 'reenviar' | 'cancelar'; linha: NotificacaoLinha };
 
+// A situação em texto (filtro e busca): a do envio no e-mail, a da leitura no sino.
+const situacaoTexto = (n: NotificacaoResponse): string =>
+  n.canal === 'interna' ? ROTULO_LEITURA_SINO[n.lidaEm ? 'lida' : 'naoLida'] : ROTULO_STATUS_NOTIFICACAO[n.status];
+const ORDEM_SITUACAO = [...ORDEM_STATUS_NOTIFICACAO.map((s) => ROTULO_STATUS_NOTIFICACAO[s]), ROTULO_LEITURA_SINO.naoLida, ROTULO_LEITURA_SINO.lida];
+
 // O ⓘ do título, em blocos (a bolha respeita o "\n"): deixa claro que reenviar é exceção, não rotina.
-const AJUDA_NOTIFICACOES = [
-  'Todos os e-mails do sistema. Os que esperam (na fila ou que falharam) vêm primeiro, o mais antigo no topo.',
+const AJUDA_ENVIOS = [
+  'Todos os avisos do sistema, por e-mail e pelo sino do painel, de todas as contas. Os e-mails que esperam (na fila ou que falharam) vêm primeiro, o mais antigo no topo.',
   'Na fila: sai sozinho em até 1 minuto, com a tarefa Enviar os e-mails ligada (desligada, só pelo Rodar agora da T6). Se o envio falhar por algo passageiro, a própria tarefa tenta de novo, várias vezes.',
   'Falhou: a tarefa desistiu (endereço recusado ou tentativas esgotadas). Só aqui alguém precisa agir: corrija a causa e Reenvie (vai para o e-mail atual da conta), ou Cancele.',
   'Ninguém precisa clicar em Reenviar no dia a dia.',
-  'O texto de cada e-mail se edita em Configurações > Mensagens.',
+  'Sino: chega na hora, sem fila. A situação diz só se a pessoa já leu.',
+  'O texto de cada aviso se edita em Configurações > Mensagens.',
 ].join('\n\n');
 
-// Aba Notificações do Dashboard (RF-124): todo e-mail que o sistema pôs na fila. Fila do SLA (DS-49): primeiro o que
-// espera (na fila ou que falhou), o mais antigo no topo; depois os enviados e cancelados, o mais novo primeiro. O
-// envio é sozinho, a cada minuto (worker do Nest, 4-mail); aqui só se vê e se trata o que falhou: Reenviar põe de volta
-// na fila, Cancelar tira de vez. Mora em 27-notificacao (o dono do dado), aparece dentro do Dashboard.
-export function ListarNotificacoes({ authFetch }: { authFetch: AuthFetch }) {
+// Notificações (RF-126): todo aviso que o sistema mandou, por e-mail e pelo sino. Fila do SLA (DS-49): primeiro o e-mail que
+// espera (na fila ou que falhou), o mais antigo no topo; depois o resto, o mais novo primeiro. O envio é sozinho, a cada
+// minuto (worker do Nest, 4-mail); aqui só se vê e se trata o e-mail que falhou: Reenviar põe de volta na fila,
+// Cancelar tira de vez. O sino não tem envio, então não tem as duas ações.
+export function ListarNotificacoes({ auth }: PropsPagina) {
+  const { authFetch } = auth;
   const [consultando, setConsultando] = useState<NotificacaoResponse | null>(null);
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [chaveRecarga, setChaveRecarga] = useState(0);
@@ -53,8 +64,9 @@ export function ListarNotificacoes({ authFetch }: { authFetch: AuthFetch }) {
     return ordenarFilaSla(lista, esperandoDesde, (n) => n.criadoEm).map((n) => ({
       ...n,
       tipo: rotuloTipoNotificacao(n.tipoEvento),
-      statusRotulo: ROTULO_STATUS_NOTIFICACAO[n.status],
-      assuntoTexto: n.assunto ?? '-',
+      canalRotulo: ROTULO_CANAL_NOTIFICACAO[n.canal],
+      para: n.emailDestinatario ?? n.nomeUsuario ?? '-',
+      statusRotulo: situacaoTexto(n),
       esperandoDesde: esperandoDesde(n),
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,30 +89,29 @@ export function ListarNotificacoes({ authFetch }: { authFetch: AuthFetch }) {
   };
 
   return (
-    <>
+    <div className="admin-content-painel">
       <GenericTable
         titulo="Notificações"
-        nivelTitulo={2}
-        ajuda={AJUDA_NOTIFICACOES}
+        ajuda={AJUDA_ENVIOS}
         colunas={[
           { chave: 'idNotificacao', rotulo: 'id', tipo: 'id' },
           { chave: 'tipo', rotulo: 'tipo', tipo: 'nome', umaLinha: true },
-          { chave: 'emailDestinatario', rotulo: 'para', tipo: 'texto' },
-          { chave: 'assuntoTexto', rotulo: 'assunto', tipo: 'texto', umaLinha: true },
+          { chave: 'canalRotulo', rotulo: 'canal', tipo: 'texto' },
+          { chave: 'para', rotulo: 'para', tipo: 'texto' },
           { chave: 'criadoEm', rotulo: 'criado em', tipo: 'dataHora' },
           { chave: 'esperandoDesde', rotulo: 'esperando', tipo: 'espera' },
           {
             chave: 'statusRotulo',
             rotulo: 'situação',
             tipo: 'status',
-            renderizar: (linha: NotificacaoLinha) => <BadgeStatusNotificacao status={linha.status} />,
-            textoExibido: (linha: NotificacaoLinha) => ROTULO_STATUS_NOTIFICACAO[linha.status],
+            renderizar: (linha: NotificacaoLinha) => <BadgeStatusNotificacao status={linha.status} canal={linha.canal} lidaEm={linha.lidaEm} />,
+            textoExibido: (linha: NotificacaoLinha) => linha.statusRotulo,
           },
         ]}
         vazio={{
           icone: 'fa-envelope-circle-check',
-          titulo: 'Nenhum e-mail nesta situação.',
-          texto: 'Os e-mails aparecem aqui assim que algum evento os pede (cadastro, aprovação de campanha, devolução...).',
+          titulo: 'Nenhum aviso nesta situação.',
+          texto: 'Os avisos aparecem aqui assim que algum evento os pede (cadastro, aprovação de campanha, devolução...).',
         }}
         chavePrimaria="idNotificacao"
         listar={listar}
@@ -110,13 +121,16 @@ export function ListarNotificacoes({ authFetch }: { authFetch: AuthFetch }) {
           cancelarEnvio: (linha) => setPedido({ acao: 'cancelar', linha }),
         }}
         acaoIndisponivel={(linha, acao) => {
+          if (linha.canal === 'interna' && (acao === 'reenviar' || acao === 'cancelarEnvio'))
+            return 'O aviso do sino chega na hora: não tem envio para reenviar ou cancelar.';
           if (acao === 'reenviar' && linha.status !== 'falhou') return 'Só um e-mail que falhou pode ser reenviado.';
           if (acao === 'cancelarEnvio' && linha.status !== 'pendente' && linha.status !== 'falhou')
             return 'Só um e-mail na fila ou que falhou pode ser cancelado.';
           return undefined;
         }}
         filtrosFacetados={[
-          { chave: 'statusRotulo', rotulo: 'Situação', ordem: ORDEM_STATUS_NOTIFICACAO.map((s) => ROTULO_STATUS_NOTIFICACAO[s]) },
+          { chave: 'canalRotulo', rotulo: 'Canal' },
+          { chave: 'statusRotulo', rotulo: 'Situação', ordem: ORDEM_SITUACAO },
           { chave: 'tipo', rotulo: 'Tipo' },
         ]}
       />
@@ -142,6 +156,6 @@ export function ListarNotificacoes({ authFetch }: { authFetch: AuthFetch }) {
           )}
         </ModalConfirmacao>
       )}
-    </>
+    </div>
   );
 }

@@ -21,7 +21,7 @@ export class RecompensaResponse {
   links: RecompensaLinkResponse[];
 }
 
-// Uma recompensa que a própria conta ganhou (RF-104), com o link especial dela.
+// Uma recompensa que a própria conta ganhou (RF-105), com o link especial dela.
 export class RecompensaGanhaResponse {
   idRecompensa: number;
   idCampanha: number;

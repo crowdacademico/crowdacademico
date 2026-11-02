@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { pedirConfirmacao } from '../crud/confirmacao';
 import type { ChangeEvent } from 'react';
 import { AvatarUsuario } from '../layout/avatar-usuario';
 import { Dica } from '../layout/tooltip';
@@ -160,8 +161,14 @@ export function SeletorFotoPerfil({
   // verdade (linha desativada + bytes apagados do bucket) só some quando quem usa este componente salvar de
   // fato (PATCH /usuario com idImagemPerfil: null: usuario.service.update.ts já cuida da limpeza, mesmo caminho
   // que desativa a foto ANTIGA ao trocar por uma nova).
-  const aoRemover = () => {
-    if (!window.confirm('Remover a foto de perfil?')) {
+  const aoRemover = async () => {
+    const confirmou = await pedirConfirmacao({
+      titulo: 'Remover a foto de perfil?',
+      texto: 'A foto sai quando você salvar.',
+      rotuloConfirmar: 'Remover foto',
+      perigo: true,
+    });
+    if (!confirmou) {
       return;
     }
     setErroLocal('');

@@ -461,7 +461,7 @@ CREATE POLICY pol_marco_cronograma_delete ON marco_cronograma FOR DELETE TO app_
 
 -- [04-E-3] comentario: regras de visibilidade de comentário não endossado/inativo (ver DOCUMENTACAO_BD.md). O
 -- endossado só aparece para quem enxerga a campanha (a regra de leitura de campanha vale dentro do EXISTS): campanha
--- encerrada pela moderação some da página pública e leva os comentários junto (RF-101).
+-- encerrada pela moderação some da página pública e leva os comentários junto (RF-102).
 DROP POLICY IF EXISTS pol_comentario_select ON comentario;
 CREATE POLICY pol_comentario_select ON comentario FOR SELECT USING (
     (ativo = TRUE AND endossado = TRUE AND EXISTS (SELECT 1 FROM campanha WHERE id_campanha = comentario.id_campanha))
@@ -559,8 +559,8 @@ CREATE POLICY pol_solicitacao_update ON solicitacao_encerramento FOR UPDATE TO a
 );
 
 -- O dono da campanha enxerga a própria rejeição, como em solicitacao_encerramento e repasse (tabelas
--- irmãs, que liberam o dono via OR EXISTS): o RF-107 (pesquisador edita e reenvia campanha rejeitada)
--- precisa do motivo na própria plataforma, não só por e-mail (RF-108). O dono é reconhecido por
+-- irmãs, que liberam o dono via OR EXISTS): o RF-108 (pesquisador edita e reenvia campanha rejeitada)
+-- precisa do motivo na própria plataforma, não só por e-mail (RF-109). O dono é reconhecido por
 -- id_usuario_dono (gravado na linha), e não por EXISTS em campanha: o histórico sobrevive à exclusão da
 -- campanha. Ver DOCUMENTACAO_BD.md [05-K-2-B].
 DROP POLICY IF EXISTS pol_historicorej_select ON historico_rejeicao;

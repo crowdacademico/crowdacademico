@@ -42,7 +42,7 @@ Fontes:
 
 Saíram daqui na limpeza de 25-10-2026 e estão inteiros em `informacoes/HISTORICO/HISTORICO_ACHADOS_PARA_DISCUTIR.md`, seção "Limpeza de 25-10-2026":
 - **Túnel do sandbox:** opção B, endereço fixo do ngrok, em uso (`.Tutorial-plataforma-pagamento-sandbox.md`).
-- **Contestação do score (RF-033):** a contestação na própria denúncia (opção B2), feita em 03-10-2026.
+- **Contestação do score (RF-034):** a contestação na própria denúncia (opção B2), feita em 03-10-2026.
 - **O pagamento que chega depois do fim da campanha:** validade de 24 horas para o Pix (opção D), feita em 03-10-2026 (`DOCUMENTACAO_BD.md`, [05-K-2-F]).
 
 ---
@@ -130,14 +130,14 @@ Em palavras simples: olhamos como Kickstarter, Catarse e Experiment.com (o mais 
 
 1. **Gráfico da arrecadação ao longo do tempo na campanha.**
    - Como é lá: no Kickstarter, o painel do criador tem um gráfico da arrecadação dia a dia, com uma linha verde marcando a meta; passando o mouse num dia, aparece o total daquele dia.
-   - Como é aqui: o V8 já pede gráficos na página pública (RF-046: orçamento por categoria e cronograma como linha do tempo), mas não a arrecadação ao longo do tempo. Hoje mostramos só a barra de progresso.
+   - Como é aqui: o V8 já pede gráficos na página pública (RF-047: orçamento por categoria e cronograma como linha do tempo), mas não a arrecadação ao longo do tempo. Hoje mostramos só a barra de progresso.
    - Para pensar: depende do módulo de contribuição (é ele que tem as datas de cada apoio). Daria para mostrar ao pesquisador (Minhas Campanhas) e ao admin (Consultar Campanha). Fica fora do V8: seria requisito novo.
    - Fontes: [Kickstarter, Project Dashboard](https://www.kickstarter.com/blog/project-dashboard); [Kickstarter, The New Creator Dashboard](https://www.kickstarter.com/blog/the-new-creator-dashboard).
 
 2. **Seção "Resultados" ao final da campanha.**
    - Como é lá: no Experiment.com, cada projeto tem seções próprias de Métodos e de Resultados, além das "Lab Notes" (um caderno de laboratório público). Eles fazem questão de dizer que "resultado negativo também é resultado".
-   - Como é aqui: o V8 já tem metade disso. Cada atualização de progresso registra a fase (andamento, resultado preliminar ou resultado final, RF-052). Falta só dar destaque: uma seção "Resultados" na página da campanha que mostra a atualização de resultado final em primeiro lugar, em vez de ela ficar misturada na lista.
-   - Para pensar: é a ideia que mais combina com um site de ciência e quase não muda requisito (é exibição do que o RF-052 já guarda).
+   - Como é aqui: o V8 já tem metade disso. Cada atualização de progresso registra a fase (andamento, resultado preliminar ou resultado final, RF-053). Falta só dar destaque: uma seção "Resultados" na página da campanha que mostra a atualização de resultado final em primeiro lugar, em vez de ela ficar misturada na lista.
+   - Para pensar: é a ideia que mais combina com um site de ciência e quase não muda requisito (é exibição do que o RF-053 já guarda).
    - Fontes: [Experiment.com, Researcher Guide: Share](https://experiment.com/guide/share); [Experiment.com](https://experiment.com/).
 
 3. **Exportar apoiadores em CSV para o pesquisador.**
@@ -148,8 +148,8 @@ Em palavras simples: olhamos como Kickstarter, Catarse e Experiment.com (o mais 
 
 4. **Atualização só para apoiadores, e não pública.**
    - Como é lá: no Catarse, a novidade tem três destinos: pública (vai por e-mail e aparece na página), só para apoiadores (só e-mail), ou só para apoiadores de uma recompensa.
-   - Como é aqui: conferido no V8, não está previsto. O RF-051 diz que as atualizações ficam visíveis na página pública, em ordem cronológica; não há atualização privada.
-   - Para pensar: seria mudança de requisito (RF-051), e depende do módulo de e-mail. Para ciência pode fazer sentido (um resultado preliminar que o pesquisador ainda não quer tornar público), mas abre a pergunta de quem é "apoiador" (o anônimo não tem conta).
+   - Como é aqui: conferido no V8, não está previsto. O RF-052 diz que as atualizações ficam visíveis na página pública, em ordem cronológica; não há atualização privada.
+   - Para pensar: seria mudança de requisito (RF-052), e depende do módulo de e-mail. Para ciência pode fazer sentido (um resultado preliminar que o pesquisador ainda não quer tornar público), mas abre a pergunta de quem é "apoiador" (o anônimo não tem conta).
    - Fonte: [Catarse, Como enviar novidades para seus apoiadores?](https://suporte.catarse.me/hc/pt-br/articles/360024077731-Como-enviar-novidades-para-seus-apoiadores).
 
 6. **Motivos prontos para a rejeição.**

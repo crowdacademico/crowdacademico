@@ -1,5 +1,4 @@
 import { useCallback } from 'react';
-import { useSearchParams } from 'react-router';
 import { AvisoSoPesquisador } from '../../components/crud/aviso-so-pesquisador';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BotaoCriar } from '../../components/crud/botao-criar';
@@ -60,22 +59,6 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
   }, [auth.authFetch, idUsuario]);
 
   const podeCriar = statusPesquisador === 'ativo';
-  // "Submeter Pesquisa" (cabeçalho) chega com ?criar=1: abre o Criar direto para quem pode criar. Para quem não pode,
-  // o aviso no topo da página já diz por quê (não é pesquisador, ou está suspenso).
-  const [parametros, setParametros] = useSearchParams();
-  const pediuCriar = parametros.get('criar') === '1';
-  const fecharCriar = () => {
-    if (pediuCriar) {
-      setParametros(
-        (atuais) => {
-          atuais.delete('criar');
-          return atuais;
-        },
-        { replace: true },
-      );
-    }
-    fecharCriando();
-  };
 
   return (
     <div className="admin-content-painel">
@@ -115,8 +98,8 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
         ]}
       />
 
-      {(criando || (pediuCriar && podeCriar)) && (
-        <ModalCriarCampanha auth={auth} aoMudar={recarregar} aoFechar={fecharCriar} />
+      {criando && (
+        <ModalCriarCampanha auth={auth} aoMudar={recarregar} aoFechar={fecharCriando} />
       )}
 
       {alterando?.statusOriginal === 'rascunho' && (

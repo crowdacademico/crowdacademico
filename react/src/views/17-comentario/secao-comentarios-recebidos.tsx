@@ -15,12 +15,12 @@ interface SecaoComentariosRecebidosProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
   idCampanha: number;
   // Campanha que já foi ao ar: a seção aparece mesmo sem comentário ("nenhum ainda"). Antes disso, só aparece se
-  // houver algum (RF-101: comentário de campanha que nunca foi publicada fica visível só para o dono).
+  // houver algum (RF-102: comentário de campanha que nunca foi publicada fica visível só para o dono).
   publicada: boolean;
 }
 
-// Comentários recebidos, no painel privado do dono da campanha (RF-096): quem escreveu, quando e o texto; endossar
-// (RF-097, até o limite de configuracoes) e excluir ou excluir e bloquear. Só o dono vê esta seção (Minhas
+// Comentários recebidos, no painel privado do dono da campanha (RF-097): quem escreveu, quando e o texto; endossar
+// (RF-098, até o limite de configuracoes) e excluir ou excluir e bloquear. Só o dono vê esta seção (Minhas
 // Campanhas); o banco recusa qualquer outra pessoa de qualquer jeito.
 export function SecaoComentariosRecebidos({ auth, idCampanha, publicada }: SecaoComentariosRecebidosProps) {
   const [comentarios, setComentarios] = useState<ComentarioResponse[] | null>(null);

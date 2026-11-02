@@ -30,19 +30,9 @@
 
 ## 1. Levar para a revisão externa
 
-Os requisitos são atualizados com a revisão externa; aqui fica só o que precisa ir no próximo pedido. A atualização dos requisitos de 29-09-2026 já absorveu o termo único, o 2FA (fica sem RF, como ideia do fim do projeto), o modelo flexível e o Alterar/Excluir do admin. A atualização de 04-10-2026 absorveu os 12 pontos levados naquele dia (validade do Pix, espera do Pix no encerramento, IP do aceite, contestação, re-aceite dos dois termos, exclusão de conta, taxa de conclusão e os parâmetros novos). Os itens abaixo não foram tratados nela e continuam abertos.
+Os requisitos são atualizados com a revisão externa; aqui fica só o que precisa ir no próximo pedido. Nada aberto agora: o pedido de 01-11-2026 foi todo respondido nos requisitos de 02-11-2026.
 
-- **Tipografia do painel padronizada** (6 classes em `2-tipografia.css`): citar no próximo pedido de revisão de interface, pedindo ideias para enxugar mais sem quebrar.
-- **Para discutir com a revisão externa (29-09-2026; achamos que alguns pontos do V8 não batem):**
-  - **Aceite pendente no próximo login:** vale para versão nova do Termo (RF-015). O V8 tirou a parte da conta criada pelo admin (nascer com senha provisória e aceite pendente), por ser ferramenta de teste; queremos rediscutir.
-  - **Modelo da campanha pode mudar até a aprovação:** o V8 deixou implícito (congelamento na aprovação); hoje o formulário nem envia o modelo.
-  - **Links no upgrade, "Projetos Criados" e validação de domínio dos links:** a resposta da revisão externa à comparação V8 × código tem pontos que vamos revisar com ela.
-- **E-mail pronto (19-10-2026), ideias do mercado de 12-10-2026:** lembretes para quem segue a campanha ("faltam 48 h" e "faltam 8 h" para o fim, como faz o Kickstarter) e o endosso de colegas antes de enviar a campanha para aprovação (como faz o Experiment.com; este só com requisito novo).
-- **Status "repassado" da contribuição (25-10-2026):** o RF-082 (`informacoes/REQUISITOS_V10.md`) lista os status obrigatórios de cada transação: "pendente, confirmado, repassado, a devolver, devolvido...". Queremos tirar o "repassado": a tela Contribuições já mostra a situação do repasse numa coluna própria (que pode estar "Concluído"), então o máximo da contribuição seria "Paga". Apagar o status antes de mudar o requisito deixaria o sistema contra ele. Pedir para tirar do requisito; a mudança no banco (o status é usado nas regras do dinheiro) entra na auditoria dos status (grupo 5).
-- **Status com o texto do RF atrás do sistema (auditoria dos status, 01-11-2026):** (1) RF-051 diz que "encerrada" é o encerramento antecipado aprovado sem contribuições, mas o RF-067 diz que sem contribuição o pesquisador encerra direto, sem aprovação; o sistema usa "encerrada" para os dois casos. (2) RF-066 diz que o repasse fica "repassado"; o repasse termina em "concluído" (quem fica "repassado" é a contribuição). (3) RF-114 ainda lista "em análise", tirado em 12-10-2026. (4) RF-124 diz "pendente, enviado, falha"; o sistema tem também "cancelado" (tratamento manual do e-mail). Detalhe em informacoes/todas as auditorias/AUDITORIA_STATUS_01-11-2026.md.
-- **Notificações (auditoria de 01-11-2026):** (1) o RF-117 diz que o encerramento por moderação devolve tudo em qualquer modelo, e o RF-118 manda orientar o doador do flexível a contestar junto à operadora, porque o ressarcimento seria do pesquisador: os dois não batem (o texto do e-mail segue o 641); (2) nenhum RF avisa o pesquisador quando uma denúncia contra ele é julgada procedente, mas o RF-034 deixa ele contestar: hoje ele só descobre olhando a tela. Perguntar se cabe um aviso "denúncia procedente".
-- **Como queremos esse pedido escrito:** "pegar no pé" da revisão externa, pedir que olhe sistemas de referência e traga ideias próprias, não só responda a lista.
-
+- **Como queremos o próximo pedido escrito:** "pegar no pé" da revisão externa, pedir que olhe sistemas de referência e traga ideias próprias, não só responda a lista.
 ---
 
 ## 2. Dependem de outro módulo ou de outra coisa existir
@@ -53,11 +43,12 @@ Os requisitos são atualizados com a revisão externa; aqui fica só o que preci
 
 A área pública não pode ser feita agora (primeiro termina a área restrita). Estes itens ficam esperando por ela:
 
-- **Seguir pesquisador (RF-028):** o botão "Seguir" e a contagem de seguidores na página pública do perfil. A API existe (`/seguir-pesquisador`, `/seguir-pesquisador/:id/seguidores`); hoje se segue pelo coração da T1 e a lista fica na T4.
-- **Escolher a recompensa ao contribuir (RF-101):** o checkout mostra as recompensas ativas da campanha e manda `idRecompensa` no `POST /contribuicao` (já aceito: exige conta e o valor mínimo).
-- **Checkout:** o aviso do modelo da campanha com a confirmação de ciência (RF-040; a API ainda não registra a ciência), o checkbox do termo de pagamento (RF-082; o aceite com IP já é gravado), a contagem regressiva do Pix (RF-081) e a tela de cada meio (RF-077).
-- **Painel "Projetos Criados" do pesquisador (RF-086, RF-087):** a lista com as métricas e o líquido estimado (o `GET /campanha/:id` já devolve `valorLiquidoEstimado`).
-- **Painel de quem apoia (RF-085):** o histórico já existe na Minha Conta, aba Contribuições; na área pública vira o painel do doador.
+- **Links acadêmicos no formulário do upgrade (RF-022):** o requisito pede os links (até 5) no próprio formulário do upgrade; hoje o upgrade não recebe links, eles entram depois, pelo perfil. Quando a área pública tiver o formulário, pedir os links na mesma tela (apontado pela revisão externa de 01-11-2026).
+- **Seguir pesquisador (RF-029):** o botão "Seguir" e a contagem de seguidores na página pública do perfil. A API existe (`/seguir-pesquisador`, `/seguir-pesquisador/:id/seguidores`); hoje se segue pelo coração da T1 e a lista fica na T4.
+- **Escolher a recompensa ao contribuir (RF-105):** o checkout mostra as recompensas ativas da campanha e manda `idRecompensa` no `POST /contribuicao` (já aceito: exige conta e o valor mínimo).
+- **Checkout:** o aviso do modelo da campanha com a confirmação de ciência (RF-041; a API ainda não registra a ciência), o checkbox do termo de pagamento (RF-086; o aceite com IP já é gravado), a contagem regressiva do Pix (RF-085) e a tela de cada meio (RF-081).
+- **Painel "Projetos Criados" do pesquisador (RF-090, RF-091):** a lista com as métricas e o líquido estimado (o `GET /campanha/:id` já devolve `valorLiquidoEstimado`).
+- **Painel de quem apoia (RF-089):** o histórico já existe na Minha Conta, aba Contribuições; na área pública vira o painel do doador.
 - **Desistir do apoio (decidido em 24-10-2026: regra do Catarse, com o art. 49 do CDC como fundamento):** o botão na área de quem apoia. As condições, as fontes e o ponto a validar com o orientador (o CDC nos 7 dias depois de contribuir) estão no `DOCUMENTACAO_FINANCEIRO.md`. Antes do botão: o texto no Termo de Uso (Administrador) e o parâmetro do prazo.
   - **Sem o orientador (25-10-2026):** não dá para contar com o orientador nesta pergunta (CDC × Catarse), nem na cláusula de ressarcimento e na da chave Pix. A decisão sai do estudo feito aqui, bem documentado, com as fontes.
 
@@ -206,7 +197,7 @@ Decidimos depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/todas as 
 
 #### 🟡 O que sobrou da auditoria dos status (01-11-2026)
 
-A regra do pesquisador suspenso e a matriz no RF-114 foram feitas em 01-11-2026; reabrir denúncia julgada continua permitido, com aviso e justificativa. Os 4 RFs com texto atrás do sistema estão no grupo 1, para a revisão externa.
+A regra do pesquisador suspenso e a matriz no RF-115 foram feitas em 01-11-2026; reabrir denúncia julgada continua permitido, com aviso e justificativa. Os 4 RFs com texto atrás do sistema estão no grupo 1, para a revisão externa.
 
 ### Visual e marca
 
@@ -236,7 +227,7 @@ Hoje `campanha` tem 23 triggers (17 funções; algumas são pares INSERT e UPDAT
 ### Protótipo estático (sessão própria)
 
 - Reputação em 4 faixas, seguir campanha e recompensas não têm presença visual no protótipo. Levantar como decisão, não encaixar numa rodada de "embelezar".
-- **Tela de Transparência do protótipo:** tirar a divisão "88/7/5", que não vem de requisito nenhum, e mostrar a taxa da plataforma, a tarifa de cada meio e o simulador do RF-063 (requisitos de 24-10-2026).
+- **Tela de Transparência do protótipo:** tirar a divisão "88/7/5", que não vem de requisito nenhum, e mostrar a taxa da plataforma, a tarifa de cada meio e o simulador do RF-064 (requisitos de 24-10-2026).
 - **Cadastro do protótipo simula uma verificação do Lattes que o sistema não faz (anotado em 05-10-2026).** Onde ver: painel "Telas do protótipo" > "10. Cadastro" > escolher "Sou pesquisador" > avançar até o passo 3. O botão "Validar" do ID Lattes mostra "Vínculo encontrado no Lattes" e bloqueia o avanço até essa validação. O RF-022 diz outra coisa: o pesquisador escolhe o tipo de link (Lattes, ORCID, ResearchGate, LinkedIn ou GitHub) e cola o endereço, o sistema só confere se o endereço é do site certo, e os links são opcionais (até 5). Sugestão: trocar o botão por tipo + endereço, conferido enquanto a pessoa digita e sem bloquear o avanço. Diferença anotada, sem mudar agora: pelo RF-022 quem vira pesquisador é um usuário já cadastrado, que pede o upgrade depois; o protótipo faz isso no próprio cadastro.
 
 ---

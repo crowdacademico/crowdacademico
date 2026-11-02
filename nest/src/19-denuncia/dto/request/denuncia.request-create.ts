@@ -7,7 +7,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 
-// Denúncia contra uma campanha (RF-109) ou contra o perfil de um pesquisador (RF-030): exatamente um alvo
+// Denúncia contra uma campanha (RF-110) ou contra o perfil de um pesquisador (RF-030): exatamente um alvo
 // (CK_DENUNCIA_ALVO_XOR, 01). O resto é do banco: campanha ativa, perfil de pesquisador, nunca a si mesmo
 // (trg_denuncia_valida_alvo), motivo do tipo certo, uma por alvo e o limite por janela de tempo (05).
 export class DenunciaRequestCreate {

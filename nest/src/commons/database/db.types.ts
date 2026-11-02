@@ -644,7 +644,7 @@ export interface RecompensaTable {
   criado_em: Generated<Date>;
 }
 
-// A recompensa que quem apoiou escolheu (RF-104). Simbólica: sem estoque controlado pelo sistema (quantidade sempre 1).
+// A recompensa que quem apoiou escolheu (RF-105). Simbólica: sem estoque controlado pelo sistema (quantidade sempre 1).
 export interface ContribuicaoRecompensaTable {
   id_contrib_recompensa: Generated<number>;
   id_contribuicao: number;

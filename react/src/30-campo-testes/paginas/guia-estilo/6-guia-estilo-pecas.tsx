@@ -115,7 +115,7 @@ export function PecasDoPainel() {
             <div className="lg:col-span-2">
               <SecaoFicha titulo="Dados">
                 <CampoFicha rotulo="Área do conhecimento" valor="Ciência da Informação" />
-                <CampoFicha rotulo="Modelo" valor="Tudo ou nada" />
+                <CampoFicha rotulo="Modelo" valor="Tudo ou nada" dica="Com dica: a ⓘ fica logo depois do rótulo, como nos formulários." />
                 <CampoFicha rotulo="Descrição" valor="Questionário com usuárias do transporte público noturno." largura="cheia" />
               </SecaoFicha>
             </div>

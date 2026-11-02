@@ -42,7 +42,7 @@ import { CampoTestesModule } from '../30-campo-testes/campo-testes.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    // Habilita @Cron em qualquer service do app (RF-064): sem isso registrado uma vez aqui, o decorator @Cron
+    // Habilita @Cron em qualquer service do app (RF-065): sem isso registrado uma vez aqui, o decorator @Cron
     // não faz nada sozinho, precisa do agendador do próprio módulo rodando por trás. Primeiro consumidor:
     // CampanhaServiceCloseExpired (12-campanha).
     ScheduleModule.forRoot(),

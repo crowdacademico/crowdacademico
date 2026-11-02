@@ -43,7 +43,7 @@ import { CampanhaServiceUpdate } from './service/campanha.service.update';
     CampanhaServiceApprove,
     CampanhaServiceReject,
     CampanhaServiceRemove,
-    // Job agendado (RF-064) - registrado aqui só porque o @Cron precisa de
+    // Job agendado (RF-065) - registrado aqui só porque o @Cron precisa de
     // um provider vivo pra existir; não é chamado por nenhum controller.
     CampanhaServiceCloseExpired,
     // Job agendado: mesma razão do de cima, expira rascunho de campanha abandonado antes de completar

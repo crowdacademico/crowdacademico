@@ -142,7 +142,7 @@ INSERT INTO permissao (nome) VALUES
 ('campanha_rejeitar'),
 ('campanha_editar'),
 ('denuncia_responder'),
--- RF-117: sem esta permissão, encerrar campanha por moderação exigia campanha_aprovar/campanha_rejeitar/
+-- RF-118: sem esta permissão, encerrar campanha por moderação exigia campanha_aprovar/campanha_rejeitar/
 -- solicitacao_encerramento_decidir (só o admin tinha as três), e um moderador que julgava a denúncia procedente
 -- não conseguia agir sobre o próprio julgamento. Permissão estreita de propósito: só a transição ativo ->
 -- encerrado_moderacao, ver fn_valida_transicao_campanha (05, [05-K-2]).
@@ -228,7 +228,7 @@ WHERE (p.nome, perm.nome) IN (
     ('moderador', 'denuncia_responder'),
     ('moderador', 'comentario_moderar'),
     ('moderador', 'atualizacao_moderar'),
-    -- RF-117: fecha o ciclo de julgar uma denúncia e agir sobre ela sem precisar do admin (ver nota em [07-B-2]).
+    -- RF-118: fecha o ciclo de julgar uma denúncia e agir sobre ela sem precisar do admin (ver nota em [07-B-2]).
     ('moderador', 'campanha_encerrar_moderacao'),
     -- revisor: vê tudo do funcionamento (relatórios, pontuação, auditoria financeira e log), sem dados pessoais e sem
     -- alterar nada. Mudar pesos e faixas da pontuação (score_editar) é só do admin.
@@ -582,12 +582,13 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'prazo_minimo_campanha_dias', '15',    'inteiro',  'Duração mínima permitida de uma campanha em dias',     TRUE, TRUE),
 -- Prazo máximo de campanha: 60 dias (decisão de produto: 15 a 60).
 (NULL, 'prazo_maximo_campanha_dias', '60',    'inteiro',  'Duração máxima permitida de uma campanha em dias',     TRUE, TRUE),
--- Lida só pelo React (formulário de criação, RF-072): sugestão, não regra. Fica entre o mínimo e o máximo acima.
+-- Lida só pelo React (formulário de criação, RF-073): sugestão, não regra. Fica entre o mínimo e o máximo acima.
 (NULL, 'prazo_sugerido_campanha_dias', '30', 'inteiro', 'Duração que o formulário de criação de campanha sugere, em dias (a pessoa pode mudar)', TRUE, TRUE),
 (NULL, 'limite_campanhas_simultaneas','2',    'inteiro',  'Nº máximo de campanhas ao mesmo tempo por pesquisador (ativas ou aguardando aprovação)', TRUE, TRUE),
+(NULL, 'lembrete_fim_campanha_horas', '48',  'inteiro',  'Horas antes do fim da campanha em que quem a segue e ainda não contribuiu recebe um lembrete, uma vez só (0 desliga)', TRUE, FALSE),
 (NULL, 'limite_endossos_campanha',   '4',     'inteiro',  'Nº máximo de endossos ativos ao mesmo tempo por campanha', TRUE, TRUE),
 (NULL, 'limite_denuncias_24h',       '5',     'inteiro',  'Nº máximo de denúncias que um usuário pode fazer dentro da janela de tempo das denúncias', TRUE, TRUE),
--- Janela de tempo do limite de denúncias (RF-113), lida por validar_denuncia_frequencia() em 05, [05-K-3].
+-- Janela de tempo do limite de denúncias (RF-114), lida por validar_denuncia_frequencia() em 05, [05-K-3].
 (NULL, 'janela_denuncias_horas',     '24',    'inteiro',  'Janela de tempo das denúncias, em horas (usada pelo limite de denúncias por usuário)', TRUE, TRUE),
 -- `comentario` tem limite de frequência como denúncia (par acima), no mesmo padrão de 2 chaves (contagem +
 -- janela) de limite_denuncias_24h/janela_denuncias_horas; 5 comentários por hora é o valor de partida, ajustável
@@ -634,7 +635,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- F
 (NULL, 'limite_links_academicos_perfil', '5', 'inteiro',  'Nº máximo de links acadêmicos por pesquisador', TRUE, TRUE),
 -- H
--- valor_minimo_contribuicao (RF-087): mesmo padrão de meta_minima_campanha, acima. R$5,00 não é piso do gateway
+-- valor_minimo_contribuicao (RF-088): mesmo padrão de meta_minima_campanha, acima. R$5,00 não é piso do gateway
 -- de pagamento (o PIX em si não impõe mínimo), é política de negócio da própria plataforma, por isso
 -- configurável.
 (NULL, 'valor_minimo_contribuicao',  '5.00',  'decimal',  'Valor mínimo aceito por contribuição, em R$',                       TRUE, TRUE),
@@ -672,7 +673,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'webhook_reprocessar_horas',              '24',   'inteiro', 'Horas tentando de novo um aviso do provedor sem correspondência antes de mandá-lo para revisão manual', TRUE, FALSE),
 -- Interruptores das tarefas automáticas (nest/src/commons/agendamento/tarefa-automatica.ts): ligadas por padrão;
 -- desligar pausa a execução agendada (o "Rodar agora" da T5 continua).
-(NULL, 'tarefa_encerrar_campanhas_ligada', 'true', 'booleano', 'Tarefa automática: vencer os Pix pendentes e encerrar as campanhas cujo prazo passou. Desligada, a execução agendada fica em pausa', TRUE, FALSE),
+(NULL, 'tarefa_encerrar_campanhas_ligada', 'true', 'booleano', 'Tarefa automática: vencer os Pix pendentes, encerrar as campanhas cujo prazo passou e lembrar quem segue uma campanha perto do fim. Desligada, a execução agendada fica em pausa', TRUE, FALSE),
 (NULL, 'tarefa_repasse_ligada', 'true', 'booleano', 'Tarefa automática: pedir ao provedor a transferência dos repasses na fila. Desligada, a execução agendada fica em pausa', TRUE, FALSE),
 (NULL, 'tarefa_devolucao_ligada', 'true', 'booleano', 'Tarefa automática: devolver as contribuições a devolver. Desligada, a execução agendada fica em pausa', TRUE, FALSE),
 (NULL, 'tarefa_conferencia_ligada', 'true', 'booleano', 'Tarefa automática: conferir com o provedor os pagamentos sem aviso e os avisos parados. Desligada, a execução agendada fica em pausa', TRUE, FALSE),
@@ -691,7 +692,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- bloqueio.
 (NULL, 'score_minimo_campanha',      '25.00', 'decimal',  'Score mínimo para criar campanha (sinal de revisão manual, nunca bloqueio automático)', TRUE, FALSE);
 -- Chaves que NÃO existem, de propósito: 'permitir_campanha_anonima' (campanha.id_usuario é NOT NULL, toda
--- campanha tem um pesquisador identificado, o que a curadoria RF-105/106 exige; contribuição anônima já existe
+-- campanha tem um pesquisador identificado, o que a curadoria RF-106/106 exige; contribuição anônima já existe
 -- via contribuicao.token_sessao) e 'limite_denuncias_suspensao' (nenhuma trigger suspende perfil
 -- automaticamente por denúncias procedentes: suspensão é decisão do Admin via curadoria manual; se um dia isso
 -- mudar, a chave volta junto com a trigger que a usa).
@@ -773,13 +774,21 @@ INSERT INTO modelo_mensagem (tipo_evento, canal, titulo, corpo, ativo, obrigator
 ('encerramento_rejeitado', 'email', 'Seu pedido de encerramento não foi aprovado',
  E'O pedido para encerrar "{{titulo}}" antes do prazo não foi aprovado, e ela continua ativa.\n\n{{#justificativa}}Motivo: {{justificativa}}{{/justificativa}}', TRUE, FALSE),
 ('pesquisador_suspenso', 'email', 'Seu perfil de pesquisador foi suspenso',
- E'O seu perfil de pesquisador foi suspenso pela moderação{{#suspenso_ate}} até {{suspenso_ate}}{{/suspenso_ate}}.\n\n{{#motivo}}Motivo: {{motivo}}{{/motivo}}\n\nEnquanto durar a suspensão, você não envia campanhas nem publica atualizações.', TRUE, FALSE),
+ E'O seu perfil de pesquisador foi suspenso pela moderação{{#suspenso_ate}} até {{suspenso_ate}}{{/suspenso_ate}}.\n\n{{#motivo}}Motivo: {{motivo}}{{/motivo}}\n\n{{#campanhas_encerradas}}Campanhas ativas encerradas pela suspensão, com o valor devolvido a quem apoiou: {{campanhas_encerradas}}.{{/campanhas_encerradas}}\n\n{{#campanhas_rejeitadas}}Campanhas que esperavam aprovação e foram rejeitadas: {{campanhas_rejeitadas}}.{{/campanhas_rejeitadas}}\n\nEnquanto durar a suspensão, você não envia campanhas nem publica atualizações.', TRUE, FALSE),
 ('pesquisador_reativado', 'email', 'Seu perfil de pesquisador foi reativado',
  E'O seu perfil de pesquisador está ativo de novo, com todas as permissões.', TRUE, FALSE),
 ('contestacao_aceita', 'email', 'Sua contestação foi aceita',
  E'A sua contestação foi aceita, e a denúncia deixou de contar na sua pontuação.\n\n{{#justificativa}}Justificativa: {{justificativa}}{{/justificativa}}', TRUE, FALSE),
 ('contestacao_recusada', 'email', 'Sua contestação não foi aceita',
  E'A sua contestação foi analisada e não foi aceita.\n\n{{#justificativa}}Justificativa: {{justificativa}}{{/justificativa}}', TRUE, FALSE),
+('denuncia_procedente', 'email', 'Uma denúncia contra você foi julgada procedente',
+ E'{{#titulo}}Uma denúncia contra a sua campanha "{{titulo}}"{{/titulo}}{{^titulo}}Uma denúncia contra o seu perfil de pesquisador{{/titulo}} foi analisada pela moderação e julgada procedente. Ela passa a contar na sua pontuação de reputação.\n\n{{#motivo}}Motivo da denúncia: {{motivo}}{{/motivo}}\n\n{{#justificativa}}Justificativa da decisão: {{justificativa}}{{/justificativa}}\n\nSe achar a decisão injusta, você pode contestá-la uma vez, em Minha Conta, aba Acadêmico, explicando o porquê.', TRUE, FALSE),
+('moderacao_encerrou_campanha', 'email', 'Sua campanha foi encerrada pela moderação',
+ E'"{{titulo}}" foi encerrada pela moderação da plataforma e saiu da página pública.\n\nTodo o valor arrecadado vai ser devolvido a quem apoiou. O motivo vem em outro aviso: a denúncia julgada procedente ou a suspensão do seu perfil.', TRUE, FALSE),
+('campanha_encerrada_antes', 'email', 'A campanha que você apoiou terminou antes do prazo',
+ E'"{{titulo}}" foi encerrada antes do prazo, a pedido do pesquisador, com a aprovação da plataforma.\n\n{{#vai_para_pesquisador}}O valor arrecadado, com a sua contribuição, vai para o pesquisador depois do prazo de segurança da plataforma.{{/vai_para_pesquisador}}{{^vai_para_pesquisador}}Como a campanha é do modelo tudo ou nada e não bateu a meta, a sua contribuição vai ser devolvida. Você recebe outro e-mail quando a devolução for concluída.{{/vai_para_pesquisador}}', TRUE, FALSE),
+('lembrete_fim_campanha', 'email', 'Uma campanha que você segue está perto do fim',
+ E'"{{titulo}}", uma campanha que você segue, termina em {{data_fim}}.\n\nSe quiser apoiar a pesquisa, ainda dá tempo.', TRUE, FALSE),
 ('campanha_aprovada', 'interna', 'Campanha aprovada',
  E'"{{titulo}}" foi aprovada e já está visível na plataforma.', TRUE, FALSE),
 ('campanha_rejeitada', 'interna', 'Campanha não aprovada',
@@ -809,7 +818,15 @@ INSERT INTO modelo_mensagem (tipo_evento, canal, titulo, corpo, ativo, obrigator
 ('contestacao_aceita', 'interna', 'Contestação aceita',
  E'A sua contestação foi aceita.', TRUE, FALSE),
 ('contestacao_recusada', 'interna', 'Contestação não aceita',
- E'A sua contestação não foi aceita.', TRUE, FALSE)
+ E'A sua contestação não foi aceita.', TRUE, FALSE),
+('denuncia_procedente', 'interna', 'Denúncia procedente',
+ E'{{#titulo}}Uma denúncia contra "{{titulo}}"{{/titulo}}{{^titulo}}Uma denúncia contra o seu perfil{{/titulo}} foi julgada procedente. Você pode contestá-la em Minha Conta.', TRUE, FALSE),
+('moderacao_encerrou_campanha', 'interna', 'Campanha encerrada pela moderação',
+ E'"{{titulo}}" foi encerrada pela moderação. O valor arrecadado vai ser devolvido.', TRUE, FALSE),
+('campanha_encerrada_antes', 'interna', 'Campanha encerrada antes do prazo',
+ E'"{{titulo}}" terminou antes do prazo.{{#vai_para_pesquisador}} O valor vai para o pesquisador.{{/vai_para_pesquisador}}{{^vai_para_pesquisador}} A sua contribuição vai ser devolvida.{{/vai_para_pesquisador}}', TRUE, FALSE),
+('lembrete_fim_campanha', 'interna', 'Campanha perto do fim',
+ E'"{{titulo}}" termina em {{data_fim}}. Ainda dá tempo de apoiar.', TRUE, FALSE)
 ON CONFLICT (tipo_evento, canal) DO NOTHING;
 
 -- ============================================================================
@@ -1120,7 +1137,7 @@ JOIN tipo_link tl ON tl.codigo = v.tipolink_codigo;
 --    9 Eduardo   flexível      encerrada antes do prazo com o pedido aprovado; transferência em andamento
 --   10 Beatriz   flexível      ativa, pedido de encerramento esperando há 40 dias, denúncia pendente
 --   11 Beatriz   flexível      ativa, um pedido rejeitado e outro esperando há 15 dias
---   12 Juliana   tudo-ou-nada  "Em breve" (RF-060): aprovada, começa daqui a 7 dias
+--   12 Juliana   tudo-ou-nada  "Em breve" (RF-061): aprovada, começa daqui a 7 dias
 --   13 Juliana   tudo-ou-nada  rascunho
 --   14 Patrícia  tudo-ou-nada  rejeitada há 5 dias, com reenvio disponível
 --   15 Patrícia  tudo-ou-nada  encerrada antes do prazo, sem a meta, com pedido aprovado: todo o dinheiro voltou
@@ -1458,7 +1475,7 @@ END;
 $$;
 
 -- [07-H-3] aceite_termo_contribuicao
--- Sustenta o RF-085/RF-086: a trilha do aceite dos termos por transação é a defesa da plataforma numa contestação de
+-- Sustenta o RF-086/RF-087: a trilha do aceite dos termos por transação é a defesa da plataforma numa contestação de
 -- pagamento. Cada contribuição aceitou a versão do termo da conta vigente no instante da contribuição.
 INSERT INTO aceite_termo_contribuicao (id_contribuicao, id_termo, aceito_em, ip_aceite)
 SELECT c.id_contribuicao,
@@ -1652,7 +1669,7 @@ BEGIN
 END;
 $$;
 
--- 5. Pedidos de encerramento antes do prazo (RF-067 a RF-069), pelo caminho do painel: o pesquisador pede, o Admin
+-- 5. Pedidos de encerramento antes do prazo (RF-068 a RF-070), pelo caminho do painel: o pesquisador pede, o Admin
 --    Sistema (1) decide com decidir_solicitacao_encerramento (03). Aprovar encerra a campanha e o dinheiro segue
 --    destino_dinheiro_campanha (05): o da campanha 9, flexível, vai para o pesquisador; o da 15, tudo-ou-nada que não
 --    bateu a meta, volta para quem apoiou. A Ana desistiu do pedido dela (cancelado pela dona). O "cancelar o projeto"
@@ -1869,7 +1886,7 @@ END;
 $$;
 
 -- [07-E-8] recompensa, link_recompensa e contribuicao_recompensa
--- Recompensas simbólicas (RF-102 a RF-104), sem estoque: os três tipos, uma desativada e um link especial (que só o
+-- Recompensas simbólicas (RF-103 a RF-105), sem estoque: os três tipos, uma desativada e um link especial (que só o
 -- dono, o admin e quem ganhou enxergam). Cada contribuição paga de quem tem conta ganha a maior recompensa ativa que o
 -- valor dela alcançou; as abaixo de todos os mínimos ficam sem recompensa, como no uso real.
 INSERT INTO recompensa (id_campanha, titulo, descricao, valor_minimo, tipo, ativo, criado_em)

@@ -28,6 +28,7 @@ import { ListarAnexosAtualizacoes } from '../../views/15-atualizacao-campanha/li
 import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
 import { PontuacaoScore } from '../../views/11-configuracoes/pontuacao-score';
 import { ListarModelosMensagem } from '../../views/27-notificacao/listar-modelos-mensagem';
+import { ListarNotificacoes } from '../../views/27-notificacao/listar-notificacoes';
 import { campoTestes } from './campo-testes-opcional';
 
 // Fonte única de verdade para "quais páginas existem": App.tsx monta as <Route> daqui e breadcrumb.tsx monta
@@ -152,6 +153,16 @@ export const ROTAS_ADMIN: Rota[] = [
     rotuloBreadcrumb: 'Pontuação (Score)',
     grupoMenu: 'CONFIGURACOES',
     icone: 'fa-star-half-stroke',
+  },
+  // Notificações: o que o sistema mandou e para quem, por e-mail e pelo sino (tabela notificacao).
+  {
+    caminho: '/admin/notificacoes',
+    caminhoRelativo: 'notificacoes',
+    elemento: ListarNotificacoes,
+    rotuloMenu: 'Notificações',
+    rotuloBreadcrumb: 'Notificações',
+    grupoMenu: 'COMUNICACOES',
+    icone: 'fa-paper-plane',
   },
   // Mensagens: o texto de cada aviso (e-mail e sino), por evento e canal (tabela modelo_mensagem).
   {

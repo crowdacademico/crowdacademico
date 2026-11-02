@@ -48,7 +48,7 @@ export const termoUsoApi = {
     authFetch(`/termos-uso/${id}/ativar`, { method: 'PATCH' }).then(
       tratarResposta<TermoUsoResponse>,
     ),
-  // DELETE /termos-uso/:id: nunca permitido na versão vigente nem numa versão já aceita por alguém (RF-094: o
+  // DELETE /termos-uso/:id: nunca permitido na versão vigente nem numa versão já aceita por alguém (RF-095: o
   // aceite é a prova; o banco recusa com 409). Só a versão nunca aceita pode ser excluída.
   excluir: (authFetch: AuthFetch, id: number): Promise<void> =>
     authFetch(`/termos-uso/${id}`, { method: 'DELETE' }).then(tratarResposta<void>),

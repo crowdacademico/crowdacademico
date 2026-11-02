@@ -73,7 +73,7 @@ export class CampanhaServiceFindOne {
     resposta.nomeEncerrador = resultado.rows[0]?.nome ?? null;
   }
 
-  // RF-090. A conta é a do repasse (liquido_repasse, 05 [05-K-2]): mesma taxa mínima, então a estimativa nunca
+  // RF-091. A conta é a do repasse (liquido_repasse, 05 [05-K-2]): mesma taxa mínima, então a estimativa nunca
   // promete mais do que o repasse vai pagar.
   private async preencherLiquidoEstimado(
     resposta: CampanhaResponse,

@@ -9,10 +9,11 @@ import {
 } from '../../commons/agendamento/tarefa-automatica';
 import { PG_POOL } from '../../commons/database/database.constants';
 
-// Chama encerrar_campanhas_vencidas() (05_regras_negocio.sql, [05-K-2]) por agendamento (RF-064): sem isso, uma
+// Chama encerrar_campanhas_vencidas() (05_regras_negocio.sql, [05-K-2]) por agendamento (RF-065): sem isso, uma
 // campanha cujo prazo vence continuaria 'ativo' para sempre e aceitando contribuição além do prazo. Antes, vence o
 // Pix pendente que passou da validade (expirar_contribuicoes_pendentes): a campanha vencida só é encerrada quando
-// não sobra Pix pendente válido.
+// não sobra Pix pendente válido. Depois, os lembretes a quem segue uma campanha perto do fim (enviar_lembretes_fim_campanha,
+// RF-055): desligar esta tarefa pausa os dois.
 //
 // `PG_POOL` direto, NUNCA `DatabaseService.getDb()`: um job agendado roda fora do pipeline HTTP, sem nenhuma
 // requisição por trás. GlobalDbInterceptor (que abre a transação e guarda o Kysely no CLS) só roda em rota HTTP
@@ -73,6 +74,15 @@ export class CampanhaServiceCloseExpired {
         this.logger.log(
           `${quantidade} campanha(s) vencida(s) encerrada(s) automaticamente.`,
         );
+      }
+
+      // Lembrete a quem segue uma campanha perto do fim e ainda não contribuiu (RF-055), uma vez só por pessoa.
+      const lembretes = await this.pool.query<{
+        enviar_lembretes_fim_campanha: number;
+      }>('SELECT public.enviar_lembretes_fim_campanha()');
+      const avisados = lembretes.rows[0]?.enviar_lembretes_fim_campanha ?? 0;
+      if (avisados > 0) {
+        this.logger.log(`${avisados} lembrete(s) de fim de campanha na fila.`);
       }
     } catch (erro) {
       this.logger.error(

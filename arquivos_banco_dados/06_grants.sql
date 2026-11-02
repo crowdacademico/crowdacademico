@@ -214,7 +214,7 @@ GRANT EXECUTE ON FUNCTION public.fn_eh_ultimo_admin_ativo(INT)                  
 -- fn_termo_uso_pendente: RF-015, chamada pelo login e pela renovação de sessão.
 REVOKE EXECUTE ON FUNCTION public.fn_termo_uso_pendente(INT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.fn_termo_uso_pendente(INT) TO app_nestjs;
--- contar_aceites_termo: RF-094, a lista de Termos sabe quais versões já foram aceitas (só o número).
+-- contar_aceites_termo: RF-095, a lista de Termos sabe quais versões já foram aceitas (só o número).
 REVOKE EXECUTE ON FUNCTION public.contar_aceites_termo(INT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.contar_aceites_termo(INT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.revogar_suspensao_papel_usuario(INT, INT)      TO app_nestjs;
@@ -361,6 +361,8 @@ GRANT EXECUTE ON FUNCTION public.aplicar_evento_repasse(INT, VARCHAR, TEXT, stat
 -- expirar_campanhas_rascunho(), expirar_campanhas_rejeitadas() e limpar_log_auditoria(). Mesma higiene de [06-D-2b].
 REVOKE EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.enviar_lembretes_fim_campanha() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.enviar_lembretes_fim_campanha() TO app_nestjs;
 -- Destino do dinheiro de campanha encerrada (05): só as funções de encerramento e o webhook chamam, por dentro. Nenhuma
 -- rota chama direto, então ninguém recebe EXECUTE.
 -- ajustar_tarifa_pagamento: o POST /contribuicao grava a tarifa real que o provedor informou ao criar a cobrança.

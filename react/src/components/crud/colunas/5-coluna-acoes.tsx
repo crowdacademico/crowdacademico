@@ -21,7 +21,7 @@ export type AcaoSistema = 'alterar' | 'consultar' | 'reenviar' | 'cancelarEnvio'
 const ACOES_SISTEMA: DefinicaoAcao<AcaoSistema>[] = [
   { acao: 'alterar', rotulo: 'Alterar', icone: 'fa-pen', variante: 'alterar' },
   { acao: 'consultar', rotulo: 'Consultar', icone: 'fa-eye' },
-  // E-mails do sistema (aba Notificações): tratamento manual do que falhou.
+  // E-mails do sistema (tela Notificações): tratamento manual do que falhou.
   { acao: 'reenviar', rotulo: 'Reenviar', icone: 'fa-paper-plane', variante: 'alterar' },
   { acao: 'cancelarEnvio', rotulo: 'Cancelar envio', icone: 'fa-ban', variante: 'excluir' },
   { acao: 'excluir', rotulo: 'Excluir', icone: 'fa-trash', variante: 'excluir' },

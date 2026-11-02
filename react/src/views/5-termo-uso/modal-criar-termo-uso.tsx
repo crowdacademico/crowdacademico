@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { pedirConfirmacao } from '../../components/crud/confirmacao';
 import { CaixaTextoLongo } from '../../components/crud/caixa-texto-longo';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { ResumoAlteracoes } from '../../components/crud/resumo-alteracoes';
@@ -55,9 +56,17 @@ export function ModalCriarTermoUso({ auth, tipoInicial = 'cadastro', aoFechar, a
     conteudo: conteudo.trim() === '' && 'Cole ou digite o texto do Termo.',
   }));
 
-  const comecarDaVigente = () => {
+  const comecarDaVigente = async () => {
     if (!vigente) return;
-    if (conteudo.trim() !== '' && !window.confirm('Trocar o texto atual pelo texto da versão vigente?')) return;
+    if (
+      conteudo.trim() !== '' &&
+      !(await pedirConfirmacao({
+        titulo: 'Trocar pelo texto da versão vigente?',
+        texto: 'O que já está escrito aqui é substituído.',
+        rotuloConfirmar: 'Trocar texto',
+      }))
+    )
+      return;
     setConteudo(vigente.conteudo);
     limparErroCampo('conteudo');
   };

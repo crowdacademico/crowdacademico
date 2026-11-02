@@ -106,7 +106,7 @@
   .crud-tabela.tabela-log {
     --altura-linha-tabela: var(--altura-linha-tabela-compacta);
     --altura-linha-tabela-compacta: 34px;
-    font-family: var(--font-mono-dev);
+    font-family: var(--font-mono);
     font-size: var(--font-size-xs);
     /* Larguras fixas: as colunas não mudam ao trocar de página (com largura automática, cada página tinha outra). */
     table-layout: fixed;

@@ -1361,7 +1361,7 @@ CREATE TRIGGER trg_denuncia_valida_tipo_motivo
 -- Função:     fn_valida_denuncia_alvo
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-1]
--- Regra:      O alvo da denúncia tem de fazer sentido: campanha só se estiver ativa (RF-109; "Em breve" é ativa),
+-- Regra:      O alvo da denúncia tem de fazer sentido: campanha só se estiver ativa (RF-110; "Em breve" é ativa),
 --             perfil só se for de pesquisador (RF-030), e ninguém denuncia a própria campanha nem o próprio perfil
 --             (conflito de interesse, como no comentário e no julgamento). SECURITY DEFINER: lê campanha e perfil
 --             sem depender do que a RLS mostra a quem denuncia.
@@ -1883,16 +1883,16 @@ EXECUTE FUNCTION public.fn_valida_limite_max_marco_cronograma();
 --                  data_fim <= NOW() e o novo status batendo com valor_bruto_arrecadado vs meta_financeira (sucesso só se
 --                  atingiu a meta, nao_atingido só se não): impossível mentir o resultado.
 --               6. Envio para aprovação (rascunho ou rejeitado -> aguardando_aprovacao) por quem tem 'campanha_editar', ou
---                  pelo próprio dono (RF-107) se for pesquisador ativo (92009) e, no reenvio de rejeitada, dentro do prazo
+--                  pelo próprio dono (RF-108) se for pesquisador ativo (92009) e, no reenvio de rejeitada, dentro do prazo
 --                  (91026). Reenvio esgotado barra qualquer perfil (91025).
---               7. Cascata de suspensão do pesquisador (RF-123), AUTOVERIFICÁVEL: só se o dono está HOJE 'suspenso' em
+--               7. Cascata de suspensão do pesquisador (RF-125), AUTOVERIFICÁVEL: só se o dono está HOJE 'suspenso' em
 --                  perfil_pesquisador e a transição é ativo -> encerrado_moderacao ou aguardando_aprovacao -> rejeitado; o
 --                  único caminho que grava esse status é suspender_pesquisador() (03, [03-P]).
---               8. Encerramento por moderação de denúncia (RF-117): 'campanha_encerrar_moderacao' faz SÓ ativo ->
+--               8. Encerramento por moderação de denúncia (RF-118): 'campanha_encerrar_moderacao' faz SÓ ativo ->
 --                  encerrado_moderacao (escopo estreito de propósito: um moderador não vira aprovador por isso).
 --               9. Conta do dono excluída (RF-016), AUTOVERIFICÁVEL: só aguardando_aprovacao -> rejeitado e só com o dono
 --                  já marcado como excluído; o único caminho é excluir_conta_usuario() (03, [03-O]).
---              10. Encerramento antecipado pelo próprio dono (RF-067), AUTOVERIFICÁVEL: ativo -> encerrado só se quem muda é
+--              10. Encerramento antecipado pelo próprio dono (RF-068), AUTOVERIFICÁVEL: ativo -> encerrado só se quem muda é
 --                  o dono, a campanha não tem contribuição confirmada e já existe o pedido aprovado sem admin, que só
 --                  encerrar_campanha_sem_contribuicao() (03) consegue gravar.
 -- Conta excluída, sem passar pela RLS de usuario (que esconde a linha excluída de quem consulta).
@@ -2216,7 +2216,7 @@ EXECUTE FUNCTION public.fn_valida_completude_campanha();
 -- Função:     fn_preenche_encerramento_campanha
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      Preenche campanha.encerrado_em ([01-E], RF-064/RF-067) quando o status passa a um status terminal
+-- Regra:      Preenche campanha.encerrado_em ([01-E], RF-065/RF-068) quando o status passa a um status terminal
 --             (fn_status_terminal: encerramento natural, antecipado ou por moderação) vindo de um que não é, sem depender do
 --             backend lembrar disso em toda rota que muda status. Não sobrescreve um encerrado_em já registrado.
 -- ----------------------------------------------------------------------------
@@ -2570,7 +2570,7 @@ EXECUTE FUNCTION public.fn_campanha_encerrada_destino_dinheiro();
 -- Função:     encerrar_campanhas_vencidas
 -- Assinatura: () -> INT
 -- Bloco:      [05-K-2]
--- Regra:      Encerra campanhas 'ativo' com prazo vencido (RF-064): sucesso se atingiu a meta, nao_atingido se não. Um job de
+-- Regra:      Encerra campanhas 'ativo' com prazo vencido (RF-065): sucesso se atingiu a meta, nao_atingido se não. Um job de
 --             fundo roda como app_nestjs SEM sessão de usuário (id_usuario_atual() é NULL) e pol_campanha_update (04) exige
 --             dono ou permissão, então a RLS não deixaria NENHUMA linha visível ao job: UPDATE 0 sem erro, e a campanha
 --             ficaria 'ativo' para sempre (contador negativo na página pública, doações recusadas).
@@ -2591,7 +2591,7 @@ EXECUTE FUNCTION public.fn_campanha_encerrada_destino_dinheiro();
 --                 (valor_bruto = soma das contribuições 'confirmado'; taxa_relativa = campanha.taxa_plataforma, ou a taxa
 --                 padrão se ainda NULL; valor_liquido = soma dos líquidos por contribuição; meta_atingida conforme o
 --                 resultado; status 'pendente'), e cada contribuição 'confirmado' passa a apontar para ele (contribuicao.id_repasse).
---                 O flexível fica com o que arrecadou mesmo sem a meta (RF-040/RF-066), por isso nunca devolve.
+--                 O flexível fica com o que arrecadou mesmo sem a meta (RF-040/RF-067), por isso nunca devolve.
 --                 Sem contribuição confirmada (bruto 0) não há o que repassar e nenhuma linha é criada.
 --                 Quem faz a transferência é o worker de repasse, não esta função.
 --               - 'nao_atingido' em campanha ALL-OR-NOTHING: move cada contribuição 'confirmado' para 'a_devolver'. NÃO
@@ -2896,7 +2896,7 @@ $$;
 -- Função:     fn_carimba_taxa_plataforma_aprovacao
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      RF-061: no momento em que aprovado_em deixa de ser NULL, copia configuracoes.taxa_plataforma_padrao para
+-- Regra:      RF-062: no momento em que aprovado_em deixa de ser NULL, copia configuracoes.taxa_plataforma_padrao para
 --             campanha.taxa_plataforma, só se ainda não houver valor explícito (não sobrescreve uma taxa customizada). Daí
 --             em diante a trigger de congelamento (acima) protege esse valor, e o pesquisador não tem a taxa alterada depois
 --             da aprovação.
@@ -2934,7 +2934,7 @@ EXECUTE FUNCTION fn_carimba_taxa_plataforma_aprovacao();
 -- Bloco:      [05-K-2]
 -- Regra:      A regra de negócio de duração de campanha lê configuracoes.prazo_minimo_campanha_dias/
 --             prazo_maximo_campanha_dias (a constraint CK_CAMPANHA_PRAZO, em 01, é só um limite técnico largo): mudar a
---             política de prazo é um UPDATE numa linha, não uma migração de estrutura. Seed: 15 a 60 dias (o RF-072, janela
+--             política de prazo é um UPDATE numa linha, não uma migração de estrutura. Seed: 15 a 60 dias (o RF-073, janela
 --             de estorno do PIX, fica satisfeito com folga).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_valida_prazo_campanha_negocio()
@@ -3181,7 +3181,7 @@ EXECUTE FUNCTION fn_valida_contribuicao_campanha_ativa();
 -- Função:     fn_valida_contribuicao_valor_minimo
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      R$5,00 não é piso do gateway (o PIX não impõe mínimo), é política de negócio da plataforma (RF-087). O limite
+-- Regra:      R$5,00 não é piso do gateway (o PIX não impõe mínimo), é política de negócio da plataforma (RF-088). O limite
 --             técnico (`valor > 0`) mora na CHECK CK_CONTRIBUICAO_VALOR_MINIMO (01); esta trigger aplica o mínimo de negócio,
 --             configurável, via configuracoes.valor_minimo_contribuicao. No cartão, também: desligado pelo admin
 --             (cartao_habilitado, 91052) e faixa própria (valor_minimo/maximo_contribuicao_cartao, 90037/90038). O boleto
@@ -5361,7 +5361,7 @@ EXECUTE FUNCTION fn_valida_seguir_campanha_publicada();
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
 -- Regra:      Uma campanha não pode ter mais endossos ativos simultâneos (ordem_endosso preenchida) do que
---             configuracoes.limite_endossos_campanha (RF-097; o 4 é só o DEFAULT de segurança caso a chave não exista).
+--             configuracoes.limite_endossos_campanha (RF-098; o 4 é só o DEFAULT de segurança caso a chave não exista).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_comentario_endosso()
 RETURNS trigger
@@ -5411,7 +5411,7 @@ EXECUTE FUNCTION validar_comentario_endosso();
 -- Função:     validar_comentario_autor
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      Pesquisador não pode comentar em sua própria campanha (RF-100).
+-- Regra:      Pesquisador não pode comentar em sua própria campanha (RF-101).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_comentario_autor()
 RETURNS trigger
@@ -5451,9 +5451,9 @@ EXECUTE FUNCTION validar_comentario_autor();
 -- Função:     fn_comentario_ignora_endosso_na_criacao
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      RF-097: só o pesquisador CRIADOR DA CAMPANHA marca um comentário como "Endossado", nunca o autor do próprio
+-- Regra:      RF-098: só o pesquisador CRIADOR DA CAMPANHA marca um comentário como "Endossado", nunca o autor do próprio
 --             comentário. pol_comentario_insert (04) só checa id_pesquisador = id_usuario_atual(), então nada impediria um
---             pesquisador de se autoendossar ao comentar na campanha de outro (RF-097). Zera endossado e ordem_endosso
+--             pesquisador de se autoendossar ao comentar na campanha de outro (RF-098). Zera endossado e ordem_endosso
 --             incondicionalmente no INSERT, sem confiar em o Nest não mandar isso: defesa em profundidade, como o resto
 --             deste arquivo faz com colunas sensíveis (ver GRANT UPDATE restrito de perfil_pesquisador, 06_grants.sql).
 -- ----------------------------------------------------------------------------
@@ -5488,7 +5488,7 @@ EXECUTE FUNCTION fn_comentario_ignora_endosso_na_criacao();
 -- Bloco:      [05-K-3]
 -- Regra:      pol_comentario_update (04) libera UPDATE ao autor do comentário, ao dono da campanha OU a quem tem
 --             'comentario_moderar', sem restringir coluna por quem: sem esta trigger, o autor endossaria o PRÓPRIO comentário via
---             UPDATE (RF-097, a mesma falha do INSERT por outra porta). Só o dono da campanha ou quem tem
+--             UPDATE (RF-098, a mesma falha do INSERT por outra porta). Só o dono da campanha ou quem tem
 --             'comentario_moderar' pode mudar `endossado`. Também calcula ordem_endosso (MAX + 1 sob pg_advisory_xact_lock
 --             por campanha) ao endossar, e a zera ao remover o endosso.
 -- ----------------------------------------------------------------------------
@@ -5545,7 +5545,7 @@ EXECUTE FUNCTION validar_comentario_endosso_autor();
 -- Função:     validar_comentario_edicao_conteudo
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      RF-099: "o pesquisador pode editar o comentário já enviado ENQUANTO ELE NÃO ESTIVER com status de endossado". Sem
+-- Regra:      RF-100: "o pesquisador pode editar o comentário já enviado ENQUANTO ELE NÃO ESTIVER com status de endossado". Sem
 --             esta trigger, dava para editar `conteudo` de um comentário já endossado (mudando o que está publicado sem o
 --             dono saber) e, como pol_comentario_update não distingue coluna, o DONO/moderador também editariam o TEXTO de um
 --             comentário que não escreveram: editar conteúdo é ação exclusiva do próprio autor. `ativo` (ocultar/reverter) não
@@ -5577,7 +5577,7 @@ $$ LANGUAGE plpgsql;
 -- Função:    validar_comentario_edicao_conteudo()
 -- Bloco:     [05-K-3]
 -- Regra:     Só o próprio autor edita `conteudo`, e só enquanto não
---            estiver endossado (RF-099).
+--            estiver endossado (RF-100).
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_comentario_edicao_conteudo ON comentario;
 CREATE TRIGGER trg_comentario_edicao_conteudo
@@ -5676,7 +5676,7 @@ EXECUTE FUNCTION validar_comentario_frequencia();
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
 -- Regra:      Um usuário não pode registrar mais denúncias (campanha + perfil somadas) do que
---             configuracoes.limite_denuncias_24h dentro da janela configuracoes.janela_denuncias_horas (RF-113). Contagem e
+--             configuracoes.limite_denuncias_24h dentro da janela configuracoes.janela_denuncias_horas (RF-114). Contagem e
 --             janela vêm de configuracoes (5 e 24 são só os DEFAULT de segurança caso a chave não exista).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_denuncia_frequencia()
@@ -5803,9 +5803,11 @@ EXECUTE FUNCTION fn_denuncia_registra_julgador();
 -- Função:     fn_valida_contestacao_pendente
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      Com uma contestação esperando análise, a situação da denúncia só muda pela decisão da contestação
---             (decidir_contestacao, 03), que fecha as duas juntas; senão a contestação ficaria aberta sobre uma
---             denúncia já mudada.
+-- Regra:      Contestada a denúncia, a situação dela só muda pela decisão da contestação (RF-115):
+--               esperando análise: só decidir_contestacao (03) muda, fechando as duas juntas; senão a contestação
+--               ficaria aberta sobre uma denúncia já mudada (91048);
+--               decidida (aceita ou recusada): não muda mais (91056). Sem isso, quem julgou procedente e perdeu na
+--               contestação podia reabrir e voltar a procedente, e o pesquisador não pode contestar de novo (91045).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_valida_contestacao_pendente()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -5814,6 +5816,10 @@ BEGIN
        AND NEW.status IS DISTINCT FROM OLD.status THEN
         RAISE EXCEPTION 'Esta denúncia tem uma contestação esperando análise: decida a contestação primeiro.'
             USING ERRCODE = '91048';
+    END IF;
+    IF OLD.contestacao_status IN ('aceita', 'recusada') AND NEW.status IS DISTINCT FROM OLD.status THEN
+        RAISE EXCEPTION 'A contestação desta denúncia já foi decidida: a situação dela não muda mais.'
+            USING ERRCODE = '91056';
     END IF;
     RETURN NEW;
 END;
@@ -5911,7 +5917,7 @@ FOR EACH ROW EXECUTE FUNCTION public.fn_usuario_normaliza_email();
 -- Função:     fn_protege_termo_aceito
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      RF-094: a versão do Termo que alguém já aceitou (no cadastro, no upgrade ou numa contribuição) não pode
+-- Regra:      RF-095: a versão do Termo que alguém já aceitou (no cadastro, no upgrade ou numa contribuição) não pode
 --             ser excluída (91032) nem ter texto, tipo ou versão alterados (91033), só substituída por uma versão
 --             nova. É a prova do que cada pessoa aceitou. Versão nunca aceita pode ser excluída e corrigida à
 --             vontade. SECURITY DEFINER: enxerga todos os aceites, independente da RLS de quem pede.
@@ -6482,7 +6488,7 @@ END;
 $$;
 
 -- ============================================================
--- [05-Q] NOTIFICAÇÃO: a fila de e-mails (RF-124) e os eventos que a alimentam
+-- [05-Q] NOTIFICAÇÃO: a fila de e-mails (RF-126) e os eventos que a alimentam
 -- ============================================================
 -- Todo e-mail nasce como uma linha 'pendente' em notificacao, na MESMA transação do evento que o causou (padrão
 -- "caixa de saída"): se a aprovação, a rejeição ou o encerramento forem desfeitos, o e-mail some junto, e nenhum
@@ -6498,7 +6504,7 @@ $$;
 -- Cada evento sai pelos canais ligados em modelo_mensagem: e-mail, sino do painel ou os dois. O texto também mora lá
 -- e o admin o edita pelo painel, sem deploy.
 -- Conta excluída não recebe nada (enfileirar_notificacao devolve NULL). Contribuição sem conta também não: não há
--- e-mail para onde mandar (RF-083).
+-- e-mail para onde mandar (RF-084).
 
 -- ----------------------------------------------------------------------------
 -- Função:     enfileirar_notificacao
@@ -6641,6 +6647,59 @@ END;
 $$;
 
 -- ----------------------------------------------------------------------------
+-- Função:     enviar_lembretes_fim_campanha
+-- Assinatura: () -> INT
+-- Bloco:      [05-Q]
+-- Regra:      Lembrete de fim de campanha (RF-055): quem segue uma campanha ativa e ainda não contribuiu recebe um
+--             aviso quando falta lembrete_fim_campanha_horas (padrão 48) para o fim; 0 desliga. Uma vez só por pessoa
+--             e campanha: o próprio aviso já enviado é a marca (notificacao com o mesmo tipo e id_campanha). Contribuiu
+--             = tem contribuição a caminho ou paga (pendente, confirmado, repassado). Nunca o dono da campanha.
+--             Devolve quantas pessoas foram avisadas. SECURITY DEFINER, sem autorização: quem chama é a tarefa de
+--             encerrar campanhas (CampanhaServiceCloseExpired, a cada 15 minutos), sem sessão de usuário.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.enviar_lembretes_fim_campanha()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_horas INT := public.config_numero('lembrete_fim_campanha_horas', 48);
+    v       RECORD;
+    v_total INT := 0;
+BEGIN
+    IF v_horas <= 0 THEN
+        RETURN 0;
+    END IF;
+
+    FOR v IN
+        SELECT c.id_campanha, c.titulo, c.data_fim, sc.id_usuario
+        FROM campanha c
+        JOIN seguir_campanha sc ON sc.id_campanha = c.id_campanha
+        WHERE c.status = 'ativo'
+          AND c.data_fim > NOW()
+          AND c.data_fim <= NOW() + v_horas * INTERVAL '1 hour'
+          AND sc.id_usuario <> c.id_usuario
+          AND NOT EXISTS (
+              SELECT 1 FROM contribuicao ct
+              WHERE ct.id_campanha = c.id_campanha AND ct.id_usuario = sc.id_usuario
+                AND ct.status IN ('pendente', 'confirmado', 'repassado'))
+          AND NOT EXISTS (
+              SELECT 1 FROM notificacao n
+              WHERE n.id_usuario = sc.id_usuario AND n.tipo_evento = 'lembrete_fim_campanha'
+                AND n.dados->>'id_campanha' = c.id_campanha::text)
+        ORDER BY c.id_campanha, sc.id_usuario
+    LOOP
+        IF public.enfileirar_notificacao(v.id_usuario, 'lembrete_fim_campanha',
+            jsonb_build_object('id_campanha', v.id_campanha, 'titulo', v.titulo, 'data_fim', v.data_fim)) IS NOT NULL THEN
+            v_total := v_total + 1;
+        END IF;
+    END LOOP;
+    RETURN v_total;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
 -- Função:     reservar_proxima_notificacao
 -- Assinatura: (p_ignorar_espera BOOLEAN DEFAULT FALSE) -> TABLE (id_notificacao INT, id_usuario INT,
 --             email_destinatario VARCHAR, tipo_evento VARCHAR, dados JSONB, tentativas INT)
@@ -6716,7 +6775,7 @@ $$;
 --                          email_backoff_max_minutos);
 --               'falhou'   falha NÃO recuperável (endereço recusado, chave do provedor errada, tipo sem modelo de
 --                          texto) ou tentativas esgotadas (email_max_tentativas, padrão 5): aparece no painel para
---                          alguém reenviar ou cancelar (RF-124);
+--                          alguém reenviar ou cancelar (RF-126);
 --               'ignorado' o e-mail não está mais 'pendente'.
 --             SECURITY DEFINER, sem autorização (job de fundo).
 -- ----------------------------------------------------------------------------
@@ -6765,7 +6824,7 @@ $$;
 -- Função:     reenviar_notificacao
 -- Assinatura: (p_id_notificacao INT) -> VOID
 -- Bloco:      [05-Q]
--- Regra:      Tratamento manual do RF-124: um e-mail 'falhou' volta para a fila agora, com as tentativas zeradas e
+-- Regra:      Tratamento manual do RF-126: um e-mail 'falhou' volta para a fila agora, com as tentativas zeradas e
 --             para o e-mail ATUAL da conta (o de quando falhou pode ser justamente o endereço errado que a pessoa já
 --             corrigiu). Exige notificacao_processar (92039); só 'falhou' pode voltar (91054: enviado não se manda de
 --             novo por aqui, e cancelado já perdeu o link, se tinha um); conta excluída não recebe (91055, a mesma
@@ -6811,7 +6870,7 @@ $$;
 -- Função:     cancelar_notificacao
 -- Assinatura: (p_id_notificacao INT) -> VOID
 -- Bloco:      [05-Q]
--- Regra:      Tratamento manual do RF-124: um e-mail 'pendente' ou 'falhou' que não deve mais sair vira 'cancelado'
+-- Regra:      Tratamento manual do RF-126: um e-mail 'pendente' ou 'falhou' que não deve mais sair vira 'cancelado'
 --             (e perde o link, se tinha um). Exige notificacao_processar (92039); enviado ou já cancelado: 91054.
 --             SECURITY DEFINER com a checagem por dentro.
 -- ----------------------------------------------------------------------------
@@ -6846,10 +6905,15 @@ $$;
 -- Função:     fn_notifica_situacao_campanha (trigger)
 -- Bloco:      [05-Q]
 -- Regra:      E-mails de quando a campanha muda de situação:
---               aguardando_aprovacao -> ativo: o dono (RF-108) e quem segue o pesquisador (RF-029, campanha nova);
---               tudo-ou-nada -> sucesso: quem apoiou (RF-083 c);
---               tudo-ou-nada -> nao_atingido: quem apoiou, avisando que a devolução começou (RF-083 a);
---               -> encerrado_moderacao: quem apoiou, em qualquer modelo (RF-118; a moderação devolve tudo).
+--               aguardando_aprovacao -> ativo: o dono (RF-109) e quem segue o pesquisador (RF-029, campanha nova);
+--               tudo-ou-nada -> sucesso: quem apoiou (RF-084 c);
+--               tudo-ou-nada -> nao_atingido: quem apoiou, avisando que a devolução começou (RF-084 a);
+--               -> encerrado_moderacao: quem apoiou, em qualquer modelo (RF-119; a moderação devolve tudo), e o dono
+--                  (RF-120), também quando foi a suspensão dele que encerrou (RF-125);
+--               -> encerrado por pedido aprovado pelo admin: quem apoiou, dizendo se o valor vai para o pesquisador ou
+--                  volta (RF-084 d); o destino é o de destino_dinheiro_campanha. O pedido vira 'aprovado' antes da
+--                  campanha mudar (decidir_solicitacao_encerramento, 03), então já está gravado aqui. O encerramento
+--                  direto do pesquisador não avisa ninguém: só existe sem dinheiro em jogo.
 --             A rejeição tem gatilho próprio em historico_rejeicao, porque a justificativa só existe lá.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_notifica_situacao_campanha()
@@ -6869,6 +6933,14 @@ BEGIN
         PERFORM public.enfileirar_notificacao_doadores(NEW.id_campanha, 'campanha_nao_atingida');
     ELSIF NEW.status = 'encerrado_moderacao' THEN
         PERFORM public.enfileirar_notificacao_doadores(NEW.id_campanha, 'campanha_encerrada_moderacao');
+        PERFORM public.enfileirar_notificacao(NEW.id_usuario, 'moderacao_encerrou_campanha',
+            jsonb_build_object('id_campanha', NEW.id_campanha, 'titulo', NEW.titulo));
+    ELSIF NEW.status = 'encerrado' AND EXISTS (
+        SELECT 1 FROM solicitacao_encerramento
+        WHERE id_campanha = NEW.id_campanha AND status = 'aprovado' AND id_admin IS NOT NULL
+    ) THEN
+        PERFORM public.enfileirar_notificacao_doadores(NEW.id_campanha, 'campanha_encerrada_antes',
+            jsonb_build_object('vai_para_pesquisador', public.destino_dinheiro_campanha(NEW.id_campanha) = 'repasse'));
     END IF;
     RETURN NULL;
 END;
@@ -6884,7 +6956,7 @@ EXECUTE FUNCTION public.fn_notifica_situacao_campanha();
 -- ----------------------------------------------------------------------------
 -- Função:     fn_notifica_rejeicao_campanha (trigger)
 -- Bloco:      [05-Q]
--- Regra:      Campanha rejeitada (RF-108): o dono recebe a justificativa, quantos reenvios ainda tem e até quando pode
+-- Regra:      Campanha rejeitada (RF-109): o dono recebe a justificativa, quantos reenvios ainda tem e até quando pode
 --             corrigir, pela mesma conta que a tela e o banco usam (fn_campanha_situacao_reenvio, [05-K-2-B]).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_notifica_rejeicao_campanha()
@@ -6917,7 +6989,7 @@ FOR EACH ROW EXECUTE FUNCTION public.fn_notifica_rejeicao_campanha();
 -- ----------------------------------------------------------------------------
 -- Função:     fn_notifica_devolucao (trigger)
 -- Bloco:      [05-Q]
--- Regra:      Devolução concluída (RF-083 b): quem apoiou com conta recebe o aviso com o valor devolvido.
+-- Regra:      Devolução concluída (RF-084 b): quem apoiou com conta recebe o aviso com o valor devolvido.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_notifica_devolucao()
 RETURNS TRIGGER
@@ -6977,8 +7049,8 @@ FOR EACH ROW EXECUTE FUNCTION public.fn_notifica_repasse_previsto();
 -- ----------------------------------------------------------------------------
 -- Função:     fn_notifica_decisao_encerramento (trigger)
 -- Bloco:      [05-Q]
--- Regra:      Pedido de encerramento antecipado decidido: o pesquisador recebe a aprovação (RF-069) ou a rejeição com a
---             justificativa do admin (RF-068).
+-- Regra:      Pedido de encerramento antecipado decidido: o pesquisador recebe a aprovação (RF-070) ou a rejeição com a
+--             justificativa do admin (RF-069).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_notifica_decisao_encerramento()
 RETURNS TRIGGER
@@ -7009,8 +7081,11 @@ EXECUTE FUNCTION public.fn_notifica_decisao_encerramento();
 -- ----------------------------------------------------------------------------
 -- Função:     fn_notifica_situacao_pesquisador (trigger)
 -- Bloco:      [05-Q]
--- Regra:      O pesquisador é avisado da suspensão, com o motivo e até quando (RF-120), e da reativação (RF-122), venha
+-- Regra:      O pesquisador é avisado da suspensão, com o motivo e até quando (RF-122), e da reativação (RF-124), venha
 --             ela do admin ou do fim do prazo (reativar_pesquisadores_vencidos).
+--             O aviso da suspensão lista as campanhas que a cascata encerra (as ativas) e rejeita (as aguardando
+--             aprovação), RF-125. suspender_pesquisador (03), o único caminho para 'suspenso', muda o perfil antes das
+--             campanhas, então aqui elas ainda estão na situação de antes: a lista é exatamente o que a cascata vai fazer.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_notifica_situacao_pesquisador()
 RETURNS TRIGGER
@@ -7021,7 +7096,13 @@ AS $$
 BEGIN
     IF NEW.status_pesquisador = 'suspenso' THEN
         PERFORM public.enfileirar_notificacao(NEW.id_usuario, 'pesquisador_suspenso',
-            jsonb_build_object('motivo', NEW.motivo_suspensao, 'suspenso_ate', NEW.suspenso_ate));
+            jsonb_build_object(
+                'motivo', NEW.motivo_suspensao,
+                'suspenso_ate', NEW.suspenso_ate,
+                'campanhas_encerradas', (SELECT string_agg('"' || titulo || '"', ', ' ORDER BY id_campanha)
+                                         FROM campanha WHERE id_usuario = NEW.id_usuario AND status = 'ativo'),
+                'campanhas_rejeitadas', (SELECT string_agg('"' || titulo || '"', ', ' ORDER BY id_campanha)
+                                         FROM campanha WHERE id_usuario = NEW.id_usuario AND status = 'aguardando_aprovacao')));
     ELSE
         PERFORM public.enfileirar_notificacao(NEW.id_usuario, 'pesquisador_reativado');
     END IF;
@@ -7066,6 +7147,42 @@ AFTER UPDATE OF contestacao_status ON denuncia
 FOR EACH ROW
 WHEN (OLD.contestacao_status = 'pendente' AND NEW.contestacao_status IN ('aceita', 'recusada'))
 EXECUTE FUNCTION public.fn_notifica_contestacao();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_notifica_denuncia_procedente (trigger)
+-- Bloco:      [05-Q]
+-- Regra:      Denúncia julgada procedente (RF-120): o pesquisador denunciado (o perfil, ou o dono da campanha) recebe o
+--             motivo, a justificativa da moderação e o caminho para contestar (RF-034), sem saber quem denunciou.
+--             Vale também quando a moderação revê a decisão e volta a procedente.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_notifica_denuncia_procedente()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_pesquisador INT;
+    v_titulo      VARCHAR(255);
+BEGIN
+    SELECT id_usuario, titulo INTO v_pesquisador, v_titulo FROM campanha WHERE id_campanha = NEW.id_campanha_alvo;
+    PERFORM public.enfileirar_notificacao(COALESCE(NEW.id_pesquisador_alvo, v_pesquisador), 'denuncia_procedente',
+        jsonb_build_object(
+            'id_denuncia', NEW.id_denuncia,
+            'id_campanha', NEW.id_campanha_alvo,
+            'titulo', v_titulo,
+            'motivo', (SELECT descricao FROM motivo_denuncia WHERE id_motivo = NEW.id_motivo),
+            'justificativa', NEW.justificativa_moderacao));
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_notifica_denuncia_procedente ON denuncia;
+CREATE TRIGGER trg_notifica_denuncia_procedente
+AFTER UPDATE OF status ON denuncia
+FOR EACH ROW
+WHEN (NEW.status = 'resolvida' AND OLD.status IS DISTINCT FROM NEW.status)
+EXECUTE FUNCTION public.fn_notifica_denuncia_procedente();
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_notifica_atualizacao (trigger)

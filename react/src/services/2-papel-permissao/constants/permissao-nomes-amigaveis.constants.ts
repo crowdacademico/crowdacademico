@@ -291,7 +291,7 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     resumo: 'Encerrar uma campanha ativa por causa de uma denúncia.',
     oQueFaz:
       'Permite levar uma campanha ativa para "encerrada por moderação", e só isso: não dá poder de aprovar nem de editar campanha.',
-    porQueExiste: 'É a resposta a uma denúncia procedente contra uma campanha que já está arrecadando (RF-117).',
+    porQueExiste: 'É a resposta a uma denúncia procedente contra uma campanha que já está arrecadando (RF-118).',
     impacto: 'alto',
   },
   // F - LINK

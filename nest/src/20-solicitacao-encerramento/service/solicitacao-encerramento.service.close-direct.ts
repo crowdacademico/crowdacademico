@@ -6,7 +6,7 @@ import { SolicitacaoEncerramentoRequestCreate } from '../dto/request/solicitacao
 import { SolicitacaoEncerramentoResponse } from '../dto/response/solicitacao-encerramento.response';
 import { consultaSolicitacaoComDetalhes } from './solicitacao-encerramento.util.with-details';
 
-// Cancelar o projeto, sem administrador (RF-067): só o dono e sem Pix pendente válido; o dinheiro já pago volta para quem apoiou.
+// Cancelar o projeto, sem administrador (RF-068): só o dono e sem Pix pendente válido; o dinheiro já pago volta para quem apoiou.
 // encerrar_campanha_sem_contribuicao() (03) grava o pedido já aprovado (sem admin) e encerra a campanha.
 @Injectable()
 export class SolicitacaoEncerramentoServiceCloseDirect {

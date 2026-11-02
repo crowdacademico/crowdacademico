@@ -2,8 +2,6 @@
    Tamanhos, fontes e as classes de texto do painel (`.titulo-*`, `.subtitulo`, `.paragrafo*`, `.legenda*`,
    `.rotulo-*`). Cor mora em 1-cores.css; o estilo de tag crua, em 3-base.css. */
 :root {
-  /* Rótulo de campo (.rotulo-campo) e o que precisa casar com ele na mesma linha (.btn-pilula-rotulo). */
-  --font-size-rotulo: 11px;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
@@ -12,10 +10,9 @@
   --font-size-2xl: 1.5rem;
   --font-size-3xl: 1.875rem;
 
-  /* Fonte do que é "só para desenvolvimento" (selo <dev>), sempre junto do roxo. */
-  --font-mono-dev: 'Courier New', monospace;
-  /* Monoespaçada de leitura (código, chave, padrão de domínio): a do sistema operacional, não a "de dev". */
-  --font-codigo: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* A única monoespaçada do painel (log, chave, id, código, selo <dev>): a do sistema operacional, feita para tela.
+     O que é de desenvolvimento se marca pelo roxo e pelo tracejado, não pela letra. */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 /* A escala do painel. A classe vai direto na tag: assim um h1-h3 não herda a serifada do estilo de tag crua.
@@ -24,7 +21,7 @@
   /* Rótulo de campo de formulário. */
   .rotulo-campo {
     display: block;
-    font-size: var(--font-size-rotulo);
+    font-size: var(--font-size-xs);
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -33,7 +30,7 @@
 
   /* Rótulo de um valor só exibido (ficha, cartão do Dashboard): mais leve e sem margem. */
   .rotulo-leitura {
-    font-size: var(--font-size-rotulo);
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -70,7 +67,7 @@
 
   /* Texto técnico denso (chave, log, id). */
   .paragrafo-denso {
-    font-family: var(--font-mono-dev);
+    font-family: var(--font-mono);
     font-size: var(--font-size-xs);
   }
 

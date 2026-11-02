@@ -24,6 +24,7 @@ import { ComparativoTemas } from './4-guia-estilo-temas';
 import { Avatares, BordasComContraste, BotaoDev, CamposExtras, InterativosGlobais } from './3-guia-estilo-extras';
 import { AtalhosEEstrutura, PecasDoPainel } from './6-guia-estilo-pecas';
 import { PilulaCarregandoModal } from '../../../components/crud/modal-ficha';
+import { ModalConfirmacao } from '../../../components/crud/modal-confirmacao';
 import { RodapeAcoes } from '../../../components/crud/rodape-acoes';
 
 // Todas as classes de texto do sistema (2-tipografia.css), na ordem da escala, com o papel de cada uma (DS-10).
@@ -313,6 +314,50 @@ export function GuiaEstilo() {
         </div>
       </Secao>
 
+      <Secao
+        titulo="Confirmação"
+        descricao="A janelinha que pede um sim antes de uma ação (ModalConfirmacao): no lugar da caixa do navegador, que ignora o tema e o A-/A+. Comum, de perigo (ação que tira algo) e com a caixinha de ciência (decisão que pesa)."
+      >
+        <ExemplosConfirmacao />
+      </Secao>
+
+    </div>
+  );
+}
+
+type TipoConfirmacao = 'comum' | 'perigo' | 'ciencia';
+
+// Os três jeitos do ModalConfirmacao no sistema, abertos por botão (o modal de verdade, por cima da página).
+function ExemplosConfirmacao() {
+  const [aberto, setAberto] = useState<TipoConfirmacao | null>(null);
+  const fechar = () => setAberto(null);
+  return (
+    <div className="flex flex-wrap gap-3">
+      <button type="button" className="btn btn-secondary" onClick={() => setAberto('comum')}>
+        Comum
+      </button>
+      <button type="button" className="btn btn-secondary" onClick={() => setAberto('perigo')}>
+        De perigo
+      </button>
+      <button type="button" className="btn btn-secondary" onClick={() => setAberto('ciencia')}>
+        Com ciência
+      </button>
+      {aberto && (
+        <ModalConfirmacao
+          titulo={aberto === 'comum' ? 'Trocar pelo texto da versão vigente?' : aberto === 'perigo' ? 'Sair sem salvar?' : 'Recusar a contestação?'}
+          rotuloConfirmar={aberto === 'comum' ? 'Trocar texto' : aberto === 'perigo' ? 'Sair sem salvar' : 'Recusar'}
+          perigo={aberto !== 'comum'}
+          exigirCiencia={aberto === 'ciencia'}
+          aoConfirmar={fechar}
+          aoCancelar={fechar}
+        >
+          {aberto === 'comum'
+            ? 'O que já está escrito aqui é substituído.'
+            : aberto === 'perigo'
+              ? 'Você tem alterações não salvas. Se sair agora, elas se perdem.'
+              : 'A denúncia continua procedente e a pontuação não muda.'}
+        </ModalConfirmacao>
+      )}
     </div>
   );
 }

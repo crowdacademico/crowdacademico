@@ -5,7 +5,7 @@ import type { ComentarioResponse } from '../type/comentario.type';
 
 // Espelha nest/src/17-comentario. Quem pode o quê é decidido pelo banco (pol_comentario_*, 04): o dono da campanha
 // endossa, exclui (apaga de vez) e bloqueia (inativo: fica guardado e o autor não comenta mais naquela campanha); a
-// lista esconde do dono o comentário bloqueado. O autor não é avisado de nenhuma dessas ações (RF-093).
+// lista esconde do dono o comentário bloqueado. O autor não é avisado de nenhuma dessas ações (RF-094).
 export const comentarioApi = {
   // Comenta como a conta logada: só pesquisador ativo, nunca na própria campanha, um por campanha (regras do banco).
   criar: (authFetch: AuthFetch, idCampanha: number, conteudo: string): Promise<ComentarioResponse> =>

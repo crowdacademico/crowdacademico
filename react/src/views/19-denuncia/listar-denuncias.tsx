@@ -28,8 +28,8 @@ interface DenunciaLinha extends Omit<DenunciaResponse, 'status'> {
   contestacaoSituacao: string;
 }
 
-// Denúncias (moderação): campanhas e perfis denunciados, com motivo, há quanto tempo esperam julgamento e situação (RF-116,
-// RF-119). Alterar abre o julgamento (RF-114) e, para campanha ativa, o encerramento por moderação (RF-117);
+// Denúncias (moderação): campanhas e perfis denunciados, com motivo, há quanto tempo esperam julgamento e situação (RF-117,
+// RF-121). Alterar abre o julgamento (RF-115) e, para campanha ativa, o encerramento por moderação (RF-118);
 // Consultar abre a mesma ficha só para ler.
 export function ListarDenuncias({ auth }: PropsPagina) {
   const [aberta, setAberta] = useState<{ denuncia: DenunciaResponse; somenteLeitura: boolean } | null>(null);

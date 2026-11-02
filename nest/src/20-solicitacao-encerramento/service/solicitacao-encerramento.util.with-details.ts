@@ -2,7 +2,7 @@ import { Kysely, sql } from 'kysely';
 import { DB } from '../../commons/database/db.types';
 import { SOLICITACAO_ENCERRAMENTO_COLUNAS_SELECT } from '../constants/solicitacao-encerramento.constants';
 
-// O pedido com o que quem decide precisa ler junto (RF-068): campanha (título, modelo, status, arrecadado), quem
+// O pedido com o que quem decide precisa ler junto (RF-069): campanha (título, modelo, status, arrecadado), quem
 // pediu, quem decidiu e quantas contribuições confirmadas a campanha tem. LEFT JOIN: conta ou campanha que a RLS
 // não mostra deixam o campo vazio, não somem com o pedido. A contagem segue a RLS de contribuicao (quem decide vê
 // todas, pela permissão de ver contribuições).

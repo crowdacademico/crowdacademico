@@ -14,8 +14,10 @@ import { NotificacaoConverter } from '../dto/converter/notificacao.converter';
 import { NotificacaoRequestList } from '../dto/request/notificacao.request-list';
 import { NotificacaoResponse } from '../dto/response/notificacao.response';
 
-// A permissão é checada aqui, e não só pela RLS: pol_notificacao_select deixa cada conta ler os próprios e-mails, e
-// esta lista é a do painel, de todos. Só e-mail: o aviso do sino não tem envio para acompanhar. Mais novo primeiro; paginada de verdade (a tabela cresce a cada evento).
+// Tela Notificações: todo aviso que o sistema mandou, por e-mail e pelo sino, de todas as contas. A permissão é checada
+// aqui, e não só pela RLS: pol_notificacao_select deixa cada conta ler os próprios avisos, e esta lista é a do
+// painel. O título do aviso do sino e o conteúdo de cada aviso saem do modelo do canal dele, como o sino e o envio
+// montam. Mais novo primeiro; paginada de verdade (a tabela cresce a cada evento).
 @Injectable()
 export class NotificacaoServiceFindAll {
   constructor(
@@ -33,22 +35,36 @@ export class NotificacaoServiceFindAll {
 
     let consulta = this.database
       .getDb()
-      .selectFrom('notificacao')
-      .selectAll()
-      .where('canal', '=', 'email')
-      .orderBy('criado_em', 'desc')
-      .orderBy('id_notificacao', 'desc');
+      .selectFrom('notificacao as n')
+      .leftJoin('usuario as u', 'u.id_usuario', 'n.id_usuario')
+      .leftJoin('modelo_mensagem as m', (juncao) =>
+        juncao
+          .onRef('m.tipo_evento', '=', 'n.tipo_evento')
+          .onRef('m.canal', '=', 'n.canal'),
+      )
+      .selectAll('n')
+      .select([
+        'u.nome as nome_usuario',
+        'm.titulo as titulo_modelo',
+        'm.corpo as corpo_modelo',
+      ])
+      .orderBy('n.criado_em', 'desc')
+      .orderBy('n.id_notificacao', 'desc');
 
+    if (query.canal) {
+      consulta = consulta.where('n.canal', '=', query.canal);
+    }
     if (query.status) {
-      consulta = consulta.where('status', '=', query.status);
+      consulta = consulta.where('n.status', '=', query.status);
     }
     const busca = query.busca?.trim();
     if (busca) {
       const padrao = `%${busca.replace(/[\\%_]/g, (c) => '\\' + c)}%`;
       consulta = consulta.where((eb) =>
         eb.or([
-          eb('email_destinatario', 'ilike', padrao),
-          eb('tipo_evento', 'ilike', padrao),
+          eb('n.email_destinatario', 'ilike', padrao),
+          eb('u.nome', 'ilike', padrao),
+          eb('n.tipo_evento', 'ilike', padrao),
         ]),
       );
     }
@@ -60,7 +76,11 @@ export class NotificacaoServiceFindAll {
     return {
       ...resultado,
       dados: resultado.dados.map((linha) =>
-        NotificacaoConverter.paraResponseDto(linha),
+        NotificacaoConverter.paraResponseDto(linha, {
+          nomeUsuario: linha.nome_usuario,
+          tituloModelo: linha.titulo_modelo,
+          corpoModelo: linha.corpo_modelo,
+        }),
       ),
     };
   }

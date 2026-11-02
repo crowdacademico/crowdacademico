@@ -101,7 +101,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91019 | `validar_atualizacao_campanha` | `atualizacao_campanha` | Atualização só permitida em campanhas ativas/sucesso/não atingidas |
 | 91020 | `fn_valida_comentario_campanha_ativa` | `comentario` | Não é possível comentar em campanha rejeitada/sob moderação |
 | 91021 | `validar_comentario_endosso` | `comentario` | Limite de endossos ativos atingido |
-| 91022 | `validar_comentario_edicao_conteudo` | `comentario` | Não é possível editar um comentário já endossado (RF-091) - remova o endosso antes |
+| 91022 | `validar_comentario_edicao_conteudo` | `comentario` | Não é possível editar um comentário já endossado (RF-100) - remova o endosso antes |
 | 91023 | `fn_congela_regras_campanha` | `campanha` | Vídeo de apresentação não pode ser alterado após a aprovação |
 | 91024 | `fn_congela_regras_campanha` | `campanha` | Área do conhecimento não pode ser alterada após a aprovação |
 | 91025 | `fn_valida_transicao_campanha` | `campanha` | Campanha rejeitada já usou todos os reenvios permitidos e não pode ser reenviada, para qualquer perfil, inclusive quem tem `campanha_editar`  |
@@ -111,13 +111,13 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91029 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_anexo` | `usuario` / `arquivo_atualizacao`, `arquivo_recompensa` | O arquivo escolhido (foto ou anexo) já está em uso em outro lugar |
 | 91030 | `suspender_usuario` / `suspender_papel_usuario` / `excluir_conta_usuario` / `fn_protege_ultimo_admin` | `usuario` / `usuario_papel` | Não é possível suspender, excluir ou tirar o papel do último administrador ativo do sistema |
 | 91031 | `excluir_conta_usuario` | `usuario` | Não é possível excluir a conta enquanto houver campanha ativa |
-| 91032 | `fn_protege_termo_aceito` | `termos_de_uso` | Versão do Termo já aceita não pode ser excluída, RF-091 |
-| 91033 | `fn_protege_termo_aceito` | `termos_de_uso` | Versão do Termo já aceita não pode ter texto, tipo ou versão alterados, RF-091 |
+| 91032 | `fn_protege_termo_aceito` | `termos_de_uso` | Versão do Termo já aceita não pode ser excluída, RF-095 |
+| 91033 | `fn_protege_termo_aceito` | `termos_de_uso` | Versão do Termo já aceita não pode ter texto, tipo ou versão alterados, RF-095 |
 | 91034 | `fn_valida_seguir_campanha_publicada` | `seguir_campanha` | Só é possível seguir uma campanha publicada |
-| 91035 | `fn_valida_denuncia_alvo` | `denuncia` | Só é possível denunciar uma campanha ativa (RF-106) |
+| 91035 | `fn_valida_denuncia_alvo` | `denuncia` | Só é possível denunciar uma campanha ativa (RF-110) |
 | 91036 | `encerrar_campanha_por_denuncia` | `denuncia` | A denúncia não é contra uma campanha |
 | 91037 | `encerrar_campanha_por_denuncia` | `campanha` | Só campanha ativa pode ser encerrada por moderação |
-| 91038 | `fn_valida_solicitacao_encerramento`, `encerrar_campanha_sem_contribuicao` | `solicitacao_encerramento` | Só campanha ativa pode ser encerrada antecipadamente (RF-064) |
+| 91038 | `fn_valida_solicitacao_encerramento`, `encerrar_campanha_sem_contribuicao` | `solicitacao_encerramento` | Só campanha ativa pode ser encerrada antecipadamente (RF-068) |
 | 91039 | `fn_valida_transicao_status_repasse`, `aplicar_evento_repasse` | `repasse` | Mudança de situação do repasse fora da máquina de estados (ex.: mexer num repasse já concluído) |
 | 91041 | `fn_valida_transicao_solicitacao`, `decidir_solicitacao_encerramento` | `solicitacao_encerramento` | Só um pedido pendente muda de situação |
 | 91042 | `decidir_solicitacao_encerramento` | `campanha` | A campanha já não está ativa: o pedido não pode ser aprovado |
@@ -133,6 +133,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91053 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | Pagamento com boleto desligado (`boleto_habilitado`, desligado por padrão) |
 | 91054 | `reenviar_notificacao`, `cancelar_notificacao` | `notificacao` | Só um e-mail que falhou pode ser reenviado; só um na fila ou que falhou pode ser cancelado |
 | 91055 | `reenviar_notificacao` | `notificacao` | A conta do e-mail foi excluída: não há para onde reenviar |
+| 91056 | `fn_valida_contestacao_pendente` | `denuncia` | Decidida a contestação, a situação da denúncia não muda mais (RF-115) |
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
 
@@ -144,8 +145,8 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92004 | `validar_comentario_autor` | `comentario` | Pesquisador não pode comentar na própria campanha |
 | 92005 | `fn_bloqueia_reversao_moderacao_comentario` | `comentario` | Só quem tem `comentario_moderar` pode reverter comentário ocultado |
 | 92006 | `fn_valida_denuncia_sem_autojulgamento` | `denuncia` | Quem registrou a denúncia não pode julgar a própria denúncia |
-| 92007 | `validar_comentario_edicao_conteudo` | `comentario` | Só o autor do comentário pode editar o próprio texto (RF-091) |
-| 92008 | `validar_comentario_endosso_autor` | `comentario` | Só o dono da campanha (ou moderação) pode endossar/remover endosso (RF-089) |
+| 92007 | `validar_comentario_edicao_conteudo` | `comentario` | Só o autor do comentário pode editar o próprio texto (RF-100) |
+| 92008 | `validar_comentario_endosso_autor` | `comentario` | Só o dono da campanha (ou moderação) pode endossar/remover endosso (RF-098) |
 | 92009 | `fn_valida_transicao_campanha` | `campanha` | Pesquisador suspenso não pode enviar nem reenviar campanha para aprovação |
 | 92010 | `deslizar_datas_campanha` | `campanha` | Só o dono (ou quem tem `campanha_editar`) reagenda datas de campanha em rascunho ou rejeitada |
 | 92011 | `contar_metricas_dashboard` | `dashboard` (várias tabelas) | Só quem tem `relatorio_visualizar` recebe as métricas do painel |

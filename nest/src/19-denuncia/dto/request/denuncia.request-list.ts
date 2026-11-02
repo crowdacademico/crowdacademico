@@ -10,7 +10,7 @@ import type {
   TipoMotivoDenuncia,
 } from '../../../commons/database/db.types';
 
-// Filtros da lista da moderação (RF-116, RF-119) e da seção de denúncias no Consultar da campanha.
+// Filtros da lista da moderação (RF-117, RF-121) e da seção de denúncias no Consultar da campanha.
 export class DenunciaRequestList extends PaginacaoQueryDto {
   @IsOptional()
   @IsIn(TIPOS_MOTIVO_DENUNCIA)

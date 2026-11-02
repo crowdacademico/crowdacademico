@@ -32,7 +32,7 @@ Três módulos pequenos e parecidos entre si - todos seguem o mesmo formato (uma
 ## Grupo 5 - Engajamento numa campanha já aprovada
 
 - ✅ **`15-atualizacao-campanha`** - posts de acompanhamento do projeto (andamento, resultado preliminar, resultado final). Junto: `link_atualizacao` e `arquivo_atualizacao` (satélites sem pasta própria, dobrados neste módulo - ver `db.types.ts`). O vínculo de arquivo já funciona (INSERT normal), só não é testável de ponta a ponta até `26-arquivo` existir.
-- ✅ **`16-seguir`** - seguir/deixar de seguir uma campanha e, desde 19-10-2026, um pesquisador (RF-028: `/seguir-pesquisador`, contagem pública de seguidores). As duas tabelas, as mesmas regras, um módulo só. O botão de verdade do seguir pesquisador fica na página pública do perfil (ainda não existe); no painel, o coração da T1 e a lista da T4.
+- ✅ **`16-seguir`** - seguir/deixar de seguir uma campanha e, desde 19-10-2026, um pesquisador (RF-029: `/seguir-pesquisador`, contagem pública de seguidores). As duas tabelas, as mesmas regras, um módulo só. O botão de verdade do seguir pesquisador fica na página pública do perfil (ainda não existe); no painel, o coração da T1 e a lista da T4.
 - ✅ **`17-comentario`** - comentários e endosso, com moderação.
 
 - ✅ **`18-recompensa`** (19-10-2026) - recompensa **simbólica** (decisão do Lucas: sem estoque, sem entrega): reconhecimento, acesso antecipado ou conteúdo digital, a partir de um valor mínimo, com um link especial opcional que só o dono, o admin e quem ganhou enxergam (`link_recompensa`). O dono cria e desativa na seção Recompensas do Alterar Campanha; quem apoia escolhe em `POST /contribuicao` (`idRecompensa`, só com conta e com o valor mínimo) e vê as ganhas na Minha Conta, aba Contribuições. A escolha na hora de contribuir depende do checkout (área pública).
@@ -47,7 +47,7 @@ Três módulos pequenos e parecidos entre si - todos seguem o mesmo formato (uma
 ## Grupo 7 - Comunicação
 
 - ✅ **`4-mail`** (19-10-2026) - o "carteiro": a cada minuto pega a fila de `notificacao`, monta o texto (`modelos/`) e entrega pelo provedor de `EMAIL_PROVIDER` (teste, Brevo pela API ou SMTP), com nova tentativa e espera crescente. Os e-mails nascem nos gatilhos do banco (`[05-Q]`) e, para verificar a conta e recuperar a senha, no Nest. Passo a passo e comparação dos serviços: `.Tutorial-email.md`. Sem tela própria: a caixa do provedor de teste é a T6 do Campo de Testes.
-- ✅ **`27-notificacao`** (19-10-2026) - o registro dos e-mails (RF-121): aba **Notificações** do Dashboard, com a situação de cada e-mail, reenviar o que falhou e cancelar; números no cartão da Visão Geral.
+- ✅ **`27-notificacao`** (19-10-2026) - o registro dos e-mails (RF-126): aba **Notificações** do Dashboard, com a situação de cada e-mail, reenviar o que falhou e cancelar; números no cartão da Visão Geral.
 - ✅ **`5-termo-uso`** - versionamento de termos de uso e aceite pelo usuário. **(esta lista tinha ficado desatualizada aqui - o módulo já existia, 4 arquivos, conferido em 01-09-2026)**
 
 ## Grupo 8 - Pagamento (por último, de propósito)
@@ -68,7 +68,7 @@ Riscos de decidir mal ou tarde: escolher um sem split e descobrir depois que o r
 
 ### Tarifa do meio de pagamento: quem paga (decidido em 12-10-2026: quem apoia, opção (c))
 
-> **Em palavras simples:** quando alguém apoia uma campanha com R$ 100, dois "pedágios" saem desse dinheiro: a **taxa da plataforma** (os 5% do RF-060, o que o CrowdAcadêmico cobra) e a **tarifa do intermediador de pagamento** (a empresa que processa o Pix, o cartão ou o boleto, como Mercado Pago ou Asaas, que cobra diferente para cada meio). Os requisitos não diziam quem paga o segundo pedágio. Sem essa resposta, a página de Transparência não tem o que mostrar e a conta do repasse fica incompleta. A decisão: **quem apoia paga a tarifa do meio que escolheu, e o Pix não tem tarifa nenhuma**. A plataforma não corre risco de prejuízo, e o Pix vira o caminho natural.
+> **Em palavras simples:** quando alguém apoia uma campanha com R$ 100, dois "pedágios" saem desse dinheiro: a **taxa da plataforma** (os 5% do RF-062, o que o CrowdAcadêmico cobra) e a **tarifa do intermediador de pagamento** (a empresa que processa o Pix, o cartão ou o boleto, como Mercado Pago ou Asaas, que cobra diferente para cada meio). Os requisitos não diziam quem paga o segundo pedágio. Sem essa resposta, a página de Transparência não tem o que mostrar e a conta do repasse fica incompleta. A decisão: **quem apoia paga a tarifa do meio que escolheu, e o Pix não tem tarifa nenhuma**. A plataforma não corre risco de prejuízo, e o Pix vira o caminho natural.
 
 **Preços de referência (levantamento de 05-10-2026; conferir no site de cada um antes de escolher o gateway):** Mercado Pago: Pix 0%, cartão de crédito de 3,99% a 4,98% conforme o prazo de recebimento, boleto R$ 3,49. Asaas: Pix R$ 1,99, boleto R$ 1,99, cartão 1,99% + R$ 0,49.
 
@@ -131,9 +131,9 @@ Muitos intermediadores **não devolvem a própria tarifa quando o pagamento é e
 
 #### Pontos para a revisão externa (o requisito ainda não diz isto)
 
-- **RF-060, acrescentar:** "A taxa da plataforma incide sobre o valor da contribuição. A tarifa do intermediador de pagamento, quando houver, é paga por quem contribui, somada ao valor e exibida antes do pagamento. O pagamento por Pix não tem acréscimo."
+- **RF-062, acrescentar:** "A taxa da plataforma incide sobre o valor da contribuição. A tarifa do intermediador de pagamento, quando houver, é paga por quem contribui, somada ao valor e exibida antes do pagamento. O pagamento por Pix não tem acréscimo."
 - **RF novo (Transparência):** página pública, sem login, com a taxa vigente da plataforma, a tarifa de cada meio de pagamento (paga por quem contribui) e a simulação do total pago e do valor que chega ao pesquisador a partir de um valor informado; as tarifas são parâmetros do Administrador.
-- **RF-090:** acrescentar as tarifas de cada meio de pagamento e o limite por contribuição no cartão à lista de parâmetros.
+- **RF-094:** acrescentar as tarifas de cada meio de pagamento e o limite por contribuição no cartão à lista de parâmetros.
 - **Política de devolução:** quando há devolução automática; que a tarifa só volta se o intermediador devolver (informado e aceito antes do pagamento); o que acontece com arrependimento e com chargeback.
 - **Pergunta jurídica:** o direito de arrependimento de 7 dias (CDC, art. 49) vale para doação sem recompensa?
 - **Cartão: recomendação (12-10-2026).** Primeira versão **só com Pix e boleto**: é o único jeito de risco zero de verdade (sem chargeback) e combina com promover o Pix. O cartão entra numa segunda etapa, se fizer falta, como mais um meio de pagamento e um parâmetro, sem refazer nada.

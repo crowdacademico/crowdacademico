@@ -8,7 +8,7 @@ export function emailValido(email: string): boolean {
 }
 
 // Caracteres de verdade, como o `char_length` do banco: um emoji vale 1 (o `.length` do JavaScript conta 2).
-// Usada no contador e na validação dos campos de texto livre com limite (RF-075).
+// Usada no contador e na validação dos campos de texto livre com limite (RF-076).
 export function contarCaracteres(texto: string): number {
   return [...texto].length;
 }

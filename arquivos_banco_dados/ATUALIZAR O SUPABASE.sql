@@ -594,3 +594,250 @@ AFTER UPDATE ON evento_pagamento
 FOR EACH ROW
 WHEN (OLD.resolvido_em IS DISTINCT FROM NEW.resolvido_em)
 EXECUTE FUNCTION public.fn_log_auditoria('id_evento_pagamento');
+
+-- ============================================================================
+-- GRUPO BX (02-11-2026) - Requisitos de 02-11: avisos novos e a trava da contestação decidida. IDEMPOTENTE.
+-- Não precisa parar o Nest (só funções, gatilhos e dados; nenhuma regra de acesso nem ALTER TABLE).
+--
+-- O que muda:
+-- 1. Decidida a contestação do pesquisador, a situação da denúncia não muda mais (o Julgar fica só de leitura).
+-- 2. Avisos novos (e-mail e sino), cada um com o texto editável em Mensagens:
+--    - ao pesquisador, quando uma denúncia contra ele é julgada procedente (motivo, justificativa e como contestar);
+--    - ao pesquisador, quando uma campanha dele é encerrada pela moderação;
+--    - a quem apoiou, quando a campanha termina antes do prazo por pedido aprovado (dizendo se o valor vai para o
+--      pesquisador ou volta);
+--    - lembrete a quem segue uma campanha perto do fim e ainda não contribuiu (uma vez só).
+-- 3. O e-mail de suspensão passa a listar as campanhas encerradas e as rejeitadas. Se o texto desse e-mail já foi
+--    mudado pela tela Mensagens, ele fica como está.
+-- 4. Parâmetro novo em Parâmetros > Campanha: lembrete_fim_campanha_horas (48; 0 desliga o lembrete).
+-- ============================================================================
+
+-- 1. Trava da contestação decidida
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_contestacao_pendente
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      Contestada a denúncia, a situação dela só muda pela decisão da contestação (RF-115):
+--               esperando análise: só decidir_contestacao (03) muda, fechando as duas juntas; senão a contestação
+--               ficaria aberta sobre uma denúncia já mudada (91048);
+--               decidida (aceita ou recusada): não muda mais (91056). Sem isso, quem julgou procedente e perdeu na
+--               contestação podia reabrir e voltar a procedente, e o pesquisador não pode contestar de novo (91045).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_contestacao_pendente()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF OLD.contestacao_status = 'pendente' AND NEW.contestacao_status = 'pendente'
+       AND NEW.status IS DISTINCT FROM OLD.status THEN
+        RAISE EXCEPTION 'Esta denúncia tem uma contestação esperando análise: decida a contestação primeiro.'
+            USING ERRCODE = '91048';
+    END IF;
+    IF OLD.contestacao_status IN ('aceita', 'recusada') AND NEW.status IS DISTINCT FROM OLD.status THEN
+        RAISE EXCEPTION 'A contestação desta denúncia já foi decidida: a situação dela não muda mais.'
+            USING ERRCODE = '91056';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- 2. Avisos da campanha: o dono no encerramento por moderação; quem apoiou no encerramento antecipado aprovado
+-- ----------------------------------------------------------------------------
+-- Função:     fn_notifica_situacao_campanha (trigger)
+-- Bloco:      [05-Q]
+-- Regra:      E-mails de quando a campanha muda de situação:
+--               aguardando_aprovacao -> ativo: o dono (RF-109) e quem segue o pesquisador (RF-029, campanha nova);
+--               tudo-ou-nada -> sucesso: quem apoiou (RF-084 c);
+--               tudo-ou-nada -> nao_atingido: quem apoiou, avisando que a devolução começou (RF-084 a);
+--               -> encerrado_moderacao: quem apoiou, em qualquer modelo (RF-119; a moderação devolve tudo), e o dono
+--                  (RF-120), também quando foi a suspensão dele que encerrou (RF-125);
+--               -> encerrado por pedido aprovado pelo admin: quem apoiou, dizendo se o valor vai para o pesquisador ou
+--                  volta (RF-084 d); o destino é o de destino_dinheiro_campanha. O pedido vira 'aprovado' antes da
+--                  campanha mudar (decidir_solicitacao_encerramento, 03), então já está gravado aqui. O encerramento
+--                  direto do pesquisador não avisa ninguém: só existe sem dinheiro em jogo.
+--             A rejeição tem gatilho próprio em historico_rejeicao, porque a justificativa só existe lá.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_notifica_situacao_campanha()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF OLD.status = 'aguardando_aprovacao' AND NEW.status = 'ativo' THEN
+        PERFORM public.enfileirar_notificacao(NEW.id_usuario, 'campanha_aprovada',
+            jsonb_build_object('id_campanha', NEW.id_campanha, 'titulo', NEW.titulo));
+        PERFORM public.enfileirar_notificacao_seguidores(NEW.id_campanha, 'nova_campanha_pesquisador');
+    ELSIF NEW.status = 'sucesso' AND NEW.modelo = 'all-or-nothing' THEN
+        PERFORM public.enfileirar_notificacao_doadores(NEW.id_campanha, 'campanha_sucesso');
+    ELSIF NEW.status = 'nao_atingido' AND NEW.modelo = 'all-or-nothing' THEN
+        PERFORM public.enfileirar_notificacao_doadores(NEW.id_campanha, 'campanha_nao_atingida');
+    ELSIF NEW.status = 'encerrado_moderacao' THEN
+        PERFORM public.enfileirar_notificacao_doadores(NEW.id_campanha, 'campanha_encerrada_moderacao');
+        PERFORM public.enfileirar_notificacao(NEW.id_usuario, 'moderacao_encerrou_campanha',
+            jsonb_build_object('id_campanha', NEW.id_campanha, 'titulo', NEW.titulo));
+    ELSIF NEW.status = 'encerrado' AND EXISTS (
+        SELECT 1 FROM solicitacao_encerramento
+        WHERE id_campanha = NEW.id_campanha AND status = 'aprovado' AND id_admin IS NOT NULL
+    ) THEN
+        PERFORM public.enfileirar_notificacao_doadores(NEW.id_campanha, 'campanha_encerrada_antes',
+            jsonb_build_object('vai_para_pesquisador', public.destino_dinheiro_campanha(NEW.id_campanha) = 'repasse'));
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+-- 3. Aviso da suspensão com as campanhas
+-- ----------------------------------------------------------------------------
+-- Função:     fn_notifica_situacao_pesquisador (trigger)
+-- Bloco:      [05-Q]
+-- Regra:      O pesquisador é avisado da suspensão, com o motivo e até quando (RF-122), e da reativação (RF-124), venha
+--             ela do admin ou do fim do prazo (reativar_pesquisadores_vencidos).
+--             O aviso da suspensão lista as campanhas que a cascata encerra (as ativas) e rejeita (as aguardando
+--             aprovação), RF-125. suspender_pesquisador (03), o único caminho para 'suspenso', muda o perfil antes das
+--             campanhas, então aqui elas ainda estão na situação de antes: a lista é exatamente o que a cascata vai fazer.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_notifica_situacao_pesquisador()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NEW.status_pesquisador = 'suspenso' THEN
+        PERFORM public.enfileirar_notificacao(NEW.id_usuario, 'pesquisador_suspenso',
+            jsonb_build_object(
+                'motivo', NEW.motivo_suspensao,
+                'suspenso_ate', NEW.suspenso_ate,
+                'campanhas_encerradas', (SELECT string_agg('"' || titulo || '"', ', ' ORDER BY id_campanha)
+                                         FROM campanha WHERE id_usuario = NEW.id_usuario AND status = 'ativo'),
+                'campanhas_rejeitadas', (SELECT string_agg('"' || titulo || '"', ', ' ORDER BY id_campanha)
+                                         FROM campanha WHERE id_usuario = NEW.id_usuario AND status = 'aguardando_aprovacao')));
+    ELSE
+        PERFORM public.enfileirar_notificacao(NEW.id_usuario, 'pesquisador_reativado');
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+-- 4. Aviso da denúncia procedente
+-- ----------------------------------------------------------------------------
+-- Função:     fn_notifica_denuncia_procedente (trigger)
+-- Bloco:      [05-Q]
+-- Regra:      Denúncia julgada procedente (RF-120): o pesquisador denunciado (o perfil, ou o dono da campanha) recebe o
+--             motivo, a justificativa da moderação e o caminho para contestar (RF-034), sem saber quem denunciou.
+--             Vale também quando a moderação revê a decisão e volta a procedente.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_notifica_denuncia_procedente()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_pesquisador INT;
+    v_titulo      VARCHAR(255);
+BEGIN
+    SELECT id_usuario, titulo INTO v_pesquisador, v_titulo FROM campanha WHERE id_campanha = NEW.id_campanha_alvo;
+    PERFORM public.enfileirar_notificacao(COALESCE(NEW.id_pesquisador_alvo, v_pesquisador), 'denuncia_procedente',
+        jsonb_build_object(
+            'id_denuncia', NEW.id_denuncia,
+            'id_campanha', NEW.id_campanha_alvo,
+            'titulo', v_titulo,
+            'motivo', (SELECT descricao FROM motivo_denuncia WHERE id_motivo = NEW.id_motivo),
+            'justificativa', NEW.justificativa_moderacao));
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_notifica_denuncia_procedente ON denuncia;
+CREATE TRIGGER trg_notifica_denuncia_procedente
+AFTER UPDATE OF status ON denuncia
+FOR EACH ROW
+WHEN (NEW.status = 'resolvida' AND OLD.status IS DISTINCT FROM NEW.status)
+EXECUTE FUNCTION public.fn_notifica_denuncia_procedente();
+
+-- 5. Lembrete de fim de campanha (a tarefa de encerrar campanhas chama a cada 15 minutos)
+-- ----------------------------------------------------------------------------
+-- Função:     enviar_lembretes_fim_campanha
+-- Assinatura: () -> INT
+-- Bloco:      [05-Q]
+-- Regra:      Lembrete de fim de campanha (RF-055): quem segue uma campanha ativa e ainda não contribuiu recebe um
+--             aviso quando falta lembrete_fim_campanha_horas (padrão 48) para o fim; 0 desliga. Uma vez só por pessoa
+--             e campanha: o próprio aviso já enviado é a marca (notificacao com o mesmo tipo e id_campanha). Contribuiu
+--             = tem contribuição a caminho ou paga (pendente, confirmado, repassado). Nunca o dono da campanha.
+--             Devolve quantas pessoas foram avisadas. SECURITY DEFINER, sem autorização: quem chama é a tarefa de
+--             encerrar campanhas (CampanhaServiceCloseExpired, a cada 15 minutos), sem sessão de usuário.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.enviar_lembretes_fim_campanha()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_horas INT := public.config_numero('lembrete_fim_campanha_horas', 48);
+    v       RECORD;
+    v_total INT := 0;
+BEGIN
+    IF v_horas <= 0 THEN
+        RETURN 0;
+    END IF;
+
+    FOR v IN
+        SELECT c.id_campanha, c.titulo, c.data_fim, sc.id_usuario
+        FROM campanha c
+        JOIN seguir_campanha sc ON sc.id_campanha = c.id_campanha
+        WHERE c.status = 'ativo'
+          AND c.data_fim > NOW()
+          AND c.data_fim <= NOW() + v_horas * INTERVAL '1 hour'
+          AND sc.id_usuario <> c.id_usuario
+          AND NOT EXISTS (
+              SELECT 1 FROM contribuicao ct
+              WHERE ct.id_campanha = c.id_campanha AND ct.id_usuario = sc.id_usuario
+                AND ct.status IN ('pendente', 'confirmado', 'repassado'))
+          AND NOT EXISTS (
+              SELECT 1 FROM notificacao n
+              WHERE n.id_usuario = sc.id_usuario AND n.tipo_evento = 'lembrete_fim_campanha'
+                AND n.dados->>'id_campanha' = c.id_campanha::text)
+        ORDER BY c.id_campanha, sc.id_usuario
+    LOOP
+        IF public.enfileirar_notificacao(v.id_usuario, 'lembrete_fim_campanha',
+            jsonb_build_object('id_campanha', v.id_campanha, 'titulo', v.titulo, 'data_fim', v.data_fim)) IS NOT NULL THEN
+            v_total := v_total + 1;
+        END IF;
+    END LOOP;
+    RETURN v_total;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.enviar_lembretes_fim_campanha() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.enviar_lembretes_fim_campanha() TO app_nestjs;
+
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
+(NULL, 'lembrete_fim_campanha_horas', '48',  'inteiro',  'Horas antes do fim da campanha em que quem a segue e ainda não contribuiu recebe um lembrete, uma vez só (0 desliga)', TRUE, FALSE)
+ON CONFLICT (chave) DO NOTHING;
+
+UPDATE configuracoes SET descricao = 'Tarefa automática: vencer os Pix pendentes, encerrar as campanhas cujo prazo passou e lembrar quem segue uma campanha perto do fim. Desligada, a execução agendada fica em pausa'
+WHERE chave = 'tarefa_encerrar_campanhas_ligada' AND descricao = 'Tarefa automática: vencer os Pix pendentes e encerrar as campanhas cujo prazo passou. Desligada, a execução agendada fica em pausa';
+
+-- 6. Os textos dos avisos novos e o novo texto do e-mail de suspensão (só se ainda for o original)
+INSERT INTO modelo_mensagem (tipo_evento, canal, titulo, corpo, ativo, obrigatoria) VALUES
+('denuncia_procedente', 'email', 'Uma denúncia contra você foi julgada procedente',
+ E'{{#titulo}}Uma denúncia contra a sua campanha "{{titulo}}"{{/titulo}}{{^titulo}}Uma denúncia contra o seu perfil de pesquisador{{/titulo}} foi analisada pela moderação e julgada procedente. Ela passa a contar na sua pontuação de reputação.\n\n{{#motivo}}Motivo da denúncia: {{motivo}}{{/motivo}}\n\n{{#justificativa}}Justificativa da decisão: {{justificativa}}{{/justificativa}}\n\nSe achar a decisão injusta, você pode contestá-la uma vez, em Minha Conta, aba Acadêmico, explicando o porquê.', TRUE, FALSE),
+('moderacao_encerrou_campanha', 'email', 'Sua campanha foi encerrada pela moderação',
+ E'"{{titulo}}" foi encerrada pela moderação da plataforma e saiu da página pública.\n\nTodo o valor arrecadado vai ser devolvido a quem apoiou. O motivo vem em outro aviso: a denúncia julgada procedente ou a suspensão do seu perfil.', TRUE, FALSE),
+('campanha_encerrada_antes', 'email', 'A campanha que você apoiou terminou antes do prazo',
+ E'"{{titulo}}" foi encerrada antes do prazo, a pedido do pesquisador, com a aprovação da plataforma.\n\n{{#vai_para_pesquisador}}O valor arrecadado, com a sua contribuição, vai para o pesquisador depois do prazo de segurança da plataforma.{{/vai_para_pesquisador}}{{^vai_para_pesquisador}}Como a campanha é do modelo tudo ou nada e não bateu a meta, a sua contribuição vai ser devolvida. Você recebe outro e-mail quando a devolução for concluída.{{/vai_para_pesquisador}}', TRUE, FALSE),
+('lembrete_fim_campanha', 'email', 'Uma campanha que você segue está perto do fim',
+ E'"{{titulo}}", uma campanha que você segue, termina em {{data_fim}}.\n\nSe quiser apoiar a pesquisa, ainda dá tempo.', TRUE, FALSE),
+('denuncia_procedente', 'interna', 'Denúncia procedente',
+ E'{{#titulo}}Uma denúncia contra "{{titulo}}"{{/titulo}}{{^titulo}}Uma denúncia contra o seu perfil{{/titulo}} foi julgada procedente. Você pode contestá-la em Minha Conta.', TRUE, FALSE),
+('moderacao_encerrou_campanha', 'interna', 'Campanha encerrada pela moderação',
+ E'"{{titulo}}" foi encerrada pela moderação. O valor arrecadado vai ser devolvido.', TRUE, FALSE),
+('campanha_encerrada_antes', 'interna', 'Campanha encerrada antes do prazo',
+ E'"{{titulo}}" terminou antes do prazo.{{#vai_para_pesquisador}} O valor vai para o pesquisador.{{/vai_para_pesquisador}}{{^vai_para_pesquisador}} A sua contribuição vai ser devolvida.{{/vai_para_pesquisador}}', TRUE, FALSE),
+('lembrete_fim_campanha', 'interna', 'Campanha perto do fim',
+ E'"{{titulo}}" termina em {{data_fim}}. Ainda dá tempo de apoiar.', TRUE, FALSE)
+ON CONFLICT (tipo_evento, canal) DO NOTHING;
+
+UPDATE modelo_mensagem SET corpo = E'O seu perfil de pesquisador foi suspenso pela moderação{{#suspenso_ate}} até {{suspenso_ate}}{{/suspenso_ate}}.\n\n{{#motivo}}Motivo: {{motivo}}{{/motivo}}\n\n{{#campanhas_encerradas}}Campanhas ativas encerradas pela suspensão, com o valor devolvido a quem apoiou: {{campanhas_encerradas}}.{{/campanhas_encerradas}}\n\n{{#campanhas_rejeitadas}}Campanhas que esperavam aprovação e foram rejeitadas: {{campanhas_rejeitadas}}.{{/campanhas_rejeitadas}}\n\nEnquanto durar a suspensão, você não envia campanhas nem publica atualizações.'
+WHERE tipo_evento = 'pesquisador_suspenso' AND canal = 'email' AND corpo = E'O seu perfil de pesquisador foi suspenso pela moderação{{#suspenso_ate}} até {{suspenso_ate}}{{/suspenso_ate}}.\n\n{{#motivo}}Motivo: {{motivo}}{{/motivo}}\n\nEnquanto durar a suspensão, você não envia campanhas nem publica atualizações.';

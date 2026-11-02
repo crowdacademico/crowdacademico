@@ -8,6 +8,7 @@
 // </SecaoFicha>
 import { Fragment } from 'react';
 import type { ReactNode } from 'react';
+import { Tooltip } from '../layout/tooltip';
 
 // Título pequeno em maiúsculo separando cada bloco ("Dados da conta", "Acesso", "Papéis"...): grid de 2 colunas
 // em telas >=sm para os pares rótulo/valor, 1 coluna no mobile.
@@ -67,21 +68,24 @@ export function SecaoFicha({ titulo, children, colunas = 2, nivel = 3, destaque 
 // histórico de login em modal-consultar-usuario.tsx, ModalConsultarUsuario).
 // `children` - conteúdo extra ABAIXO do valor (ex.: a lista expandida em
 // si), continua fora do fluxo normal de rótulo/valor.
+// `dica` - explicação do campo, na ⓘ logo depois do rótulo (como nos formulários), não ao lado do valor.
 interface CampoFichaProps {
   rotulo: string;
   valor?: ReactNode;
   largura?: 'cheia';
   acao?: ReactNode;
+  dica?: string;
   children?: ReactNode;
 }
 
-export function CampoFicha({ rotulo, valor, largura, acao, children }: CampoFichaProps) {
+export function CampoFicha({ rotulo, valor, largura, acao, dica, children }: CampoFichaProps) {
   const temValor = valor !== null && valor !== undefined && valor !== '';
 
   return (
     <div className={'campo-ficha' + (largura === 'cheia' ? ' sm:col-span-2' : '')}>
       <div className="rotulo-leitura mb-1">
         {rotulo}
+        {dica && <Tooltip texto={dica} esquerda />}
       </div>
       <div className="campo-ficha__valor">
         {/* break-words + min-w-0: min-w-0 é o que permite o span ENCOLHER dentro do flex (sem isso,

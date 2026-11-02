@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
 import { ToastProvider } from './components/layout/toast/toast-provider'
+import { ConfirmacaoGlobal } from './components/crud/confirmacao-global'
 import { ConfiguracoesProvider } from './services/11-configuracoes/context/configuracoes-provider'
 import './assets/css/tailwind-theme.css'
 import './assets/css/0-style.css'
@@ -18,6 +19,7 @@ createRoot(elementoRaiz).render(
       <ConfiguracoesProvider>
         <ToastProvider>
           <App />
+          <ConfirmacaoGlobal />
         </ToastProvider>
       </ConfiguracoesProvider>
     </BrowserRouter>

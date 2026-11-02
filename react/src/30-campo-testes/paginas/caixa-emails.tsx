@@ -92,7 +92,7 @@ export function CaixaEmails({ auth }: PropsPagina) {
       <div className="admin-content-painel">
         <GenericTable<EmailLinha>
           titulo="Caixa de E-mails"
-          ajuda="Todos os e-mails do sistema desde a última limpeza, do mais novo para o mais antigo: na fila, enviados, que falharam e cancelados. Com o provedor de teste nada sai para fora: é aqui que se confere o texto e os links. Só o Limpar a caixa tira os e-mails desta lista (eles continuam na aba Notificações do Dashboard)."
+          ajuda="Todos os e-mails do sistema desde a última limpeza, do mais novo para o mais antigo: na fila, enviados, que falharam e cancelados. Com o provedor de teste nada sai para fora: é aqui que se confere o texto e os links. Só o Limpar a caixa tira os e-mails desta lista (eles continuam em Comunicações > Notificações)."
           acaoTopo={
             <button type="button" className="btn btn-secondary" disabled={ocupado} onClick={() => void limpar()}>
               Limpar a caixa

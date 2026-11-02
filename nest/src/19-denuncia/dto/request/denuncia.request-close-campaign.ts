@@ -1,7 +1,7 @@
 import { IsString, Matches, MaxLength } from 'class-validator';
 
-// Encerrar a campanha por moderação a partir de uma denúncia procedente (RF-117): a justificativa é obrigatória e
-// vai para a denúncia e para o log de auditoria (RF-125).
+// Encerrar a campanha por moderação a partir de uma denúncia procedente (RF-118): a justificativa é obrigatória e
+// vai para a denúncia e para o log de auditoria (RF-127).
 export class DenunciaRequestCloseCampaign {
   @IsString({ message: 'Escreva por que a campanha está sendo encerrada.' })
   @Matches(/\S/, {

@@ -74,7 +74,7 @@ export class ContribuicaoServiceCreate {
     // IP de quem contribui: vai para o aceite do Termo (aceite_termo_contribuicao), guardado pelo prazo do Termo.
     ip?: string,
   ): Promise<ContribuicaoResponseCreate> {
-    // Rota @Publico() (contribuir não exige conta, RF-076): o guard de autenticação não roda a checagem de termo
+    // Rota @Publico() (contribuir não exige conta, RF-077): o guard de autenticação não roda a checagem de termo
     // pendente nela. Quem ESTÁ logado e com termo pendente recebe o mesmo 403 de qualquer outra rota.
     if (usuario?.termoPendente) {
       throw new ForbiddenException({
@@ -210,7 +210,7 @@ export class ContribuicaoServiceCreate {
     return ContribuicaoConverter.paraResponseCreate(contribuicao, cobranca);
   }
 
-  // RF-103 e RF-104: a recompensa escolhida precisa estar ativa, ser da mesma campanha (o banco também confere,
+  // RF-104 e RF-105: a recompensa escolhida precisa estar ativa, ser da mesma campanha (o banco também confere,
   // trg_contrib_recompensa_valida) e o valor da contribuição precisa alcançar o mínimo dela. Recompensa simbólica,
   // sem estoque: quantidade 1. Na mesma transação da contribuição, com a conta na sessão (pol_contrib_recompensa_insert).
   private async registrarRecompensa(

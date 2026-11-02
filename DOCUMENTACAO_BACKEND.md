@@ -640,7 +640,7 @@ A lista dos títulos acadêmicos válidos não é copiada em cada ficha: vem de 
 
 **`ComentarioServiceUpdate`** - não calcula `ordem_endosso`. Ao endossar, a trigger `validar_comentario_endosso_autor` calcula `MAX(ordem_endosso) + 1` da campanha sob `pg_advisory_xact_lock` (dois endossos ao mesmo tempo na mesma campanha ficam em fila e não repetem o número nem passam do limite), e ao remover o endosso zera a ordem; o service só manda `endossado`. Como o `UPDATE` que não afeta linha nenhuma pode ser "não existe" ou "a RLS barrou", o service usa `distinguir404ou403`. A trigger de limite (`validar_comentario_endosso`) confere `NEW.endossado`, para não depender de a ordem já estar calculada.
 
-**`CampanhaServiceCloseExpired`** (RF-057) - o único service do projeto que roda **fora** do pipeline HTTP, e por isso o único que não usa `DatabaseService.getDb()`:
+**`CampanhaServiceCloseExpired`** (RF-065) - o único service do projeto que roda **fora** do pipeline HTTP, e por isso o único que não usa `DatabaseService.getDb()`:
 
 > Sem ele, nada chamaria `encerrar_campanhas_vencidas()` (Postgres, `[05-K-2]`), e uma campanha vencida continuaria `'ativo'` para sempre.
 
@@ -658,7 +658,7 @@ A lista dos títulos acadêmicos válidos não é copiada em cada ficha: vem de 
 
 #### É a melhor solução? É *future-proof*?
 
-**Para o tamanho e a fase atual do projeto: sim, é a solução certa** - simples, usa infraestrutura que já existe (nenhuma peça nova além do agendador em si), e é literalmente o padrão recomendado no ecossistema NestJS para "preciso rodar algo periodicamente, sem que seja uma rota HTTP visitada por alguém" - qualquer outro job futuro deste tipo (ex.: expirar QR Code do RF-076, reprocessar notificação com falha) pode copiar exatamente este molde: injetar `PG_POOL`, um método com `@Cron`, pronto.
+**Para o tamanho e a fase atual do projeto: sim, é a solução certa** - simples, usa infraestrutura que já existe (nenhuma peça nova além do agendador em si), e é literalmente o padrão recomendado no ecossistema NestJS para "preciso rodar algo periodicamente, sem que seja uma rota HTTP visitada por alguém" - qualquer outro job futuro deste tipo (ex.: expirar QR Code do RF-085, reprocessar notificação com falha) pode copiar exatamente este molde: injetar `PG_POOL`, um método com `@Cron`, pronto.
 
 **Uma limitação real, que vale você saber para explicar se perguntarem:** isto roda **dentro do mesmo processo** do servidor Nest - ou seja, só dispara enquanto o backend estiver de pé. Hospedagem gratuita (Render, citado em `PENDENCIAS e correcoes.md`/RNF-012) costuma **"dormir"** um serviço web depois de um tempo sem nenhuma requisição chegando, acordando de novo só quando alguém acessa. Se isso acontecer, o `@Cron` também dorme junto - nenhuma campanha vence "atrasado de verdade" nesse intervalo, só fica pendente de encerrar até o backend acordar por qualquer motivo (a próxima visita de qualquer usuário já é suficiente). Quando acorda, a própria natureza da função resolve isso sozinha, sem precisar de nada especial: ela sempre confere `data_fim <= NOW()` contra o relógio de agora, então uma campanha vencida há 2 horas ou há 2 minutos é encerrada do mesmo jeito na primeira checagem depois de acordar - nada fica "perdido pra sempre", só potencialmente **atrasado** enquanto o servidor está dormindo. Este é o mesmo tipo de limitação que o projeto já aceita conscientemente em outros lugares por causa da hospedagem gratuita (RNF-012: "disponibilidade mínima de 95%... limitações de uptime são reconhecidas como restrição do ambiente acadêmico") - não é uma falha de desenho, é uma característica do ambiente gratuito.
 
@@ -970,16 +970,16 @@ Módulos pequenos, mas reais e em uso pelo painel administrativo.
 **Em palavras simples:** qualquer conta logada denuncia uma campanha ativa ou o perfil de um pesquisador; a moderação (admin e moderador, permissão `denuncia_responder`) lista, julga e, se a denúncia de campanha procede, encerra a campanha. As regras estão no banco; o Nest só monta as consultas.
 
 - **`POST /denuncia`** - cria em nome de quem está logado, sempre `pendente`. Exatamente um alvo (`idCampanhaAlvo` ou `idPesquisadorAlvo`), `idMotivo` e `relato` opcional. O banco recusa: campanha que não está ativa (91035), perfil que não é de pesquisador (90026), a própria campanha ou o próprio perfil (92029), motivo do tipo errado (90005/90006), denúncia repetida (23505) e o limite por janela (93001).
-- **`GET /denuncia`** - filtros `tipo` (campanha ou perfil), `status`, `idCampanha`, `idPesquisador`. Traz junto o motivo, quem denunciou (nome e e-mail), o título e o status da campanha ou o nome do pesquisador (RF-113, RF-116). Quem tem `denuncia_responder` vê todas; os outros, só as próprias (`pol_denuncia_select`).
-- **`PATCH /denuncia/:id`** - julga (RF-111): `status` e, ao decidir (procedente ou improcedente), a `justificativa` obrigatória. Quem denunciou não julga a própria (92006, RF-112). O banco só deixa mudar essas duas colunas.
-- **`POST /denuncia/:id/encerrar-campanha`** - chama `encerrar_campanha_por_denuncia()` (03): a denúncia vira procedente com a justificativa e a campanha vira `encerrado_moderacao`, juntas (RF-114). A campanha some da página pública pela própria RLS. Quem decidiu, quando e por quê ficam no log de auditoria (RF-115).
+- **`GET /denuncia`** - filtros `tipo` (campanha ou perfil), `status`, `idCampanha`, `idPesquisador`. Traz junto o motivo, quem denunciou (nome e e-mail), o título e o status da campanha ou o nome do pesquisador (RF-117, RF-121). Quem tem `denuncia_responder` vê todas; os outros, só as próprias (`pol_denuncia_select`).
+- **`PATCH /denuncia/:id`** - julga (RF-115): `status` e, ao decidir (procedente ou improcedente), a `justificativa` obrigatória. Quem denunciou não julga a própria (92006, RF-116). O banco só deixa mudar essas duas colunas.
+- **`POST /denuncia/:id/encerrar-campanha`** - chama `encerrar_campanha_por_denuncia()` (03): a denúncia vira procedente com a justificativa e a campanha vira `encerrado_moderacao`, juntas (RF-118). A campanha some da página pública pela própria RLS. Quem decidiu, quando e por quê ficam no log de auditoria (RF-119).
 
 📌 **encerrar por moderação sai da denúncia.**
 - O encerramento por moderação não é uma rota de campanha solta: acontece a partir de uma denúncia de campanha, numa função do banco que resolve a denúncia e encerra a campanha na mesma transação.
-- **Por quê:** o RF-114 fala em encerrar "após averiguação" de uma denúncia; amarrar as duas coisas garante que todo encerramento por moderação tem uma denúncia procedente e uma justificativa por trás. A função é `SECURITY DEFINER` porque a regra de acesso de `campanha` não abre a campanha ao moderador.
-- **Caso-limite:** as outras denúncias pendentes da mesma campanha continuam pendentes; a moderação decide cada uma. A devolução do dinheiro (RF-114) entra com o módulo de contribuição.
+- **Por quê:** o RF-118 fala em encerrar "após averiguação" de uma denúncia; amarrar as duas coisas garante que todo encerramento por moderação tem uma denúncia procedente e uma justificativa por trás. A função é `SECURITY DEFINER` porque a regra de acesso de `campanha` não abre a campanha ao moderador.
+- **Caso-limite:** as outras denúncias pendentes da mesma campanha continuam pendentes; a moderação decide cada uma. A devolução do dinheiro (RF-118) entra com o módulo de contribuição.
 
-#### Contestação do score (RF-033, 3 endpoints)
+#### Contestação do score (RF-034, 3 endpoints)
 
 **Em palavras simples:** o pesquisador pede revisão de uma denúncia procedente contra ele; a moderação aceita (a denúncia vira improcedente e a nota se recalcula) ou recusa. Tudo mora na própria denúncia ([05-K-2-J] do `DOCUMENTACAO_BD.md`).
 
@@ -989,11 +989,11 @@ Módulos pequenos, mas reais e em uso pelo painel administrativo.
 
 ### `20-solicitacao-encerramento` (18 arquivos, 5 endpoints)
 
-**Em palavras simples:** o pesquisador encerra uma campanha ativa antes do prazo. Sem nenhuma contribuição confirmada, encerra sozinho; com contribuição, pede ao administrador, que aprova (a campanha é encerrada) ou rejeita com justificativa. Enquanto o pedido está pendente, o pesquisador pode cancelá-lo (RF-064 a RF-066).
+**Em palavras simples:** o pesquisador encerra uma campanha ativa antes do prazo. Sem nenhuma contribuição confirmada, encerra sozinho; com contribuição, pede ao administrador, que aprova (a campanha é encerrada) ou rejeita com justificativa. Enquanto o pedido está pendente, o pesquisador pode cancelá-lo (RF-068 a RF-070).
 
 - **`POST /solicitacao-encerramento`** - o pedido (`idCampanha`, `justificativa`), sempre pendente. O banco recusa: quem não é dono (RLS), campanha que não está ativa (91038), sem justificativa (90028), segundo pedido pendente (23505).
 - **`POST /solicitacao-encerramento/encerrar-direto`** - `encerrar_campanha_sem_contribuicao()` (03): só o dono (92031), sem contribuição confirmada (91040) e sem Pix pendente válido (91043). Grava o encerramento como pedido aprovado sem admin, cancela um pedido pendente que houver e encerra a campanha.
-- **`GET /solicitacao-encerramento`** - filtros `status` e `idCampanha`. Traz o que o RF-065 pede: título, modelo e arrecadado da campanha, quem pediu, quantas contribuições confirmadas, a justificativa, e quem decidiu. Quem decide vê todos; o dono, os das próprias campanhas.
+- **`GET /solicitacao-encerramento`** - filtros `status` e `idCampanha`. Traz o que o RF-069 pede: título, modelo e arrecadado da campanha, quem pediu, quantas contribuições confirmadas, a justificativa, e quem decidiu. Quem decide vê todos; o dono, os das próprias campanhas.
 - **`POST /solicitacao-encerramento/:id/cancelar`** - o dono desiste enquanto está pendente (92002 fora disso).
 - **`POST /solicitacao-encerramento/:id/decidir`** - `decidir_solicitacao_encerramento()` (03): `aprovar` e, para rejeitar, `justificativa` obrigatória (90029). Só pedido pendente (91041); aprovar exige campanha ainda ativa (91042) e encerra a campanha. Grava quem decidiu e quando.
 
@@ -1045,7 +1045,7 @@ Versões dos termos de uso, de 2 tipos: `cadastro` (o termo da conta, que cobre 
 - **`POST /termos-uso` (Criar)** só cria rascunho: sempre `ativo = FALSE`, nunca ativa sozinho nem mexe em outra linha. O fluxo é criar, a equipe revisar o texto e só então um administrador tornar a versão vigente.
 - **`PATCH /termos-uso/:id/ativar`** torna a versão a vigente do seu tipo e, na mesma transação, desativa a vigente anterior do mesmo tipo (idempotente se o alvo já é a vigente). Serve tanto para promover um rascunho quanto para voltar a uma versão antiga.
 - **`PATCH /termos-uso/:id` (Alterar)** só edita `conteudo`, e só enquanto **ninguém aceitou** aquela versão; depois do primeiro aceite a versão fica somente leitura, para preservar o valor probatório do que foi aceito. Quem recusa é o banco (`trg_termos_de_uso_protege_aceito`, 409 `91033`). `versao` e `tipo` são imutáveis.
-- **`DELETE /termos-uso/:id`**: nunca apaga a versão vigente (sempre precisa existir uma por tipo) nem versão com aceite registrado (409 `91032`, RF-091). Não existe exclusão forçada.
+- **`DELETE /termos-uso/:id`**: nunca apaga a versão vigente (sempre precisa existir uma por tipo) nem versão com aceite registrado (409 `91032`, RF-095). Não existe exclusão forçada.
 - **`GET /termos-uso/pendente`** (RF-015, liberada com termo pendente): o termo que a tela de aceite mostra, decidido por `fn_termo_uso_pendente()`: o da conta primeiro e, para quem é pesquisador, o de pesquisador. 404 sem nada pendente.
 - **`POST /termos-uso/:id/aceitar`** (RF-015): quem já tem conta aceita a versão vigente nova do Termo de Uso. Aceita o id que está pendente para a conta (o da conta ou o de pesquisador); outro id responde 409 (a versão mudou enquanto a pessoa lia); aceitar de novo não é erro.
 
@@ -1198,7 +1198,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | GET · POST | `/seguir-campanha` |
 | AUTH | DELETE | `/seguir-campanha/:idCampanha` |
 | pub | GET | `/seguir-campanha/:idCampanha/seguidores` *(só o número, para a página da campanha)* |
-| AUTH | GET · POST | `/seguir-pesquisador` *(RF-028: a lista é sempre a da conta logada)* |
+| AUTH | GET · POST | `/seguir-pesquisador` *(RF-029: a lista é sempre a da conta logada)* |
 | AUTH | DELETE | `/seguir-pesquisador/:idPesquisador` |
 | pub | GET | `/seguir-pesquisador/:idPesquisador/seguidores` *(só o número, para a página do perfil)* |
 | pub | GET | `/recompensa` *(`?idCampanha=`; o link especial só vem para o dono, o admin e quem ganhou)* |
@@ -1219,7 +1219,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | pub | GET | `/arquivo/:id` · `/arquivo/avatar/:idUsuario` |
 | AUTH | DELETE | `/arquivo/:id` |
 | **Pagamento** | | |
-| pub | POST | `/contribuicao` *(contribuir não exige conta, RF-073; devolve o Pix "copia e cola" ou o link da página segura do cartão)* |
+| pub | POST | `/contribuicao` *(contribuir não exige conta, RF-077; devolve o Pix "copia e cola" ou o link da página segura do cartão)* |
 | AUTH | GET | `/contribuicao/campanha/:idCampanha/resumo` *(quantas e quanto por meio e situação, para o Consultar da campanha; só o dono ou quem tem `contribuicao_visualizar_sensivel`)* |
 | AUTH | GET | `/contribuicao/minhas` *(o histórico da conta logada, com a recompensa escolhida)* |
 | pub | GET | `/contribuicao/:id` *(acompanhar a contribuição: com login, pelo próprio usuário; sem conta, pelo cabeçalho `X-Token-Sessao`)* |
@@ -1238,7 +1238,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | GET | `/log-auditoria` · `/log-auditoria/minha-atividade` |
 | AUTH | GET | `/dashboard/resumo` |
 | AUTH | GET | `/notificacao` · `/notificacao/resumo` *(e-mails do sistema; exige `notificacao_processar`)* |
-| AUTH | POST | `/notificacao/:id/reenviar` · `/notificacao/:id/cancelar` *(RF-121; permissão e situação conferidas no banco)* |
+| AUTH | POST | `/notificacao/:id/reenviar` · `/notificacao/:id/cancelar` *(RF-126; permissão e situação conferidas no banco)* |
 | AUTH | GET | `/notificacao-interna` · `/notificacao-interna/nao-lidas` *(o sino da própria conta)* |
 | AUTH | PATCH | `/notificacao-interna/:id/lida` · `/notificacao-interna/lidas` *(marca o próprio aviso, ou todos, como lido)* |
 | AUTH | GET | `/modelo-mensagem` *(o texto de cada aviso; exige `configuracao_gerenciar`)* |
@@ -1299,7 +1299,7 @@ Carrega variáveis de ambiente (`.env`) através do `ConfigService`, injetável 
 
 ### 15.7b Agendamento - `@nestjs/schedule`
 
-Fecha o RF-057 (encerramento automático de campanha vencida, ver §7.4, `CampanhaServiceCloseExpired`). É o pacote oficial do NestJS para `@Cron`/`@Interval`/`@Timeout` - registra um agendador de verdade por trás do decorator via `ScheduleModule.forRoot()` (uma vez, em `AppModule`). Usam: os 6 jobs de §7.4, as tarefas automáticas do pagamento (`DOCUMENTACAO_FINANCEIRO.md`, seção 2.2) e o envio de e-mail (seção 21).
+Fecha o RF-065 (encerramento automático de campanha vencida, ver §7.4, `CampanhaServiceCloseExpired`). É o pacote oficial do NestJS para `@Cron`/`@Interval`/`@Timeout` - registra um agendador de verdade por trás do decorator via `ScheduleModule.forRoot()` (uma vez, em `AppModule`). Usam: os 6 jobs de §7.4, as tarefas automáticas do pagamento (`DOCUMENTACAO_FINANCEIRO.md`, seção 2.2) e o envio de e-mail (seção 21).
 
 ### 15.8 Armazenamento de arquivo - `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` + `sharp`
 
@@ -1572,11 +1572,11 @@ Testado com o backend rodando de verdade contra o Postgres real (não só compil
 - A exportação de dados e a exclusão de Termo de Uso usam `emSequencia()` (`commons/database/em-sequencia.util.ts`). A alteração de Termo de Uso faz as duas consultas uma depois da outra.
 - **Por quê:** é uma conexão só por requisição (§2.7). O `Promise.all` nunca rodaria em paralelo de verdade e dependeria de um enfileiramento que o driver `pg` já avisa que vai remover.
 
-📌 **Suspensão de papel com motivo (RF-118).**
+📌 **Suspensão de papel com motivo (RF-123).**
 - `POST /usuario-papel/:idUsuario/:idPapel/suspender` recebe o mesmo `SuspensaoRequestDto` (data e motivo) da suspensão de conta e de pesquisador.
-- **Por quê:** o RF-118 pede motivo obrigatório também para a suspensão de um papel.
+- **Por quê:** o RF-123 pede motivo obrigatório também para a suspensão de um papel.
 
-📌 **Termo aceito não é excluído nem alterado (RF-091).**
+📌 **Termo aceito não é excluído nem alterado (RF-095).**
 - `termo-uso.service.remove.ts` e `termo-uso.service.update.ts` não conferem o aceite por conta própria: quem recusa é a trigger do banco (409 `91032` e `91033`). Não existe exclusão forçada.
 - **Por quê:** o aceite é a prova do que a pessoa aceitou; apagar a versão apagaria junto essa prova.
 - **Caso-limite:** um rascunho aceito por engano não sai mais da lista. Ele fica inativo, e uma versão nova toma o lugar.
@@ -1637,7 +1637,7 @@ Testado com o backend rodando de verdade contra o Postgres real (não só compil
 
 - Recompensa simbólica: título, tipo (`reconhecimento`, `acesso_antecipado`, `digital`), valor mínimo, descrição e um link especial opcional (`link_recompensa`). Sem estoque (`quantidade_disponivel` sempre vazia) e sem excluir (desativa, `ativo = false`).
 - **Por quê:** o mais simples possível. A RLS de `link_recompensa` mostra o link só ao dono, ao admin e a quem ganhou: é o "link especial" sem nenhuma regra nova.
-- **Caso-limite:** o RF-100 cita quantidade disponível; o sistema não controla (ponto para a revisão externa). O link só aceita tipos de link com `permite_recompensa` (hoje só GitHub); para outro site, o admin cadastra um tipo em Tipos de Link.
+- **Caso-limite:** o RF-104 cita quantidade disponível; o sistema não controla (ponto para a revisão externa). O link só aceita tipos de link com `permite_recompensa` (hoje só GitHub); para outro site, o admin cadastra um tipo em Tipos de Link.
 
 - Escolher a recompensa é um campo opcional de `POST /contribuicao` (`idRecompensa`): exige conta, recompensa ativa da mesma campanha e valor igual ou acima do mínimo; grava `contribuicao_recompensa` na mesma transação. A recompensa só conta como ganha quando a contribuição é paga.
 - **Por quê:** a política `pol_contrib_recompensa_insert` já exigia o dono da contribuição; quem contribui sem conta não tem nome para o reconhecimento.
@@ -1645,9 +1645,9 @@ Testado com o backend rodando de verdade contra o Postgres real (não só compil
 
 ### 21.3 Seguir pesquisador, minhas contribuições e líquido estimado
 
-- **Seguir pesquisador (RF-028)** fica em `16-seguir` (agora `SeguirModule`): mesma regra do seguir campanha; o alvo precisa ter perfil de pesquisador (400), seguir duas vezes dá 409 e a si mesmo, 400 (as duas do banco). A contagem pública usa `contar_seguidores_pesquisador` (`[03-E]`), sem dizer quem segue.
-- **`GET /contribuicao/minhas`** (RF-009, RF-085): o histórico da conta logada, com a recompensa escolhida; registrado antes de `GET /contribuicao/:id` no módulo.
-- **Líquido estimado (RF-087):** `GET /campanha/:id` traz `valorLiquidoEstimado` e `taxaAplicada`, pela mesma conta do repasse (`liquido_repasse`, taxa mínima incluída).
+- **Seguir pesquisador (RF-029)** fica em `16-seguir` (agora `SeguirModule`): mesma regra do seguir campanha; o alvo precisa ter perfil de pesquisador (400), seguir duas vezes dá 409 e a si mesmo, 400 (as duas do banco). A contagem pública usa `contar_seguidores_pesquisador` (`[03-E]`), sem dizer quem segue.
+- **`GET /contribuicao/minhas`** (RF-009, RF-089): o histórico da conta logada, com a recompensa escolhida; registrado antes de `GET /contribuicao/:id` no módulo.
+- **Líquido estimado (RF-091):** `GET /campanha/:id` traz `valorLiquidoEstimado` e `taxaAplicada`, pela mesma conta do repasse (`liquido_repasse`, taxa mínima incluída).
 - **Quem aprovou:** `GET /campanha/:id` traz `nomeAprovador`, o nome de `campanha.id_admin` numa campanha aprovada (o `id_admin` só é carimbado na aprovação ou na rejeição, e a rejeição só acontece antes de aprovar). Só para quem tem `campanha_aprovar`; para os outros, `null`. **Por quê:** o dono e a página pública não precisam saber qual pessoa da equipe aprovou.
 - **Quem encerrou:** `GET /campanha/:id` traz `nomeEncerrador`, com a mesma restrição: o nome de quem levou a campanha à situação final de hoje, pela última linha do log de auditoria dessa mudança (`trg_log_auditoria_campanha_status`), ou "Sistema" quando a linha não tem responsável (a tarefa do fim do prazo). **Por quê do log:** os quatro caminhos de encerramento (prazo, pedido aprovado, "Cancelar o projeto" do dono, moderação) gravam quem fez em lugares diferentes, ou em nenhum; o log é o único que registra todos. **Caso-limite:** depois da retenção do log (`log_auditoria_retencao_dias`), ou com a conta de quem encerrou excluída, vem `null`.
 

@@ -21,7 +21,7 @@ import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
 import { EtapaRevisaoCampanha } from './etapa-revisao-campanha';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { CampanhaRequestCreate, CampanhaResponse, ModeloCampanha } from '../../services/12-campanha/type/campanha.type';
-import { ROTULO_MODELO_CAMPANHA } from '../../services/12-campanha/constants/status-campanha.constants';
+import { EXPLICACAO_MODELO_CAMPANHA, ROTULO_MODELO_CAMPANHA } from '../../services/12-campanha/constants/status-campanha.constants';
 import { Tooltip } from '../../components/layout/tooltip';
 
 interface ModalCriarCampanhaProps {
@@ -64,11 +64,6 @@ const FORM_VAZIO: FormDadosCampanha = {
   dataFim: '',
   videoApresentacaoUrl: '',
 };
-
-const EXPLICACAO_MODELO =
-  'Tudo ou nada: o pesquisador só recebe se a meta for batida até o fim do prazo; senão, todo o dinheiro volta para quem apoiou. ' +
-  'Flexível: o pesquisador recebe o que for arrecadado, mesmo sem bater a meta. Cartão de crédito só no flexível. ' +
-  'Dá para trocar até a aprovação.';
 
 type Etapa = 'dados' | 'orcamento' | 'cronograma' | 'revisao';
 
@@ -389,7 +384,7 @@ export function ModalCriarCampanha({
             <Campo
               rotulo={
                 <>
-                  Modelo de financiamento <Tooltip texto={EXPLICACAO_MODELO} />
+                  Modelo de financiamento <Tooltip texto={EXPLICACAO_MODELO_CAMPANHA} />
                 </>
               }
               className="sm:col-span-2"
@@ -430,7 +425,7 @@ export function ModalCriarCampanha({
                   type="date"
                   value={form.dataInicio}
                   min={hoje}
-                  // Sem data de fim ainda, sugere a duração padrão (RF-072); a pessoa muda o fim se quiser.
+                  // Sem data de fim ainda, sugere a duração padrão (RF-073); a pessoa muda o fim se quiser.
                   onChange={(evento) => {
                     const dataInicio = evento.target.value;
                     const dataFim =

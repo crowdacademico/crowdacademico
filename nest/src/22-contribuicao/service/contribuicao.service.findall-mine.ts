@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { ContribuicaoResponseMine } from '../dto/response/contribuicao.response-mine';
 
-// GET /contribuicao/minhas: o histórico de contribuições da própria conta (RF-009, RF-088), com a campanha, o meio, a
-// situação e a recompensa escolhida (RF-104). pol_contribuicao_select (04) só devolve as linhas da sessão; o WHERE
+// GET /contribuicao/minhas: o histórico de contribuições da própria conta (RF-009, RF-089), com a campanha, o meio, a
+// situação e a recompensa escolhida (RF-105). pol_contribuicao_select (04) só devolve as linhas da sessão; o WHERE
 // repete isso para a consulta usar o índice. Mais nova primeiro.
 @Injectable()
 export class ContribuicaoServiceFindAllMine {

@@ -10,7 +10,6 @@ import { formatarReaisSemSimbolo } from '../../services/constant/util/formatacao
 import { DashboardIdentidadeVisual } from './dashboard-identidade-visual';
 import { DashboardRegrasNegocio } from './dashboard-regras-negocio';
 import { DashboardSaude } from './dashboard-saude';
-import { ListarNotificacoes } from '../27-notificacao/listar-notificacoes';
 import { lerAcessadosRecentemente } from '../../services/router/acessados-recentemente';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { CaixaAviso } from '../../components/crud/caixa-aviso';
@@ -25,14 +24,13 @@ export const TEXTO_TOOLTIP_SESSOES_ATIVAS =
   'Pessoas com login ou renovação recente (a janela de tempo fica em Parâmetros do Sistema). Quem está em vários aparelhos conta uma vez só: uma aproximação de quem está usando o sistema agora.';
 
 // Abas: estrutura em abas em vez de empilhar seção atrás de seção (para o Dashboard não virar uma "tela onde
-// tudo cabe"). "Visão Geral" tem os cards + o resumo dos e-mails; as outras (Regras do Negócio, Notificações,
-// Identidade Visual, Saúde) são visões do painel global. Notificações mora em views/27-notificacao (o dono do dado).
-type AbaChave = 'visao-geral' | 'regras' | 'notificacoes' | 'identidade' | 'saude';
+// tudo cabe"). "Visão Geral" tem os cards + o resumo dos e-mails (a lista inteira é a tela Notificações); as outras (Regras
+// do Negócio, Identidade Visual, Saúde) são visões do painel global.
+type AbaChave = 'visao-geral' | 'regras' | 'identidade' | 'saude';
 
 const ABAS: { chave: AbaChave; rotulo: string; icone: string }[] = [
   { chave: 'visao-geral', rotulo: 'Visão Geral', icone: 'fa-gauge' },
   { chave: 'regras', rotulo: 'Regras do Negócio', icone: 'fa-sliders' },
-  { chave: 'notificacoes', rotulo: 'Notificações', icone: 'fa-envelope' },
   { chave: 'identidade', rotulo: 'Identidade Visual', icone: 'fa-image' },
   { chave: 'saude', rotulo: 'Saúde', icone: 'fa-heart-pulse' },
 ];
@@ -199,8 +197,8 @@ export function Dashboard({ auth }: DashboardProps) {
                 <CardMetrica rotulo="Arrecadado (total)" valor={resumo.valorTotalArrecadado} moeda />
               </div>
 
-              {/* Campanhas por status (RF-091): o requisito pede essa quebra, não só o total. "Fila com
-                  score baixo" é a 5ª parte do RF-091: campanha aguardando aprovação cujo pesquisador está
+              {/* Campanhas por status (RF-092): o requisito pede essa quebra, não só o total. "Fila com
+                  score baixo" é a 5ª parte do RF-092: campanha aguardando aprovação cujo pesquisador está
                   abaixo do score mínimo, só um sinal para revisar com mais cuidado. */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <CardMetrica rotulo="Campanhas ativas" valor={resumo.campanhasAtivas} para={campanhasCom('ativo')} />
@@ -238,9 +236,9 @@ export function Dashboard({ auth }: DashboardProps) {
             </div>
           )}
 
-          {/* (c) E-mails do sistema: o que espera e o que falhou (pede ação). A lista inteira fica na aba Notificações. */}
+          {/* (c) E-mails do sistema: o que espera e o que falhou (pede ação). A lista inteira fica em Comunicações > Notificações. */}
           <div className="cartao-painel p-5">
-            <h2 className="subtitulo mb-2">Notificações</h2>
+            <h2 className="subtitulo mb-2">E-mails</h2>
             {resumo === null ? (
               <p className="paragrafo texto-fraco">-</p>
             ) : (
@@ -251,9 +249,9 @@ export function Dashboard({ auth }: DashboardProps) {
                 <span className="paragrafo texto-fraco">
                   <strong className={resumo.notificacoesComFalha > 0 ? 'texto-aviso' : 'texto-forte'}>{resumo.notificacoesComFalha}</strong> com falha
                 </span>
-                <button type="button" className="btn btn-secondary" onClick={() => setAbaAtiva('notificacoes')}>
-                  Ver os e-mails
-                </button>
+                <Link to="/admin/notificacoes" className="btn btn-secondary">
+                  Ver as notificações
+                </Link>
               </div>
             )}
           </div>
@@ -261,11 +259,6 @@ export function Dashboard({ auth }: DashboardProps) {
       )}
 
       {abaAtiva === 'regras' && <DashboardRegrasNegocio auth={auth} />}
-      {abaAtiva === 'notificacoes' && (
-        <div className="admin-content-painel">
-          <ListarNotificacoes authFetch={auth.authFetch} />
-        </div>
-      )}
       {abaAtiva === 'identidade' && <DashboardIdentidadeVisual />}
       {abaAtiva === 'saude' && <DashboardSaude bancoConectado={bancoConectado} resumo={resumo} />}
     </div>

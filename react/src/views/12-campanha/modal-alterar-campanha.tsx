@@ -1,6 +1,13 @@
 import { useId, useState } from 'react';
 import { BadgeStatusCampanha } from '../../components/crud/badge-status-campanha';
-import { ROTULO_MODELO_CAMPANHA, STATUS_ACEITA_ATUALIZACAO, STATUS_PUBLICADA } from '../../services/12-campanha/constants/status-campanha.constants';
+import {
+  EXPLICACAO_MODELO_CAMPANHA,
+  ROTULO_MODELO_CAMPANHA,
+  STATUS_ACEITA_ATUALIZACAO,
+  STATUS_MODELO_EDITAVEL,
+  STATUS_PUBLICADA,
+} from '../../services/12-campanha/constants/status-campanha.constants';
+import { Tooltip } from '../../components/layout/tooltip';
 import type { ReactNode } from 'react';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
@@ -30,6 +37,7 @@ import type {
   CampanhaRequestUpdate,
   CampanhaResponse,
   HistoricoRejeicaoResponse,
+  ModeloCampanha,
 } from '../../services/12-campanha/type/campanha.type';
 import type { OrcamentoCampanhaResponse } from '../../services/13-orcamento-campanha/type/orcamento-campanha.type';
 import type { MarcoCronogramaResponse } from '../../services/14-marco-cronograma/type/marco-cronograma.type';
@@ -60,6 +68,7 @@ interface ModalAlterarCampanhaProps {
 interface FormCampanha {
   titulo: string;
   idAreaConhecimento: string;
+  modelo: ModeloCampanha;
   metaFinanceira: string;
   descricao: string;
   dataInicio: string;
@@ -86,6 +95,7 @@ const STATUS_EDITAVEIS = new Set(['rascunho', 'aguardando_aprovacao', 'rejeitado
 const paraForm = (campanha: CampanhaResponse): FormCampanha => ({
   titulo: campanha.titulo,
   idAreaConhecimento: String(campanha.idAreaConhecimento),
+  modelo: campanha.modelo,
   metaFinanceira: String(campanha.metaFinanceira),
   descricao: campanha.descricao ?? '',
   dataInicio: campanha.dataInicio ? dataLocal(campanha.dataInicio) : '',
@@ -162,6 +172,7 @@ export function ModalAlterarCampanha({
   const descreveBloqueio = (campo: string) => (camposBloqueados.has(campo) ? idAvisoBloqueio : undefined);
   const podeEditarItens = !edicaoTravada && campanha !== null && STATUS_EDITAVEIS.has(campanha.status);
   const podeEnviar = !edicaoTravada && (campanha?.status === 'rascunho' || campanha?.status === 'rejeitado');
+  const modeloEditavel = campanha !== null && STATUS_MODELO_EDITAVEL.has(campanha.status) && !travado('modelo');
   const duracao = form ? duracaoEmDias(form.dataInicio, form.dataFim) : null;
   // Orçamento e cronograma completos (os critérios do "Pronta para aprovar?" do Revisar). Só muda a aparência do Enviar
   // (DS-113): incompleta, ele fica apagado mas clicável, e o banco diz o que falta. O prazo vencido não entra aqui: o
@@ -180,6 +191,7 @@ export function ModalAlterarCampanha({
     titulo: dados.titulo.trim(),
     idAreaConhecimento: Number(dados.idAreaConhecimento),
     metaFinanceira: Number(dados.metaFinanceira),
+    ...(modeloEditavel ? { modelo: dados.modelo } : {}),
     ...(dados.descricao.trim() ? { descricao: dados.descricao.trim() } : {}),
     ...(dados.dataInicio ? { dataInicio: inicioDoDia(dados.dataInicio) } : {}),
     ...(dados.dataFim ? { dataFim: fimDoDia(dados.dataFim) } : {}),
@@ -387,6 +399,32 @@ export function ModalAlterarCampanha({
                     </Campo>
                   )}
                   {campoTexto('dataFim', 'Fim (previsto)', '', 'date')}
+                  {/* O modelo só vira campo antes do envio e depois de uma rejeição; nos outros casos fica só o selo do topo. */}
+                  {modeloEditavel && (
+                    <Campo
+                      rotulo={
+                        <>
+                          Modelo de financiamento <Tooltip texto={EXPLICACAO_MODELO_CAMPANHA} />
+                        </>
+                      }
+                      className="sm:col-span-2"
+                    >
+                      {({ atributos }) => (
+                        <select
+                          {...atributos}
+                          value={form.modelo}
+                          onChange={(evento) => setForm({ ...form, modelo: evento.target.value as ModeloCampanha })}
+                          className="input-padrao"
+                        >
+                          {(Object.keys(ROTULO_MODELO_CAMPANHA) as ModeloCampanha[]).map((modelo) => (
+                            <option key={modelo} value={modelo}>
+                              {ROTULO_MODELO_CAMPANHA[modelo]}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </Campo>
+                  )}
                   {travado('descricao') ? (
                     <CampoFicha rotulo="Descrição" valor={form.descricao} largura="cheia" />
                   ) : (

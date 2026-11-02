@@ -76,7 +76,7 @@ export function ListarTermosUso({ auth }: PropsPagina) {
           { chave: 'tipo', rotulo: 'Tipo', ordem: TIPOS_TERMO, rotulos: ROTULO_TIPO_TERMO },
         ]}
         acoes={acoesCompletas}
-        // Versão aceita por alguém não se exclui (RF-094), e a vigente nunca (sempre existe uma por tipo): a lixeira fica
+        // Versão aceita por alguém não se exclui (RF-095), e a vigente nunca (sempre existe uma por tipo): a lixeira fica
         // apagada, com o motivo na dica, em vez de abrir o modal e o banco recusar no fim. O lápis fica sempre: o modal
         // de Alterar também é onde se torna vigente uma versão antiga, e lá o texto de versão aceita vem só para leitura.
         acaoIndisponivel={(linha, acao) => {

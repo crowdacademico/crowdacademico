@@ -67,6 +67,7 @@ const GRUPO_CONFIGURACAO: Record<string, string> = {
   // Campanha
   prazo_minimo_campanha_dias: 'Campanha',
   prazo_sugerido_campanha_dias: 'Campanha',
+  lembrete_fim_campanha_horas: 'Campanha',
   prazo_maximo_campanha_dias: 'Campanha',
   limite_campanhas_simultaneas: 'Campanha',
   limite_endossos_campanha: 'Campanha',

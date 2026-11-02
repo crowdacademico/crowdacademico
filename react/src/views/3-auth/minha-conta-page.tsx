@@ -11,6 +11,7 @@ import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { confirmarSaida } from '../../components/crud/use-alteracao-nao-salva';
+import { pedirConfirmacao } from '../../components/crud/confirmacao';
 import { Campo } from '../../components/input/campo';
 import { BotaoMostrarSenha } from '../../components/input/botao-mostrar-senha';
 import { MedidorSenha } from '../../components/input/medidor-senha';
@@ -320,8 +321,8 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
   };
 
   // "Cancelar" volta para a tela de antes de Minha Conta (pergunta antes, se houver alteração não salva).
-  const aoCancelar = () => {
-    if (!confirmarSaida(sujo)) {
+  const aoCancelar = async () => {
+    if (!(await confirmarSaida(sujo))) {
       return;
     }
     aoVoltar();
@@ -513,7 +514,13 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
   };
 
   const aoEncerrarTodas = async () => {
-    if (!window.confirm('Encerrar todas as outras sessões ativas?')) {
+    const confirmou = await pedirConfirmacao({
+      titulo: 'Encerrar as outras sessões?',
+      texto: 'Os outros aparelhos conectados nesta conta saem na hora; este continua.',
+      rotuloConfirmar: 'Encerrar sessões',
+      perigo: true,
+    });
+    if (!confirmou) {
       return;
     }
     await executarEncerrandoTodas(async () => {

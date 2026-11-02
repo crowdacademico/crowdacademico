@@ -6,7 +6,7 @@ import { DenunciaRequestUpdate } from '../dto/request/denuncia.request-update';
 import { DenunciaResponse } from '../dto/response/denuncia.response';
 import { consultaDenunciaComDetalhes } from './denuncia.util.with-details';
 
-// Julgar (RF-114): muda o status e grava a justificativa. Ao decidir (procedente ou improcedente), o porquê da decisão;
+// Julgar (RF-115): muda o status e grava a justificativa. Ao decidir (procedente ou improcedente), o porquê da decisão;
 // ao reabrir uma denúncia já julgada (voltar a pendente), o porquê da reabertura, que o log de auditoria mostra junto de
 // quem reabriu. Pendente que continua pendente fica sem justificativa. Quem denunciou não julga (92006, 05).
 @Injectable()

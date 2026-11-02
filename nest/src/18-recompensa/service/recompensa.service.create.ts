@@ -5,7 +5,7 @@ import { RecompensaConverter } from '../dto/converter/recompensa.converter';
 import { RecompensaRequestCreate } from '../dto/request/recompensa.request-create';
 import { RecompensaResponse } from '../dto/response/recompensa.response';
 
-// RF-102 e RF-103, na versão simbólica: reconhecimento, acesso antecipado ou algo digital, com um valor mínimo. Sem
+// RF-103 e RF-104, na versão simbólica: reconhecimento, acesso antecipado ou algo digital, com um valor mínimo. Sem
 // estoque (quantidade_disponivel fica vazia = ilimitada) e sem entrega. Só o dono da campanha cria
 // (pol_recompensa_insert, 04: a RLS recusa os outros); o limite de texto da descrição é do banco
 // (trg_recompensa_valida_limite_texto). O link especial é opcional, na mesma transação.

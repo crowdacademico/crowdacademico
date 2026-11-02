@@ -57,6 +57,13 @@ export const GRUPOS_MENU_ADMIN: GrupoMenuAdmin[] = [
     itens: itensDoGrupo('CADASTROS'),
   },
   {
+    // Os avisos ao usuário (e-mail e sino): o que saiu e para quem (Notificações). O texto de cada aviso (Mensagens) é
+    // configuração e mora em Configurações. Logo abaixo de GESTÃO DO USUÁRIO: é a conversa do sistema com a pessoa,
+    // quase parte da gestão dela.
+    titulo: 'COMUNICAÇÕES',
+    itens: itensDoGrupo('COMUNICACOES'),
+  },
+  {
     // Configurações é um grupo próprio: um item chamado "Configurações" dentro de um grupo TAMBÉM chamado
     // Configurações ficaria esquisito. O item em si é "Parâmetros do Sistema" (ver comentário completo em
     // rotas.constants.ts, onde o grupoMenu 'CONFIGURACOES' é definido); o grupo já nasce com o nome certo para

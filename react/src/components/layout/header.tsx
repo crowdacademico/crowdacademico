@@ -11,9 +11,7 @@ import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 // estrutura), único em toda tela (App.tsx). Adaptações, porque este React só tem o painel admin (home) e a tela
 // de login, nenhuma outra tela pública:
 // 1. A marca navega de verdade para "/" (home).
-// 2. "Submeter Pesquisa" abre o Criar Campanha em Minhas Campanhas (`?criar=1`), só em desenvolvimento. Quem não é pesquisador cai na
-// mesma página, que explica por que não pode criar; quem não está logado passa pelo login antes.
-// 3. "Meu Painel"/"Entrar" (canto direito): logado mostra nome real + Sair; deslogado é um link de verdade para
+// 2. "Meu Painel"/"Entrar" (canto direito): logado mostra nome real + Sair; deslogado é um link de verdade para
 // "/login" (views/3-auth/login-page.tsx).
 
 interface HeaderProps {
@@ -35,22 +33,11 @@ export function Header({ auth }: HeaderProps) {
           </span>
         </Link>
 
-        {/* "Submeter Pesquisa" é o item mais à esquerda deste grupo, com um respiro grande (mr-10, além do
-            gap-3 normal) antes dos controles de fonte/tema. MenuUsuario (o ícone de login/avatar) precisa
+        {/* MenuUsuario (o ícone de login/avatar) precisa
             ficar no CANTO de verdade: por isso DevLoginRapido fica fora deste `flex` (ver logo abaixo):
             dentro dele, mesmo por último, alargaria o grupo inteiro e o `justify-between` do cabeçalho
             empurraria tudo para a esquerda junto, deixando o login sobrando no meio da tela, longe do canto. */}
         <div className="flex items-center gap-3">
-          {/* Por enquanto abre Minhas Campanhas da área de testes, que só existe em desenvolvimento. */}
-          {import.meta.env.DEV && (
-            <Link
-              to="/admin/campo-testes/minhas-campanhas?criar=1"
-              className="btn btn-primary btn-destaque hidden lg:inline-flex mr-10"
-            >
-              Submeter Pesquisa
-            </Link>
-          )}
-
           <ControleFonte />
           <ControleTema />
 
@@ -63,8 +50,9 @@ export function Header({ auth }: HeaderProps) {
 
       {/* DevLoginRapido posicionado ABSOLUTO, fora do grupo acima de propósito: assim ele pode ir "mais para
           a direita" (inclusive na faixa de padding do cabeçalho) sem influenciar a posição de mais nada: o
-          `justify-between` de cima só enxerga o grupo normal (Submeter Pesquisa...MenuUsuario), que continua
-          exatamente no canto dele.
+          `justify-between` de cima só enxerga o grupo normal (fonte, tema, sino e MenuUsuario), que continua
+          exatamente no canto dele. Abaixo de `--breakpoint-dev-login` (tailwind-theme.css) não sobra espaço à direita e
+          ele cobriria o ícone de login: desce para logo abaixo do cabeçalho.
 
           import.meta.env.DEV: mesmo tratamento da área de testes: some sozinho em qualquer `npm run build`,
           continua disponível em `npm run dev`. Sem isso, o botão iria para o build de produção também, e
@@ -72,7 +60,7 @@ export function Header({ auth }: HeaderProps) {
           como admin com uma senha de seed conhecida, sem digitar nada. Ver `DOCUMENTACAO_FRONTEND.md`, seção
           9, nota sobre `DevLoginRapido`. */}
       {import.meta.env.DEV && !auth.autenticado && !auth.carregando && (
-        <div className="absolute top-1/2 -translate-y-1/2 right-1 sm:right-2">
+        <div className="absolute top-full mt-2 right-1 sm:right-2 dev-login:top-1/2 dev-login:mt-0 dev-login:-translate-y-1/2">
           <DevLoginRapido auth={auth} />
         </div>
       )}

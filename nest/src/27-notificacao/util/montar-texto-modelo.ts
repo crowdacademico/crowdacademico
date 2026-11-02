@@ -11,6 +11,7 @@ const CAMPOS_DATA = new Set([
   'prazo_reenvio_ate',
   'data_prevista',
   'suspenso_ate',
+  'data_fim',
 ]);
 
 export const PADRAO_MARCA = /\{\{([#^/]?)([a-z0-9_]+)\}\}/g;

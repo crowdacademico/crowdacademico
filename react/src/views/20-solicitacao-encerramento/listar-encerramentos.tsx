@@ -24,7 +24,7 @@ interface PedidoLinha extends Omit<SolicitacaoEncerramentoResponse, 'status'> {
   esperandoDesde: string | null;
 }
 
-// Encerramentos (moderação): os pedidos de encerramento antecipado (RF-068), com pesquisador, campanha, modelo,
+// Encerramentos (moderação): os pedidos de encerramento antecipado (RF-069), com pesquisador, campanha, modelo,
 // arrecadado, contribuições confirmadas e situação; os pendentes pedem decisão. Alterar abre o pedido pendente para
 // aprovar (encerra a campanha) ou rejeitar (com justificativa); Consultar abre qualquer pedido só para ler.
 export function ListarEncerramentos({ auth }: PropsPagina) {

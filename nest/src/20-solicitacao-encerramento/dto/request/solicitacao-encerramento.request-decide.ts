@@ -7,7 +7,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 
-// Aprovar ou rejeitar um pedido (RF-068): rejeitar exige justificativa; aprovar aceita uma, opcional.
+// Aprovar ou rejeitar um pedido (RF-069): rejeitar exige justificativa; aprovar aceita uma, opcional.
 export class SolicitacaoEncerramentoRequestDecide {
   @IsBoolean({ message: 'Escolha aprovar ou rejeitar.' })
   aprovar: boolean;

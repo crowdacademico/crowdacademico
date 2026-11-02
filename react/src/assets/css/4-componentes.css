@@ -169,7 +169,7 @@
   /* Pílula na mesma linha de um rótulo de campo: mesma letra do .rotulo-campo, para as duas palavras casarem. */
   .btn-pilula-rotulo {
     padding: 0.125rem 0.625rem;
-    font-size: var(--font-size-rotulo);
+    font-size: var(--font-size-xs);
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -203,7 +203,7 @@
   /* Variações do campo (depois do .input-padrao, para vencer o tamanho e a fonte dele): texto de código
      (monoespaçado, como chave e padrão de domínio) e campo pequeno. */
   .input-padrao--codigo {
-    font-family: var(--font-codigo);
+    font-family: var(--font-mono);
   }
 
   .input-padrao--pequeno {
@@ -712,12 +712,12 @@
     max-width: var(--largura-texto-curto);
   }
 
-  /* Selo <dev>: recurso que existe só para desenvolvimento e teste. Roxo e monoespaçada, uma combinação que
-     nada mais usa. */
+  /* Selo <dev>: recurso que existe só para desenvolvimento e teste. O roxo é o que nada mais usa; a letra é a
+     monoespaçada de sempre. */
   .badge-dev {
     background-color: var(--cor-dev-fundo-selo);
     color: var(--cor-dev-texto);
-    font-family: var(--font-mono-dev);
+    font-family: var(--font-mono);
   }
 
   /* Botão de desenvolvimento dentro de um formulário: o tamanho do .btn, roxo e tracejado. */
@@ -739,7 +739,7 @@
     padding: 0.5rem 0.9rem;
     background-color: var(--cor-dev-texto);
     color: var(--cor-texto-sobre-cor);
-    font-family: var(--font-mono-dev);
+    font-family: var(--font-mono);
     font-weight: 700;
     font-size: var(--font-size-xs);
     border: 2px dashed var(--cor-dev-fundo-selo);
@@ -876,6 +876,13 @@
   .dica__bolha--direita {
     left: auto;
     right: 0;
+    transform: none;
+  }
+
+  /* --esquerda: começa no gatilho e cresce para a direita, para o gatilho perto da borda esquerda (rótulo de ficha):
+     centralizada, a metade da esquerda passaria da borda do modal e seria cortada. */
+  .dica__bolha--esquerda {
+    left: 0;
     transform: none;
   }
 

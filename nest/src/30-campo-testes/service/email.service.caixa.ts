@@ -131,7 +131,7 @@ export class EmailServiceCaixa {
   }
 
   // Esvazia a caixa: grava o maior número de agora no parâmetro e limpa a memória do provedor de teste. Os e-mails
-  // continuam no banco (aba Notificações); só saem da T6.
+  // continuam no banco (tela Notificações); só saem da T6.
   async limpar(): Promise<void> {
     await this.autorizacao.exigirPermissao(PERMISSAO, MENSAGEM_SEM_PERMISSAO);
     await sql`

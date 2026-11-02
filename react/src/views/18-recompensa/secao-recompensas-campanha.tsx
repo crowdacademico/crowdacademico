@@ -37,7 +37,7 @@ interface FormRecompensa {
 
 const FORM_VAZIO: FormRecompensa = { titulo: '', tipo: ORDEM_TIPO_RECOMPENSA[0], valorMinimo: '', descricao: '', idTipoLink: '', url: '' };
 
-// Recompensas simbólicas da campanha (RF-102 a RF-104): reconhecimento, acesso antecipado ou um conteúdo digital, cada
+// Recompensas simbólicas da campanha (RF-103 a RF-105): reconhecimento, acesso antecipado ou um conteúdo digital, cada
 // uma a partir de um valor de contribuição. Sem estoque e sem entrega. O link especial só aparece para o dono, o admin e
 // quem ganhou a recompensa (o banco esconde dos outros). Escolher a recompensa é na hora de contribuir (área pública).
 export function SecaoRecompensasCampanha({ auth, idCampanha, podeGerenciar }: SecaoRecompensasCampanhaProps) {

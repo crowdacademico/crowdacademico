@@ -4,7 +4,7 @@ import { DatabaseService } from '../../commons/database/database.service';
 import { TermoUsoRequestUpdate } from '../dto/request/termo-uso.request-update';
 import { TermoUsoResponse } from '../dto/response/termo-uso.response';
 
-// Alterar SÓ é permitido enquanto NINGUÉM aceitou esta versão específica ainda (RF-094): editar depois do aceite
+// Alterar SÓ é permitido enquanto NINGUÉM aceitou esta versão específica ainda (RF-095): editar depois do aceite
 // destruiria o valor probatório de quem já aceitou um texto que deixaria de ser esse. Quem recusa é o banco
 // (fn_protege_termo_aceito, 91033 -> 409), olhando as duas tabelas de aceite (usuario_termo e
 // aceite_termo_contribuicao). Só `conteudo` é editável: `versao`/`tipo` são imutáveis (TermoUsoRequestUpdate).

@@ -13,7 +13,7 @@ import { ComentarioResponse } from '../dto/response/comentario.response';
 // pol_comentario_select (04) já esconde comentário inativo/não-endossado
 // de quem não é dono/moderador. Além disso, o comentário bloqueado pelo dono
 // (inativo) some da lista dele; continua visível ao autor e à moderação.
-// O nome do autor vem por LEFT JOIN (RF-096), como em campanha.util.with-names.ts:
+// O nome do autor vem por LEFT JOIN (RF-097), como em campanha.util.with-names.ts:
 // conta excluída deixa o comentário sem nome, não o esconde.
 @Injectable()
 export class ComentarioServiceFindAll {

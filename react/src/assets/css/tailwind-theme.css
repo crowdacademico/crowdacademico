@@ -16,4 +16,7 @@
      `max-painel:` (admin-sidebar.tsx, admin-layout.tsx). O CSS do grid (6-admin-shell.css) repete o número uma
      vez no @media, porque @media não aceita variável: ao mudar aqui, mude lá também. */
   --breakpoint-painel: 1377px;
+  /* Largura a partir da qual o botão dev de login rápido cabe na sobra à direita do cabeçalho sem cobrir o ícone de
+     login; abaixo dela ele desce para logo abaixo do cabeçalho (`dev-login:` em header.tsx). */
+  --breakpoint-dev-login: 1720px;
 }

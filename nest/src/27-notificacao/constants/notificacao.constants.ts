@@ -19,6 +19,10 @@ export const TIPO_NOTIFICACAO = {
   pesquisadorReativado: 'pesquisador_reativado',
   contestacaoAceita: 'contestacao_aceita',
   contestacaoRecusada: 'contestacao_recusada',
+  denunciaProcedente: 'denuncia_procedente',
+  moderacaoEncerrouCampanha: 'moderacao_encerrou_campanha',
+  campanhaEncerradaAntes: 'campanha_encerrada_antes',
+  lembreteFimCampanha: 'lembrete_fim_campanha',
 } as const;
 
 export type TipoNotificacao =
@@ -57,10 +61,20 @@ export const CAMPOS_POR_TIPO: Record<TipoNotificacao, readonly string[]> = {
   ],
   encerramento_aprovado: ['nome', 'titulo', 'justificativa'],
   encerramento_rejeitado: ['nome', 'titulo', 'justificativa'],
-  pesquisador_suspenso: ['nome', 'motivo', 'suspenso_ate'],
+  pesquisador_suspenso: [
+    'nome',
+    'motivo',
+    'suspenso_ate',
+    'campanhas_encerradas',
+    'campanhas_rejeitadas',
+  ],
   pesquisador_reativado: ['nome'],
   contestacao_aceita: ['nome', 'justificativa'],
   contestacao_recusada: ['nome', 'justificativa'],
+  denuncia_procedente: ['nome', 'titulo', 'motivo', 'justificativa'],
+  moderacao_encerrou_campanha: ['nome', 'titulo'],
+  campanha_encerrada_antes: ['nome', 'titulo', 'vai_para_pesquisador'],
+  lembrete_fim_campanha: ['nome', 'titulo', 'data_fim'],
 };
 
 export const camposDoTipo = (tipo: string): readonly string[] =>

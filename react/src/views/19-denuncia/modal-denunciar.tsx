@@ -27,8 +27,8 @@ interface ModalDenunciarProps {
   aoDenunciado?: () => void;
 }
 
-// Denunciar uma campanha (RF-109) ou o perfil de um pesquisador (RF-030): motivo obrigatório, só os ativos do tipo
-// certo (RF-110), e relato opcional. O banco recusa denúncia repetida, de campanha que não está ativa, contra si
+// Denunciar uma campanha (RF-110) ou o perfil de um pesquisador (RF-030): motivo obrigatório, só os ativos do tipo
+// certo (RF-111), e relato opcional. O banco recusa denúncia repetida, de campanha que não está ativa, contra si
 // mesmo e acima do limite por janela de tempo, e a mensagem dele aparece aqui. Pronto para a página pública.
 export function ModalDenunciar({ authFetch, alvo, nomeAlvo, relatoInicial = '', aoFechar, aoDenunciado }: ModalDenunciarProps) {
   const tipo = alvo.idCampanhaAlvo !== undefined ? 'campanha' : 'perfil';

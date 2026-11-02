@@ -20,7 +20,7 @@ interface ContribuicaoLinha extends MinhaContribuicao {
   recompensa: string;
 }
 
-// Aba Contribuições da Minha Conta (RF-009, RF-088, RF-104): o histórico de contribuições da própria conta e as
+// Aba Contribuições da Minha Conta (RF-009, RF-089, RF-105): o histórico de contribuições da própria conta e as
 // recompensas que ela ganhou, com o link especial de cada uma. Mora em 22-contribuicao (o dono do dado). Contribuir é
 // na página pública da campanha, que ainda não existe; hoje uma contribuição nasce pela T5 do Campo de Testes.
 export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {

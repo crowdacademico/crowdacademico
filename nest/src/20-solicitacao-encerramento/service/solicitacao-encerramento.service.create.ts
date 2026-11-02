@@ -5,7 +5,7 @@ import { SolicitacaoEncerramentoRequestCreate } from '../dto/request/solicitacao
 import { SolicitacaoEncerramentoResponse } from '../dto/response/solicitacao-encerramento.response';
 import { consultaSolicitacaoComDetalhes } from './solicitacao-encerramento.util.with-details';
 
-// Pedido ao administrador (RF-067): nasce pendente. Só o dono (pol_solicitacao_insert), só campanha ativa e com
+// Pedido ao administrador (RF-068): nasce pendente. Só o dono (pol_solicitacao_insert), só campanha ativa e com
 // justificativa (trg_solicitacao_valida_criacao), um pendente por vez (uq_solicitacao_encerramento_pendente).
 @Injectable()
 export class SolicitacaoEncerramentoServiceCreate {

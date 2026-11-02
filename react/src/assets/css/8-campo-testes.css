@@ -7,7 +7,7 @@
     gap: 0.5rem;
     padding: 0.3rem 0.5rem;
     font-size: var(--font-size-xs);
-    font-family: var(--font-mono-dev);
+    font-family: var(--font-mono);
     cursor: pointer;
     border-radius: var(--radius-sm);
   }

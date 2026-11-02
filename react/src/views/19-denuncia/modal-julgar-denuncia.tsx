@@ -35,9 +35,9 @@ interface ModalJulgarDenunciaProps {
   somenteLeitura?: boolean;
 }
 
-// Julgar uma denúncia (RF-114): ler o que foi denunciado e decidir. Pendente não pede justificativa;
+// Julgar uma denúncia (RF-115): ler o que foi denunciado e decidir. Pendente não pede justificativa;
 // resolvida (procedente) e improcedente pedem o porquê. Numa denúncia procedente contra campanha ativa, a moderação
-// pode encerrar a campanha na mesma ação (RF-117): a campanha sai da página pública. Quem denunciou não julga a
+// pode encerrar a campanha na mesma ação (RF-118): a campanha sai da página pública. Quem denunciou não julga a
 // própria denúncia; o banco recusa e a mensagem aparece aqui. Com uma contestação do pesquisador esperando análise
 // (RF-034), a decisão é sobre ela: aceitar torna a denúncia improcedente (a nota se recalcula) e recusar a mantém,
 // sempre com justificativa.
@@ -51,6 +51,9 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
   // Decisão da contestação esperando o OK na janelinha de confirmação: true = aceitar, false = recusar.
   const [confirmandoContestacao, setConfirmandoContestacao] = useState<boolean | null>(null);
   const contestacaoPendente = denuncia.contestacaoStatus === 'pendente';
+  // Decidida a contestação, a situação não muda mais (RF-115, o banco recusa com 91056): a denúncia só se lê.
+  const contestacaoDecidida = denuncia.contestacaoStatus === 'aceita' || denuncia.contestacaoStatus === 'recusada';
+  const leitura = somenteLeitura || contestacaoDecidida;
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { mostrar } = useToast();
   const { ocupado, executar } = useEnvio(reportarErro, limparErro);
@@ -138,7 +141,7 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
         aoFechar={aoFechar}
         erro={erro}
         rodape={
-          somenteLeitura ? (
+          leitura ? (
             <RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Fechar" />
           ) : (
             <RodapeAcoes
@@ -158,6 +161,11 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
         }
       >
         <div className="space-y-6">
+          {contestacaoDecidida && !somenteLeitura && (
+            <CaixaAviso icone="fa-lock" titulo="Contestação já decidida">
+              A situação desta denúncia não muda mais: a decisão da contestação é a última palavra.
+            </CaixaAviso>
+          )}
           <SecaoFicha titulo="Denunciado" destaque>
             <CampoFicha rotulo="Motivo" valor={denuncia.motivo} largura="cheia" />
             {denuncia.idCampanhaAlvo !== null && (
@@ -183,7 +191,7 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
           </SecaoFicha>
 
           {/* A decisão já tomada vem antes da contestação, que é contra ela; aparece também ao decidir a contestação. */}
-          {(somenteLeitura || contestacaoPendente) && (
+          {(leitura || contestacaoPendente) && (
             <SecaoFicha titulo="Decisão" destaque>
               {STATUS_DENUNCIA_DECIDIDA.has(denuncia.status) && (
                 <>
@@ -225,7 +233,7 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
             </SecaoFicha>
           )}
 
-          {somenteLeitura ? null : contestacaoPendente ? (
+          {leitura ? null : contestacaoPendente ? (
             <SecaoFicha titulo="Decidir a contestação" colunas={1} destaque>
               <CaixaAviso titulo="O que cada decisão faz">
                 Aceitar torna esta denúncia improcedente, e a pontuação do pesquisador se recalcula sozinha. Uma campanha

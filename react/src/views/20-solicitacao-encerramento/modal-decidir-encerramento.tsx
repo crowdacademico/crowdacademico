@@ -27,7 +27,7 @@ interface ModalDecidirEncerramentoProps {
   somenteLeitura?: boolean;
 }
 
-// Decidir um pedido de encerramento antecipado (RF-068): o que o pesquisador pediu, com o modelo, o arrecadado e as
+// Decidir um pedido de encerramento antecipado (RF-069): o que o pesquisador pediu, com o modelo, o arrecadado e as
 // contribuições confirmadas. Aprovar encerra a campanha na hora (pede confirmação com ciência); rejeitar exige justificativa e a
 // campanha segue ativa. Pedido já decidido ou cancelado só se consulta.
 export function ModalDecidirEncerramento({ authFetch, pedido, aoFechar, aoDecidido, somenteLeitura = false }: ModalDecidirEncerramentoProps) {

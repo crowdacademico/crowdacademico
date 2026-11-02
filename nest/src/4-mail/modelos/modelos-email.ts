@@ -55,6 +55,8 @@ const BOTOES: Partial<
   [TIPO_NOTIFICACAO.encerramentoAprovado]: entrar,
   [TIPO_NOTIFICACAO.encerramentoRejeitado]: entrar,
   [TIPO_NOTIFICACAO.pesquisadorReativado]: entrar,
+  [TIPO_NOTIFICACAO.denunciaProcedente]: entrar,
+  [TIPO_NOTIFICACAO.moderacaoEncerrouCampanha]: entrar,
 };
 
 // null = sem o link que o tipo exige: o worker marca o e-mail como falha não recuperável.
