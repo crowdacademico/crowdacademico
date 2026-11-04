@@ -599,6 +599,7 @@ export interface AtualizacaoCampanhaTable {
   fase: FaseAtualizacao;
   tipo: TipoAtualizacao;
   ativo: Generated<boolean>;
+  ocultada_moderacao: Generated<boolean>;
 }
 
 export interface OrcamentoCampanhaTable {

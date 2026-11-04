@@ -7,4 +7,5 @@ export const ATUALIZACAO_CAMPANHA_COLUNAS_SELECT = [
   'fase',
   'tipo',
   'ativo',
+  'ocultada_moderacao',
 ] as const;

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { AcaoLinha } from '../acao-linha';
 
 // Coluna Ações: a GenericTable monta sozinha, sempre por último, a partir da prop `acoes` (a tela nunca a
@@ -77,6 +78,16 @@ export interface ColunaAcao {
 const CLASSE_CENTRALIZADA = 'crud-tabela__celula--centralizada';
 const CLASSE_COLUNA_ACOES = CLASSE_CENTRALIZADA + ' crud-tabela__col--acoes';
 const CLASSE_COLUNA_PROPRIA = CLASSE_CENTRALIZADA + ' crud-tabela__col--acao-propria';
+
+// A mesma coluna Ações para as tabelas pequenas montadas à mão (as de dentro dos modais), quando as ações não são do
+// contrato acima (Endossar, o Salvar da edição na linha). Ações do contrato usam CelulaAcoes.
+export function CelulaAcoesLivre({ children }: { children: ReactNode }) {
+  return (
+    <td className={CLASSE_COLUNA_ACOES}>
+      <div className="crud-tabela__acoes">{children}</div>
+    </td>
+  );
+}
 
 export function CabecalhoAcoes({ coluna }: { coluna?: ColunaAcao }) {
   return <th className={coluna ? CLASSE_CENTRALIZADA : CLASSE_COLUNA_ACOES}>{coluna?.rotulo ?? 'Ações'}</th>;

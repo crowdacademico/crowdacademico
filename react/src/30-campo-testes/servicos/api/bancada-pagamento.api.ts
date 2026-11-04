@@ -73,6 +73,7 @@ export const ehChamadaDeRepasses = ({ caminho }: { caminho: string }) =>
 
 export const bancadaPagamentoApi = {
   estado: (chamar: Chamar) => chamar<EstadoBancada>(BASE),
+  // As recompensas que o valor alcança o banco liga sozinho (fn_concede_recompensas, 05).
   contribuir: (chamar: Chamar, idCampanha: number, valor: number, meioPagamento: 'pix' | 'cartao_credito' | 'boleto') =>
     chamar<ContribuicaoCriada>('/contribuicao', {
       method: 'POST',

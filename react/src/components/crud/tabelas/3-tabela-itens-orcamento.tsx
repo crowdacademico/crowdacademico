@@ -1,6 +1,7 @@
 import { TabelaEditavel } from './tabela-editavel';
 import type { ColunaEditavel } from './tabela-editavel';
 import { BarraProgresso } from '../barra-progresso';
+import { InputDinheiro } from '../../input/input-dinheiro';
 import { formatarMoeda } from '../../../services/constant/util/formatacao.util';
 import type { OrcamentoCampanhaResponse } from '../../../services/13-orcamento-campanha/type/orcamento-campanha.type';
 
@@ -34,7 +35,7 @@ const COLUNAS: ColunaEditavel<OrcamentoCampanhaResponse, FormItem>[] = [
     rotulo: 'Valor',
     exibir: (item) => formatarMoeda(item.valor),
     campo: (form, mudar) => (
-      <input type="number" aria-label="Valor do item" placeholder="Valor" value={form.valor} onChange={(evento) => mudar({ valor: evento.target.value })} className="input-padrao" />
+      <InputDinheiro aria-label="Valor do item" placeholder="Valor" valor={form.valor} aoMudar={(valor) => mudar({ valor })} />
     ),
   },
 ];

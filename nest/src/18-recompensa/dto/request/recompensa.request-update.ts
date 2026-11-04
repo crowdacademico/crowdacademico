@@ -8,7 +8,9 @@ import {
   IsString,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
+import { RecompensaRequestLink } from './recompensa.request-create';
 import {
   TIPOS_RECOMPENSA,
   type TipoRecompensa,
@@ -39,4 +41,11 @@ export class RecompensaRequestUpdate {
   @IsOptional()
   @IsBoolean()
   ativo?: boolean;
+
+  // Troca o link especial: tira o que havia e grava este, na mesma transação (acesso antecipado e entrega digital
+  // nunca ficam sem link, fn_valida_link_recompensa, 05).
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RecompensaRequestLink)
+  link?: RecompensaRequestLink;
 }

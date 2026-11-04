@@ -18,3 +18,21 @@ export const ROTULO_TIPO_ATUALIZACAO: Record<TipoAtualizacao, string> = {
   pdf: 'PDF',
   linkexterno: 'Link externo',
 };
+
+// Situação em palavras: visível, ou excluída mantendo o registro, pela moderação ou pelo próprio dono ("por você" na
+// tela dele, "pelo pesquisador" nas outras).
+export function rotuloSituacaoAtualizacao(
+  atualizacao: { ativo: boolean; ocultadaModeracao: boolean },
+  doDono = false,
+): string {
+  if (atualizacao.ativo) return 'Visível';
+  if (atualizacao.ocultadaModeracao) return 'Excluída pela moderação';
+  return doDono ? 'Excluída por você' : 'Excluída pelo pesquisador';
+}
+
+// O formato sai dos anexos, sem perguntar (RF-053): PDF pesa mais que imagem, imagem mais que link.
+export function formatoPelosAnexos(tiposMime: string[], temLink: boolean): TipoAtualizacao {
+  if (tiposMime.includes('application/pdf')) return 'pdf';
+  if (tiposMime.some((tipo) => tipo.startsWith('image/'))) return 'imagem';
+  return temLink ? 'linkexterno' : 'texto';
+}

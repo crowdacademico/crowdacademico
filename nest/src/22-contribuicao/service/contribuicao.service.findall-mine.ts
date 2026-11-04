@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 import { ContribuicaoResponseMine } from '../dto/response/contribuicao.response-mine';
 
 // GET /contribuicao/minhas: o histórico de contribuições da própria conta (RF-009, RF-089), com a campanha, o meio, a
-// situação e a recompensa escolhida (RF-105). pol_contribuicao_select (04) só devolve as linhas da sessão; o WHERE
+// situação e as recompensas ganhas (RF-105, todas as que o valor alcançou, fn_concede_recompensas, 05). pol_contribuicao_select (04) só devolve as linhas da sessão; o WHERE
 // repete isso para a consulta usar o índice. Mais nova primeiro.
 @Injectable()
 export class ContribuicaoServiceFindAllMine {
@@ -14,12 +15,6 @@ export class ContribuicaoServiceFindAllMine {
       .getDb()
       .selectFrom('contribuicao as c')
       .leftJoin('campanha as ca', 'ca.id_campanha', 'c.id_campanha')
-      .leftJoin(
-        'contribuicao_recompensa as cr',
-        'cr.id_contribuicao',
-        'c.id_contribuicao',
-      )
-      .leftJoin('recompensa as r', 'r.id_recompensa', 'cr.id_recompensa')
       .select([
         'c.id_contribuicao',
         'c.id_campanha',
@@ -31,8 +26,14 @@ export class ContribuicaoServiceFindAllMine {
         'c.status',
         'c.anonima',
         'c.criado_em',
-        'r.titulo as titulo_recompensa',
       ])
+      .select(
+        sql<
+          string | null
+        >`(SELECT string_agg(r.titulo, ', ' ORDER BY r.valor_minimo)
+          FROM contribuicao_recompensa cr JOIN recompensa r ON r.id_recompensa = cr.id_recompensa
+          WHERE cr.id_contribuicao = c.id_contribuicao)`.as('recompensas'),
+      )
       .where('c.id_usuario', '=', idUsuario)
       .orderBy('c.criado_em', 'desc')
       .orderBy('c.id_contribuicao', 'desc')
@@ -49,7 +50,7 @@ export class ContribuicaoServiceFindAllMine {
       status: l.status,
       anonima: l.anonima,
       criadoEm: l.criado_em,
-      tituloRecompensa: l.titulo_recompensa,
+      recompensas: l.recompensas,
     }));
   }
 }

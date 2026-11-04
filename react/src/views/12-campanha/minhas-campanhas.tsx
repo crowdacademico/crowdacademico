@@ -87,7 +87,7 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
           icone: 'fa-flask',
           titulo: 'Você ainda não tem campanhas.',
           texto: podeCriar
-            ? 'Clique em "Criar campanha" para começar: dados, orçamento e cronograma, em 3 etapas.'
+            ? 'Clique em "Criar campanha" para começar: dados, orçamento, cronograma e, se quiser, recompensas.'
             : 'Campanhas são criadas por pesquisadores (veja o aviso no topo da página).',
         }}
         listar={listar}
@@ -99,11 +99,11 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
       />
 
       {criando && (
-        <ModalCriarCampanha auth={auth} aoMudar={recarregar} aoFechar={fecharCriando} />
+        <ModalCriarCampanha auth={auth} comRecompensas aoMudar={recarregar} aoFechar={fecharCriando} />
       )}
 
       {alterando?.statusOriginal === 'rascunho' && (
-        <ModalCriarCampanha auth={auth} idRascunho={alterando.idCampanha} aoMudar={recarregar} aoFechar={fecharAlterando} />
+        <ModalCriarCampanha auth={auth} idRascunho={alterando.idCampanha} comRecompensas aoMudar={recarregar} aoFechar={fecharAlterando} />
       )}
 
       {alterando && alterando.statusOriginal !== 'rascunho' && (

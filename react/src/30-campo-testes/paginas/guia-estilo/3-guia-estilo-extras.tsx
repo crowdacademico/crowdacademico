@@ -6,6 +6,7 @@ import { AvatarUsuario } from '../../../components/layout/avatar-usuario';
 import { useToast } from '../../../components/layout/toast/use-toast';
 import { Dica } from '../../../components/layout/tooltip';
 import { CaixaSomenteLeitura } from '../../../components/input/caixa-somente-leitura';
+import { InputDinheiro } from '../../../components/input/input-dinheiro';
 import { comporSobre, lerCor, razaoContraste } from './5-contraste-cor.util';
 
 // Complementos do Guia de Estilo: o que não cabia em "Componentes" por depender de tema global
@@ -15,7 +16,9 @@ import { comporSobre, lerCor, razaoContraste } from './5-contraste-cor.util';
 export function CamposExtras() {
   const idSelect = useId();
   const idTexto = useId();
+  const idDinheiro = useId();
   const nomeRadio = useId();
+  const [dinheiro, setDinheiro] = useState('1234.50');
 
   return (
     <div className="space-y-3">
@@ -30,6 +33,10 @@ export function CamposExtras() {
       <div>
         <label htmlFor={idTexto} className="rotulo-campo">Textarea</label>
         <textarea id={idTexto} className="input-padrao" rows={2} defaultValue="Texto em várias linhas" />
+      </div>
+      <div>
+        <label htmlFor={idDinheiro} className="rotulo-campo">Valor em reais (InputDinheiro: digite só os números)</label>
+        <InputDinheiro id={idDinheiro} valor={dinheiro} aoMudar={setDinheiro} />
       </div>
       {/* CaixaSomenteLeitura: clique e tente digitar para ver o aviso. Ao lado, o mesmo aviso já aberto (Dica
           `alerta`), porque ele só aparece com interação e não sairia numa imagem da página. */}

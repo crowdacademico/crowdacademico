@@ -12,8 +12,12 @@ interface ModalExcluirItemProps {
   nome: string;
   // Os CampoFicha de "O que será excluído".
   campos: ReactNode;
-  // O que o banco faz de verdade (bloqueia se em uso, apaga pra sempre se não).
-  explicacao: ReactNode;
+  // O que o banco faz de verdade (bloqueia se em uso, apaga pra sempre se não). Sem ela, a caixa de aviso não aparece.
+  explicacao?: ReactNode;
+  // Escolha antes de confirmar, abaixo da explicação (ex.: "Manter o registro" das Atualizações).
+  extra?: ReactNode;
+  // Quando a exclusão pode ser desfeita (mantendo o registro), troca o "não pode ser desfeita".
+  subtitulo?: string;
   remover: () => Promise<void>;
   mensagemSucesso: string;
   detalheSucesso?: string;
@@ -27,6 +31,8 @@ export function ModalExcluirItem({
   nome,
   campos,
   explicacao,
+  extra,
+  subtitulo = 'Esta ação não pode ser desfeita.',
   remover,
   mensagemSucesso,
   detalheSucesso,
@@ -48,7 +54,7 @@ export function ModalExcluirItem({
   return (
     <ModalFicha
       titulo={`Excluir "${nome}"`}
-      subtitulo="Esta ação não pode ser desfeita."
+      subtitulo={subtitulo}
       aoFechar={aoFechar}
       rodape={
         <RodapeAcoes
@@ -65,9 +71,12 @@ export function ModalExcluirItem({
       erro={erro}
     >
       <SecaoFicha titulo="O que será excluído">{campos}</SecaoFicha>
-      <CaixaAviso titulo="O que acontece de verdade" tom="erro">
-        <p>{explicacao}</p>
-      </CaixaAviso>
+      {explicacao && (
+        <CaixaAviso titulo="O que acontece de verdade" tom="erro">
+          <p>{explicacao}</p>
+        </CaixaAviso>
+      )}
+      {extra}
     </ModalFicha>
   );
 }

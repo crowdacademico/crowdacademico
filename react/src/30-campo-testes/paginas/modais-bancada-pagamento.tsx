@@ -3,6 +3,7 @@ import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { Campo } from '../../components/input/campo';
+import { InputDinheiro } from '../../components/input/input-dinheiro';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
@@ -169,16 +170,7 @@ export function ModalGerarPix({ authFetch, chamar, aoFechar, aoGerado }: ModalGe
           </Campo>
           <Campo rotulo="Valor (R$)">
             {({ atributos, classeErro }) => (
-              <input
-                {...atributos}
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                min="0.01"
-                value={valor}
-                onChange={(evento) => setValor(evento.target.value)}
-                className={'input-padrao' + classeErro}
-              />
+              <InputDinheiro {...atributos} valor={valor} aoMudar={setValor} className={'input-padrao' + classeErro} />
             )}
           </Campo>
         </SecaoFicha>

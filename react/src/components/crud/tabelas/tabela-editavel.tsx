@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { AcaoLinha } from '../acao-linha';
+import { CabecalhoAcoes, CelulaAcoesLivre } from '../colunas/5-coluna-acoes';
 
 // Base das tabelas com edição na própria linha (links acadêmicos, itens de orçamento, marcos de cronograma):
 // cada linha mostra Alterar/Excluir (sem Consultar: a linha já mostra tudo, e o texto longo tem "ler tudo"); Alterar
@@ -81,7 +82,7 @@ export function TabelaEditavel<T, F>({
                   {coluna.rotulo}
                 </th>
               ))}
-              {podeEditar && <th className="crud-tabela__celula--centralizada">Ações</th>}
+              {podeEditar && <CabecalhoAcoes />}
             </tr>
           </thead>
           <tbody>
@@ -95,8 +96,7 @@ export function TabelaEditavel<T, F>({
                     </td>
                   ))}
                   {podeEditar && (
-                    <td className="crud-tabela__celula--centralizada">
-                      <div className="crud-tabela__acoes">
+                    <CelulaAcoesLivre>
                         {emEdicao ? (
                           <>
                             <AcaoLinha rotulo="Salvar" icone="fa-check" variante="escolher" onClick={() => void salvar(linha)} />
@@ -116,8 +116,7 @@ export function TabelaEditavel<T, F>({
                             <AcaoLinha rotulo="Excluir" icone="fa-trash" variante="excluir" onClick={() => aoExcluir(linha)} />
                           </>
                         )}
-                      </div>
-                    </td>
+                    </CelulaAcoesLivre>
                   )}
                 </tr>
               );
@@ -127,11 +126,11 @@ export function TabelaEditavel<T, F>({
                 {colunas.map((coluna) => (
                   <td key={coluna.rotulo}>{coluna.campo(novo, mudarNovo)}</td>
                 ))}
-                <td className="crud-tabela__celula--centralizada">
+                <CelulaAcoesLivre>
                   <button type="button" className="btn btn-sucesso btn-pequeno whitespace-nowrap" onClick={() => void adicionar()}>
                     + adicionar
                   </button>
-                </td>
+                </CelulaAcoesLivre>
               </tr>
             )}
           </tbody>

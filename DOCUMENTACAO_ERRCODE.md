@@ -134,6 +134,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91054 | `reenviar_notificacao`, `cancelar_notificacao` | `notificacao` | Só um e-mail que falhou pode ser reenviado; só um na fila ou que falhou pode ser cancelado |
 | 91055 | `reenviar_notificacao` | `notificacao` | A conta do e-mail foi excluída: não há para onde reenviar |
 | 91056 | `fn_valida_contestacao_pendente` | `denuncia` | Decidida a contestação, a situação da denúncia não muda mais (RF-115) |
+| 91057 | `fn_valida_link_recompensa` | `recompensa`, `link_recompensa` | Recompensa ativa de acesso antecipado ou entrega digital sem o link especial (RF-103) |
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
 
@@ -177,6 +178,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92037 | `listar_revisoes_pagamento`, `resolver_revisao_pagamento`, `listar_reembolsos_manuais`, `concluir_reembolso_manual`, `listar_repasses_atencao`, `reenfileirar_repasse`, `marcar_repasse_pago` | `evento_pagamento`, `contribuicao`, `repasse` | Sem permissão para ver ou resolver as pendências de pagamento |
 | 92038 | `resumo_contribuicoes_campanha` | `contribuicao` | Só o dono da campanha ou quem tem `contribuicao_visualizar_sensivel` vê o resumo das contribuições dela |
 | 92039 | `reenviar_notificacao`, `cancelar_notificacao` | `notificacao` | Sem permissão (`notificacao_processar`) para reenviar ou cancelar e-mails |
+| 92040 | `fn_atualizacao_ocultacao` | `atualizacao_campanha` | Atualização excluída pela moderação (mantendo o registro): o dono não a põe de volta |
 
 ## 93xxx - Limite de taxa (429)
 

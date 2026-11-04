@@ -3,6 +3,7 @@
 // age, a gestão só lê) e na Bancada da Campanha.
 
 import { AcaoLinha } from '../acao-linha';
+import { CabecalhoAcoes, CelulaAcoesLivre } from '../colunas/5-coluna-acoes';
 import { formatarData } from '../../../services/constant/util/formatacao.util';
 import type { ComentarioResponse as Comentario } from '../../../services/17-comentario/type/comentario.type';
 import { CaixaTabela } from './caixa-tabela';
@@ -34,7 +35,7 @@ export function TabelaComentarios({ comentarios, ehDono, limiteAtingido = false,
             <th className="crud-tabela__col--curta">Data</th>
             <th>Comentário</th>
             <th className="crud-tabela__col--curta">Endosso</th>
-            {ehDono && <th>Ações</th>}
+            {ehDono && <CabecalhoAcoes />}
           </tr>
         </thead>
         <tbody>
@@ -48,8 +49,7 @@ export function TabelaComentarios({ comentarios, ehDono, limiteAtingido = false,
               </td>
               <td>{item.endossado ? <span className="badge badge-sucesso">#{item.ordemEndosso}</span> : '-'}</td>
               {ehDono && (
-                <td>
-                  <div className="crud-tabela__acoes">
+                <CelulaAcoesLivre>
                     <AcaoLinha
                       rotulo={item.endossado ? 'Remover endosso' : 'Endossar'}
                       icone={item.endossado ? 'fa-heart-crack' : 'fa-heart'}
@@ -64,8 +64,7 @@ export function TabelaComentarios({ comentarios, ehDono, limiteAtingido = false,
                     {aoDenunciar && item.idPesquisador !== null && (
                       <AcaoLinha rotulo="Denunciar autor" icone="fa-flag" variante="excluir" onClick={() => aoDenunciar(item)} />
                     )}
-                  </div>
-                </td>
+                </CelulaAcoesLivre>
               )}
             </tr>
           ))}

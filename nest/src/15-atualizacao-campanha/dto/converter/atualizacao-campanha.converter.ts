@@ -1,9 +1,11 @@
 import { AtualizacaoCampanhaEntity } from '../../../commons/database/db.types';
+import { AnexoAtualizacaoResponse } from '../response/anexo-atualizacao.response';
 import { AtualizacaoCampanhaResponse } from '../response/atualizacao-campanha.response';
 
 export class AtualizacaoCampanhaConverter {
   static paraResponseDto(
     entity: AtualizacaoCampanhaEntity,
+    anexos: AnexoAtualizacaoResponse[] = [],
   ): AtualizacaoCampanhaResponse {
     return {
       idAtualizacao: entity.id_atualizacao,
@@ -14,6 +16,8 @@ export class AtualizacaoCampanhaConverter {
       fase: entity.fase,
       tipo: entity.tipo,
       ativo: entity.ativo,
+      ocultadaModeracao: entity.ocultada_moderacao,
+      anexos,
     };
   }
 }

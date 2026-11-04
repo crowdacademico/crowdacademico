@@ -977,6 +977,41 @@ CREATE TRIGGER trg_contrib_recompensa_valida
     EXECUTE FUNCTION public.trg_valida_contribuicao_recompensa();
 
 -- ----------------------------------------------------------------------------
+-- Função:     fn_concede_recompensas
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-1]
+-- Regra:      RF-104 e RF-105: quem contribui ganha, sem escolher, todas as recompensas ativas da campanha cujo valor
+--             mínimo a contribuição alcança (com R$ 151, as de R$ 50, R$ 100 e R$ 150). Só quem tem conta: a recompensa é
+--             para alguém. O valor que conta é o da contribuição, sem a tarifa. Recompensa criada depois não vale para
+--             contribuição antiga. Aparece como ganha quando a contribuição é paga.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_concede_recompensas()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.id_usuario IS NOT NULL THEN
+        INSERT INTO contribuicao_recompensa (id_contribuicao, id_recompensa)
+        SELECT NEW.id_contribuicao, r.id_recompensa
+        FROM recompensa r
+        WHERE r.id_campanha = NEW.id_campanha AND r.ativo AND r.valor_minimo <= NEW.valor;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_contribuicao_concede_recompensas
+-- Tabela:    contribuicao
+-- Momento:   AFTER INSERT
+-- Função:    fn_concede_recompensas()
+-- Bloco:     [05-K-1]
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_contribuicao_concede_recompensas ON contribuicao;
+CREATE TRIGGER trg_contribuicao_concede_recompensas
+    AFTER INSERT ON contribuicao
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_concede_recompensas();
+
+-- ----------------------------------------------------------------------------
 -- Função:     trg_valida_escopo_tipolink
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-1]
@@ -1258,6 +1293,56 @@ CREATE TRIGGER trg_link_recompensa_valida_tipo
     BEFORE INSERT OR UPDATE ON link_recompensa
     FOR EACH ROW
     EXECUTE FUNCTION public.trg_valida_escopo_tipolink();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_link_recompensa
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-1]
+-- Regra:      RF-103: acesso antecipado e entrega digital chegam a quem apoiou pelo link especial, então a recompensa
+--             ativa desses dois tipos precisa ter pelo menos um link (91057). Reconhecimento não tem o que entregar.
+--             CONSTRAINT TRIGGER DEFERRABLE: a recompensa e o link são gravados em comandos separados da mesma
+--             transação, e a conferência é do estado FINAL, no COMMIT. Vale ao criar ou mudar a recompensa e ao tirar
+--             ou trocar o link.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_link_recompensa()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    v_id INT := CASE WHEN TG_OP = 'DELETE' THEN OLD.id_recompensa ELSE NEW.id_recompensa END;
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM recompensa r
+        WHERE r.id_recompensa = v_id
+          AND r.ativo
+          AND r.tipo IN ('acesso_antecipado', 'digital')
+          AND NOT EXISTS (SELECT 1 FROM link_recompensa l WHERE l.id_recompensa = r.id_recompensa)
+    ) THEN
+        RAISE EXCEPTION 'Acesso antecipado e entrega digital precisam do link especial: é por ele que a recompensa chega a quem apoiou.'
+            USING ERRCODE = '91057';
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Triggers:  trg_recompensa_exige_link, trg_link_recompensa_exige_link
+-- Tabelas:   recompensa (criar ou mudar), link_recompensa (tirar ou trocar)
+-- Momento:   AFTER, DEFERRABLE INITIALLY DEFERRED
+-- Função:    fn_valida_link_recompensa()
+-- Bloco:     [05-K-1]
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_recompensa_exige_link ON recompensa;
+CREATE CONSTRAINT TRIGGER trg_recompensa_exige_link
+    AFTER INSERT OR UPDATE ON recompensa
+    DEFERRABLE INITIALLY DEFERRED
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_link_recompensa();
+
+DROP TRIGGER IF EXISTS trg_link_recompensa_exige_link ON link_recompensa;
+CREATE CONSTRAINT TRIGGER trg_link_recompensa_exige_link
+    AFTER UPDATE OR DELETE ON link_recompensa
+    DEFERRABLE INITIALLY DEFERRED
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_link_recompensa();
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_valida_area_conhecimento_nivel2
@@ -5262,6 +5347,51 @@ CREATE TRIGGER trg_atualizacao_campanha_status
 BEFORE INSERT ON atualizacao_campanha
 FOR EACH ROW
 EXECUTE FUNCTION validar_atualizacao_campanha();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_atualizacao_ocultacao
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      RF-053: a moderação exclui qualquer atualização mantendo o registro ("Excluída") e o dono oculta as
+--             suas. Grava quem tirou do ar em ocultada_moderacao (ninguém escreve nela direto) e não deixa o dono pôr
+--             de volta o que a moderação excluiu (92040). O que o próprio dono ocultou ele mesmo mostra de novo.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_atualizacao_ocultacao()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.ocultada_moderacao := OLD.ocultada_moderacao;
+
+    IF OLD.ativo = TRUE AND NEW.ativo = FALSE THEN
+        NEW.ocultada_moderacao := NOT EXISTS (
+            SELECT 1 FROM campanha WHERE id_campanha = NEW.id_campanha AND id_usuario = public.id_usuario_atual()
+        );
+    ELSIF OLD.ativo = FALSE AND NEW.ativo = TRUE THEN
+        IF OLD.ocultada_moderacao AND NOT public.tem_permissao('atualizacao_moderar') THEN
+            RAISE EXCEPTION 'Esta atualização foi excluída pela moderação e não pode voltar a aparecer.'
+                USING ERRCODE = '92040';
+        END IF;
+        NEW.ocultada_moderacao := FALSE;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_atualizacao_ocultacao
+-- Tabela:    atualizacao_campanha
+-- Momento:   BEFORE UPDATE
+-- Função:    fn_atualizacao_ocultacao()
+-- Bloco:     [05-K-2]
+-- Regra:     Registra quem tirou do ar e impede o dono de desfazer a exclusão da moderação.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_atualizacao_ocultacao ON atualizacao_campanha;
+CREATE TRIGGER trg_atualizacao_ocultacao
+BEFORE UPDATE ON atualizacao_campanha
+FOR EACH ROW
+EXECUTE FUNCTION fn_atualizacao_ocultacao();
 
 -- ============================================================================
 --  [05-K-3] REGRAS TRANSVERSAIS - COMUNIDADE, ENGAJAMENTO E RBAC

@@ -21,5 +21,6 @@ export interface MinhaContribuicao {
   status: StatusContribuicao;
   anonima: boolean;
   criadoEm: string;
-  tituloRecompensa: string | null;
+  // As recompensas ganhas, separadas por vírgula, da menor para a maior; null = nenhuma.
+  recompensas: string | null;
 }

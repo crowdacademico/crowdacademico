@@ -19,10 +19,12 @@ import { ContadorCaracteres } from '../../components/input/contador-caracteres';
 import { erroLimiteCaracteres } from '../../services/constant/util/validacao.util';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
 import { EtapaRevisaoCampanha } from './etapa-revisao-campanha';
+import { SecaoRecompensasCampanha } from '../18-recompensa/secao-recompensas-campanha';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { CampanhaRequestCreate, CampanhaResponse, ModeloCampanha } from '../../services/12-campanha/type/campanha.type';
 import { EXPLICACAO_MODELO_CAMPANHA, ROTULO_MODELO_CAMPANHA } from '../../services/12-campanha/constants/status-campanha.constants';
 import { Tooltip } from '../../components/layout/tooltip';
+import { InputDinheiro } from '../../components/input/input-dinheiro';
 
 interface ModalCriarCampanhaProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
@@ -38,6 +40,10 @@ interface ModalCriarCampanhaProps {
   subtituloDados?: string;
   // Texto que fica na frente do subtítulo em todas as etapas (a Bancada da Campanha põe "Pesquisador: fulano.").
   contexto?: string;
+  // Botão "Coloque recompensas" na Revisão, que abre as recompensas num modal: só quando quem está logado é o dono
+  // (Minhas Campanhas). A Bancada da Campanha cria em nome de outro pesquisador, e só o dono cadastra recompensa
+  // (pol_recompensa_insert).
+  comRecompensas?: boolean;
   // A lista de quem abriu precisa recarregar (campanha criada, alterada ou enviada).
   aoMudar: () => void;
   aoFechar: () => void;
@@ -93,9 +99,11 @@ export function ModalCriarCampanha({
   camposExtrasValidos = true,
   subtituloDados = 'A campanha é salva como rascunho a cada etapa: dá para fechar e continuar depois.',
   contexto,
+  comRecompensas = false,
   aoMudar,
   aoFechar,
 }: ModalCriarCampanhaProps) {
+  const [vendoRecompensas, setVendoRecompensas] = useState(false);
   const { mostrar } = useToast();
   const { reportarErro } = useErroToast();
   const { ocupado: trabalhando, executar: executarTrabalhando } = useEnvio(reportarErro);
@@ -228,7 +236,7 @@ export function ModalCriarCampanha({
 
   const subtitulo = [
     contexto,
-    idCampanha === null ? subtituloDados : 'Cada etapa é salva ao avançar; dá para fechar e continuar depois.',
+    idCampanha === null ? subtituloDados : undefined,
   ]
     .filter(Boolean)
     .join(' ');
@@ -281,202 +289,214 @@ export function ModalCriarCampanha({
     );
 
   return (
-    <ModalFicha
-      variasTelas
-      titulo={idRascunho === undefined ? 'Criar Campanha' : 'Continuar rascunho'}
-      carregando={carregandoRascunho}
-      // Um clique sem querer no fundo escurecido derrubaria o passo a passo; só fecha por Cancelar ou pelo X.
-      // Depois da etapa 1 a campanha já está salva como rascunho: fechar não perde nada.
-      fecharAoClicarFora={false}
-      subtitulo={subtitulo}
-      badges={[selo]}
-      aoFechar={fechar}
-      rodape={rodape}
-    >
-      <IndicadorEtapas
-        etapas={ETAPAS}
-        atual={etapa}
-        aoEscolher={trabalhando ? undefined : irPara}
-        // Antes de o rascunho existir, só dá para avançar pelo Próximo (que valida e cria).
-        liberada={(chave) => chave === 'dados' || idCampanha !== null}
-      />
-      {etapa === 'revisao' && idCampanha !== null ? (
-        <EtapaRevisaoCampanha
-          auth={auth}
-          idCampanha={idCampanha}
-          titulo={form.titulo}
-          nomeArea={areas.find((area) => String(area.idAreaConhecimento) === form.idAreaConhecimento)?.nome ?? ''}
-          meta={Number(form.metaFinanceira)}
-          dataInicio={form.dataInicio}
-          dataFim={form.dataFim}
-          duracaoDias={duracao}
-          prazoValido={duracaoValida && form.dataInicio >= hoje}
-          minimoItensOrcamento={regras.minimoItensOrcamento}
-          minimoMarcosCronograma={regras.minimoMarcosCronograma}
-          aoAvaliar={setRevisaoPronta}
+    <>
+      <ModalFicha
+        variasTelas
+        titulo={idRascunho === undefined ? 'Criar Campanha' : 'Continuar rascunho'}
+        carregando={carregandoRascunho}
+        // Um clique sem querer no fundo escurecido derrubaria o passo a passo; só fecha por Cancelar ou pelo X.
+        // Depois da etapa 1 a campanha já está salva como rascunho: fechar não perde nada.
+        fecharAoClicarFora={false}
+        subtitulo={subtitulo}
+        badges={[selo]}
+        aoFechar={fechar}
+        rodape={rodape}
+      >
+        <IndicadorEtapas
+          etapas={ETAPAS}
+          atual={etapa}
+          aoEscolher={trabalhando ? undefined : irPara}
+          // Antes de o rascunho existir, só dá para avançar pelo Próximo (que valida e cria).
+          liberada={(chave) => chave === 'dados' || idCampanha !== null}
         />
-      ) : (etapa === 'orcamento' || etapa === 'cronograma') && idCampanha !== null ? (
-        <SecaoFicha titulo={etapa === 'orcamento' ? 'Orçamento' : 'Cronograma'}>
-          <div className="sm:col-span-2">
-            <PainelOrcamentoCronograma
-              // `key`: a etapa troca só a prop `abaFixa`, e o painel guarda a aba no próprio estado; sem remontar,
-              // Cronograma continuaria mostrando a tabela de Orçamento.
-              key={etapa}
-              auth={auth}
-              idCampanha={idCampanha}
-              podeEditar
-              abaFixa={etapa}
-              metaFinanceira={Number(form.metaFinanceira)}
-              dataInicioCampanha={form.dataInicio}
-              minimoMarcosCronograma={regras.minimoMarcosCronograma}
-            />
-          </div>
-        </SecaoFicha>
-      ) : (
-        <>
-          {camposExtras}
-          {erroDe('extras') && <p className="legenda enfase texto-erro -mt-2 mb-3">{erroDe('extras')}</p>}
-          <SecaoFicha titulo="Dados">
-            <Campo rotulo="Título" className="sm:col-span-2" erro={erroDe('titulo')}>
-              {({ atributos, classeErro }) => (
-                <input
-                  {...atributos}
-                  type="text"
-                  value={form.titulo}
-                  onChange={(evento) => setForm({ ...form, titulo: evento.target.value })}
-                  className={'input-padrao' + classeErro}
-                />
-              )}
-            </Campo>
-            <Campo rotulo="Área do conhecimento" erro={erroDe('area')}>
-              {({ atributos, classeErro }) => (
-                <select
-                  {...atributos}
-                  value={form.idAreaConhecimento}
-                  onChange={(evento) => setForm({ ...form, idAreaConhecimento: evento.target.value })}
-                  className={'input-padrao' + classeErro}
-                >
-                  <option value="">Selecione...</option>
-                  {areas.map((area) => (
-                    <option key={area.idAreaConhecimento} value={area.idAreaConhecimento}>
-                      {area.nome}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </Campo>
-            <Campo
-              rotulo="Meta (R$)"
-              dica={`Meta mínima: ${formatarMoeda(regras.metaMinima)}.`}
-              erro={erroDe('meta') ?? (metaAbaixoDoMinimo && textoMetaMinima)}
-            >
-              {({ atributos, classeErro }) => (
-                <input
-                  {...atributos}
-                  type="number"
-                  min={regras.metaMinima}
-                  value={form.metaFinanceira}
-                  onChange={(evento) => setForm({ ...form, metaFinanceira: evento.target.value })}
-                  className={'input-padrao' + classeErro}
-                />
-              )}
-            </Campo>
-            <Campo
-              rotulo={
-                <>
-                  Modelo de financiamento <Tooltip texto={EXPLICACAO_MODELO_CAMPANHA} />
-                </>
-              }
-              className="sm:col-span-2"
-            >
-              {({ atributos }) => (
-                <select
-                  {...atributos}
-                  value={form.modelo}
-                  onChange={(evento) => setForm({ ...form, modelo: evento.target.value as ModeloCampanha })}
-                  className="input-padrao"
-                >
-                  {(Object.keys(ROTULO_MODELO_CAMPANHA) as ModeloCampanha[]).map((modelo) => (
-                    <option key={modelo} value={modelo}>
-                      {ROTULO_MODELO_CAMPANHA[modelo]}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </Campo>
-            <Campo rotulo="Descrição (opcional)" className="sm:col-span-2" erro={erroDe('descricao')}>
-              {({ atributos, classeErro }) => (
-                <>
-                  <textarea
+        {etapa === 'revisao' && idCampanha !== null ? (
+          <EtapaRevisaoCampanha
+            auth={auth}
+            idCampanha={idCampanha}
+            titulo={form.titulo}
+            nomeArea={areas.find((area) => String(area.idAreaConhecimento) === form.idAreaConhecimento)?.nome ?? ''}
+            meta={Number(form.metaFinanceira)}
+            dataInicio={form.dataInicio}
+            dataFim={form.dataFim}
+            duracaoDias={duracao}
+            prazoValido={duracaoValida && form.dataInicio >= hoje}
+            minimoItensOrcamento={regras.minimoItensOrcamento}
+            minimoMarcosCronograma={regras.minimoMarcosCronograma}
+            aoAvaliar={setRevisaoPronta}
+            botaoRecompensas={
+              comRecompensas && (
+                <button type="button" className="btn btn-secondary" onClick={() => setVendoRecompensas(true)}>
+                  <i className="fa-solid fa-gift" aria-hidden="true"></i> Coloque recompensas
+                </button>
+              )
+            }
+          />
+        ) : (etapa === 'orcamento' || etapa === 'cronograma') && idCampanha !== null ? (
+          <SecaoFicha titulo={etapa === 'orcamento' ? 'Orçamento' : 'Cronograma'}>
+            <div className="sm:col-span-2">
+              <PainelOrcamentoCronograma
+                // `key`: a etapa troca só a prop `abaFixa`, e o painel guarda a aba no próprio estado; sem remontar,
+                // Cronograma continuaria mostrando a tabela de Orçamento.
+                key={etapa}
+                auth={auth}
+                idCampanha={idCampanha}
+                podeEditar
+                abaFixa={etapa}
+                metaFinanceira={Number(form.metaFinanceira)}
+                dataInicioCampanha={form.dataInicio}
+                minimoMarcosCronograma={regras.minimoMarcosCronograma}
+              />
+            </div>
+          </SecaoFicha>
+        ) : (
+          <>
+            {camposExtras}
+            {erroDe('extras') && <p className="legenda enfase texto-erro -mt-2 mb-3">{erroDe('extras')}</p>}
+            <SecaoFicha titulo="Dados">
+              <Campo rotulo="Título" className="sm:col-span-2" erro={erroDe('titulo')}>
+                {({ atributos, classeErro }) => (
+                  <input
                     {...atributos}
-                    rows={3}
-                    value={form.descricao}
-                    onChange={(evento) => setForm({ ...form, descricao: evento.target.value })}
+                    type="text"
+                    value={form.titulo}
+                    onChange={(evento) => setForm({ ...form, titulo: evento.target.value })}
                     className={'input-padrao' + classeErro}
                   />
-                  <ContadorCaracteres texto={form.descricao} limite={regras.limiteDescricao} />
-                </>
-              )}
-            </Campo>
-            <Campo rotulo="Início" erro={erroDe('inicio')}>
-              {({ atributos, classeErro }) => (
-                <input
-                  {...atributos}
-                  type="date"
-                  value={form.dataInicio}
-                  min={hoje}
-                  // Sem data de fim ainda, sugere a duração padrão (RF-073); a pessoa muda o fim se quiser.
-                  onChange={(evento) => {
-                    const dataInicio = evento.target.value;
-                    const dataFim =
-                      form.dataFim === '' && dataInicio !== '' ? somarDias(dataInicio, regras.prazoSugeridoDias) : form.dataFim;
-                    setForm({ ...form, dataInicio, dataFim });
-                  }}
-                  className={'input-padrao' + classeErro}
-                />
-              )}
-            </Campo>
-            {/* O aviso de prazo vale para as duas datas e ocupa a linha inteira abaixo delas, por isso fica fora do
-                Campo e é ligado ao campo "Fim" à mão; fica vermelho também quando o fim está vazio e já houve uma
-                tentativa de avançar. */}
-            <Campo rotulo="Fim">
-              {({ atributos }) => (
-                <input
-                  {...atributos}
-                  aria-invalid={prazoComErro}
-                  aria-describedby={idPrazoDica}
-                  type="date"
-                  value={form.dataFim}
-                  min={form.dataInicio || hoje}
-                  onChange={(evento) => setForm({ ...form, dataFim: evento.target.value })}
-                  className={'input-padrao' + (prazoComErro ? ' borda-erro' : '')}
-                />
-              )}
-            </Campo>
-            <p
-              id={idPrazoDica}
-              className={'legenda sm:col-span-2 -mt-2 texto-herdado ' + (prazoComErro ? 'texto-erro enfase' : 'texto-fraco')}
-            >
-              {form.dataFim === '' && erroDe('fim') ? 'Informe a data de fim. ' : ''}
-              {duracao !== null ? `Duração: ${duracao} ${duracao === 1 ? 'dia' : 'dias'}. ` : ''}A campanha precisa durar
-              entre {regras.prazoMinimoDias} e {regras.prazoMaximoDias} dias, começando hoje ou depois. Sugestão:{' '}
-              {regras.prazoSugeridoDias} dias.
-            </p>
-            <Campo rotulo="URL do vídeo de apresentação (opcional)" className="sm:col-span-2">
-              {({ atributos }) => (
-                <input
-                  {...atributos}
-                  type="url"
-                  value={form.videoApresentacaoUrl}
-                  onChange={(evento) => setForm({ ...form, videoApresentacaoUrl: evento.target.value })}
-                  className="input-padrao"
-                  placeholder="https://"
-                />
-              )}
-            </Campo>
-          </SecaoFicha>
-        </>
+                )}
+              </Campo>
+              <Campo rotulo="Área do conhecimento" erro={erroDe('area')}>
+                {({ atributos, classeErro }) => (
+                  <select
+                    {...atributos}
+                    value={form.idAreaConhecimento}
+                    onChange={(evento) => setForm({ ...form, idAreaConhecimento: evento.target.value })}
+                    className={'input-padrao' + classeErro}
+                  >
+                    <option value="">Selecione...</option>
+                    {areas.map((area) => (
+                      <option key={area.idAreaConhecimento} value={area.idAreaConhecimento}>
+                        {area.nome}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </Campo>
+              <Campo
+                rotulo="Meta (R$)"
+                dica={`Meta mínima: ${formatarMoeda(regras.metaMinima)}.`}
+                erro={erroDe('meta') ?? (metaAbaixoDoMinimo && textoMetaMinima)}
+              >
+                {({ atributos, classeErro }) => (
+                  <InputDinheiro
+                    {...atributos}
+                    valor={form.metaFinanceira}
+                    aoMudar={(metaFinanceira) => setForm({ ...form, metaFinanceira })}
+                    className={'input-padrao' + classeErro}
+                  />
+                )}
+              </Campo>
+              <Campo
+                rotulo={
+                  <>
+                    Modelo de financiamento <Tooltip texto={EXPLICACAO_MODELO_CAMPANHA} />
+                  </>
+                }
+                className="sm:col-span-2"
+              >
+                {({ atributos }) => (
+                  <select
+                    {...atributos}
+                    value={form.modelo}
+                    onChange={(evento) => setForm({ ...form, modelo: evento.target.value as ModeloCampanha })}
+                    className="input-padrao"
+                  >
+                    {(Object.keys(ROTULO_MODELO_CAMPANHA) as ModeloCampanha[]).map((modelo) => (
+                      <option key={modelo} value={modelo}>
+                        {ROTULO_MODELO_CAMPANHA[modelo]}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </Campo>
+              <Campo rotulo="Descrição (opcional)" className="sm:col-span-2" erro={erroDe('descricao')}>
+                {({ atributos, classeErro }) => (
+                  <>
+                    <textarea
+                      {...atributos}
+                      rows={3}
+                      value={form.descricao}
+                      onChange={(evento) => setForm({ ...form, descricao: evento.target.value })}
+                      className={'input-padrao' + classeErro}
+                    />
+                    <ContadorCaracteres texto={form.descricao} limite={regras.limiteDescricao} />
+                  </>
+                )}
+              </Campo>
+              <Campo rotulo="Início" erro={erroDe('inicio')}>
+                {({ atributos, classeErro }) => (
+                  <input
+                    {...atributos}
+                    type="date"
+                    value={form.dataInicio}
+                    min={hoje}
+                    // Sem data de fim ainda, sugere a duração padrão (RF-073); a pessoa muda o fim se quiser.
+                    onChange={(evento) => {
+                      const dataInicio = evento.target.value;
+                      const dataFim =
+                        form.dataFim === '' && dataInicio !== '' ? somarDias(dataInicio, regras.prazoSugeridoDias) : form.dataFim;
+                      setForm({ ...form, dataInicio, dataFim });
+                    }}
+                    className={'input-padrao' + classeErro}
+                  />
+                )}
+              </Campo>
+              {/* O aviso de prazo vale para as duas datas e ocupa a linha inteira abaixo delas, por isso fica fora do
+                  Campo e é ligado ao campo "Fim" à mão; fica vermelho também quando o fim está vazio e já houve uma
+                  tentativa de avançar. */}
+              <Campo rotulo="Fim">
+                {({ atributos }) => (
+                  <input
+                    {...atributos}
+                    aria-invalid={prazoComErro}
+                    aria-describedby={idPrazoDica}
+                    type="date"
+                    value={form.dataFim}
+                    min={form.dataInicio || hoje}
+                    onChange={(evento) => setForm({ ...form, dataFim: evento.target.value })}
+                    className={'input-padrao' + (prazoComErro ? ' borda-erro' : '')}
+                  />
+                )}
+              </Campo>
+              <p
+                id={idPrazoDica}
+                className={'legenda sm:col-span-2 -mt-2 texto-herdado ' + (prazoComErro ? 'texto-erro enfase' : 'texto-fraco')}
+              >
+                {form.dataFim === '' && erroDe('fim') ? 'Informe a data de fim. ' : ''}
+                {duracao !== null ? `Duração: ${duracao} ${duracao === 1 ? 'dia' : 'dias'}. ` : ''}A campanha precisa durar
+                entre {regras.prazoMinimoDias} e {regras.prazoMaximoDias} dias, começando hoje ou depois. Sugestão:{' '}
+                {regras.prazoSugeridoDias} dias.
+              </p>
+              <Campo rotulo="URL do vídeo de apresentação (opcional)" className="sm:col-span-2">
+                {({ atributos }) => (
+                  <input
+                    {...atributos}
+                    type="url"
+                    value={form.videoApresentacaoUrl}
+                    onChange={(evento) => setForm({ ...form, videoApresentacaoUrl: evento.target.value })}
+                    className="input-padrao"
+                    placeholder="https://"
+                  />
+                )}
+              </Campo>
+            </SecaoFicha>
+          </>
+        )}
+      </ModalFicha>
+      {vendoRecompensas && idCampanha !== null && (
+        <ModalFicha titulo="Recompensas" subtitulo={form.titulo} aoFechar={() => setVendoRecompensas(false)}>
+          <SecaoRecompensasCampanha auth={auth} idCampanha={idCampanha} podeGerenciar />
+        </ModalFicha>
       )}
-    </ModalFicha>
+    </>
   );
 }

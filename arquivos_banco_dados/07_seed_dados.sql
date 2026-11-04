@@ -1305,8 +1305,28 @@ FROM (VALUES
     (7,  'Projeto da cadeira pronto', 'O projeto mecânico foi validado e as peças recicladas já foram separadas.', -10, 'andamento', 'texto'),
     (8,  'Recrutamento concluído', 'Recrutamos 60 idosos, divididos nos dois grupos do estudo.', -30, 'andamento', 'texto'),
     (9,  'Primeiras trilhas mapeadas', 'Mapeamos 3 das 8 trilhas previstas em restingas do litoral.', -25, 'andamento', 'texto'),
-    (10, 'Nascentes mapeadas', 'Identificamos 14 nascentes; a coleta das amostras começa na próxima semana.', -30, 'andamento', 'texto')
+    (10, 'Nascentes mapeadas', 'Identificamos 14 nascentes; a coleta das amostras começa na próxima semana.', -30, 'andamento', 'texto'),
+    (3,  'Fotos de pacientes sem autorização', 'Seguem algumas fotos dos exames feitos ontem na unidade de saúde.', -8, 'andamento', 'imagem'),
+    (5,  'Agenda de visitas (versão antiga)', 'Esta agenda foi substituída pela publicação seguinte.', -45, 'andamento', 'texto')
 ) AS v(n, titulo, conteudo, dias, fase, tipo);
+
+-- O link da atualização de código aberto, e as duas formas de ocultar (RF-053): a moderação oculta uma atualização em
+-- desacordo com as regras e o dono oculta uma que ficou velha. São linhas a mais (oculta não conta no score) e cada
+-- uma passa pela trigger como a pessoa que ocultou (trg_atualizacao_ocultacao, 05).
+INSERT INTO link_atualizacao (id_atualizacao, id_tipolink, ordem, url)
+SELECT a.id_atualizacao, t.id_tipolink, 1, 'https://github.com/crowdacademico'
+FROM atualizacao_campanha a, tipo_link t
+WHERE a.titulo = 'Artigo submetido com o código aberto' AND t.codigo = 'GITHUB';
+
+DO $$
+BEGIN
+    PERFORM set_config('app.id_usuario_atual', '3', TRUE);  -- Moderador Sistema
+    UPDATE atualizacao_campanha SET ativo = FALSE WHERE titulo = 'Fotos de pacientes sem autorização';
+    PERFORM set_config('app.id_usuario_atual', (SELECT id_usuario FROM campanha WHERE id_campanha = 5)::TEXT, TRUE);
+    UPDATE atualizacao_campanha SET ativo = FALSE WHERE titulo = 'Agenda de visitas (versão antiga)';
+    PERFORM set_config('app.id_usuario_atual', '', TRUE);
+END;
+$$;
 
 -- [07-E-7] comentario
 -- Só pesquisador comenta, nunca na própria campanha, e só em campanha publicada (todas estavam no ar nestas datas).
@@ -1887,8 +1907,9 @@ $$;
 
 -- [07-E-8] recompensa, link_recompensa e contribuicao_recompensa
 -- Recompensas simbólicas (RF-103 a RF-105), sem estoque: os três tipos, uma desativada e um link especial (que só o
--- dono, o admin e quem ganhou enxergam). Cada contribuição paga de quem tem conta ganha a maior recompensa ativa que o
--- valor dela alcançou; as abaixo de todos os mínimos ficam sem recompensa, como no uso real.
+-- dono, o admin e quem ganhou enxergam). Cada contribuição paga de quem tem conta ganha todas as recompensas ativas que
+-- o valor dela alcançou, como faz fn_concede_recompensas (05) no uso real; as abaixo de todos os mínimos ficam sem
+-- recompensa. Aqui o seed liga à mão porque as contribuições nasceram antes das recompensas.
 INSERT INTO recompensa (id_campanha, titulo, descricao, valor_minimo, tipo, ativo, criado_em)
 SELECT v.id_campanha, v.titulo, v.descricao, v.valor_minimo, v.tipo::tipo_recompensa, v.ativo, c.criado_em + INTERVAL '1 day'
 FROM (VALUES
@@ -1902,18 +1923,20 @@ FROM (VALUES
 ) AS v(id_campanha, titulo, descricao, valor_minimo, tipo, ativo)
 JOIN campanha c ON c.id_campanha = v.id_campanha;
 
+-- Acesso antecipado e entrega digital ativos precisam do link (trg_recompensa_exige_link, 05).
 INSERT INTO link_recompensa (id_recompensa, id_tipolink, ordem, url)
-SELECT r.id_recompensa, (SELECT id_tipolink FROM tipo_link WHERE codigo = 'GITHUB'), 0, 'https://github.com/crowdacademico-dados'
-FROM recompensa r WHERE r.id_campanha = 1 AND r.tipo = 'digital';
+SELECT r.id_recompensa, (SELECT id_tipolink FROM tipo_link WHERE codigo = 'GITHUB'), 0, v.url
+FROM recompensa r
+JOIN (VALUES
+    ('Acesso aos dados da pesquisa', 'https://github.com/crowdacademico-dados'),
+    ('Testar o aplicativo antes do lançamento', 'https://github.com/leitura-acessivel-beta'),
+    ('Ler os resultados antes da publicação', 'https://github.com/retinopatia-resultados')
+) AS v(titulo, url) ON v.titulo = r.titulo;
 
 INSERT INTO contribuicao_recompensa (id_contribuicao, id_recompensa, adquirida_em)
-SELECT c.id_contribuicao, escolhida.id_recompensa, c.criado_em
+SELECT c.id_contribuicao, r.id_recompensa, c.criado_em
 FROM contribuicao c
-CROSS JOIN LATERAL (
-    SELECT r.id_recompensa FROM recompensa r
-    WHERE r.id_campanha = c.id_campanha AND r.ativo AND r.valor_minimo <= c.valor
-    ORDER BY r.valor_minimo DESC LIMIT 1
-) escolhida
+JOIN recompensa r ON r.id_campanha = c.id_campanha AND r.ativo AND r.valor_minimo <= c.valor
 WHERE c.id_campanha IN (1, 2, 3)
   AND c.id_usuario IS NOT NULL
   AND c.status IN ('confirmado', 'repassado', 'a_devolver', 'devolvido', 'reembolso_manual');

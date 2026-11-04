@@ -624,6 +624,9 @@ CREATE TABLE atualizacao_campanha (
     fase           fase_atualizacao NOT NULL,  -- RF-053: toda atualização registra a fase e o formato
     tipo           tipo_atualizacao NOT NULL,
     ativo          BOOLEAN          NOT NULL DEFAULT TRUE, -- SOFT DELETE E MODERAÇÃO DAS ATUALIZAÇÕES
+    -- Quem tirou do ar: TRUE = a moderação excluiu mantendo o registro ("Excluída"; o dono não desfaz), FALSE = o dono
+    -- ocultou. Só a trigger [05-K-2] grava.
+    ocultada_moderacao BOOLEAN      NOT NULL DEFAULT FALSE,
 
     CONSTRAINT "PK_ATUALIZACAO_CAMPANHA" PRIMARY KEY (id_atualizacao),
     CONSTRAINT "FK_ATUALIZACAO_CAMPANHA_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE,

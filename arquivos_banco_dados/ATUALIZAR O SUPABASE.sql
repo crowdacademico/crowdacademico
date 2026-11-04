@@ -841,3 +841,260 @@ ON CONFLICT (tipo_evento, canal) DO NOTHING;
 
 UPDATE modelo_mensagem SET corpo = E'O seu perfil de pesquisador foi suspenso pela moderação{{#suspenso_ate}} até {{suspenso_ate}}{{/suspenso_ate}}.\n\n{{#motivo}}Motivo: {{motivo}}{{/motivo}}\n\n{{#campanhas_encerradas}}Campanhas ativas encerradas pela suspensão, com o valor devolvido a quem apoiou: {{campanhas_encerradas}}.{{/campanhas_encerradas}}\n\n{{#campanhas_rejeitadas}}Campanhas que esperavam aprovação e foram rejeitadas: {{campanhas_rejeitadas}}.{{/campanhas_rejeitadas}}\n\nEnquanto durar a suspensão, você não envia campanhas nem publica atualizações.'
 WHERE tipo_evento = 'pesquisador_suspenso' AND canal = 'email' AND corpo = E'O seu perfil de pesquisador foi suspenso pela moderação{{#suspenso_ate}} até {{suspenso_ate}}{{/suspenso_ate}}.\n\n{{#motivo}}Motivo: {{motivo}}{{/motivo}}\n\nEnquanto durar a suspensão, você não envia campanhas nem publica atualizações.';
+
+-- ============================================================================
+-- GRUPO BY (03-11-2026) - Atualizações de campanha: quem ocultou. IDEMPOTENTE (pode colar de novo).
+-- PARE O NEST ANTES DE COLAR (tem ALTER TABLE) e suba de novo depois.
+--
+-- O que muda:
+-- 1. Coluna nova ocultada_moderacao: diz se a atualização foi ocultada pela moderação ou pelo próprio dono.
+-- 2. O dono continua ocultando e mostrando de novo as suas; o que a moderação ocultou, só a moderação mostra de novo.
+-- 3. Demonstração: o link da atualização de código aberto, uma atualização ocultada pela moderação e outra pelo dono
+--    (só entram se ainda não existirem e se as campanhas 1, 3 e 5 estiverem publicadas).
+-- ============================================================================
+
+-- 1. Coluna
+ALTER TABLE atualizacao_campanha ADD COLUMN IF NOT EXISTS ocultada_moderacao BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- 2. Regra
+CREATE OR REPLACE FUNCTION fn_atualizacao_ocultacao()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.ocultada_moderacao := OLD.ocultada_moderacao;
+
+    IF OLD.ativo = TRUE AND NEW.ativo = FALSE THEN
+        NEW.ocultada_moderacao := NOT EXISTS (
+            SELECT 1 FROM campanha WHERE id_campanha = NEW.id_campanha AND id_usuario = public.id_usuario_atual()
+        );
+    ELSIF OLD.ativo = FALSE AND NEW.ativo = TRUE THEN
+        IF OLD.ocultada_moderacao AND NOT public.tem_permissao('atualizacao_moderar') THEN
+            RAISE EXCEPTION 'Esta atualização foi ocultada pela moderação: só a moderação pode mostrá-la de novo.'
+                USING ERRCODE = '92040';
+        END IF;
+        NEW.ocultada_moderacao := FALSE;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_atualizacao_ocultacao ON atualizacao_campanha;
+CREATE TRIGGER trg_atualizacao_ocultacao
+BEFORE UPDATE ON atualizacao_campanha
+FOR EACH ROW
+EXECUTE FUNCTION fn_atualizacao_ocultacao();
+
+-- 3. Demonstração
+INSERT INTO link_atualizacao (id_atualizacao, id_tipolink, ordem, url)
+SELECT a.id_atualizacao, t.id_tipolink, 1, 'https://github.com/crowdacademico'
+FROM atualizacao_campanha a, tipo_link t
+WHERE a.titulo = 'Artigo submetido com o código aberto' AND t.codigo = 'GITHUB' AND t.permite_atualizacao
+  AND NOT EXISTS (SELECT 1 FROM link_atualizacao l WHERE l.id_atualizacao = a.id_atualizacao);
+
+INSERT INTO atualizacao_campanha (id_campanha, titulo, conteudo, publicado_em, fase, tipo)
+SELECT v.n, v.titulo, v.conteudo, NOW() + v.dias * INTERVAL '1 day', 'andamento', v.tipo::tipo_atualizacao
+FROM (VALUES
+    (3, 'Fotos de pacientes sem autorização', 'Seguem algumas fotos dos exames feitos ontem na unidade de saúde.', -8, 'imagem'),
+    (5, 'Agenda de visitas (versão antiga)', 'Esta agenda foi substituída pela publicação seguinte.', -45, 'texto')
+) AS v(n, titulo, conteudo, dias, tipo)
+JOIN campanha c ON c.id_campanha = v.n AND c.status IN ('ativo', 'sucesso', 'nao_atingido')
+WHERE NOT EXISTS (SELECT 1 FROM atualizacao_campanha a WHERE a.titulo = v.titulo);
+
+DO $$
+BEGIN
+    PERFORM set_config('app.id_usuario_atual', '3', TRUE);
+    UPDATE atualizacao_campanha SET ativo = FALSE WHERE titulo = 'Fotos de pacientes sem autorização' AND ativo;
+    PERFORM set_config('app.id_usuario_atual', COALESCE((SELECT id_usuario FROM campanha WHERE id_campanha = 5)::TEXT, ''), TRUE);
+    UPDATE atualizacao_campanha SET ativo = FALSE WHERE titulo = 'Agenda de visitas (versão antiga)' AND ativo;
+    PERFORM set_config('app.id_usuario_atual', '', TRUE);
+END;
+$$;
+
+-- ============================================================================
+-- GRUPO BZ (03-11-2026) - Atualizações: a moderação exclui (mantendo o registro ou de vez). IDEMPOTENTE.
+-- COLE DEPOIS DO GRUPO BY. PARE O NEST ANTES DE COLAR (tem regra de acesso nova) e suba de novo depois.
+--
+-- O que muda:
+-- 1. A moderação pode apagar de vez uma atualização (os anexos vão junto). O dono não apaga.
+-- 2. A mensagem para o dono que tenta pôr de volta uma atualização excluída pela moderação.
+-- ============================================================================
+
+-- 1. Apagar de vez
+GRANT DELETE ON atualizacao_campanha TO app_nestjs;
+DROP POLICY IF EXISTS pol_atualizacao_delete ON atualizacao_campanha;
+CREATE POLICY pol_atualizacao_delete ON atualizacao_campanha FOR DELETE TO app_nestjs USING (
+    (SELECT public.tem_permissao('atualizacao_moderar'))
+);
+
+-- 2. Mensagem
+CREATE OR REPLACE FUNCTION fn_atualizacao_ocultacao()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.ocultada_moderacao := OLD.ocultada_moderacao;
+
+    IF OLD.ativo = TRUE AND NEW.ativo = FALSE THEN
+        NEW.ocultada_moderacao := NOT EXISTS (
+            SELECT 1 FROM campanha WHERE id_campanha = NEW.id_campanha AND id_usuario = public.id_usuario_atual()
+        );
+    ELSIF OLD.ativo = FALSE AND NEW.ativo = TRUE THEN
+        IF OLD.ocultada_moderacao AND NOT public.tem_permissao('atualizacao_moderar') THEN
+            RAISE EXCEPTION 'Esta atualização foi excluída pela moderação e não pode voltar a aparecer.'
+                USING ERRCODE = '92040';
+        END IF;
+        NEW.ocultada_moderacao := FALSE;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ============================================================================
+-- GRUPO CA (04-11-2026) - Link obrigatório nas recompensas e o pesquisador exclui as próprias atualizações. IDEMPOTENTE.
+-- PARE O NEST ANTES DE COLAR (tem regra de acesso nova) e suba de novo depois.
+--
+-- O que muda:
+-- 1. Recompensa ativa de acesso antecipado ou entrega digital precisa do link especial (é por ele que chega a quem
+--    apoiou). As da demonstração ganham o link antes da regra entrar.
+-- 2. O pesquisador pode apagar de vez as próprias atualizações, menos a que a moderação excluiu.
+-- ============================================================================
+
+-- 1. Links da demonstração e a regra
+INSERT INTO link_recompensa (id_recompensa, id_tipolink, ordem, url)
+SELECT r.id_recompensa, t.id_tipolink, 0, v.url
+FROM recompensa r
+JOIN (VALUES
+    ('Acesso aos dados da pesquisa', 'https://github.com/crowdacademico-dados'),
+    ('Testar o aplicativo antes do lançamento', 'https://github.com/leitura-acessivel-beta'),
+    ('Ler os resultados antes da publicação', 'https://github.com/retinopatia-resultados')
+) AS v(titulo, url) ON v.titulo = r.titulo
+JOIN tipo_link t ON t.codigo = 'GITHUB' AND t.permite_recompensa
+WHERE NOT EXISTS (SELECT 1 FROM link_recompensa l WHERE l.id_recompensa = r.id_recompensa);
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_link_recompensa
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-1]
+-- Regra:      RF-103: acesso antecipado e entrega digital chegam a quem apoiou pelo link especial, então a recompensa
+--             ativa desses dois tipos precisa ter pelo menos um link (91057). Reconhecimento não tem o que entregar.
+--             CONSTRAINT TRIGGER DEFERRABLE: a recompensa e o link são gravados em comandos separados da mesma
+--             transação, e a conferência é do estado FINAL, no COMMIT. Vale ao criar ou mudar a recompensa e ao tirar
+--             ou trocar o link.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_link_recompensa()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    v_id INT := CASE WHEN TG_OP = 'DELETE' THEN OLD.id_recompensa ELSE NEW.id_recompensa END;
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM recompensa r
+        WHERE r.id_recompensa = v_id
+          AND r.ativo
+          AND r.tipo IN ('acesso_antecipado', 'digital')
+          AND NOT EXISTS (SELECT 1 FROM link_recompensa l WHERE l.id_recompensa = r.id_recompensa)
+    ) THEN
+        RAISE EXCEPTION 'Acesso antecipado e entrega digital precisam do link especial: é por ele que a recompensa chega a quem apoiou.'
+            USING ERRCODE = '91057';
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Triggers:  trg_recompensa_exige_link, trg_link_recompensa_exige_link
+-- Tabelas:   recompensa (criar ou mudar), link_recompensa (tirar ou trocar)
+-- Momento:   AFTER, DEFERRABLE INITIALLY DEFERRED
+-- Função:    fn_valida_link_recompensa()
+-- Bloco:     [05-K-1]
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_recompensa_exige_link ON recompensa;
+CREATE CONSTRAINT TRIGGER trg_recompensa_exige_link
+    AFTER INSERT OR UPDATE ON recompensa
+    DEFERRABLE INITIALLY DEFERRED
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_link_recompensa();
+
+DROP TRIGGER IF EXISTS trg_link_recompensa_exige_link ON link_recompensa;
+CREATE CONSTRAINT TRIGGER trg_link_recompensa_exige_link
+    AFTER UPDATE OR DELETE ON link_recompensa
+    DEFERRABLE INITIALLY DEFERRED
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_link_recompensa();
+
+-- 2. O pesquisador apaga as próprias atualizações
+DROP POLICY IF EXISTS pol_atualizacao_delete ON atualizacao_campanha;
+CREATE POLICY pol_atualizacao_delete ON atualizacao_campanha FOR DELETE TO app_nestjs USING (
+    (SELECT public.tem_permissao('atualizacao_moderar'))
+    OR (
+        NOT ocultada_moderacao
+        AND EXISTS (SELECT 1 FROM campanha WHERE id_campanha = atualizacao_campanha.id_campanha AND id_usuario = (SELECT public.id_usuario_atual()))
+    )
+);
+
+-- ============================================================================
+-- GRUPO CB (04-11-2026) - Só a moderação apaga uma atualização de vez. IDEMPOTENTE.
+-- PARE O NEST ANTES DE COLAR (muda regra de acesso) e suba de novo depois.
+--
+-- O que muda: desfaz a parte 2 do Grupo CA. O pesquisador sempre exclui mantendo o registro: o que ele publicou (um
+-- vírus, um conteúdo malicioso) fica guardado como prova. Só a moderação escolhe apagar de vez.
+-- ============================================================================
+DROP POLICY IF EXISTS pol_atualizacao_delete ON atualizacao_campanha;
+CREATE POLICY pol_atualizacao_delete ON atualizacao_campanha FOR DELETE TO app_nestjs USING (
+    (SELECT public.tem_permissao('atualizacao_moderar'))
+);
+
+-- ============================================================================
+-- GRUPO CC (04-11-2026) - Recompensa automática: quem contribui ganha todas as que o valor alcança. IDEMPOTENTE.
+-- Não precisa parar o Nest (só função, gatilho e dados; nenhuma regra de acesso nem ALTER TABLE).
+--
+-- O que muda:
+-- 1. Ninguém escolhe recompensa: ao contribuir (com conta), a pessoa ganha todas as recompensas ativas da campanha
+--    cujo valor mínimo a contribuição alcança (com R$ 151, as de R$ 50, R$ 100 e R$ 150).
+-- 2. As contribuições que já existem ganham as recompensas que faltavam pela mesma regra.
+-- ============================================================================
+
+-- 1. A regra
+-- ----------------------------------------------------------------------------
+-- Função:     fn_concede_recompensas
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-1]
+-- Regra:      RF-104 e RF-105: quem contribui ganha, sem escolher, todas as recompensas ativas da campanha cujo valor
+--             mínimo a contribuição alcança (com R$ 151, as de R$ 50, R$ 100 e R$ 150). Só quem tem conta: a recompensa é
+--             para alguém. O valor que conta é o da contribuição, sem a tarifa. Recompensa criada depois não vale para
+--             contribuição antiga. Aparece como ganha quando a contribuição é paga.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_concede_recompensas()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.id_usuario IS NOT NULL THEN
+        INSERT INTO contribuicao_recompensa (id_contribuicao, id_recompensa)
+        SELECT NEW.id_contribuicao, r.id_recompensa
+        FROM recompensa r
+        WHERE r.id_campanha = NEW.id_campanha AND r.ativo AND r.valor_minimo <= NEW.valor;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_contribuicao_concede_recompensas
+-- Tabela:    contribuicao
+-- Momento:   AFTER INSERT
+-- Função:    fn_concede_recompensas()
+-- Bloco:     [05-K-1]
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_contribuicao_concede_recompensas ON contribuicao;
+CREATE TRIGGER trg_contribuicao_concede_recompensas
+    AFTER INSERT ON contribuicao
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_concede_recompensas();
+
+-- 2. As que já existem
+INSERT INTO contribuicao_recompensa (id_contribuicao, id_recompensa, adquirida_em)
+SELECT c.id_contribuicao, r.id_recompensa, c.criado_em
+FROM contribuicao c
+JOIN recompensa r ON r.id_campanha = c.id_campanha AND r.ativo AND r.valor_minimo <= c.valor
+WHERE c.id_usuario IS NOT NULL
+ON CONFLICT (id_contribuicao, id_recompensa) DO NOTHING;

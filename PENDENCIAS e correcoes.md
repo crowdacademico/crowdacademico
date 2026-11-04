@@ -30,8 +30,10 @@
 
 ## 1. Levar para a revisão externa
 
-Os requisitos são atualizados com a revisão externa; aqui fica só o que precisa ir no próximo pedido. Nada aberto agora: o pedido de 01-11-2026 foi todo respondido nos requisitos de 02-11-2026.
+Os requisitos são atualizados com a revisão externa; aqui fica só o que precisa ir no próximo pedido. O pedido de 01-11-2026 foi todo respondido nos requisitos de 02-11-2026.
 
+- **RF-053, fase e formato da atualização (anotado em 04-11-2026; assunto para bem mais à frente):** o Lucas não gostou deste requisito, acha estranho. Texto atual: "Cada atualização de progresso deve registrar a fase do projeto a que se refere (andamento, resultado preliminar ou resultado final) e o formato do conteúdo publicado (texto, imagem, PDF ou link externo), podendo ter arquivos e links externos anexados." Como o sistema faz hoje: a fase é escolhida pelo pesquisador; o formato não é mais perguntado, sai dos anexos (PDF, imagem, link ou só texto), porque escolhido à mão dava para marcar "PDF" sem anexar nada.
+- **RF-105, recompensa automática (anotado em 04-11-2026; já feito no sistema):** o requisito diz "a recompensa escolhida pelo doador", mas o Lucas decidiu que ninguém escolhe: quem contribui ganha automaticamente todas as recompensas ativas cujo valor mínimo a contribuição alcança (com R$ 151, as de R$ 50, R$ 100 e R$ 150). Pedir que o texto do RF-105 passe a dizer isso (o RF-104 continua valendo: abaixo do mínimo, não ganha).
 - **Como queremos o próximo pedido escrito:** "pegar no pé" da revisão externa, pedir que olhe sistemas de referência e traga ideias próprias, não só responda a lista.
 ---
 
@@ -210,6 +212,10 @@ A regra do pesquisador suspenso e a matriz no RF-115 foram feitas em 01-11-2026;
 - **Troca do logo e do ícone pelo painel** (aba Identidade Visual do Dashboard, hoje um espaço reservado). Desde 25-10-2026 a marca padrão está no projeto (`DOCUMENTACAO_FRONTEND.md`, seção 12); o envio pelo painel substitui a padrão, e o admin do futuro troca sem mexer no código nem no banco. A análise, os 4 problemas e as duas decisões em aberto estão no topo do `ACHADOS_PARA_DISCUTIR.md`. O envio passa pelo Storage pessoal do Lucas: nos testes, só ele envia.
 
 ### Estrutura e ferramentas
+
+#### 🟡 Auditoria de coisas inúteis (anotado em 04-11-2026; para o futuro)
+
+Procurar no sistema inteiro campo, coluna, tela ou mecanismo que só existe por existir: gravado ou mostrado, mas que nenhuma parte do sistema usa, ou que repete o que outra coisa já mostra. Exemplo que motivou: o formato da atualização (RF-053), que nada usa e repete o ícone dos anexos; saiu da tela em 04-11-2026, mas continua gravado. Para cada achado: tirar da tela, tirar do banco ou levar à revisão externa.
 
 #### 🟡 Auditoria do Tailwind que anula o CSS: falta a versão com navegador
 

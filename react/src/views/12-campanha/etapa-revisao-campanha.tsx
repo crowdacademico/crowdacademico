@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { BarraProgresso } from '../../components/crud/barra-progresso';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
@@ -25,6 +26,8 @@ interface EtapaRevisaoCampanhaProps {
   minimoMarcosCronograma: number;
   // Avisa quem abriu se o checklist está todo verde (o botão Enviar muda de aparência, ver ModalCriarCampanha).
   aoAvaliar?: (pronto: boolean) => void;
+  // Botão que abre as recompensas (opcionais, fora do checklist), no fim da Revisão.
+  botaoRecompensas?: ReactNode;
 }
 
 // Última etapa do passo a passo: tudo o que vai para a avaliação, num lugar só, e o checklist do que o banco vai
@@ -44,6 +47,7 @@ export function EtapaRevisaoCampanha({
   minimoItensOrcamento,
   minimoMarcosCronograma,
   aoAvaliar,
+  botaoRecompensas,
 }: EtapaRevisaoCampanhaProps) {
   const { reportarErro } = useErroToast();
   const [orcamento, setOrcamento] = useState<OrcamentoCampanhaResponse[]>([]);
@@ -98,7 +102,8 @@ export function EtapaRevisaoCampanha({
         <CampoFicha rotulo="Meta" valor={formatarMoeda(meta)} />
         <CampoFicha
           rotulo="Período"
-          valor={`${formatarData(`${dataInicio}T12:00:00`)} a ${formatarData(`${dataFim}T12:00:00`)}`}
+          // Rascunho sem as duas datas: "-" em vez de "Invalid Date".
+          valor={dataInicio && dataFim ? `${formatarData(`${dataInicio}T12:00:00`)} a ${formatarData(`${dataFim}T12:00:00`)}` : null}
         />
         <CampoFicha rotulo="Duração" valor={duracaoDias === null ? null : `${duracaoDias} dias`} />
       </SecaoFicha>
@@ -136,6 +141,12 @@ export function EtapaRevisaoCampanha({
           </ol>
         )}
       </SecaoFicha>
+
+      {botaoRecompensas && (
+        <SecaoFicha titulo="Recompensas (opcional)" colunas={1}>
+          <div>{botaoRecompensas}</div>
+        </SecaoFicha>
+      )}
     </div>
   );
 }

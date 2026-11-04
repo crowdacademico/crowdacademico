@@ -1189,8 +1189,9 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | pub | GET | `/atualizacao-campanha` · `/link-atualizacao` · `/arquivo-atualizacao` |
 | AUTH | POST | `/atualizacao-campanha` · `/link-atualizacao` · `/arquivo-atualizacao` |
 | AUTH | PATCH | `/atualizacao-campanha/:id` · `/link-atualizacao/:id` |
+| AUTH | DELETE | `/atualizacao-campanha/:id` *(excluir de vez; só a moderação, `pol_atualizacao_delete`; os anexos vão junto)* |
 | AUTH | DELETE | `/link-atualizacao/:id` |
-| AUTH | GET | `/anexo-atualizacao` *(só leitura; todos os arquivos e links das atualizações, o mais novo primeiro; exige `atualizacao_moderar`)* |
+| AUTH | GET | `/atualizacao-campanha/moderacao` *(as atualizações de todas as campanhas, com os anexos, a mais nova primeiro; a RLS escopa: quem tem `atualizacao_moderar` vê todas, os outros as visíveis e as próprias ocultas)* |
 | pub | GET | `/comentario` *(filtro `endossado`: só os endossados, na ordem do endosso)* |
 | AUTH | POST | `/comentario` |
 | AUTH | PATCH | `/comentario/:id` |
@@ -1221,7 +1222,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | **Pagamento** | | |
 | pub | POST | `/contribuicao` *(contribuir não exige conta, RF-077; devolve o Pix "copia e cola" ou o link da página segura do cartão)* |
 | AUTH | GET | `/contribuicao/campanha/:idCampanha/resumo` *(quantas e quanto por meio e situação, para o Consultar da campanha; só o dono ou quem tem `contribuicao_visualizar_sensivel`)* |
-| AUTH | GET | `/contribuicao/minhas` *(o histórico da conta logada, com a recompensa escolhida)* |
+| AUTH | GET | `/contribuicao/minhas` *(o histórico da conta logada, com as recompensas ganhas de cada contribuição)* |
 | pub | GET | `/contribuicao/:id` *(acompanhar a contribuição: com login, pelo próprio usuário; sem conta, pelo cabeçalho `X-Token-Sessao`)* |
 | pub | POST | `/pagamento/webhook/:provedor` · `/pagamento/webhook/:provedor/autorizacao-saque` *(quem chama é o provedor; a autenticidade é o token dele, conferido antes de tocar no banco; a segunda responde se uma transferência ou devolução pode sair)* |
 | AUTH | GET · POST · DELETE | `/conta-recebimento` *(a chave Pix do próprio pesquisador, conferida no provedor)* |
@@ -1639,14 +1640,14 @@ Testado com o backend rodando de verdade contra o Postgres real (não só compil
 - **Por quê:** o mais simples possível. A RLS de `link_recompensa` mostra o link só ao dono, ao admin e a quem ganhou: é o "link especial" sem nenhuma regra nova.
 - **Caso-limite:** o RF-104 cita quantidade disponível; o sistema não controla (ponto para a revisão externa). O link só aceita tipos de link com `permite_recompensa` (hoje só GitHub); para outro site, o admin cadastra um tipo em Tipos de Link.
 
-- Escolher a recompensa é um campo opcional de `POST /contribuicao` (`idRecompensa`): exige conta, recompensa ativa da mesma campanha e valor igual ou acima do mínimo; grava `contribuicao_recompensa` na mesma transação. A recompensa só conta como ganha quando a contribuição é paga.
+- Ninguém escolhe recompensa: ao gravar a contribuição de quem tem conta, o banco liga a ela todas as recompensas ativas da campanha cujo mínimo o valor alcança (`fn_concede_recompensas`, ver `DOCUMENTACAO_BD.md`). O `POST /contribuicao` não tem campo de recompensa. A recompensa só conta como ganha quando a contribuição é paga.
 - **Por quê:** a política `pol_contrib_recompensa_insert` já exigia o dono da contribuição; quem contribui sem conta não tem nome para o reconhecimento.
 - **Caso-limite:** a contribuição que vence ou falha guarda a escolha, mas `/recompensa/minhas` e a contagem só olham as pagas.
 
 ### 21.3 Seguir pesquisador, minhas contribuições e líquido estimado
 
 - **Seguir pesquisador (RF-029)** fica em `16-seguir` (agora `SeguirModule`): mesma regra do seguir campanha; o alvo precisa ter perfil de pesquisador (400), seguir duas vezes dá 409 e a si mesmo, 400 (as duas do banco). A contagem pública usa `contar_seguidores_pesquisador` (`[03-E]`), sem dizer quem segue.
-- **`GET /contribuicao/minhas`** (RF-009, RF-089): o histórico da conta logada, com a recompensa escolhida; registrado antes de `GET /contribuicao/:id` no módulo.
+- **`GET /contribuicao/minhas`** (RF-009, RF-089): o histórico da conta logada, com as recompensas ganhas de cada contribuição numa linha só (`recompensas`, separadas por vírgula); registrado antes de `GET /contribuicao/:id` no módulo.
 - **Líquido estimado (RF-091):** `GET /campanha/:id` traz `valorLiquidoEstimado` e `taxaAplicada`, pela mesma conta do repasse (`liquido_repasse`, taxa mínima incluída).
 - **Quem aprovou:** `GET /campanha/:id` traz `nomeAprovador`, o nome de `campanha.id_admin` numa campanha aprovada (o `id_admin` só é carimbado na aprovação ou na rejeição, e a rejeição só acontece antes de aprovar). Só para quem tem `campanha_aprovar`; para os outros, `null`. **Por quê:** o dono e a página pública não precisam saber qual pessoa da equipe aprovou.
 - **Quem encerrou:** `GET /campanha/:id` traz `nomeEncerrador`, com a mesma restrição: o nome de quem levou a campanha à situação final de hoje, pela última linha do log de auditoria dessa mudança (`trg_log_auditoria_campanha_status`), ou "Sistema" quando a linha não tem responsável (a tarefa do fim do prazo). **Por quê do log:** os quatro caminhos de encerramento (prazo, pedido aprovado, "Cancelar o projeto" do dono, moderação) gravam quem fez em lugares diferentes, ou em nenhum; o log é o único que registra todos. **Caso-limite:** depois da retenção do log (`log_auditoria_retencao_dias`), ou com a conta de quem encerrou excluída, vem `null`.

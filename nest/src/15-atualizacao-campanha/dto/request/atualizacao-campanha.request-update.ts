@@ -14,13 +14,8 @@ import type {
   TipoAtualizacao,
 } from '../../../commons/database/db.types';
 
-// `ativo` incluso de propósito (autor oculta a própria atualização,
-// moderador com atualizacao_moderar oculta/reverte qualquer uma) -
-// fn_bloqueia_reversao_moderacao_comentario não existe pra esta tabela,
-// mas pol_atualizacao_update (04) já limita quem chega até aqui (dono OU
-// atualizacao_moderar); não há trigger extra de reversão nesta tabela
-// (diferente de comentario), então o dono também pode reverter a própria
-// ocultação - decisão consciente, não uma lacuna esquecida.
+// `ativo`: o dono oculta e mostra de novo a própria atualização; a moderação (atualizacao_moderar) oculta e mostra
+// qualquer uma. O que a moderação ocultou o dono não mostra de novo (fn_atualizacao_ocultacao, 05, 92040).
 export class AtualizacaoCampanhaRequestUpdate {
   @IsOptional()
   @IsString()

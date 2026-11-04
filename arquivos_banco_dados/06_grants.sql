@@ -252,7 +252,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON verificacao_email, recuperacao_senha, se
 -- ============================================================================
 --  [06-E] CAMPANHA
 -- ============================================================================
--- Só seguir_campanha e comentario têm policy de DELETE nesse bloco; as demais não têm DELETE concedido (ver [06-E] no
+-- Só seguir_campanha, comentario e atualizacao_campanha têm policy de DELETE nesse bloco; as demais não têm DELETE concedido (ver [06-E] no
 -- DOCUMENTACAO_BD.md). repasse não tem UPDATE aqui nem policy de UPDATE (04): é dinheiro saindo (mesmo raciocínio
 -- de contribuicao, [06-H]); status/repassado_em só mudam via atualizar_status_repasse() (05, SECURITY DEFINER, [05-K-2]).
 GRANT INSERT, UPDATE ON
@@ -282,6 +282,8 @@ REVOKE EXECUTE ON FUNCTION public.denuncias_contra_mim() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.denuncias_contra_mim() TO app_nestjs;
 -- comentario tem DELETE: pol_comentario_delete (04) restringe ao dono da campanha e a comentário ativo.
 GRANT DELETE ON comentario TO app_nestjs;
+-- atualizacao_campanha tem DELETE: pol_atualizacao_delete (04) restringe à moderação (Excluir sem manter o registro; o dono sempre mantém).
+GRANT DELETE ON atualizacao_campanha TO app_nestjs;
 -- historico_rejeicao: só INSERT. Histórico de moderação é imutável, e nenhum código faz UPDATE nele (a policy de
 -- UPDATE também não existe em 04).
 GRANT INSERT ON historico_rejeicao TO app_nestjs;

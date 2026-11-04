@@ -37,6 +37,8 @@ export interface RecompensaRequestUpdate {
   valorMinimo?: number;
   tipo?: TipoRecompensa;
   ativo?: boolean;
+  // Troca o link especial (tira o que havia e grava este, numa transação só).
+  link?: { idTipoLink: number; url: string };
 }
 
 // Uma recompensa que a conta logada ganhou (GET /recompensa/minhas).

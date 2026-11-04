@@ -396,6 +396,13 @@ CREATE POLICY pol_atualizacao_update ON atualizacao_campanha FOR UPDATE TO app_n
     EXISTS (SELECT 1 FROM campanha WHERE id_campanha = atualizacao_campanha.id_campanha AND id_usuario = (SELECT public.id_usuario_atual()))
     OR (SELECT public.tem_permissao('atualizacao_moderar'))
 );
+-- Excluir de vez (RF-053): só a moderação. O dono sempre exclui mantendo o registro (ativo = FALSE): o que ele publicou
+-- (um vírus, um conteúdo malicioso) fica guardado como prova. Os anexos vão junto (ON DELETE CASCADE) e o arquivo que
+-- sobra sem dono é apagado pela limpeza de órfãos.
+DROP POLICY IF EXISTS pol_atualizacao_delete ON atualizacao_campanha;
+CREATE POLICY pol_atualizacao_delete ON atualizacao_campanha FOR DELETE TO app_nestjs USING (
+    (SELECT public.tem_permissao('atualizacao_moderar'))
+);
 
 -- Orçamento e cronograma estruturados. Leitura segue a MESMA visibilidade de campanha
 -- (pol_campanha_select), e não o padrão USING (TRUE) de pol_recompensa_select: expor o orçamento de uma

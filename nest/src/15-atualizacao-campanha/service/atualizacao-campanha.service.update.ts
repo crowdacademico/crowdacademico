@@ -5,10 +5,14 @@ import { ATUALIZACAO_CAMPANHA_COLUNAS_SELECT } from '../constants/atualizacao-ca
 import { AtualizacaoCampanhaConverter } from '../dto/converter/atualizacao-campanha.converter';
 import { AtualizacaoCampanhaRequestUpdate } from '../dto/request/atualizacao-campanha.request-update';
 import { AtualizacaoCampanhaResponse } from '../dto/response/atualizacao-campanha.response';
+import { AnexoAtualizacaoService } from './anexo-atualizacao.service';
 
 @Injectable()
 export class AtualizacaoCampanhaServiceUpdate {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly anexos: AnexoAtualizacaoService,
+  ) {}
 
   async executar(
     id: number,
@@ -45,6 +49,7 @@ export class AtualizacaoCampanhaServiceUpdate {
       );
     }
 
-    return AtualizacaoCampanhaConverter.paraResponseDto(linha);
+    const anexos = await this.anexos.porAtualizacao([id]);
+    return AtualizacaoCampanhaConverter.paraResponseDto(linha, anexos.get(id));
   }
 }

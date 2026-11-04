@@ -8,6 +8,7 @@ import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 import { TIPOS_COLUNA, type NomeTipoColuna } from './colunas/tipos-coluna';
 import { DISTRIBUICAO_COLUNAS } from './colunas/distribuicao';
+import { criarAjusteTextoAcoes } from './colunas/texto-acoes';
 import { CabecalhoAcoes, CelulaAcoes, type AcaoIndisponivel, type AcoesLinha, type ColunaAcao } from './colunas/5-coluna-acoes';
 import { BarraFiltros } from '../search/barra-filtros';
 import { Tooltip } from '../layout/tooltip';
@@ -448,17 +449,7 @@ export function GenericTable<T extends Linha>({
     };
     // Texto das ações (Alterar/Consultar/Excluir): além da regra de largura da seção (5-crud.css), some quando
     // ESTA tabela não cabe com ele, e volta quando o cartão tiver de novo a largura que ela pedia com o texto.
-    let larguraComTextoAcoes = 0;
-    const ajustarTextoAcoes = () => {
-      if (!wrapper.hasAttribute('data-acoes-icone')) {
-        if (wrapper.scrollWidth > wrapper.clientWidth) {
-          larguraComTextoAcoes = wrapper.scrollWidth;
-          wrapper.setAttribute('data-acoes-icone', '');
-        }
-      } else if (wrapper.clientWidth >= larguraComTextoAcoes) {
-        wrapper.removeAttribute('data-acoes-icone');
-      }
-    };
+    const ajustarTextoAcoes = criarAjusteTextoAcoes(wrapper);
     // Depois das ações só em ícone, se a tabela ainda não cabe, ela se aperta em degraus (5-crud.css,
     // `data-apertada`): 1 = texto secundário menor e vãos mínimos; 2 = também o nome mais estreito. Sobe só o degrau
     // de que precisa e desce quando o cartão tiver de novo a largura que ela pedia no degrau de baixo. A cada degrau

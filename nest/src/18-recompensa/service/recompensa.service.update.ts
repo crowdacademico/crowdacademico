@@ -8,7 +8,7 @@ import { RecompensaServiceFindAll } from './recompensa.service.findall';
 
 // Alterar ou desativar (ativo = false; não existe excluir: uma recompensa já escolhida numa contribuição precisa
 // continuar existindo, FK_CONTRIBUICAO_RECOMPENSA_RECOMPENSA). Dono da campanha ou quem tem campanha_editar
-// (pol_recompensa_update, 04).
+// (pol_recompensa_update, 04). `link` troca o link especial na mesma transação.
 @Injectable()
 export class RecompensaServiceUpdate {
   constructor(
@@ -46,6 +46,22 @@ export class RecompensaServiceUpdate {
         'Recompensa não encontrada.',
         'Só o dono da campanha altera as recompensas dela.',
       );
+    }
+    if (dto.link) {
+      const db = this.database.getDb();
+      await db
+        .deleteFrom('link_recompensa')
+        .where('id_recompensa', '=', idRecompensa)
+        .execute();
+      await db
+        .insertInto('link_recompensa')
+        .values({
+          id_recompensa: idRecompensa,
+          id_tipolink: dto.link.idTipoLink,
+          url: dto.link.url,
+          ordem: 0,
+        })
+        .execute();
     }
     const lista = await this.findAll.executar(linha.id_campanha);
     const atualizada = lista.find((r) => r.idRecompensa === idRecompensa);

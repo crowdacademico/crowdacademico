@@ -24,7 +24,7 @@ import { ListarRepassesAtencao } from '../../views/25-pagamento-revisao/listar-r
 import { ListarAuditoriaFinanceira } from '../../views/25-pagamento-revisao/listar-auditoria-financeira';
 import { ListarContribuicoes } from '../../views/25-pagamento-revisao/listar-contribuicoes';
 import { ListarRepasses } from '../../views/25-pagamento-revisao/listar-repasses';
-import { ListarAnexosAtualizacoes } from '../../views/15-atualizacao-campanha/listar-anexos-atualizacoes';
+import { ListarAtualizacoes } from '../../views/15-atualizacao-campanha/listar-atualizacoes';
 import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
 import { PontuacaoScore } from '../../views/11-configuracoes/pontuacao-score';
 import { ListarModelosMensagem } from '../../views/27-notificacao/listar-modelos-mensagem';
@@ -220,16 +220,15 @@ export const ROTAS_ADMIN: Rota[] = [
     grupoMenu: 'CAMPANHA',
     icone: 'fa-bullhorn',
   },
-  // Só leitura: os arquivos e links das atualizações de campanha (atualizacao_moderar: admin e moderador). No menu,
-  // o nome curto (DS-112).
+  // As atualizações de todas as campanhas, com os anexos: a moderação oculta e mostra de novo (atualizacao_moderar).
   {
-    caminho: '/admin/anexos-atualizacoes',
-    caminhoRelativo: 'anexos-atualizacoes',
-    elemento: ListarAnexosAtualizacoes,
-    rotuloMenu: 'Anexos',
-    rotuloBreadcrumb: 'Anexos das Atualizações',
+    caminho: '/admin/atualizacoes',
+    caminhoRelativo: 'atualizacoes',
+    elemento: ListarAtualizacoes,
+    rotuloMenu: 'Atualizações',
+    rotuloBreadcrumb: 'Atualizações',
     grupoMenu: 'CAMPANHA',
-    icone: 'fa-paperclip',
+    icone: 'fa-newspaper',
   },
 
   // Fila de aprovação: item do grupo MODERAÇÃO.

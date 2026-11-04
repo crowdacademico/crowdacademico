@@ -1,9 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ModalConsultarContribuicao } from './modal-consultar-contribuicao';
 import { BadgeStatusContribuicao } from '../../components/crud/badge-status-contribuicao';
-import { EstadoVazio } from '../../components/crud/estado-vazio';
 import { GenericTable } from '../../components/crud/generic-table';
-import { Carregando } from '../../components/layout/carregando';
 import { recompensaApi } from '../../services/18-recompensa/api/recompensa.api';
 import { ROTULO_TIPO_RECOMPENSA } from '../../services/18-recompensa/constants/recompensa.constants';
 import { contribuicaoApi } from '../../services/22-contribuicao/api/contribuicao.api';
@@ -20,19 +18,28 @@ interface ContribuicaoLinha extends MinhaContribuicao {
   recompensa: string;
 }
 
+interface RecompensaLinha extends RecompensaGanha {
+  // A mesma recompensa pode vir de duas contribuições: o par é a chave.
+  chave: string;
+  tipoRotulo: string;
+}
+
 // Aba Contribuições da Minha Conta (RF-009, RF-089, RF-105): o histórico de contribuições da própria conta e as
-// recompensas que ela ganhou, com o link especial de cada uma. Mora em 22-contribuicao (o dono do dado). Contribuir é
+// recompensas que ela ganhou (todas as que o valor de cada contribuição paga alcançou), em tabela, com a campanha e o link
+// especial de cada uma. Mora em 22-contribuicao (o dono do dado). Contribuir é
 // na página pública da campanha, que ainda não existe; hoje uma contribuição nasce pela T5 do Campo de Testes.
 export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
-  const [recompensas, setRecompensas] = useState<RecompensaGanha[] | null>(null);
   const [consultando, setConsultando] = useState<ContribuicaoLinha | null>(null);
 
-  useEffect(() => {
-    recompensaApi
-      .minhas(auth.authFetch)
-      .then(setRecompensas)
-      .catch(() => setRecompensas([]));
-  }, [auth.authFetch]);
+  const listarRecompensas = useCallback(
+    async (): Promise<RecompensaLinha[]> =>
+      (await recompensaApi.minhas(auth.authFetch)).map((r) => ({
+        ...r,
+        chave: `${r.idContribuicao}-${r.idRecompensa}`,
+        tipoRotulo: ROTULO_TIPO_RECOMPENSA[r.tipo],
+      })),
+    [auth.authFetch],
+  );
 
   const listar = useCallback(async (): Promise<ContribuicaoLinha[]> => {
     const lista = await contribuicaoApi.minhas(auth.authFetch);
@@ -41,7 +48,7 @@ export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'au
       campanha: c.tituloCampanha ?? `Campanha #${c.idCampanha}`,
       meio: ROTULO_MEIO_PAGAMENTO[c.meioPagamento],
       situacao: ROTULO_STATUS_CONTRIBUICAO[c.status],
-      recompensa: c.tituloRecompensa ?? '-',
+      recompensa: c.recompensas ?? '-',
     }));
   }, [auth.authFetch]);
 
@@ -57,7 +64,7 @@ export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'au
           { chave: 'valor', rotulo: 'valor', tipo: 'dinheiro' },
           { chave: 'taxaPagamento', rotulo: 'tarifa', tipo: 'dinheiro' },
           { chave: 'meio', rotulo: 'meio', tipo: 'texto' },
-          { chave: 'recompensa', rotulo: 'recompensa', tipo: 'texto' },
+          { chave: 'recompensa', rotulo: 'recompensas', tipo: 'texto', umaLinha: true },
           { chave: 'criadoEm', rotulo: 'data', tipo: 'dataHora' },
           {
             chave: 'situacao',
@@ -84,35 +91,36 @@ export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'au
         />
       )}
 
-      <section className="space-y-3">
-        <h2 className="titulo-secao">Recompensas ganhas</h2>
-        {recompensas === null ? (
-          <Carregando />
-        ) : recompensas.length === 0 ? (
-          <EstadoVazio compacto icone="fa-gift" titulo="Nenhuma recompensa ainda." texto="Elas aparecem aqui quando a contribuição que as escolheu é paga." />
-        ) : (
-          <ul className="space-y-3">
-            {recompensas.map((item) => (
-              <li key={`${item.idContribuicao}-${item.idRecompensa}`} className="cartao-painel p-4 space-y-1">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="enfase">{item.titulo}</span>
-                  <span className="badge badge-neutro">{ROTULO_TIPO_RECOMPENSA[item.tipo]}</span>
-                </div>
-                <p className="paragrafo texto-fraco">{item.tituloCampanha}</p>
-                {item.descricao && <p className="paragrafo">{item.descricao}</p>}
-                {item.links.map((link) => (
-                  <p key={link.idLinkRecompensa} className="paragrafo flex items-center gap-2">
-                    <i className="fa-solid fa-link" aria-hidden="true"></i>
-                    <a href={link.url} target="_blank" rel="noreferrer" className="link-texto break-all">
-                      {link.url}
-                    </a>
-                  </p>
-                ))}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <GenericTable<RecompensaLinha>
+        titulo="Recompensas ganhas"
+        nivelTitulo={2}
+        ajuda="Toda recompensa que o valor de uma contribuição sua alcançou, quando ela foi paga. O link especial só você, o pesquisador e a administração enxergam."
+        colunas={[
+          { chave: 'idRecompensa', rotulo: 'id', tipo: 'id' },
+          { chave: 'titulo', rotulo: 'recompensa', tipo: 'nome', umaLinha: true },
+          { chave: 'tipoRotulo', rotulo: 'tipo', tipo: 'status' },
+          { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'texto', umaLinha: true },
+          { chave: 'idContribuicao', rotulo: 'contribuição', tipo: 'id' },
+          {
+            chave: 'links',
+            rotulo: 'link',
+            tipo: 'texto',
+            renderizar: (linha: RecompensaLinha) =>
+              linha.links[0] ? (
+                <a href={linha.links[0].url} target="_blank" rel="noreferrer" className="link-texto">
+                  <i className="fa-solid fa-link" aria-hidden="true"></i> Abrir
+                </a>
+              ) : (
+                '-'
+              ),
+            textoExibido: (linha: RecompensaLinha) => (linha.links[0] ? 'Abrir' : '-'),
+          },
+        ]}
+        chavePrimaria="chave"
+        listar={listarRecompensas}
+        vazio={{ icone: 'fa-gift', titulo: 'Nenhuma recompensa ainda.', texto: 'Elas aparecem aqui quando uma contribuição sua que alcança o valor de uma recompensa é paga.' }}
+        filtrosFacetados={[{ chave: 'tipoRotulo', rotulo: 'Tipo' }]}
+      />
     </div>
   );
 }

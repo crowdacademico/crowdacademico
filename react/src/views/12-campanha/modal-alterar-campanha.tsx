@@ -22,6 +22,7 @@ import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 
 import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
 import { ContadorCaracteres } from '../../components/input/contador-caracteres';
+import { InputDinheiro } from '../../components/input/input-dinheiro';
 import { dataLocal, duracaoEmDias, fimDoDia, inicioDoDia } from '../../services/12-campanha/util/prazo-campanha.util';
 import { useAreasDaCampanha } from '../../services/8-area-conhecimento/hook/use-areas-da-campanha';
 import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
@@ -237,17 +238,26 @@ export function ModalAlterarCampanha({
       />
     ) : (
       <Campo rotulo={rotulo} className={largura}>
-        {({ atributos }) => (
-          <input
-            {...atributos}
-            type={tipo}
-            value={form[campo]}
-            onChange={(evento) => setForm({ ...form, [campo]: evento.target.value })}
-            className="input-padrao"
-            disabled={travado(campo)}
-            aria-describedby={descreveBloqueio(campo)}
-          />
-        )}
+        {({ atributos }) =>
+          tipo === 'number' ? (
+            <InputDinheiro
+              {...atributos}
+              valor={form[campo]}
+              aoMudar={(valor) => setForm({ ...form, [campo]: valor })}
+              aria-describedby={descreveBloqueio(campo)}
+            />
+          ) : (
+            <input
+              {...atributos}
+              type={tipo}
+              value={form[campo]}
+              onChange={(evento) => setForm({ ...form, [campo]: evento.target.value })}
+              className="input-padrao"
+              disabled={travado(campo)}
+              aria-describedby={descreveBloqueio(campo)}
+            />
+          )
+        }
       </Campo>
     ));
 
