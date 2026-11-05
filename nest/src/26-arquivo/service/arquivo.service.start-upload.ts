@@ -62,8 +62,8 @@ export class ArquivoServiceStartUpload {
     );
     if (dto.tamanhoBytes > tamanhoMaximo) {
       throw new BadRequestException(
-        `Arquivo excede o tamanho máximo permitido para ${tipoMime} ` +
-          `(${Math.round(tamanhoMaximo / 1024 / 1024)} MB).`,
+        `${tipoMime === 'application/pdf' ? 'O PDF' : 'A imagem'} passa do limite de ` +
+          `${Math.round(tamanhoMaximo / 1024 / 1024)} MB.`,
       );
     }
 

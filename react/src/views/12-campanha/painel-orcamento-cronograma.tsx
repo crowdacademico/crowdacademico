@@ -30,12 +30,8 @@ interface PainelOrcamentoCronogramaProps {
   // uma embaixo da outra. Conta o espaço do PAINEL, não da tela: no Consultar e no Alterar ele tem a largura toda do
   // modal (lado a lado); no celular, nunca cabe.
   abaFixa?: 'orcamento' | 'cronograma';
-  // `metaFinanceira`: opcional; quando presente, a tabela de Orçamento mostra o total em relação à meta acima dela.
-  metaFinanceira?: number;
   // `dataInicioCampanha`: mínimo da data prevista de um marco (ver 4-tabela-marcos-cronograma.tsx).
   dataInicioCampanha?: string;
-  // `minimoMarcosCronograma`: quando presente, a tabela de Cronograma mostra o mínimo e quantos há.
-  minimoMarcosCronograma?: number;
 }
 
 export function PainelOrcamentoCronograma({
@@ -44,9 +40,7 @@ export function PainelOrcamentoCronograma({
   podeEditar,
   aoCarregar,
   abaFixa,
-  metaFinanceira,
   dataInicioCampanha,
-  minimoMarcosCronograma,
 }: PainelOrcamentoCronogramaProps) {
   const { reportarErro } = useErroToast();
   const [orcamento, setOrcamento] = useState<OrcamentoCampanhaResponse[]>([]);
@@ -105,7 +99,6 @@ export function PainelOrcamentoCronograma({
             <TabelaItensOrcamento
               itens={orcamento}
               podeEditar={podeEditar}
-              metaFinanceira={metaFinanceira}
               aoAdicionar={(dados: DadosItemOrcamento) => executar(() => orcamentoCampanhaApi.criar(auth.authFetch, { idCampanha, ...dados }))}
               aoSalvar={(item, dados) => executar(() => orcamentoCampanhaApi.atualizar(auth.authFetch, item.idOrcamento, dados))}
               aoExcluir={(item) => void executar(() => orcamentoCampanhaApi.remover(auth.authFetch, item.idOrcamento))}
@@ -120,7 +113,6 @@ export function PainelOrcamentoCronograma({
               marcos={cronograma}
               podeEditar={podeEditar}
               dataInicioCampanha={dataInicioCampanha}
-              minimoMarcos={minimoMarcosCronograma}
               aoAdicionar={(dados: DadosMarco) => executar(() => marcoCronogramaApi.criar(auth.authFetch, { idCampanha, ...dados }))}
               aoSalvar={(marco, dados) => executar(() => marcoCronogramaApi.atualizar(auth.authFetch, marco.idMarco, dados))}
               aoExcluir={(marco) => void executar(() => marcoCronogramaApi.remover(auth.authFetch, marco.idMarco))}

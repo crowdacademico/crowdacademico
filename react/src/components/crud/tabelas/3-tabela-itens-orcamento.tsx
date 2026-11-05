@@ -1,6 +1,5 @@
 import { TabelaEditavel } from './tabela-editavel';
 import type { ColunaEditavel } from './tabela-editavel';
-import { BarraProgresso } from '../barra-progresso';
 import { InputDinheiro } from '../../input/input-dinheiro';
 import { formatarMoeda } from '../../../services/constant/util/formatacao.util';
 import type { OrcamentoCampanhaResponse } from '../../../services/13-orcamento-campanha/type/orcamento-campanha.type';
@@ -43,28 +42,14 @@ const COLUNAS: ColunaEditavel<OrcamentoCampanhaResponse, FormItem>[] = [
 interface TabelaItensOrcamentoProps {
   itens: OrcamentoCampanhaResponse[];
   podeEditar: boolean;
-  // Quando presente, mostra acima da tabela o total dos itens em relação à meta, com a barra; em vermelho se não bater
-  // (o banco exige a igualdade exata na aprovação, RF-042; isto só adianta o aviso).
-  metaFinanceira?: number;
   aoAdicionar: (dados: DadosItemOrcamento) => Promise<boolean>;
   aoSalvar: (item: OrcamentoCampanhaResponse, dados: DadosItemOrcamento) => Promise<boolean>;
   aoExcluir: (item: OrcamentoCampanhaResponse) => void;
 }
 
-export function TabelaItensOrcamento({ itens, podeEditar, metaFinanceira, aoAdicionar, aoSalvar, aoExcluir }: TabelaItensOrcamentoProps) {
-  const soma = itens.reduce((total, item) => total + item.valor, 0);
-
+export function TabelaItensOrcamento({ itens, podeEditar, aoAdicionar, aoSalvar, aoExcluir }: TabelaItensOrcamentoProps) {
   return (
     <>
-      {metaFinanceira !== undefined && (
-        <div className="paragrafo flex flex-wrap items-center justify-between gap-3 mb-3 texto-herdado">
-          <span className={soma === metaFinanceira ? 'texto-fraco' : 'texto-erro enfase'}>
-            Total dos itens: <strong>{formatarMoeda(soma)}</strong> de {formatarMoeda(metaFinanceira)}
-            {soma !== metaFinanceira && ' (precisa ser igual à meta)'}
-          </span>
-          <BarraProgresso valor={soma} total={metaFinanceira} rotulo="Total do orçamento em relação à meta" />
-        </div>
-      )}
       <TabelaEditavel
         linhas={itens}
         chave={(item) => item.idOrcamento}

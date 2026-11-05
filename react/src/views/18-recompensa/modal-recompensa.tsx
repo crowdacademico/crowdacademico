@@ -190,6 +190,7 @@ export function ModalRecompensa({ auth, idCampanha, recompensa, aoFechar, aoSalv
                     type="url"
                     maxLength={500}
                     value={url}
+                    disabled={idTipoLink === ''}
                     onChange={(evento) => setUrl(evento.target.value)}
                     className={'input-padrao' + classeErro}
                   />

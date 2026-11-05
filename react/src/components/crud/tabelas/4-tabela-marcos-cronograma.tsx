@@ -29,8 +29,6 @@ interface TabelaMarcosCronogramaProps {
   // `min` da data prevista. Só mínimo, de propósito: RF-045/fn_valida_data_marco_cronograma barram data anterior
   // ao início, mas permitem passar do fim (a divulgação de resultado costuma vir depois do prazo).
   dataInicioCampanha?: string;
-  // Quando presente, mostra acima da tabela quantos marcos há e o mínimo, em vermelho se faltar.
-  minimoMarcos?: number;
   aoAdicionar: (dados: DadosMarco) => Promise<boolean>;
   aoSalvar: (marco: MarcoCronogramaResponse, dados: DadosMarco) => Promise<boolean>;
   aoExcluir: (marco: MarcoCronogramaResponse) => void;
@@ -40,7 +38,6 @@ export function TabelaMarcosCronograma({
   marcos,
   podeEditar,
   dataInicioCampanha,
-  minimoMarcos,
   aoAdicionar,
   aoSalvar,
   aoExcluir,
@@ -72,15 +69,6 @@ export function TabelaMarcosCronograma({
 
   return (
     <>
-      {minimoMarcos !== undefined && (
-        <p className={'paragrafo flex items-center gap-2 mb-3 texto-herdado ' + (marcos.length >= minimoMarcos ? 'texto-fraco' : 'texto-erro enfase')}>
-          <i
-            className={'fa-solid ' + (marcos.length >= minimoMarcos ? 'fa-circle-check texto-sucesso' : 'fa-circle-xmark')}
-            aria-hidden="true"
-          ></i>
-          {marcos.length} de pelo menos {minimoMarcos} marcos.
-        </p>
-      )}
       <TabelaEditavel
         linhas={marcos}
         chave={(marco) => marco.idMarco}

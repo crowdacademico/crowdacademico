@@ -80,10 +80,8 @@ export function ModalAtualizacao({ auth, idCampanha, atualizacao, aoFechar, aoSa
 
   const adicionarLink = () => {
     const tipo = tiposLink.find((t) => String(t.idTipolink) === linkTipo);
-    if (!tipo || linkUrl.trim() === '') {
-      reportarErro(new Error('Escolha o tipo do link e cole o endereço.'));
-      return;
-    }
+    // O botão só fica ativo com o tipo escolhido e o endereço preenchido.
+    if (!tipo || linkUrl.trim() === '') return;
     setLinks([...links, { idTipoLink: tipo.idTipolink, nomeTipo: tipo.nome, url: linkUrl.trim() }]);
     setLinkUrl('');
   };
@@ -233,8 +231,16 @@ export function ModalAtualizacao({ auth, idCampanha, atualizacao, aoFechar, aoSa
               <div className="grid sm:grid-cols-3 gap-3 items-end">
                 <Campo rotulo="Tipo do link (opcional)">
                   {({ atributos }) => (
-                    <select {...atributos} value={linkTipo} onChange={(evento) => setLinkTipo(evento.target.value)} className="input-padrao">
-                      <option value="">Escolha</option>
+                    <select
+                      {...atributos}
+                      value={linkTipo}
+                      onChange={(evento) => {
+                        setLinkTipo(evento.target.value);
+                        if (evento.target.value === '') setLinkUrl('');
+                      }}
+                      className="input-padrao"
+                    >
+                      <option value="">Nenhum</option>
                       {tiposLink.map((tipo) => (
                         <option key={tipo.idTipolink} value={tipo.idTipolink}>
                           {tipo.nome}
@@ -250,13 +256,19 @@ export function ModalAtualizacao({ auth, idCampanha, atualizacao, aoFechar, aoSa
                       type="url"
                       maxLength={500}
                       value={linkUrl}
+                      disabled={linkTipo === ''}
                       onChange={(evento) => setLinkUrl(evento.target.value)}
                       className="input-padrao"
                     />
                   )}
                 </Campo>
                 <div>
-                  <button type="button" className="btn btn-secondary" disabled={ocupado} onClick={adicionarLink}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={ocupado || linkTipo === '' || linkUrl.trim() === ''}
+                    onClick={adicionarLink}
+                  >
                     <i className="fa-solid fa-plus" aria-hidden="true"></i> Adicionar link
                   </button>
                 </div>

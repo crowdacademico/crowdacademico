@@ -342,9 +342,7 @@ export function ModalCriarCampanha({
                 idCampanha={idCampanha}
                 podeEditar
                 abaFixa={etapa}
-                metaFinanceira={Number(form.metaFinanceira)}
                 dataInicioCampanha={form.dataInicio}
-                minimoMarcosCronograma={regras.minimoMarcosCronograma}
               />
             </div>
           </SecaoFicha>

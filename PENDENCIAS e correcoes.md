@@ -10,7 +10,14 @@
 
 ## ⭐ Para discutir (anotado em 18-10-2026, no topo de propósito)
 
-- **Colunas das tabelas: o que sobrou (01-11-2026; baixa prioridade, decidido pelo Lucas: não é importante agora, talvez conversar no futuro).** As 6 tabelas que rolavam de lado a 1400 px cabem agora, a 1280, 1366, 1400 e 1920 px (DS-120: a tabela que não cabe se aperta em degraus). Ainda rolam a 1400 px **Contribuições (29 px) e Auditoria Financeira (6 px)**; Eventos de Pagamento passou a caber em 01-11-2026, quando as curtas do mesmo tipo deixaram de ter a mesma largura na tabela apertada (DS-120). Decidido pelo Lucas: Eventos de Pagamento não se mexe mais; Auditoria Financeira mantém todas as colunas e os segundos; em Contribuições a coluna REPASSE fica (ela mostra Pendente, Processando, Erro e Aguardando chave Pix, que a situação da contribuição não mostra). Nelas pesam duas regras de propósito, que só mudam com decisão: (1) as curtas do mesmo tipo ficam iguais (em Contribuições, Meio, Situação e Repasse têm 180 px por causa de "Aguardando pagamento"); (2) a data com hora mostra os segundos (163 px; o "sem segundos" já foi cogitado em 25-10-2026, em "Visual e marca"). Opções: soltar a regra (1) só na tabela apertada, tirar os segundos das datas da lista, ou aceitar a rolagem nessas três.
+### O que o orientador falou (anotado em 05-11-2026, com as palavras do Lucas; ele mesmo vai escrever as soluções)
+
+- **Modo de edição em Papéis x Permissões:** precisa de um botão de liga/desliga do modo de edição da tabela Papéis x Permissões, porque os botões são muito sensíveis: se alguém clicar e não perceber, uma permissão pode ser concedida ou tirada, e vai ser difícil de lembrar e consertar depois.
+- **Custo, lucro e monetização da plataforma:** pensar no custo da plataforma, nos lucros e na monetização. Por exemplo, se a plataforma tiver 100 ou 1000 campanhas tudo-ou-nada que não derem certo, a plataforma não fica com nada. Pensar em formas de minimizar os prejuízos. O Lucas comentou a "monetização por rendimento enquanto o dinheiro está parado"; o professor disse para pensar mais em outras coisas.
+- **Nos termos:** o item acima precisa estar nos termos.
+- **Prazo de aprovação da campanha:** estar nos termos e planejar quanto tempo a plataforma leva para aprovar uma campanha. Demorar pode frustrar os pesquisadores e levá-los a procurar outra plataforma. Ter em mente um limite máximo, e trabalhar isso na documentação.
+- **Futuro:** uma curadoria com IA para agilizar o trabalho do curador.
+
 - **Reorganizar o `DESIGN_SYSTEM.md` (18-10-2026, para o futuro, não agora):** as regras principais (core), como linha e coluna das tabelas (DS-100, DS-104, DS-105), passam para os números de destaque, para serem achadas primeiro. Junto da reorganização numérica de pastas e arquivos (seção de Pagamento).
 
 **Financeiro comparado com o mercado (19-10-2026).** Feitos no mesmo dia: a contestação de cartão vai para revisão manual, e o repasse espera a carência de `repasse_carencia_dias` (15). Fica para decidir:
@@ -47,7 +54,7 @@ A área pública não pode ser feita agora (primeiro termina a área restrita). 
 
 - **Links acadêmicos no formulário do upgrade (RF-022):** o requisito pede os links (até 5) no próprio formulário do upgrade; hoje o upgrade não recebe links, eles entram depois, pelo perfil. Quando a área pública tiver o formulário, pedir os links na mesma tela (apontado pela revisão externa de 01-11-2026).
 - **Seguir pesquisador (RF-029):** o botão "Seguir" e a contagem de seguidores na página pública do perfil. A API existe (`/seguir-pesquisador`, `/seguir-pesquisador/:id/seguidores`); hoje se segue pelo coração da T1 e a lista fica na T4.
-- **Escolher a recompensa ao contribuir (RF-105):** o checkout mostra as recompensas ativas da campanha e manda `idRecompensa` no `POST /contribuicao` (já aceito: exige conta e o valor mínimo).
+- **Recompensas no checkout (RF-105):** mostrar, conforme o valor digitado, quais recompensas a pessoa vai ganhar (ninguém escolhe: o banco liga sozinho todas as que o valor alcança, desde 04-11-2026).
 - **Checkout:** o aviso do modelo da campanha com a confirmação de ciência (RF-041; a API ainda não registra a ciência), o checkbox do termo de pagamento (RF-086; o aceite com IP já é gravado), a contagem regressiva do Pix (RF-085) e a tela de cada meio (RF-081).
 - **Painel "Projetos Criados" do pesquisador (RF-090, RF-091):** a lista com as métricas e o líquido estimado (o `GET /campanha/:id` já devolve `valorLiquidoEstimado`).
 - **Painel de quem apoia (RF-089):** o histórico já existe na Minha Conta, aba Contribuições; na área pública vira o painel do doador.
@@ -81,6 +88,8 @@ A área pública não pode ser feita agora (primeiro termina a área restrita). 
 
 
 ### Arquivos
+
+- **Recompensa com arquivo (04-11-2026, sem pressa):** a tabela `arquivo_recompensa` existe, mas nenhuma tela usa; seria outro jeito de entregar o conteúdo digital, sem depender de link externo.
 
 #### 🟡 Especificação registrada (13-09-2026): tela de administração pra `arquivo` (espaço ocupado, órfãos, maiores consumidores) - NÃO construída de propósito
 
@@ -199,9 +208,11 @@ Decidimos depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/todas as 
 
 #### 🟡 O que sobrou da auditoria dos status (01-11-2026)
 
-A regra do pesquisador suspenso e a matriz no RF-115 foram feitas em 01-11-2026; reabrir denúncia julgada continua permitido, com aviso e justificativa. Os 4 RFs com texto atrás do sistema estão no grupo 1, para a revisão externa.
+A regra do pesquisador suspenso e a matriz no RF-115 foram feitas em 01-11-2026; reabrir denúncia julgada continua permitido, com aviso e justificativa. Os 4 RFs com texto atrás do sistema foram respondidos nos requisitos de 02-11-2026.
 
 ### Visual e marca
+
+- **Campos de valor em reais em Parâmetros (04-11-2026):** a meta, o orçamento, a recompensa e o Contribuir do T5 já usam o campo de dinheiro (R$ 123,45 ao digitar). Os Parâmetros decimais ficaram de fora porque misturam reais e porcentagem; ver quais são em reais.
 
 - **Modais menores, sem barra de rolagem quando der (01-11-2026, estudar antes).** Alguns modais poderiam ser menores sem perder conteúdo: texto de explicação vira tooltip (regra de 10-10-2026). Exemplo do Lucas, no Julgar Denúncia: o bloco "O que cada decisão faz" ("Aceitar torna esta denúncia improcedente...") caberia num tooltip. A meta é evitar a rolagem só nos modais em que der; o de denúncia é um deles. Estudar modal por modal antes de mexer.
 - **Coluna VALOR de Parâmetros: respondido em 01-11-2026.** Com a tabela apertada (DS-120), o e-mail quebra no "@" (não vira "ler tudo"), e a tabela não rola mais. Custo: as linhas em que a chave ou o e-mail quebram ficam com 53 ou 54 px, e não 51 (DS-100). Se incomodar, a alternativa é o "ler tudo" nessas duas colunas.
@@ -212,6 +223,10 @@ A regra do pesquisador suspenso e a matriz no RF-115 foram feitas em 01-11-2026;
 - **Troca do logo e do ícone pelo painel** (aba Identidade Visual do Dashboard, hoje um espaço reservado). Desde 25-10-2026 a marca padrão está no projeto (`DOCUMENTACAO_FRONTEND.md`, seção 12); o envio pelo painel substitui a padrão, e o admin do futuro troca sem mexer no código nem no banco. A análise, os 4 problemas e as duas decisões em aberto estão no topo do `ACHADOS_PARA_DISCUTIR.md`. O envio passa pelo Storage pessoal do Lucas: nos testes, só ele envia.
 
 ### Estrutura e ferramentas
+
+#### 🟡 Tipos de link para atualização e recompensa (04-11-2026)
+
+Hoje o único tipo liberado para atualização e recompensa é o GitHub, e a regra dele só aceita endereço de perfil (`github.com/nome`), não de repositório. Artigo (DOI), vídeo ou pasta de arquivos precisam de um tipo novo, criado pelo admin na tela Tipos de Link (sem código). Decidir quais tipos entram no seed.
 
 #### 🟡 Auditoria de coisas inúteis (anotado em 04-11-2026; para o futuro)
 

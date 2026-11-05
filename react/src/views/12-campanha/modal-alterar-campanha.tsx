@@ -501,9 +501,7 @@ export function ModalAlterarCampanha({
                     auth={auth}
                     idCampanha={idCampanha}
                     podeEditar={podeEditarItens}
-                    metaFinanceira={Number(form.metaFinanceira)}
                     dataInicioCampanha={form.dataInicio}
-                    minimoMarcosCronograma={regras.minimoMarcosCronograma}
                     aoCarregar={(itens, marcos) => {
                       setOrcamento(itens);
                       setCronograma(marcos);
