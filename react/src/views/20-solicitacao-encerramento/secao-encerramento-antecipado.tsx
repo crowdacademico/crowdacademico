@@ -6,6 +6,7 @@ import { TabelaSolicitacoesEncerramento } from '../../components/crud/tabelas/13
 import { Campo } from '../../components/input/campo';
 import { ContadorCaracteres } from '../../components/input/contador-caracteres';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
+import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { Tooltip } from '../../components/layout/tooltip';
 import { solicitacaoEncerramentoApi } from '../../services/20-solicitacao-encerramento/api/solicitacao-encerramento.api';
@@ -94,7 +95,7 @@ export function SecaoEncerramentoAntecipado({ authFetch, idCampanha, valorArreca
 
   return (
     <SecaoFicha titulo="Encerrar a campanha" colunas={1}>
-      {erro && <p className="erro-campo">{erro}</p>}
+      <MensagemErro texto={erro} className="erro-campo" />
       {pendente ? (
         <CaixaAviso titulo={`Pedido enviado em ${formatarData(pendente.solicitadoEm)}, esperando o administrador`}>
           <p>A campanha continua recebendo apoio até a decisão. Você pode desistir enquanto o pedido não for decidido.</p>

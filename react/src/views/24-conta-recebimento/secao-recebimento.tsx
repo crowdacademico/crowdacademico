@@ -6,6 +6,7 @@ import { GenericTable } from '../../components/crud/generic-table';
 import { ModalConfirmacao } from '../../components/crud/modal-confirmacao';
 import { Campo } from '../../components/input/campo';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
+import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { Tooltip } from '../../components/layout/tooltip';
 import { contaRecebimentoApi } from '../../services/24-conta-recebimento/api/conta-recebimento.api';
@@ -73,7 +74,7 @@ export function SecaoRecebimento({ authFetch }: { authFetch: AuthFetch }) {
   return (
     <>
       <SecaoFicha titulo="Recebimento por Pix" nivel={2}>
-        {erro && <p className="erro-campo">{erro}</p>}
+        <MensagemErro texto={erro} className="erro-campo" />
         {conta && !editando && (
           <>
             <CampoFicha rotulo="Chave Pix" valor={`${ROTULO_TIPO_CHAVE_PIX[conta.tipoChave]}: ${conta.chaveMascarada}`} />

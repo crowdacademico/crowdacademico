@@ -196,16 +196,6 @@ Decidimos depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/todas as 
 
 - **Permissão por rota no painel:** a guarda do `/admin/*` só exige login, não confere o papel (quem vê o quê continua decidido pelo backend). "Fica para perto do fim".
 
-#### 🟡 Achados da super auditoria ao vivo de 24-10-2026 (a decidir)
-
-- **Aviso de erro: estudar antes de mexer (25-10-2026, sem pressa).** Hoje o painel faz de dois jeitos: quase toda tela com formulário mostra só o texto vermelho (o `useErroToast` com `mostraTexto` esconde o aviso flutuante quando o erro já está na tela), e as seções Encerrar a campanha (Alterar do dono) e chave Pix (`secao-recebimento.tsx`) mostram os dois com a mesma frase, porque o texto vermelho delas não tem a marca `data-mensagem-erro`. Gostamos dos dois avisos (retorno claro e imediato) e da ideia do meio-termo: o aviso flutuante só avisa ("Não foi possível..., veja o motivo abaixo") e o texto vermelho traz o motivo. Antes de aplicar, estudar as variáveis, sem valor escrito à mão:
-  - **Tipo de erro:** de campo (o backend manda `campos`, o erro aparece embaixo do campo), recusa de regra (409, 422), sem permissão (403), falha de rede ou do servidor (500).
-  - **Onde a tela mostra:** modal de Criar/Alterar (38 dos arquivos), página inteira (login, Minha Conta, cadastro), seção dentro de modal, janelinha de confirmação. O login já tem desenho próprio, decidido em 24-10-2026 (frase no topo e os campos em vermelho): o aviso flutuante ali seria repetido.
-  - **O texto do aviso flutuante:** uma frase única num lugar só (constante), a frase com o nome da ação passado por quem chama ("Não foi possível salvar a campanha"), ou o próprio motivo, como hoje.
-  - **Leitor de tela:** o texto vermelho já é anunciado (`role="alert"`); um aviso flutuante com a mesma frase seria anunciado duas vezes.
-  - **Quantas telas:** 46 arquivos usam `mostraTexto`, 16 usam o aviso flutuante sozinho (ações fora de formulário).
-  Mercado (24-10-2026): o Primer, do GitHub, desaconselha o aviso flutuante para erro; o GOV.UK usa duas camadas, um resumo no topo mais o erro em cada campo, as duas na própria página.
-
 #### 🟡 O que sobrou da auditoria dos status (01-11-2026)
 
 A regra do pesquisador suspenso e a matriz no RF-115 foram feitas em 01-11-2026; reabrir denúncia julgada continua permitido, com aviso e justificativa. Os 4 RFs com texto atrás do sistema foram respondidos nos requisitos de 02-11-2026.

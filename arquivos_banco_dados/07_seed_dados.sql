@@ -267,7 +267,7 @@ INSERT INTO tipo_link (codigo, nome, ativo, regex, dominio, permite_perfil, perm
 ('ORCID',              'ORCID',                TRUE,  '^https?://orcid\.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$',   '{orcid.org}',        TRUE, FALSE, FALSE),
 ('RESEARCHGATE',       'ResearchGate',         TRUE,  '^https?://(www\.)?researchgate\.net/profile/[\w\-]+$', '{researchgate.net}', TRUE, FALSE, FALSE),
 ('LINKEDIN',           'LinkedIn',             TRUE,  '^https?://(www\.)?linkedin\.com/in/[\w\-]+/?$',        '{linkedin.com}',     TRUE, FALSE, FALSE),
-('GITHUB',             'GitHub',               TRUE,  '^https?://(www\.)?github\.com/[\w\-]+/?$',             '{github.com}',       TRUE, TRUE,  TRUE);
+('GITHUB',             'GitHub',               TRUE,  '^https?://(www\.|gist\.)?github\.com/[\w.\-]+(/.*)?$', '{github.com}',       TRUE, TRUE,  TRUE);
 
 -- [07-C-2] area_conhecimento
 -- 2 níveis do CNPq (grande área -> área): "Ciências da Saúde" cobrindo de odontologia a saúde coletiva era amplo
