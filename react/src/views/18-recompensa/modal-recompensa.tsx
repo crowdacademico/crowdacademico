@@ -5,6 +5,8 @@ import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { useFecharComAviso } from '../../components/crud/use-alteracao-nao-salva';
 import { Campo } from '../../components/input/campo';
 import { InputDinheiro } from '../../components/input/input-dinheiro';
+import { Tooltip } from '../../components/layout/tooltip';
+import { EXEMPLO_LINK_POR_TIPO } from '../../services/7-link-academico/constants/exemplos-link.constants';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { recompensaApi } from '../../services/18-recompensa/api/recompensa.api';
@@ -51,6 +53,9 @@ export function ModalRecompensa({ auth, idCampanha, recompensa, aoFechar, aoSalv
   const [url, setUrl] = useState(linkAtual?.url ?? '');
   const [tiposLink, setTiposLink] = useState<TipoLinkResponse[]>([]);
   const precisaLink = tipoUsaLink(tipo);
+  // O exemplo do tipo escolhido (os mesmos dos links acadêmicos), no ⓘ do endereço.
+  const codigoTipoLink = tiposLink.find((opcao) => String(opcao.idTipolink) === idTipoLink)?.codigo;
+  const exemploLink = codigoTipoLink ? EXEMPLO_LINK_POR_TIPO[codigoTipoLink] : undefined;
 
   useEffect(() => {
     tipoLinkApi.listar(auth.authFetch, { ativo: true, escopo: 'recompensa' }).then(setTiposLink).catch(reportarErro);
@@ -173,8 +178,16 @@ export function ModalRecompensa({ auth, idCampanha, recompensa, aoFechar, aoSalv
             <>
               <Campo rotulo="Tipo do link" erro={erroDe('idTipoLink')}>
                 {({ atributos, classeErro }) => (
-                  <select {...atributos} value={idTipoLink} onChange={(evento) => setIdTipoLink(evento.target.value)} className={'input-padrao' + classeErro}>
-                    <option value="">Escolha</option>
+                  <select
+                    {...atributos}
+                    value={idTipoLink}
+                    onChange={(evento) => {
+                      setIdTipoLink(evento.target.value);
+                      if (evento.target.value === '') setUrl('');
+                    }}
+                    className={'input-padrao' + classeErro}
+                  >
+                    <option value="">Nenhum</option>
                     {tiposLink.map((opcao) => (
                       <option key={opcao.idTipolink} value={opcao.idTipolink}>
                         {opcao.nome}
@@ -183,7 +196,14 @@ export function ModalRecompensa({ auth, idCampanha, recompensa, aoFechar, aoSalv
                   </select>
                 )}
               </Campo>
-              <Campo rotulo="Endereço do link" erro={erroDe('url')}>
+              <Campo
+                rotulo={
+                  <>
+                    Endereço do link {exemploLink && <Tooltip texto={`Exemplo: ${exemploLink}`} />}
+                  </>
+                }
+                erro={erroDe('url')}
+              >
                 {({ atributos, classeErro }) => (
                   <input
                     {...atributos}

@@ -53,7 +53,7 @@ export type TipoAtualizacao = "imagem" | "linkexterno" | "pdf" | "texto";
 
 export type TipoChavePix = "aleatoria" | "cnpj" | "cpf" | "email" | "telefone";
 
-export type TipoConfiguracao = "booleano" | "decimal" | "inteiro" | "texto";
+export type TipoConfiguracao = "booleano" | "decimal" | "dinheiro" | "inteiro" | "texto";
 
 export type TipoMotivoDenuncia = "campanha" | "perfil";
 

@@ -12,7 +12,6 @@
 
 ### O que o orientador falou (anotado em 05-11-2026, com as palavras do Lucas; ele mesmo vai escrever as soluções)
 
-- **Modo de edição em Papéis x Permissões:** precisa de um botão de liga/desliga do modo de edição da tabela Papéis x Permissões, porque os botões são muito sensíveis: se alguém clicar e não perceber, uma permissão pode ser concedida ou tirada, e vai ser difícil de lembrar e consertar depois.
 - **Custo, lucro e monetização da plataforma:** pensar no custo da plataforma, nos lucros e na monetização. Por exemplo, se a plataforma tiver 100 ou 1000 campanhas tudo-ou-nada que não derem certo, a plataforma não fica com nada. Pensar em formas de minimizar os prejuízos. O Lucas comentou a "monetização por rendimento enquanto o dinheiro está parado"; o professor disse para pensar mais em outras coisas.
 - **Nos termos:** o item acima precisa estar nos termos.
 - **Prazo de aprovação da campanha:** estar nos termos e planejar quanto tempo a plataforma leva para aprovar uma campanha. Demorar pode frustrar os pesquisadores e levá-los a procurar outra plataforma. Ter em mente um limite máximo, e trabalhar isso na documentação.
@@ -89,7 +88,8 @@ A área pública não pode ser feita agora (primeiro termina a área restrita). 
 
 ### Arquivos
 
-- **Recompensa com arquivo (04-11-2026, sem pressa):** a tabela `arquivo_recompensa` existe, mas nenhuma tela usa; seria outro jeito de entregar o conteúdo digital, sem depender de link externo.
+- **Recompensa com arquivo (07-11-2026, aguardando a Alexia):** o Lucas perguntou à Alexia se a recompensa entrega também por arquivo (imagem ou PDF) ou só por link. Já foi feito e testado, e desfeito no mesmo dia para esperar a resposta; as versões com o recurso estão guardadas fora do repositório, e o Grupo CF do ATUALIZAR ficou comentado, marcado "NÃO COLE".
+
 
 #### 🟡 Especificação registrada (13-09-2026): tela de administração pra `arquivo` (espaço ocupado, órfãos, maiores consumidores) - NÃO construída de propósito
 
@@ -212,7 +212,6 @@ A regra do pesquisador suspenso e a matriz no RF-115 foram feitas em 01-11-2026;
 
 ### Visual e marca
 
-- **Campos de valor em reais em Parâmetros (04-11-2026):** a meta, o orçamento, a recompensa e o Contribuir do T5 já usam o campo de dinheiro (R$ 123,45 ao digitar). Os Parâmetros decimais ficaram de fora porque misturam reais e porcentagem; ver quais são em reais.
 
 - **Modais menores, sem barra de rolagem quando der (01-11-2026, estudar antes).** Alguns modais poderiam ser menores sem perder conteúdo: texto de explicação vira tooltip (regra de 10-10-2026). Exemplo do Lucas, no Julgar Denúncia: o bloco "O que cada decisão faz" ("Aceitar torna esta denúncia improcedente...") caberia num tooltip. A meta é evitar a rolagem só nos modais em que der; o de denúncia é um deles. Estudar modal por modal antes de mexer.
 - **Coluna VALOR de Parâmetros: respondido em 01-11-2026.** Com a tabela apertada (DS-120), o e-mail quebra no "@" (não vira "ler tudo"), e a tabela não rola mais. Custo: as linhas em que a chave ou o e-mail quebram ficam com 53 ou 54 px, e não 51 (DS-100). Se incomodar, a alternativa é o "ler tudo" nessas duas colunas.

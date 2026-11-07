@@ -107,7 +107,8 @@ $$;
 -- ============================================================
 -- ENUMS
 -- ============================================================
-CREATE TYPE tipo_configuracao     AS ENUM ('decimal', 'inteiro', 'texto', 'booleano');
+-- 'dinheiro': valor em reais (o painel mostra o campo de R$); 'decimal' fica para porcentagem e outros números.
+CREATE TYPE tipo_configuracao     AS ENUM ('decimal', 'inteiro', 'texto', 'booleano', 'dinheiro');
 CREATE TYPE status_pesquisador    AS ENUM ('ativo', 'suspenso');
 CREATE TYPE tipo_vinculo          AS ENUM ('institucional', 'independente');
 CREATE TYPE titulo_academico      AS ENUM ('graduado', 'especialista', 'mestre', 'doutor');
@@ -322,6 +323,7 @@ CREATE TABLE configuracoes (
         OR tipo = 'texto'
         OR (tipo = 'inteiro'  AND valor ~ '^[0-9]+$')
         OR (tipo = 'decimal'  AND valor ~ '^[0-9]+(\.[0-9]+)?$')
+        OR (tipo = 'dinheiro' AND valor ~ '^[0-9]+(\.[0-9]{1,2})?$')
         OR (tipo = 'booleano' AND valor IN ('true', 'false'))),
     -- Chave GLOBAL é contrato do sistema: para "desligar" uma regra muda-se o valor, não se desativa a chave.
     CONSTRAINT "CK_CONFIGURACOES_GLOBAL_ATIVA" CHECK (id_usuario IS NOT NULL OR ativo = TRUE),

@@ -123,7 +123,7 @@ A pontuação dos pesquisadores é pública: todo papel a vê, sem permissão pr
 
 ### [01-C] CONFIG (Configurações, Catálogos e Arquivo Base)
 
-* **`configuracoes`:** parâmetros globais do sistema (`id_usuario IS NULL`) e preferências individuais (`id_usuario` preenchido). `UNIQUE` em `chave`, para *upsert*.
+* **`configuracoes`:** parâmetros globais do sistema (`id_usuario IS NULL`) e preferências individuais (`id_usuario` preenchido). `UNIQUE` em `chave`, para *upsert*. O `tipo` diz o formato do valor: `inteiro`, `decimal` (porcentagem e outros números), `dinheiro` (valor em reais, até 2 casas; o painel mostra o campo de R$), `booleano` e `texto`.
   * **Coluna `publica`** (`BOOLEAN NOT NULL DEFAULT FALSE`): separa o que o navegador precisa para montar uma tela (ex.: `valor_minimo_contribuicao`) do que é parâmetro interno de segurança ou moderação (ex.: `limite_tentativas_login`). `GET /configuracoes` sem login só devolve as públicas; quem tem `configuracao_gerenciar` vê todas (`pol_config_select`, [04-C]). Só tem efeito em linha global.
   * **Por que nasce `FALSE`:** uma chave nova nasce interna e só fica pública por ato deliberado; com `DEFAULT TRUE`, esquecer de marcar seria o mesmo que expor.
 * **`tipo_link`:** catálogo de redes e links externos. As flags `permite_perfil`, `permite_atualizacao` e `permite_recompensa` definem onde cada tipo pode ser usado. Tem `codigo` estável (chave natural, usada pelo seed para referenciar o catálogo sem depender do id).
@@ -762,7 +762,7 @@ Regras conferidas no PGlite com o banco inteiro, usando o papel real `app_nestjs
 
 * **`INSERT` e `UPDATE` por coluna em `campanha`** (`06`): `valor_bruto_arrecadado`, `taxa_plataforma`, `encerrado_em`, `enviado_aprovacao_em`, `modelo` (no `UPDATE`) e `id_usuario` ficam fora do `GRANT` do `app_nestjs`; só trigger ou função `SECURITY DEFINER` os mudam. Sem isso, o dono faria `UPDATE campanha SET valor_bruto_arrecadado = 999999`.
 * **Configuração:**
-  * **O valor bate com o tipo** (`CK_CONFIGURACOES_VALOR_TIPO`, `01`): `'5,00'` (vírgula) numa chave decimal derrubaria `config_numero()` em toda aprovação; a escrita já falha com 23514.
+  * **O valor bate com o tipo** (`CK_CONFIGURACOES_VALOR_TIPO`, `01`): `'5,00'` (vírgula) numa chave decimal ou de dinheiro derrubaria `config_numero()` em toda aprovação; a escrita já falha com 23514. Dinheiro aceita no máximo 2 casas.
   * **O mínimo não passa do máximo** (`trg_configuracoes_pares_min_max`, `CONSTRAINT TRIGGER` diferida, 90019): prazo da campanha, itens de orçamento, marcos e tamanho de arquivo. Sem a trava, `prazo_minimo = 70` com `prazo_maximo = 60` impediria qualquer envio, sem mensagem clara. Só confere linhas globais, ativas e numéricas; `mínimo = máximo` vale. Como cada edição do painel é uma transação, subir o mínimo acima do máximo atual exige subir o máximo antes; o erro diz qual par e qual ordem seguir, e leva os valores no `DETAIL` (o Nest devolve como `dados`).
   * **Chave global não se apaga nem se desativa** (`pol_config_delete` e `CK_CONFIGURACOES_GLOBAL_ATIVA`): é parte do contrato do sistema; apagar `limite_campanhas_simultaneas` faria o código cair num padrão escondido. Para "desligar" uma regra, muda-se o valor. **Caso-limite:** uma chave global criada por engano pelo painel não se apaga mais por ele.
 * **`contar_metricas_dashboard()` acha o papel pelo código**, não pelo nome (renomear o papel não zera a métrica).

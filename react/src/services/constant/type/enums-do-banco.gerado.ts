@@ -42,7 +42,7 @@ export type TipoAtualizacao = (typeof TIPO_ATUALIZACAO)[number];
 export const TIPO_CHAVE_PIX = ['aleatoria', 'cnpj', 'cpf', 'email', 'telefone'] as const;
 export type TipoChavePix = (typeof TIPO_CHAVE_PIX)[number];
 
-export const TIPO_CONFIGURACAO = ['booleano', 'decimal', 'inteiro', 'texto'] as const;
+export const TIPO_CONFIGURACAO = ['booleano', 'decimal', 'dinheiro', 'inteiro', 'texto'] as const;
 export type TipoConfiguracao = (typeof TIPO_CONFIGURACAO)[number];
 
 export const TIPO_MOTIVO_DENUNCIA = ['campanha', 'perfil'] as const;

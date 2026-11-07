@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
@@ -49,7 +50,16 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
           // A descrição é o que o admin lê; a chave fica ao lado, para quem precisa dela (documentação, suporte).
           { chave: 'descricao', rotulo: 'parâmetro', tipo: 'nome', umaLinha: true },
           { chave: 'chave', rotulo: 'chave', tipo: 'texto' },
-          { chave: 'valor', rotulo: 'valor', tipo: 'texto' },
+          {
+            chave: 'valor',
+            rotulo: 'valor',
+            tipo: 'texto',
+            // Parâmetro em reais aparece como R$; os outros, como estão gravados.
+            renderizar: (linha: ConfiguracoesResponse) =>
+              linha.tipo === 'dinheiro' && linha.valor !== null ? formatarMoeda(linha.valor) : linha.valor,
+            textoExibido: (linha: ConfiguracoesResponse) =>
+              linha.tipo === 'dinheiro' && linha.valor !== null ? formatarMoeda(linha.valor) : (linha.valor ?? ''),
+          },
           { chave: 'tipo', rotulo: 'tipo', tipo: 'texto' },
           { chave: 'ativo', rotulo: 'ativo', tipo: 'simNao' },
           // `publica`: se a linha global aparece para quem não tem 'configuracao_gerenciar' (GET /configuracoes

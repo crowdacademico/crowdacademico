@@ -411,14 +411,14 @@ O formato que serviria para todos os tamanhos com um arquivo só é o SVG (desen
 ### Gestão do usuário
 
 - **Usuários:** Alterar é uma tela só, que rola (sem abas): em cima, o que espera o Salvar (foto, nome, senha, perfil de pesquisador); embaixo, o que grava na hora (papéis, moderação, CPF, links acadêmicos). Um filtro no topo mostra uma parte só sem desmontar as outras; o cabeçalho mostra pílulas da situação; o rodapé diz o que mudou. Revogar papel pede confirmação; suspender pede motivo e prazo de Parâmetros.
-- **Papéis & Permissões:** matriz Papel × Permissão; a descrição de cada papel vem do banco (`papel.descricao`, editável no Alterar Papel), e o significado de cada permissão, de um dicionário (`permissao-nomes-amigaveis.constants.ts`); quem tem uma permissão é lido ao vivo.
+- **Papéis & Permissões:** matriz Papel × Permissão, com o interruptor "Edição ligada/desligada" ao lado do título: começa desligado (só ✓ e -, nada clicável) e só com ele ligado cada célula concede ou revoga, para nenhum clique sem querer mudar uma permissão; a descrição de cada papel vem do banco (`papel.descricao`, editável no Alterar Papel), e o significado de cada permissão, de um dicionário (`permissao-nomes-amigaveis.constants.ts`); quem tem uma permissão é lido ao vivo.
 
 ### Configurações
 
 - **Termo de Uso:** Criar, Consultar, Alterar e Excluir em modal. Versão aceita é só leitura (e não se exclui); "Começar da vigente" no Criar. Selos: Vigente, Substituída, Rascunho.
 - **Tela de aceite (`views/5-termo-uso/tela-aceite-termo-uso.tsx`, RF-015):** mostra o termo pendente que `GET /termos-uso/pendente` devolver (o da conta ou o de pesquisador, com o nome certo no título). Com os dois pendentes, aceitar o primeiro mostra o segundo. Usa o `ModalTermo` (o padrão do termo do Criar conta, com "Tela cheia"). O X e o Esc encerram a sessão, como "Sair" (RF-015: com termo pendente só dá para ler, aceitar ou sair).
 - **Pontuação (Score) (`views/11-configuracoes/pontuacao-score.tsx`, Configurações):** os pesos das 4 dimensões e, dentro de cada uma, os itens com "ligado" e peso, mostrando quantos pontos cada item vale na hora (a parte dele da dimensão); e as faixas de reputação (nome, descrição, de, até). Cada bloco tem Desfazer e Salvar; Salvar só liga sem erro (dimensões somando 100, faixas cobrindo 0 a 100 sem buraco), e o banco confere de novo. Salvar recalcula todo mundo. O aviso de "regra ainda não fechada" saiu do painel de score do Consultar Usuário.
-- **Parâmetros do Sistema:** a descrição como nome; o campo de valor segue o tipo (Sim/Não, inteiro, decimal). Chave de um par mínimo/máximo mostra o aviso de qual editar primeiro.
+- **Parâmetros do Sistema:** a descrição como nome; o campo de valor segue o tipo (Sim/Não, inteiro, decimal, e o campo de R$ para os parâmetros em reais, que a lista também mostra como R$). Chave de um par mínimo/máximo mostra o aviso de qual editar primeiro.
 - **Áreas do Conhecimento, Tipos de Link, Motivos de Denúncia:** catálogos com a mesma API (`criarApiCatalogo`) e modais; Tipo de Link tem "Testar com um link".
 
 ### Campanha

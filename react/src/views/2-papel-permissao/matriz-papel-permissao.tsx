@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Tooltip } from '../../components/layout/tooltip';
+import { Interruptor } from '../../components/input/interruptor';
 import { TabelaPapelPermissao } from '../../components/crud/tabelas/6-tabela-papel-permissao';
 import { chaveCelula } from '../../services/2-papel-permissao/util/chave-celula-matriz.util';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
@@ -34,7 +35,8 @@ const TEXTO_TOOLTIP_MATRIZ =
   "nenhum vínculo ainda (ex.: 'usuario'/'pesquisador' começam sem nenhuma " +
   'permissão nomeada, o acesso deles normalmente é por serem donos do ' +
   'próprio dado, não por permissão, mas nada impede conceder uma se ' +
-  'precisar). Clique numa célula pra conceder ou revogar.';
+  'precisar). Para conceder ou revogar, ligue a edição e clique na célula; com ela desligada, nada muda por um ' +
+  'clique sem querer.';
 
 // Colunas em ordem de poder (maior para o menor), pela posição do papel no banco (compararPorPoder), não alfabética.
 
@@ -46,6 +48,8 @@ export function MatrizPapelPermissao({ authFetch }: MatrizPapelPermissaoProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const [celulaAlterando, setCelulaAlterando] = useState<string | null>(null);
+  // Começa desligada: a matriz só muda com a edição ligada de propósito.
+  const [editando, setEditando] = useState(false);
 
   // Papéis do maior cargo para o menor; permissões pelo nome AMIGÁVEL (é o que aparece na tela, então é o que
   // precisa estar em ordem alfabética visível para quem lê).
@@ -97,10 +101,19 @@ export function MatrizPapelPermissao({ authFetch }: MatrizPapelPermissaoProps) {
 
   return (
     <section className="crud-secao">
-      <h2 className="titulo-secao flex items-center">
-        Papel × Permissão
-        <Tooltip texto={TEXTO_TOOLTIP_MATRIZ} />
-      </h2>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <h2 className="titulo-secao flex items-center">
+          Papel × Permissão
+          <Tooltip texto={TEXTO_TOOLTIP_MATRIZ} />
+        </h2>
+        <Interruptor
+          ligado={editando}
+          aoAlternar={() => setEditando((atual) => !atual)}
+          rotulo="Modo de edição da matriz Papel × Permissão"
+          textoLigado="Edição ligada"
+          textoDesligado="Edição desligada"
+        />
+      </div>
 
       {carregando ? (
         <div className="animate-pulse h-32 fundo-sutil rounded"></div>
@@ -110,6 +123,7 @@ export function MatrizPapelPermissao({ authFetch }: MatrizPapelPermissaoProps) {
           permissoes={permissoes}
           concedidos={concedidos}
           celulaAlterando={celulaAlterando}
+          editando={editando}
           aoAlternar={(papel, permissao, concedido) => void alternar(papel, permissao, concedido)}
         />
       )}

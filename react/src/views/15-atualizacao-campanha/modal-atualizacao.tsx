@@ -5,6 +5,8 @@ import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { useFecharComAviso } from '../../components/crud/use-alteracao-nao-salva';
 import { Campo } from '../../components/input/campo';
+import { Tooltip } from '../../components/layout/tooltip';
+import { EXEMPLO_LINK_POR_TIPO } from '../../services/7-link-academico/constants/exemplos-link.constants';
 import { ContadorCaracteres } from '../../components/input/contador-caracteres';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -15,7 +17,7 @@ import {
   formatoPelosAnexos,
 } from '../../services/15-atualizacao-campanha/constants/atualizacao-campanha.constants';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
-import { enviarAnexoAtualizacao } from '../../services/26-arquivo/util/enviar-arquivo.util';
+import { enviarAnexo } from '../../services/26-arquivo/util/enviar-arquivo.util';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
@@ -73,6 +75,10 @@ export function ModalAtualizacao({ auth, idCampanha, atualizacao, aoFechar, aoSa
     conteudo: conteudo.trim() === '' ? 'Escreva o conteúdo.' : erroLimiteCaracteres(conteudo, limite, 'O conteúdo'),
   }));
 
+  // O exemplo do tipo escolhido (os mesmos dos links acadêmicos), no ⓘ do endereço.
+  const codigoTipo = tiposLink.find((tipo) => String(tipo.idTipolink) === linkTipo)?.codigo;
+  const exemploLink = codigoTipo ? EXEMPLO_LINK_POR_TIPO[codigoTipo] : undefined;
+
   const formato = formatoPelosAnexos(
     arquivos.map((arquivo) => arquivo.type),
     links.length > 0,
@@ -98,7 +104,7 @@ export function ModalAtualizacao({ auth, idCampanha, atualizacao, aoFechar, aoSa
           for (const [indice, arquivo] of arquivos.entries()) {
             const rotulo = `Enviando arquivo ${indice + 1} de ${arquivos.length}`;
             setProgresso(`${rotulo}...`);
-            const enviado = await enviarAnexoAtualizacao(auth.authFetch, arquivo, (percentual) => setProgresso(`${rotulo} (${percentual}%)...`));
+            const enviado = await enviarAnexo(auth.authFetch, arquivo, (percentual) => setProgresso(`${rotulo} (${percentual}%)...`));
             idsArquivos.push(enviado.idArquivo);
           }
         } finally {
@@ -249,7 +255,13 @@ export function ModalAtualizacao({ auth, idCampanha, atualizacao, aoFechar, aoSa
                     </select>
                   )}
                 </Campo>
-                <Campo rotulo="Endereço do link">
+                <Campo
+                  rotulo={
+                    <>
+                      Endereço do link {exemploLink && <Tooltip texto={`Exemplo: ${exemploLink}`} />}
+                    </>
+                  }
+                >
                   {({ atributos }) => (
                     <input
                       {...atributos}

@@ -886,9 +886,9 @@ BEGIN
     FOREACH v_par SLICE 1 IN ARRAY v_pares LOOP
         IF v_chave = v_par[1] OR v_chave = v_par[2] THEN
             SELECT valor::DECIMAL INTO v_minimo FROM configuracoes
-            WHERE chave = v_par[1] AND id_usuario IS NULL AND ativo = TRUE AND tipo IN ('inteiro', 'decimal');
+            WHERE chave = v_par[1] AND id_usuario IS NULL AND ativo = TRUE AND tipo IN ('inteiro', 'decimal', 'dinheiro');
             SELECT valor::DECIMAL INTO v_maximo FROM configuracoes
-            WHERE chave = v_par[2] AND id_usuario IS NULL AND ativo = TRUE AND tipo IN ('inteiro', 'decimal');
+            WHERE chave = v_par[2] AND id_usuario IS NULL AND ativo = TRUE AND tipo IN ('inteiro', 'decimal', 'dinheiro');
 
             IF v_minimo IS NOT NULL AND v_maximo IS NOT NULL AND v_minimo > v_maximo THEN
                 RAISE EXCEPTION 'O valor mínimo (%) de "%" não pode ser maior que o máximo (%) de "%". Antes de subir o mínimo, suba o máximo (ou baixe o máximo só depois de baixar o mínimo).',

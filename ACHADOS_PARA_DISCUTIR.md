@@ -38,6 +38,18 @@ Fontes:
 
 ---
 
+## 📌 Para discutir (07-11-2026): repositório privado do GitHub como recompensa
+
+**A ideia:** o pesquisador compartilhar um repositório do GitHub com quem apoiou, inclusive um repositório fechado (privado).
+
+**O que o GitHub permite:**
+- **Repositório público:** quem tem o link abre. Funciona hoje com um link na recompensa.
+- **Repositório privado:** o link sozinho não abre ("página não encontrada"). O GitHub não tem "qualquer um com o link pode ver" para repositório privado: o dono convida cada pessoa pelo nome de usuário dela no GitHub, uma a uma, e a pessoa precisa ter conta e aceitar o convite.
+
+**O que o sistema precisaria para o privado:** pedir o usuário do GitHub de quem ganhou a recompensa, mostrar a lista ao pesquisador e ele convidar cada um à mão no GitHub. Convidar sozinho pelo sistema exigiria uma integração com o GitHub bem mais complexa.
+
+**Alternativas que funcionam só com o link:** gist secreto do GitHub (não aparece em busca, mas abre com o link) ou uma pasta no Google Drive com "qualquer pessoa com o link".
+
 ## 📌 Decididos e feitos, para a Alexia ler
 
 Saíram daqui na limpeza de 25-10-2026 e estão inteiros em `informacoes/HISTORICO/HISTORICO_ACHADOS_PARA_DISCUTIR.md`, seção "Limpeza de 25-10-2026":

@@ -1098,3 +1098,113 @@ FROM contribuicao c
 JOIN recompensa r ON r.id_campanha = c.id_campanha AND r.ativo AND r.valor_minimo <= c.valor
 WHERE c.id_usuario IS NOT NULL
 ON CONFLICT (id_contribuicao, id_recompensa) DO NOTHING;
+
+-- ============================================================================
+-- GRUPO CD (07-11-2026) - Parâmetro do tipo "dinheiro", parte 1 de 2. IDEMPOTENTE.
+-- COLE SOZINHO e rode; depois cole o Grupo CE numa colagem separada (o Postgres não deixa usar um valor novo de
+-- tipo na mesma colagem em que ele foi criado). Não precisa parar o Nest.
+--
+-- O que muda: os parâmetros em reais ganham um tipo próprio, para o painel mostrar o campo de R$ (R$ 123,45).
+-- ============================================================================
+ALTER TYPE tipo_configuracao ADD VALUE IF NOT EXISTS 'dinheiro';
+
+-- ============================================================================
+-- GRUPO CE (07-11-2026) - Parâmetro do tipo "dinheiro", parte 2 de 2. IDEMPOTENTE.
+-- COLE DEPOIS DO GRUPO CD, numa colagem separada. Não precisa parar o Nest (nenhuma regra de acesso).
+--
+-- O que muda:
+-- 1. O formato aceito para "dinheiro": número com até 2 casas (ex.: 5.00).
+-- 2. A conferência de mínimo e máximo passa a ler também os parâmetros em reais.
+-- 3. Os 8 parâmetros em R$ mudam de "decimal" para "dinheiro" (as porcentagens continuam "decimal").
+-- ============================================================================
+
+-- 1. Formato (as conferências deixadas para o fim rodam antes: com alguma pendente, a tabela não pode mudar)
+SET CONSTRAINTS ALL IMMEDIATE;
+ALTER TABLE configuracoes DROP CONSTRAINT IF EXISTS "CK_CONFIGURACOES_VALOR_TIPO";
+ALTER TABLE configuracoes ADD CONSTRAINT "CK_CONFIGURACOES_VALOR_TIPO" CHECK (
+       valor IS NULL
+    OR tipo = 'texto'
+    OR (tipo = 'inteiro'  AND valor ~ '^[0-9]+$')
+    OR (tipo = 'decimal'  AND valor ~ '^[0-9]+(\.[0-9]+)?$')
+    OR (tipo = 'dinheiro' AND valor ~ '^[0-9]+(\.[0-9]{1,2})?$')
+    OR (tipo = 'booleano' AND valor IN ('true', 'false')));
+
+-- 2. Mínimo e máximo
+CREATE OR REPLACE FUNCTION public.fn_valida_pares_min_max_configuracoes()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    v_pares TEXT[][] := ARRAY[
+        ['prazo_minimo_campanha_dias',    'prazo_maximo_campanha_dias'],
+        ['orcamento_min_itens',           'orcamento_max_itens'],
+        ['cronograma_min_marcos',         'cronograma_max_marcos'],
+        ['arquivo_tamanho_minimo_bytes',  'arquivo_tamanho_maximo_imagem_bytes'],
+        ['arquivo_tamanho_minimo_bytes',  'arquivo_tamanho_maximo_documento_bytes'],
+        ['espera_atencao_dias',           'espera_critica_dias'],
+        ['repasse_backoff_base_minutos',  'repasse_backoff_max_minutos'],
+        ['estorno_backoff_base_minutos',  'estorno_backoff_max_minutos'],
+        ['valor_minimo_contribuicao_cartao', 'valor_maximo_contribuicao_cartao']
+    ];
+    v_chave  TEXT;
+    v_par    TEXT[];
+    v_minimo DECIMAL;
+    v_maximo DECIMAL;
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        v_chave := OLD.chave;
+    ELSE
+        v_chave := NEW.chave;
+    END IF;
+
+    FOREACH v_par SLICE 1 IN ARRAY v_pares LOOP
+        IF v_chave = v_par[1] OR v_chave = v_par[2] THEN
+            SELECT valor::DECIMAL INTO v_minimo FROM configuracoes
+            WHERE chave = v_par[1] AND id_usuario IS NULL AND ativo = TRUE AND tipo IN ('inteiro', 'decimal', 'dinheiro');
+            SELECT valor::DECIMAL INTO v_maximo FROM configuracoes
+            WHERE chave = v_par[2] AND id_usuario IS NULL AND ativo = TRUE AND tipo IN ('inteiro', 'decimal', 'dinheiro');
+
+            IF v_minimo IS NOT NULL AND v_maximo IS NOT NULL AND v_minimo > v_maximo THEN
+                RAISE EXCEPTION 'O valor mínimo (%) de "%" não pode ser maior que o máximo (%) de "%". Antes de subir o mínimo, suba o máximo (ou baixe o máximo só depois de baixar o mínimo).',
+                    v_minimo, v_par[1], v_maximo, v_par[2]
+                    USING ERRCODE = '90019',
+                          DETAIL = json_build_object('chaveMinimo', v_par[1], 'valorMinimo', v_minimo,
+                                                     'chaveMaximo', v_par[2], 'valorMaximo', v_maximo)::text;
+            END IF;
+        END IF;
+    END LOOP;
+
+    RETURN NULL;
+END;
+$$;
+
+-- 3. Os parâmetros em reais
+UPDATE configuracoes SET tipo = 'dinheiro'
+WHERE id_usuario IS NULL AND tipo = 'decimal' AND chave IN (
+    'taxa_minima_repasse', 'meta_minima_campanha', 'valor_minimo_contribuicao', 'valor_minimo_contribuicao_cartao',
+    'valor_maximo_contribuicao_cartao', 'taxa_cartao_fixa', 'taxa_pagamento_pix', 'taxa_pagamento_boleto');
+
+-- ============================================================================
+-- GRUPO CF (07-11-2026) - CANCELADO, NÃO COLE (aguardando a Alexia decidir sobre recompensa com arquivo; o código
+-- foi desfeito e está guardado fora do repositório). Recompensa com arquivo. IDEMPOTENTE.
+--
+-- O que muda: acesso antecipado e entrega digital podem chegar a quem apoiou por um arquivo (imagem ou PDF) em vez
+-- do link especial. A recompensa ativa desses dois tipos precisa de pelo menos um dos dois.
+-- ============================================================================
+-- CREATE OR REPLACE FUNCTION public.fn_valida_link_recompensa()
+-- RETURNS TRIGGER LANGUAGE plpgsql AS $$
+-- DECLARE
+--     v_id INT := CASE WHEN TG_OP = 'DELETE' THEN OLD.id_recompensa ELSE NEW.id_recompensa END;
+-- BEGIN
+--     IF EXISTS (
+--         SELECT 1 FROM recompensa r
+--         WHERE r.id_recompensa = v_id
+--           AND r.ativo
+--           AND r.tipo IN ('acesso_antecipado', 'digital')
+--           AND NOT EXISTS (SELECT 1 FROM link_recompensa l WHERE l.id_recompensa = r.id_recompensa)
+--           AND NOT EXISTS (SELECT 1 FROM arquivo_recompensa a WHERE a.id_recompensa = r.id_recompensa)
+--     ) THEN
+--         RAISE EXCEPTION 'Acesso antecipado e entrega digital precisam do link especial ou de um arquivo: é por eles que a recompensa chega a quem apoiou.'
+--             USING ERRCODE = '91057';
+--     END IF;
+--     RETURN NULL;
+-- END;
+-- $$;

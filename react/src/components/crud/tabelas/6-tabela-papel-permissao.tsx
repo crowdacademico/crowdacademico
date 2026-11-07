@@ -4,7 +4,8 @@ import { chaveCelula } from '../../../services/2-papel-permissao/util/chave-celu
 import type { PapelResponse, PermissaoResponse } from '../../../services/2-papel-permissao/type/papel-permissao.type';
 
 // Matriz Papel × Permissão: uma linha por permissão, uma coluna por papel, ✓ onde o papel tem a permissão.
-// Cada célula é um botão que concede/revoga. Usada em Papéis (views/2-papel-permissao/matriz-papel-permissao.tsx),
+// Com `editando`, cada célula é um botão que concede/revoga; sem, a matriz é só leitura (✓ e -), para nenhum clique
+// sem querer mudar uma permissão. Usada em Papéis (views/2-papel-permissao/matriz-papel-permissao.tsx),
 // que busca os dados e faz a concessão.
 
 interface TabelaPapelPermissaoProps {
@@ -13,10 +14,11 @@ interface TabelaPapelPermissaoProps {
   concedidos: Set<string>;
   // Célula com a concessão/revogação em andamento (mostra "…" e fica desabilitada).
   celulaAlterando: string | null;
+  editando: boolean;
   aoAlternar: (papel: PapelResponse, permissao: PermissaoResponse, concedido: boolean) => void;
 }
 
-export function TabelaPapelPermissao({ papeis, permissoes, concedidos, celulaAlterando, aoAlternar }: TabelaPapelPermissaoProps) {
+export function TabelaPapelPermissao({ papeis, permissoes, concedidos, celulaAlterando, editando, aoAlternar }: TabelaPapelPermissaoProps) {
   return (
     <div className="overflow-x-auto">
       <table className="crud-tabela">
@@ -41,6 +43,13 @@ export function TabelaPapelPermissao({ papeis, permissoes, concedidos, celulaAlt
                 const chave = chaveCelula(papel.idPapel, permissao.idPermissao);
                 const temPermissao = concedidos.has(chave);
                 const texto = temPermissao ? `Clique pra revogar de "${papel.nome}"` : `Clique pra conceder pra "${papel.nome}"`;
+                if (!editando) {
+                  return (
+                    <td key={papel.idPapel} className="text-center">
+                      <span className={'enfase ' + (temPermissao ? 'texto-sucesso' : 'texto-fraco opacity-50')}>{temPermissao ? '✓' : '-'}</span>
+                    </td>
+                  );
+                }
                 return (
                   <td key={papel.idPapel} className="text-center">
                     <button

@@ -9,6 +9,8 @@ import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { Campo } from '../../components/input/campo';
 import { CaixaMarcacao } from '../../components/input/caixa-marcacao';
+import { InputDinheiro } from '../../components/input/input-dinheiro';
+import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { configuracoesApi } from '../../services/11-configuracoes/api/configuracoes.api';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import { parMinMaxDaConfiguracao } from '../../services/11-configuracoes/constants/configuracoes-pares-min-max.constants';
@@ -20,12 +22,14 @@ import type { ConfiguracoesResponse, TipoConfiguracao } from '../../services/11-
 const ROTULO_TIPO_CONFIGURACAO: Record<TipoConfiguracao, string> = {
   inteiro: 'Número inteiro',
   decimal: 'Número com casas decimais',
+  dinheiro: 'Valor em reais',
   booleano: 'Sim ou não',
   texto: 'Texto',
 };
 const DICA_TIPO_CONFIGURACAO: Record<TipoConfiguracao, string | undefined> = {
   inteiro: 'Só números, sem vírgula nem ponto (ex.: 30).',
   decimal: 'Número com vírgula ou ponto para os centavos (ex.: 5,50).',
+  dinheiro: undefined,
   booleano: undefined,
   texto: undefined,
 };
@@ -64,7 +68,11 @@ export function ModalConsultarConfiguracao({ configuracao, aoFechar }: ModalCons
           valor={configuracao.idUsuario === null ? 'Global (vale para todo o sistema)' : `Pessoal (conta ${configuracao.idUsuario})`}
           largura="cheia"
         />
-        <CampoFicha rotulo="Valor" valor={configuracao.valor} largura="cheia" />
+        <CampoFicha
+          rotulo="Valor"
+          valor={configuracao.tipo === 'dinheiro' && configuracao.valor !== null ? formatarMoeda(configuracao.valor) : configuracao.valor}
+          largura="cheia"
+        />
         <CampoFicha rotulo="Descrição" valor={configuracao.descricao} largura="cheia" />
       </SecaoFicha>
     </ModalFicha>
@@ -142,7 +150,17 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
         <div className="sm:col-span-2">
           <Campo rotulo="Valor" erro={erroDe('valor') ?? errosCampo.valor} dica={DICA_TIPO_CONFIGURACAO[configuracao.tipo]}>
             {({ atributos, classeErro }) =>
-              configuracao.tipo === 'booleano' ? (
+              configuracao.tipo === 'dinheiro' ? (
+                <InputDinheiro
+                  {...atributos}
+                  valor={valor}
+                  aoMudar={(novo) => {
+                    setValor(novo);
+                    limparErroCampo('valor');
+                  }}
+                  className={'input-padrao' + classeErro}
+                />
+              ) : configuracao.tipo === 'booleano' ? (
                 <select
                   {...atributos}
                   value={valor}

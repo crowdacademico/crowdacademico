@@ -575,7 +575,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- prazo_minimo_campanha_dias e os limites de negócio (campanhas simultâneas, endossos, denúncias/24h) são lidos
 -- pelas triggers de 05 (ver as funções correspondentes); mudar a política é um UPDATE numa linha.
 (NULL, 'taxa_plataforma_padrao',     '5.00',  'decimal',  'Taxa padrão cobrada pela plataforma (%)',              TRUE, TRUE),
-(NULL, 'taxa_minima_repasse',        '2.00',  'decimal',  'Menor taxa da plataforma num repasse, em R$: cobre a tarifa do provedor pela transferência Pix ao pesquisador', TRUE, TRUE),
+(NULL, 'taxa_minima_repasse',        '2.00',  'dinheiro',  'Menor taxa da plataforma num repasse, em R$: cobre a tarifa do provedor pela transferência Pix ao pesquisador', TRUE, TRUE),
 -- Lida por expirar_contribuicoes_pendentes() e encerrar_campanhas_vencidas() (05, [05-K-2]): o Pix pendente vence
 -- depois disto, e a campanha vencida espera os pendentes ainda válidos antes de sair o resultado.
 (NULL, 'pix_validade_horas',         '24',    'inteiro',  'Horas que um Pix gerado pode ser pago; depois disso a contribuição pendente vence', TRUE, TRUE),
@@ -631,14 +631,14 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'limite_caracteres_descricao_marco',        '2000', 'inteiro', 'Nº máximo de caracteres na descrição de um marco do cronograma (até 20.000)',                      TRUE, TRUE),
 -- Meta 0.00 seria sucesso instantâneo numa campanha all-or-nothing. Mesmo padrão do prazo: limite técnico
 -- largo na constraint (01, > 0), mínimo de negócio de verdade aqui.
-(NULL, 'meta_minima_campanha',       '500.00', 'decimal',  'Valor mínimo de meta financeira aceito para uma campanha, em R$',            TRUE, TRUE),
+(NULL, 'meta_minima_campanha',       '500.00', 'dinheiro',  'Valor mínimo de meta financeira aceito para uma campanha, em R$',            TRUE, TRUE),
 -- F
 (NULL, 'limite_links_academicos_perfil', '5', 'inteiro',  'Nº máximo de links acadêmicos por pesquisador', TRUE, TRUE),
 -- H
 -- valor_minimo_contribuicao (RF-088): mesmo padrão de meta_minima_campanha, acima. R$5,00 não é piso do gateway
 -- de pagamento (o PIX em si não impõe mínimo), é política de negócio da própria plataforma, por isso
 -- configurável.
-(NULL, 'valor_minimo_contribuicao',  '5.00',  'decimal',  'Valor mínimo aceito por contribuição, em R$',                       TRUE, TRUE),
+(NULL, 'valor_minimo_contribuicao',  '5.00',  'dinheiro',  'Valor mínimo aceito por contribuição, em R$',                       TRUE, TRUE),
 -- Tarifa do provedor de pagamento: quem apoia paga POR CIMA do valor (contribui 100, paga 100 + tarifa). Gravada na
 -- contribuição no momento do apoio (fn_contribuicao_define_taxa_pagamento, 05); não entra no arrecadado, no repasse
 -- nem na devolução, então a plataforma nunca paga a tarifa do provedor. 0 = sem tarifa.
@@ -646,14 +646,14 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- provedor. Pode ser desligado; faixa própria; tarifa percentual + fixa (estimativa: a real é lida do provedor em cada
 -- cobrança); e o prazo médio em que o provedor libera o dinheiro (só para mostrar a previsão ao pesquisador).
 (NULL, 'cartao_habilitado',                'true',  'booleano', 'Aceitar contribuição com cartão de crédito (só em campanha flexível)', TRUE, TRUE),
-(NULL, 'valor_minimo_contribuicao_cartao', '20.00', 'decimal',  'Valor mínimo de uma contribuição com cartão, em R$', TRUE, TRUE),
-(NULL, 'valor_maximo_contribuicao_cartao', '500.00','decimal',  'Valor máximo de uma contribuição com cartão, em R$ (limita o prejuízo de uma contestação de compra)', TRUE, TRUE),
+(NULL, 'valor_minimo_contribuicao_cartao', '20.00', 'dinheiro',  'Valor mínimo de uma contribuição com cartão, em R$', TRUE, TRUE),
+(NULL, 'valor_maximo_contribuicao_cartao', '500.00','dinheiro',  'Valor máximo de uma contribuição com cartão, em R$ (limita o prejuízo de uma contestação de compra)', TRUE, TRUE),
 (NULL, 'taxa_cartao_percentual',           '1.99',  'decimal',  'Parte percentual da tarifa do provedor no cartão, paga por quem apoia (estimativa; a real vem do provedor)', TRUE, TRUE),
-(NULL, 'taxa_cartao_fixa',                 '0.49',  'decimal',  'Parte fixa da tarifa do provedor no cartão, em R$, paga por quem apoia (estimativa; a real vem do provedor)', TRUE, TRUE),
+(NULL, 'taxa_cartao_fixa',                 '0.49',  'dinheiro',  'Parte fixa da tarifa do provedor no cartão, em R$, paga por quem apoia (estimativa; a real vem do provedor)', TRUE, TRUE),
 (NULL, 'cartao_dias_liberacao',            '30',    'inteiro',  'Dias, contados do pagamento, até o provedor liberar o dinheiro do cartão (previsão mostrada ao pesquisador)', TRUE, FALSE),
-(NULL, 'taxa_pagamento_pix',         '1.99',  'decimal',  'Tarifa do provedor por Pix recebido, em R$, paga por quem apoia além do valor da contribuição', TRUE, TRUE),
+(NULL, 'taxa_pagamento_pix',         '1.99',  'dinheiro',  'Tarifa do provedor por Pix recebido, em R$, paga por quem apoia além do valor da contribuição', TRUE, TRUE),
 (NULL, 'boleto_habilitado',          'false', 'booleano', 'Aceitar contribuição com boleto (só em campanha flexível)', TRUE, TRUE),
-(NULL, 'taxa_pagamento_boleto',      '1.99',  'decimal',  'Tarifa do provedor por boleto pago, em R$, paga por quem apoia além do valor da contribuição (estimativa; a real vem do provedor)', TRUE, TRUE),
+(NULL, 'taxa_pagamento_boleto',      '1.99',  'dinheiro',  'Tarifa do provedor por boleto pago, em R$, paga por quem apoia além do valor da contribuição (estimativa; a real vem do provedor)', TRUE, TRUE),
 (NULL, 'boleto_vencimento_dias',     '3',     'inteiro',  'Dias, contados da contribuição, até o vencimento do boleto', TRUE, TRUE),
 -- Workers de pagamento (23-pagamento no Nest; funções em 05, [05-K-2]): repasse ao pesquisador, devolução do
 -- tudo-ou-nada e reconciliação com o provedor.

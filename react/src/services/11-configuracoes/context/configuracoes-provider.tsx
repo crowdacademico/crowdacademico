@@ -15,6 +15,7 @@ function converterValor(linha: ConfiguracoesResponse): ValorConfiguracao | null 
   }
   switch (linha.tipo) {
     case 'decimal':
+    case 'dinheiro':
       return Number(linha.valor);
     case 'inteiro':
       return parseInt(linha.valor, 10);
