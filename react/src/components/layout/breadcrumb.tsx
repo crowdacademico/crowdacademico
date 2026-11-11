@@ -15,7 +15,7 @@ const TODAS_AS_ROTAS: Rota[] = [...ROTAS, ...ROTAS_ADMIN];
 // (Alterar/Consultar/Excluir/Criar, ver rotas.constants.ts) aponta para o `caminho` absoluto da própria
 // listagem via `paiCaminho`; sobe essa cadeia até não ter mais pai (a maioria das rotas, sem aninhamento, já
 // para na 1ª volta).
-export function Breadcrumb() {
+export function Breadcrumb({ noCabecalho = false }: { noCabecalho?: boolean }) {
   const location = useLocation();
 
   // matchPath (não comparação exata de string) porque existem rotas com
@@ -42,8 +42,21 @@ export function Breadcrumb() {
     // sticky top-16: o breadcrumb acompanha o cabeçalho conforme a página rola; 16 = 4rem = a altura do
     // <Header> (h-16), que também é sticky top-0; z-40 (menor que o z-50 do Header) garante que o cabeçalho
     // sempre fica por cima quando os dois grudam juntos no topo.
-    <nav data-topo-fixo className="fundo-sutil border-b borda-padrao sticky top-16 z-40">
-      <div className="paragrafo largura-site py-3 flex items-center gap-2 flex-wrap texto-herdado">
+    <nav
+      data-topo-fixo={noCabecalho ? undefined : true}
+      className={
+        noCabecalho
+          ? 'paragrafo mb-4 flex items-center gap-2 flex-wrap texto-herdado'
+          : 'fundo-sutil border-b borda-padrao sticky top-16 z-40'
+      }
+    >
+      <div
+        className={
+          noCabecalho
+            ? 'flex items-center gap-2 flex-wrap'
+            : 'paragrafo largura-site py-3 flex items-center gap-2 flex-wrap texto-herdado'
+        }
+      >
         <Link to="/" className="texto-marca enfase hover:underline">
           Início
         </Link>

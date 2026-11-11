@@ -4,26 +4,26 @@ import { useAuth } from './services/3-auth/hook/use-auth';
 import { ROTAS, ROTAS_ADMIN } from './services/router/rotas.constants';
 import { AdminLayout } from './components/layout/painel-admin/admin-layout';
 import { campoTestes } from './services/router/campo-testes-opcional';
+import { LayoutPublico } from './components/layout/layout-publico';
 
-// useAuth() chamado uma vez só, aqui em cima: Header (dentro de Layout) e cada página recebem o mesmo `auth`
+// useAuth() chamado uma vez só, aqui em cima: os layouts e cada página recebem o mesmo `auth`
 // por prop, nunca cada um com sua própria sessão. Rotas vêm de services/router/rotas.constants (fonte única,
 // compartilhada com o breadcrumb e o menu lateral): adicionar uma página nova é só acrescentar uma linha lá,
 // não mexer aqui.
 //
-// "/" redireciona para /admin/dashboard (a aba padrão): as abas do painel são rotas de verdade, então "/" não
-// pode ser todas ao mesmo tempo.
+// A Home pública usa "/"; o painel administrativo mantém sua rota própria em "/admin/dashboard".
 function App() {
   const auth = useAuth();
 
   const rotas = (
     <Routes>
-      <Route element={<Layout auth={auth} />}>
-        <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
-
+      <Route element={<LayoutPublico auth={auth} />}>
         {ROTAS.map(({ caminho, elemento: Elemento }) => (
           <Route key={caminho} path={caminho} element={<Elemento auth={auth} />} />
         ))}
+      </Route>
 
+      <Route element={<Layout auth={auth} />}>
         <Route path="/admin" element={<AdminLayout auth={auth} />}>
           {/* Redirect da rota base sem aba: "/admin/minha-conta" sozinho não é uma página própria (só o link
               antigo, menu-usuario.tsx, aponta para cá); a aba padrão é Perfil. */}

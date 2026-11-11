@@ -30,12 +30,26 @@ import { PontuacaoScore } from '../../views/11-configuracoes/pontuacao-score';
 import { ListarModelosMensagem } from '../../views/27-notificacao/listar-modelos-mensagem';
 import { ListarNotificacoes } from '../../views/27-notificacao/listar-notificacoes';
 import { campoTestes } from './campo-testes-opcional';
+import { ComoFunciona } from '../../views/publico/como-funciona';
+import { Sobre } from '../../views/publico/sobre';
+import { TermosUso } from '../../views/publico/termos-uso';
+import { AtualizacoesCampanha } from '../../views/publico/atualizacoes-campanha';
+import { RedirecionarAreaConta } from '../../views/publico/redirecionar-area-conta';
+import { MinhasCampanhas } from '../../views/12-campanha/minhas-campanhas';
+import { PerfilPesquisador } from '../../views/publico/perfil-pesquisador';
+import { Transparencia } from '../../views/publico/transparencia';
+import { Home } from '../../views/publico/home';
+import { Explorar } from '../../views/publico/explorar';
+import { Campanha } from '../../views/publico/campanha';
+import { Checkout } from '../../views/publico/checkout';
+import { ApoioConfirmado } from '../../views/publico/apoio-confirmado';
+import { Notificacoes } from '../../views/publico/notificacoes';
 
 // Fonte única de verdade para "quais páginas existem": App.tsx monta as <Route> daqui e breadcrumb.tsx monta
 // o rótulo daqui. rotuloBreadcrumb: null = não aparece no breadcrumb.
 //
-// Duas listas porque descrevem coisas diferentes: ROTAS são páginas PÚBLICAS/pré-login (Header/Breadcrumb/
-// Footer, sem sidebar): login, cadastro, verificar e-mail. ROTAS_ADMIN é TUDO que precisa do menu lateral,
+// Duas listas porque descrevem coisas diferentes: ROTAS são páginas públicas (Header/Breadcrumb/Footer, sem
+// sidebar), incluindo conteúdo institucional e autenticação. ROTAS_ADMIN é TUDO que precisa do menu lateral,
 // renderizado dentro do <Outlet/> de components/layout/painel-admin/admin-layout.tsx (sidebar + área de conteúdo compartilhadas).
 //
 // rotuloMenu é o que aparece no menu lateral (admin-sidebar.tsx via admin-menu.constants): é a MESMA lista, não
@@ -63,6 +77,25 @@ export interface Rota {
 }
 
 export const ROTAS: Rota[] = [
+  { caminho: '/', elemento: Home, rotuloBreadcrumb: null },
+  { caminho: '/explorar', elemento: Explorar, rotuloBreadcrumb: 'Explorar projetos' },
+  { caminho: '/campanha/:id', elemento: Campanha, rotuloBreadcrumb: 'Campanha' },
+  { caminho: '/checkout', elemento: Checkout, rotuloBreadcrumb: 'Apoiar campanha' },
+  { caminho: '/apoiar', elemento: Checkout, rotuloBreadcrumb: 'Apoiar campanha' },
+  { caminho: '/apoio-confirmado', elemento: ApoioConfirmado, rotuloBreadcrumb: 'Confirmação do apoio' },
+  { caminho: '/como-funciona', elemento: ComoFunciona, rotuloBreadcrumb: 'Como funciona' },
+  { caminho: '/sobre', elemento: Sobre, rotuloBreadcrumb: 'Sobre' },
+  { caminho: '/termos', elemento: TermosUso, rotuloBreadcrumb: 'Termo de Uso' },
+  { caminho: '/transparencia', elemento: Transparencia, rotuloBreadcrumb: 'Transparência' },
+  { caminho: '/pesquisador/:idUsuario', elemento: PerfilPesquisador, rotuloBreadcrumb: 'Pesquisador' },
+  { caminho: '/campanha/:id/atualizacoes', elemento: AtualizacoesCampanha, rotuloBreadcrumb: 'Atualizações' },
+  { caminho: '/minha-conta', elemento: RedirecionarAreaConta, rotuloBreadcrumb: null },
+  { caminho: '/minhas-campanhas', elemento: RedirecionarAreaConta, rotuloBreadcrumb: null },
+  { caminho: '/criar-campanha', elemento: RedirecionarAreaConta, rotuloBreadcrumb: null },
+  { caminho: '/minhas-contribuicoes', elemento: RedirecionarAreaConta, rotuloBreadcrumb: null },
+  { caminho: '/painel-doador', elemento: RedirecionarAreaConta, rotuloBreadcrumb: null },
+  { caminho: '/painel-pesquisador', elemento: RedirecionarAreaConta, rotuloBreadcrumb: null },
+  { caminho: '/notificacoes', elemento: Notificacoes, rotuloBreadcrumb: 'Notificações' },
   { caminho: '/login', elemento: LoginPage, rotuloBreadcrumb: 'Login' },
   { caminho: '/cadastro', elemento: CadastroPage, rotuloBreadcrumb: 'Criar conta' },
   {
@@ -75,6 +108,12 @@ export const ROTAS: Rota[] = [
 ];
 
 export const ROTAS_ADMIN: Rota[] = [
+  {
+    caminho: '/admin/minhas-campanhas',
+    caminhoRelativo: 'minhas-campanhas',
+    elemento: MinhasCampanhas,
+    rotuloBreadcrumb: 'Minhas Campanhas',
+  },
   {
     caminho: '/admin/dashboard',
     caminhoRelativo: 'dashboard',

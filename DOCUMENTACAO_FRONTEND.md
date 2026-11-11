@@ -80,7 +80,7 @@ react/
     ├── assets/css/     - CSS numerado + tema do Tailwind
     ├── components/     - peças reutilizáveis entre módulos
     ├── services/       - comunicação com a API, tipos, regras de tela, estado compartilhado
-    ├── views/          - as páginas
+    ├── views/          - as páginas, com `views/publico/` para páginas públicas sem módulo próprio do Nest
     └── 30-campo-testes/ - o Campo de Testes inteiro (seção 13): paginas/ e servicos/; sempre o último número
 ```
 
@@ -113,12 +113,12 @@ react/
 
 📌 **Fonte única: `services/router/rotas.constants.ts`.** As rotas, o breadcrumb, o menu lateral e a busca global (Ctrl+K) leem a mesma lista; ninguém tem cópia.
 
-- **`ROTAS`** (públicas, sem menu): `/login`, `/cadastro`, `/verificar-email`, `/esqueci-senha`, `/redefinir-senha`.
+- **`ROTAS`** (públicas, sem menu): Home (`/`), explorar, campanha e atualizações (`/explorar`, `/campanha/:id`, `/campanha/:id/atualizacoes`), perfil público (`/pesquisador/:idUsuario`), transparência, como funciona, sobre e termo vigente; checkout e confirmação de apoio; notificações da própria conta; e telas de autenticação. Páginas públicas sem módulo próprio do Nest ficam em `views/publico/`. Rotas antigas de conta/campanhas redirecionam para os fluxos correspondentes do painel.
 - **`ROTAS_ADMIN`** (dentro do `AdminLayout`, com menu lateral). Cada entrada tem `caminho`, `elemento` e os metadados: `rotuloBreadcrumb` (`null` = não aparece), `paiCaminho` (a listagem dona de uma rota de detalhe), `rotuloMenu`, `grupoMenu` e `icone` (sem `grupoMenu`, a rota existe mas não vira item do menu, como Minha Conta).
 
 📌 **Rotas de verdade, nunca abas em `useState`:** link direto, botão Voltar e F5 funcionam. O item ativo do menu sai da própria URL (`NavLink`).
 
-**Redirecionamentos (`App.tsx`):** `/` → `/admin/dashboard`; `/admin/minha-conta` → `/admin/minha-conta/perfil`.
+**Redirecionamentos (`App.tsx`):** `/admin/minha-conta` → `/admin/minha-conta/perfil`. A Home pública ocupa `/`; o Dashboard administrativo continua em `/admin/dashboard`.
 
 📌 **Guarda de login única, no `AdminLayout`.** Sem sessão, qualquer `/admin/*` vai para `/login` levando a página pedida (`state.voltarPara`, só caminhos que começam com `/admin/`). Durante a restauração da sessão (F5), a guarda espera. Com nova versão do Termo de Uso pendente, mostra a tela de aceite no lugar do painel (seção 13).
 
@@ -292,7 +292,7 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 
 ### `components/layout/`
 
-`layout.tsx` (cabeçalho, breadcrumb, `<main>` e rodapé), `header.tsx`, `footer.tsx`, `logo-marca.tsx` (o logo, seção 12), `breadcrumb.tsx`, `avatar-usuario.tsx`, `tooltip.tsx`, `carregando.tsx`, `limite-erro.tsx`, `barra-abas-botoes.tsx`, `barra-carregamento/`, `toast/` e `cabecalho/` (busca global, menu do usuário, sino, controles de tema e de fonte, entrar como).
+`layout.tsx` (cabeçalho, breadcrumb, `<main>` e rodapé das rotas restritas), `header.tsx`, `footer.tsx`, `logo-marca.tsx` (o logo, seção 12), `breadcrumb.tsx`, `avatar-usuario.tsx`, `tooltip.tsx`, `carregando.tsx`, `limite-erro.tsx`, `barra-abas-botoes.tsx`, `barra-carregamento/`, `toast/` e `cabecalho/` (busca global, menu do usuário, sino, controles de tema e de fonte, entrar como). As páginas públicas usam `layout-publico.tsx`, `header-publico.tsx` e `footer-publico.tsx`, com navegação própria e o visual do protótipo; controles de tema, fonte, usuário e sino são reutilizados.
 
 📌 **Destaques:**
 - **`LimiteErro`:** um erro de renderização mostra um aviso no lugar do trecho que quebrou (com botão de recarregar), em vez de tela em branco. Em volta do conteúdo de todas as páginas e da área do painel (o menu continua de pé). Recomeça ao trocar de página.
@@ -521,7 +521,11 @@ Em Repasses em Atenção e Reembolsos Manuais (lista e ficha), o "último motivo
 
 ## 16. O que não existe ainda e débitos conhecidos
 
-- **Área pública** (campanha, home, checkout, painel do doador e do pesquisador). Ver `PROXIMOS_MODULOS.md`. Botões do cabeçalho e do rodapé que levariam a ela ainda não têm destino; "Continuar com Google" é simulado.
+- **Área pública em migração:** Home, explorar e campanha usam a API de campanhas; perfil público e transparência usam os dados/endpoints existentes; atualizações, notificações, checkout e confirmação consultam os endpoints do Nest. Login/cadastro usam `useAuth`. Rotas legadas de conta, contribuições e campanhas reutilizam as telas existentes do principal. Não há ainda um dashboard separado para doador ou pesquisador.
+- **Termos e privacidade:** `/termos` mostra o Termo de Uso ativo de conta/contribuições via backend. O protótipo tinha texto Lorem Ipsum; uma política de privacidade separada só deve ser exibida quando houver conteúdo oficial publicado.
+- **Conteúdo sem backend:** páginas institucionais usam texto explicativo, mas não reproduzem métricas, perfis ou campanhas fictícias.
+- **Cabeçalhos e rodapés separados:** as páginas públicas usam os equivalentes próprios do protótipo (`header-publico.tsx` e `footer-publico.tsx`); `header.tsx`, `footer.tsx` e `layout.tsx` continuam exclusivos do layout restrito e não foram alterados.
+- **Botões de autenticação:** "Continuar com Google" ainda é simulado.
 - **Trocar logo e ícone pelo painel** (aba Identidade Visual): hoje a marca são arquivos do projeto (seção 12).
 - **Telas que dependem da área pública:** mostrar no checkout as recompensas que o valor alcança e o aviso do modelo da campanha, o botão de seguir pesquisador no perfil público, o painel "Projetos Criados" do pesquisador.
 - ⚠️ **Nenhum teste automatizado no React.**

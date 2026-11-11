@@ -5,6 +5,30 @@
    `--color-primary`/`--color-surface`/`--color-dark` direto; o resto usa os apelidos `--cor-*`. */
 @import 'tailwindcss';
 
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fontes/inter-variavel.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fontes/ibm-plex-mono-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fontes/ibm-plex-mono-600.woff2') format('woff2');
+}
+
 @theme {
   --color-primary: #0f9b58;
   --color-primary-dark: #0b7a45;

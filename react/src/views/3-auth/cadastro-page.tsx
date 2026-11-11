@@ -6,8 +6,10 @@ import { ModalTermo } from '../../components/crud/modal-termo';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Campo } from '../../components/input/campo';
+import { CampoCpf } from '../../components/input/campo-cpf';
 import { BotaoMostrarSenha } from '../../components/input/botao-mostrar-senha';
 import { MedidorSenha } from '../../components/input/medidor-senha';
+import { CamposVinculoPerfil } from '../6-perfil-pesquisador/campos-vinculo-perfil';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { ErroHttp } from '../../services/constant/api/http.util';
@@ -16,21 +18,57 @@ import type { TermoUsoResponseActive } from '../../services/5-termo-uso/type/ter
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { emailValido } from '../../services/constant/util/validacao.util';
 import { SENHA_MINIMO_CARACTERES } from '../../services/3-auth/constants/senha.constants';
+import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
+import type { TipoVinculo, TituloAcademico } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 
-
+type TipoConta = 'apoiador' | 'pesquisador';
 type CampoTocado = 'nome' | 'email' | 'senha' | 'confirmar';
+type TipoTermoCadastro = 'cadastro' | 'upgrade_pesquisador';
 
-// Tela de cadastro público: a primeira tela pública de verdade além de login. Só os 5 campos que importam para
-// criar a conta (nome/e-mail/senha/confirmar/aceite); o resto (foto, perfil acadêmico...) mora em Minha Conta,
-// editável depois, para não derrubar a conversão do cadastro em si.
+const TIPOS_CONTA: { chave: TipoConta; titulo: string; descricao: string; icone: string }[] = [
+  {
+    chave: 'apoiador',
+    titulo: 'Quero apoiar',
+    descricao: 'Apoie campanhas de pesquisa e acompanhe os resultados.',
+    icone: 'fa-hand-holding-heart',
+  },
+  {
+    chave: 'pesquisador',
+    titulo: 'Sou pesquisador',
+    descricao: 'Crie seu perfil acadêmico e publique campanhas de pesquisa.',
+    icone: 'fa-flask',
+  },
+];
+
+function cpfValido(cpf: string): boolean {
+  const digitos = cpf.replace(/\D/g, '');
+  if (digitos.length !== 11 || /^(\d)\1{10}$/.test(digitos)) return false;
+  const calcularDigito = (base: string, pesoInicial: number) => {
+    const soma = [...base].reduce((total, digito, indice) => (
+      total + Number(digito) * (pesoInicial - indice)
+    ), 0);
+    const resto = (soma * 10) % 11;
+    return resto === 10 ? 0 : resto;
+  };
+  return calcularDigito(digitos.slice(0, 9), 10) === Number(digitos[9]) &&
+    calcularDigito(digitos.slice(0, 10), 11) === Number(digitos[10]);
+}
+
 export function CadastroPage({ auth }: PropsPagina) {
   const navigate = useNavigate();
+  const [passo, setPasso] = useState<1 | 2>(1);
+  const [tipoConta, setTipoConta] = useState<TipoConta | null>(null);
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [cpf, setCpf] = useState('');
+  const [tipoVinculo, setTipoVinculo] = useState<TipoVinculo>('institucional');
+  const [vinculoInstitucional, setVinculoInstitucional] = useState('');
+  const [tituloAcademico, setTituloAcademico] = useState<TituloAcademico>('mestre');
   const [aceiteTermos, setAceiteTermos] = useState(false);
+  const [aceiteTermosPesquisador, setAceiteTermosPesquisador] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
 
@@ -46,35 +84,102 @@ export function CadastroPage({ auth }: PropsPagina) {
 
   const [erroEmailDuplicado, setErroEmailDuplicado] = useState(false);
   const [modalTermoAberto, setModalTermoAberto] = useState(false);
+  const [tipoTermoModal, setTipoTermoModal] = useState<TipoTermoCadastro>('cadastro');
+  const [erroTipoConta, setErroTipoConta] = useState('');
+  const [perfilPesquisadorPendente, setPerfilPesquisadorPendente] = useState(false);
+  const [tokenVerificacaoEmailDev, setTokenVerificacaoEmailDev] = useState<string | null>(null);
+  const [termos, setTermos] = useState<Partial<Record<TipoTermoCadastro, TermoUsoResponseActive>>>({});
   const idErroTermos = useId();
-  const [termo, setTermo] = useState<TermoUsoResponseActive | null>(null);
+  const idErroTermosPesquisador = useId();
   const [carregandoTermo, setCarregandoTermo] = useState(false);
 
-  const abrirTermos = () => {
+  const abrirTermos = (tipo: TipoTermoCadastro) => {
     setModalTermoAberto(true);
-    if (!termo) {
+    setTipoTermoModal(tipo);
+    if (!termos[tipo]) {
       setCarregandoTermo(true);
-      termoUsoApi.buscarAtivo('cadastro')
-        .then(setTermo)
-        .catch(() => setTermo(null))
+      termoUsoApi.buscarAtivo(tipo)
+        .then((termoAtivo) => setTermos((atuais) => ({ ...atuais, [tipo]: termoAtivo })))
+        .catch(reportarErro)
         .finally(() => setCarregandoTermo(false));
     }
   };
 
   const emailEhValido = emailValido(email);
   const senhasIguais = senha.length > 0 && senha === confirmarSenha;
-  // "Criar conta" fica sempre clicável: clicando com algo faltando, cada campo mostra o próprio erro (inclusive o
-  // aceite dos Termos, que antes só deixava o botão cinza sem dizer por quê).
   const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
     nome: nome.trim().length < NOME_MINIMO_CARACTERES && MENSAGEM_NOME_CURTO,
     email: email.trim() === '' ? 'Informe o e-mail.' : !emailEhValido && 'E-mail inválido.',
     senha: senha.length < SENHA_MINIMO_CARACTERES && `A senha precisa ter pelo menos ${SENHA_MINIMO_CARACTERES} caracteres.`,
     confirmar: confirmarSenha === '' ? 'Confirme a senha.' : !senhasIguais && 'As senhas não são iguais.',
     termos: !aceiteTermos && 'É preciso aceitar o Termo de Uso para criar a conta.',
+    cpf: tipoConta === 'pesquisador' && !cpfValido(cpf) && 'Informe um CPF válido.',
+    vinculoInstitucional:
+      tipoConta === 'pesquisador' &&
+      tipoVinculo === 'institucional' &&
+      !vinculoInstitucional.trim() &&
+      'Informe a instituição.',
+    termosPesquisador:
+      tipoConta === 'pesquisador' &&
+      !aceiteTermosPesquisador &&
+      'É preciso aceitar o Termo de Uso do pesquisador.',
   }));
+
+  const criarPerfilPesquisador = async () => {
+    await perfilPesquisadorApi.criar(auth.authFetch, {
+      cpf,
+      tipoVinculo,
+      vinculoInstitucional: tipoVinculo === 'institucional' ? vinculoInstitucional.trim() : undefined,
+      tituloAcademico,
+      aceiteTermos: true,
+    });
+  };
+
+  const concluirCadastro = (tokenDev: string | null) => {
+    if (tokenDev) {
+      window.alert(
+        '[SÓ EM DEV] Link de verificação de e-mail (nenhum e-mail é enviado ainda):\n\n' +
+          `${window.location.origin}/verificar-email?token=${tokenDev}`,
+      );
+    }
+    void navigate('/');
+  };
+
+  const retornarAoPassoUm = () => {
+    setPasso(1);
+    setErroTipoConta('');
+  };
 
   const aoCadastrar = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
+    if (passo === 1) {
+      if (!tipoConta) {
+        setErroTipoConta('Selecione como deseja usar a plataforma.');
+        return;
+      }
+      setErroTipoConta('');
+      setPasso(2);
+      return;
+    }
+
+    if (perfilPesquisadorPendente) {
+      setEnviando(true);
+      limparErro();
+      try {
+        await criarPerfilPesquisador();
+        concluirCadastro(tokenVerificacaoEmailDev);
+      } catch (erroPerfil) {
+        reportarErro(new Error(
+          `A conta foi criada, mas não foi possível concluir o perfil de pesquisador. Tente novamente: ${
+            erroPerfil instanceof Error ? erroPerfil.message : 'erro desconhecido'
+          }`,
+        ));
+      } finally {
+        setEnviando(false);
+      }
+      return;
+    }
+
     if (!tentarEnviar()) {
       return;
     }
@@ -82,16 +187,26 @@ export function CadastroPage({ auth }: PropsPagina) {
     setErroEmailDuplicado(false);
     setEnviando(true);
     try {
-      const resultado = await auth.cadastrar(nome, email, senha, aceiteTermos);
-      if (resultado.tokenVerificacaoEmailDev) {
-        // Ambiente sem 4-mail ainda - link de verificação exibido direto,
-        // com aviso claro de que é só dev (ver auth.service.register.ts).
-        window.alert(
-          '[SÓ EM DEV] Link de verificação de e-mail (nenhum e-mail é enviado ainda):\n\n' +
-            `${window.location.origin}/verificar-email?token=${resultado.tokenVerificacaoEmailDev}`,
-        );
+      if (tipoConta === 'pesquisador' && !termos.upgrade_pesquisador) {
+        const termoPesquisador = await termoUsoApi.buscarAtivo('upgrade_pesquisador');
+        setTermos((atuais) => ({ ...atuais, upgrade_pesquisador: termoPesquisador }));
       }
-      void navigate('/');
+      const resultado = await auth.cadastrar(nome, email, senha, aceiteTermos);
+      setTokenVerificacaoEmailDev(resultado.tokenVerificacaoEmailDev);
+      if (tipoConta === 'pesquisador') {
+        try {
+          await criarPerfilPesquisador();
+        } catch (erroPerfil) {
+          setPerfilPesquisadorPendente(true);
+          reportarErro(new Error(
+            `A conta foi criada, mas não foi possível concluir o perfil de pesquisador. Tente novamente nesta tela: ${
+              erroPerfil instanceof Error ? erroPerfil.message : 'erro desconhecido'
+            }`,
+          ));
+          return;
+        }
+      }
+      concluirCadastro(resultado.tokenVerificacaoEmailDev);
     } catch (erroRequisicao) {
       if (erroRequisicao instanceof ErroHttp && erroRequisicao.status === 409) {
         setErroEmailDuplicado(true);
@@ -103,29 +218,63 @@ export function CadastroPage({ auth }: PropsPagina) {
   };
 
   return (
-    <div className="pagina-centralizada">
-      <div className="max-w-(--largura-cartao-solto) w-full max-h-(--altura-cartao-solto) fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden flex flex-col">
-        {/* `isolate` + `-z-10`: o brilho verde (o mesmo do Login) fica atrás do ícone e do texto sem precisar de
-            z-index em cada um. */}
-        <div className="p-10 text-center border-b borda-padrao fundo-sutil shrink-0 relative isolate overflow-hidden">
-          <div
-            className="pointer-events-none absolute -z-10 top-0 left-1/2 -translate-x-1/2 w-32 h-32 brilho-marca brilho-marca-forte rounded-full blur-3xl"
-          ></div>
-          <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center texto-sobre-cor icone-destaque mb-5 shadow-lg">
-            <i className="fa-solid fa-user-plus" aria-hidden="true"></i>
-          </div>
-          <h1 className="titulo-pagina mb-2">Criar conta</h1>
-          <p className="paragrafo texto-fraco">
-            Leva menos de um minuto, o resto você completa depois, em Minha Conta.
+    <div className="pagina-centralizada auth-cadastro">
+      <section className="auth-cadastro__cartao w-full max-w-2xl fundo-cartao rounded-2xl sombra-cartao-solto border borda-padrao overflow-hidden" aria-labelledby="titulo-cadastro">
+        <header className="p-8 pb-0">
+          <h1 id="titulo-cadastro" className="titulo-secao mb-1">Criar conta</h1>
+          <p className="text-sm texto-fraco mb-6">
+            Já tem conta? <Link to="/login" className="texto-marca font-bold hover:underline">Entrar</Link>
           </p>
-        </div>
+          <div className="flex items-center gap-2 mb-8" aria-label={`Etapa ${passo} de 2`}>
+            {[1, 2].map((numero) => (
+              <span
+                key={numero}
+                aria-current={passo === numero ? 'step' : undefined}
+                className={`flex-1 h-1.5 rounded-full ${numero <= passo ? 'fundo-marca' : 'fundo-sutil'}`}
+              />
+            ))}
+          </div>
+        </header>
 
-        <form
-          id="form-cadastro"
-          onSubmit={aoCadastrar}
-          className="p-10 space-y-5 overflow-y-auto min-h-0 flex-1"
-        >
-          <MensagemErro texto={erro} />
+        <form id="form-cadastro" onSubmit={aoCadastrar} noValidate className="px-8 pb-4 space-y-5">
+          <MensagemErro texto={erro || (perfilPesquisadorPendente
+            ? 'A conta foi criada, mas o perfil de pesquisador ainda não foi concluído. Tente novamente.'
+            : undefined)} />
+
+          {passo === 1 ? (
+            <div>
+              <h2 className="subtitulo texto-forte mb-4">Como você quer usar a plataforma?</h2>
+              <div className="grid gap-4">
+                {TIPOS_CONTA.map((tipo) => (
+                  <button
+                    type="button"
+                    key={tipo.chave}
+                    aria-pressed={tipoConta === tipo.chave}
+                    onClick={() => {
+                      setTipoConta(tipo.chave);
+                      setErroTipoConta('');
+                    }}
+                    className={`cartao text-left transition-all ${tipoConta === tipo.chave ? 'borda-marca' : ''}`}
+                  >
+                    <span className="flex items-center gap-3 mb-2">
+                      <span className="w-10 h-10 rounded-lg fundo-marca-sutil texto-marca flex items-center justify-center">
+                        <i className={`fa-solid ${tipo.icone}`} aria-hidden="true" />
+                      </span>
+                      <span className="subtitulo texto-forte">{tipo.titulo}</span>
+                    </span>
+                    <span className="block text-sm texto-padrao leading-relaxed">{tipo.descricao}</span>
+                  </button>
+                ))}
+              </div>
+              {erroTipoConta && <p className="legenda enfase erro-campo mt-3" role="alert">{erroTipoConta}</p>}
+            </div>
+          ) : (
+            <>
+              <p className="paragrafo texto-fraco">
+                {tipoConta === 'pesquisador'
+                  ? 'Informe seus dados de acesso e os dados necessários para criar seu perfil acadêmico.'
+                  : 'Informe seus dados para criar sua conta de apoiador.'}
+              </p>
 
           <Campo rotulo="Nome" erro={erroDe('nome') ?? (tocado.nome && nome.trim().length < NOME_MINIMO_CARACTERES && MENSAGEM_NOME_CURTO)}>
             {({ atributos, classeErro }) => (
@@ -173,6 +322,30 @@ export function CadastroPage({ auth }: PropsPagina) {
               />
             )}
           </Campo>
+
+          {tipoConta === 'pesquisador' && (
+            <section className="space-y-5">
+              <h2 className="titulo-bloco titulo-bloco--linha">Dados do perfil de pesquisador</h2>
+              <CampoCpf
+                valor={cpf}
+                onChange={setCpf}
+                erro={erroDe('cpf')}
+              />
+              <CamposVinculoPerfil
+                tipoVinculo={tipoVinculo}
+                vinculoInstitucional={vinculoInstitucional}
+                tituloAcademico={tituloAcademico}
+                rotuloVinculoInstitucional="Instituição"
+                aoAlterarTipoVinculo={setTipoVinculo}
+                aoAlterarVinculoInstitucional={setVinculoInstitucional}
+                aoAlterarTituloAcademico={setTituloAcademico}
+                erroVinculoInstitucional={erroDe('vinculoInstitucional')}
+              />
+              <p className="legenda texto-fraco">
+                Links acadêmicos e chave Pix podem ser informados depois, nas respectivas áreas do perfil.
+              </p>
+            </section>
+          )}
 
           <Campo rotulo="Senha" erro={erroDe('senha')}>
             {({ atributos, classeErro }) => (
@@ -224,7 +397,7 @@ export function CadastroPage({ auth }: PropsPagina) {
             )}
           </Campo>
 
-          <div>
+          <div className="space-y-2">
             <label className="paragrafo flex items-start gap-2.5 texto-padrao">
               <input
                 type="checkbox"
@@ -238,7 +411,7 @@ export function CadastroPage({ auth }: PropsPagina) {
                 Li e aceito os{' '}
                 <button
                   type="button"
-                  onClick={abrirTermos}
+                  onClick={() => abrirTermos('cadastro')}
                   className="link-texto"
                 >
                   Termo de Uso
@@ -251,43 +424,81 @@ export function CadastroPage({ auth }: PropsPagina) {
                 {erroDe('termos')}
               </p>
             )}
+            {tipoConta === 'pesquisador' && (
+              <>
+                <label className="paragrafo flex items-start gap-2.5 texto-padrao">
+                  <input
+                    type="checkbox"
+                    checked={aceiteTermosPesquisador}
+                    onChange={(evento) => setAceiteTermosPesquisador(evento.target.checked)}
+                    aria-invalid={Boolean(erroDe('termosPesquisador'))}
+                    aria-describedby={erroDe('termosPesquisador') ? idErroTermosPesquisador : undefined}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    Li e aceito o{' '}
+                    <button
+                      type="button"
+                      onClick={() => abrirTermos('upgrade_pesquisador')}
+                      className="link-texto"
+                    >
+                      Termo de Uso do pesquisador
+                    </button>
+                    .
+                  </span>
+                </label>
+                {erroDe('termosPesquisador') && (
+                  <p id={idErroTermosPesquisador} className="legenda enfase erro-campo">
+                    {erroDe('termosPesquisador')}
+                  </p>
+                )}
+              </>
+            )}
           </div>
+            </>
+          )}
         </form>
 
-        <div className="p-6 border-t borda-padrao fundo-cartao shrink-0 space-y-3">
+        <footer className="p-8 pt-4 flex items-center justify-between gap-3">
+          {passo === 2 ? (
+            <button
+              type="button"
+              onClick={retornarAoPassoUm}
+              className="btn btn-secondary"
+              disabled={enviando || perfilPesquisadorPendente}
+            >
+              Voltar
+            </button>
+          ) : <span />}
           <button
             type="submit"
             form="form-cadastro"
             disabled={enviando}
-            className="btn btn-primary btn-destaque btn-grande w-full"
+            className="btn btn-primary"
           >
-            {enviando ? 'Criando conta...' : 'Criar conta'}
+            {enviando
+              ? perfilPesquisadorPendente ? 'Concluindo perfil...' : 'Criando conta...'
+              : passo === 1 ? 'Continuar' : perfilPesquisadorPendente ? 'Concluir perfil de pesquisador' : 'Criar conta'}
           </button>
-          <p className="legenda texto-fraco text-center">
-            Já tem conta?{' '}
-            <Link to="/login" className="link-texto">
-              Entrar
-            </Link>
-          </p>
-        </div>
-      </div>
+        </footer>
 
       {modalTermoAberto && (
         <ModalTermo
-          titulo="Termo de Uso"
-          versao={termo?.versao}
-          conteudo={termo?.conteudo ?? null}
+          titulo={tipoTermoModal === 'cadastro' ? 'Termo de Uso' : 'Termo de Uso do pesquisador'}
+          versao={termos[tipoTermoModal]?.versao}
+          conteudo={termos[tipoTermoModal]?.conteudo ?? null}
           carregando={carregandoTermo}
           aoFechar={() => setModalTermoAberto(false)}
           // Concordar marca a caixinha do aceite e fecha; Cancelar só fecha (igual ao X, ao Esc e ao clique fora).
           rodape={
-            termo && (
+            termos[tipoTermoModal] && (
               <RodapeAcoes
                 aoCancelar={() => setModalTermoAberto(false)}
                 acao={{
                   rotulo: 'Li e concordo',
                   aoClicar: () => {
-                    setAceiteTermos(true);
+                    if (tipoTermoModal === 'cadastro') setAceiteTermos(true);
+                    else setAceiteTermosPesquisador(true);
                     setModalTermoAberto(false);
                   },
                 }}
@@ -296,6 +507,7 @@ export function CadastroPage({ auth }: PropsPagina) {
           }
         />
       )}
+      </section>
     </div>
   );
 }
