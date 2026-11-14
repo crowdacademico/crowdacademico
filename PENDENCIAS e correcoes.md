@@ -109,6 +109,17 @@ Ideia detalhada e registrada aqui pra não se perder. **Decisão: não construir
 
 
 
+### Documentação da integração da área pública (anotado em 14-11-2026; fica para depois, a pedido do Lucas)
+
+A Alexia trouxe a área pública para dentro do sistema (branch `tentativadeintegracao`, continuada na `area-publica`). O código e o banco estão sendo consertados; a documentação fica para o fim:
+
+- **`DOCUMENTACAO_BD.md`:** a coluna `campanha.id_imagem_capa` (com `FK_CAMPANHA_IMAGEM_CAPA` e `CK_CAMPANHA_VIDEO_OU_IMAGEM_CAPA`: vídeo ou capa, não os dois), as funções `contribuicoes_recebidas_pesquisador`, `contar_apoios_publicos_campanha` e `fn_valida_posse_imagem_capa_campanha` (com o trigger `trg_valida_posse_imagem_capa_campanha`), e tirar as três menções ao bloco `[07-B-4]`, que saiu do seed (as contas `usuario` e `pesquisador` agora testam pela área pública).
+- **`DOCUMENTACAO_BACKEND.md`:** as rotas novas `GET /contribuicao/recebidas` e `GET /contribuicao/campanha/:id/apoios` (pública) e os campos novos da resposta da campanha (`idImagemCapa`, `imagemCapaUrl`, `instituicaoPesquisador`).
+- **`DOCUMENTACAO_FRONTEND.md`:** conferir o que a Alexia escreveu contra o código final (layout público, `views/publico/`, Minha Conta fora do painel, Estúdio do pesquisador, `podeAcessarPainelAdmin`).
+- **`informacoes/ESTUDO_PERMISSOES_PESQUISADOR_NO_PAINEL.md`:** cita o `[07-B-4]` como regra em vigor.
+- **`MATRIZ-RASTREABILIDADE-RF.md`:** os RFs que a área pública passou a atender.
+- Já feito: `DOCUMENTACAO_ERRCODE.md` (códigos 91058 e 92041, e a capa nos códigos 90022, 91029 e 92025).
+
 ---
 
 ## 3. No dia do deploy

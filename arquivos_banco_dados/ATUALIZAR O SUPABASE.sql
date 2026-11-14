@@ -1278,6 +1278,7 @@ GRANT EXECUTE ON FUNCTION public.contribuicoes_recebidas_pesquisador() TO app_ne
 -- ============================================================================
 -- GRUPO CH (12-11-2026) - Restringir contribuições recebidas às que estão pagas. IDEMPOTENTE.
 -- Cole este grupo nos bancos onde o Grupo CG já foi aplicado.
+-- (Nota de 14-11-2026: este grupo é idêntico ao CG, não muda nada. A versão final da função está no Grupo CL.)
 -- ============================================================================
 CREATE OR REPLACE FUNCTION public.contribuicoes_recebidas_pesquisador()
 RETURNS TABLE (
@@ -1380,7 +1381,9 @@ WHERE pp.id_papel = p.id_papel
 
 -- ============================================================================
 -- GRUPO CK (13-11-2026) - Imagem de capa da campanha. IDEMPOTENTE.
--- Não precisa parar o Nest: a coluna é nullable e as rotinas novas são compatíveis com campanhas antigas.
+-- PARE O NEST antes de colar (corrigido em 14-11-2026; antes dizia que não precisava): o grupo altera a tabela
+-- campanha e recria a policy de arquivo, e isso pede uma trava que pode esperar para sempre (ou dar deadlock) com o
+-- Nest usando as duas tabelas, a mesma regra do Grupo BS. A coluna é nullable e as campanhas antigas continuam valendo.
 --
 -- O que muda:
 --   1. campanha passa a apontar para um arquivo de imagem já confirmado pelo módulo 26-arquivo.
@@ -1628,3 +1631,97 @@ BEGIN
     END IF;
 END;
 $$;
+
+-- ============================================================================
+-- GRUPO CL (14-11-2026) - Correções dos grupos CG a CK (integração da área pública). IDEMPOTENTE.
+-- Não precisa parar o Nest: só troca o corpo de duas funções (sem alteração de tabela ou policy).
+-- Cole depois do CK. Se o CG a CK ainda não foram colados, cole os cinco antes e este por último.
+--
+-- O que muda:
+--   1. Imagem de capa congelada após a aprovação passa a sair com o código 91058. O CK usava 91030, que já é
+--      "último administrador ativo" (fn_protege_ultimo_admin) e faria a tela mostrar o motivo errado.
+--   2. contribuicoes_recebidas_pesquisador: "precisa estar autenticado" passa a sair com 92041. O CG usava 92038, que
+--      já é "sem permissão para ver o resumo das contribuições" (resumo_contribuicoes_campanha).
+--   3. contribuicoes_recebidas_pesquisador passa a listar também as contribuições já repassadas ('repassado'), a
+--      mesma régua da contagem pública do CI. Antes, um apoio pago sumia da lista do pesquisador no dia do repasse.
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.fn_campanha_erro_congelamento(p_campo TEXT, p_rejeitada BOOLEAN)
+RETURNS TABLE (errcode TEXT, mensagem TEXT)
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT '91027', 'Esta campanha rejeitada já usou todos os reenvios permitidos e agora é somente leitura.'
+    WHERE p_rejeitada
+    UNION ALL
+    SELECT v.errcode, v.mensagem
+    FROM (VALUES
+        ('meta_financeira',       '91004', 'Fraude bloqueada: não é permitido alterar a meta financeira após a aprovação da campanha.'),
+        ('modelo',                '91005', 'Fraude bloqueada: não é permitido alterar o modelo de financiamento após a aprovação da campanha.'),
+        ('taxa_plataforma',       '91006', 'Operação bloqueada: a taxa da plataforma não pode ser alterada após o congelamento.'),
+        ('titulo',                '91007', 'Fraude bloqueada: não é permitido alterar o título após a aprovação da campanha.'),
+        ('descricao',             '91008', 'Fraude bloqueada: não é permitido alterar a descrição após a aprovação da campanha.'),
+        ('video_apresentacao_url','91023', 'Fraude bloqueada: não é permitido alterar o vídeo de apresentação após a aprovação da campanha.'),
+        ('id_area_conhecimento',  '91024', 'Operação bloqueada: a área do conhecimento não pode ser alterada após a aprovação da campanha.'),
+        ('id_imagem_capa',       '91058', 'Operação bloqueada: a imagem de capa não pode ser alterada após a aprovação da campanha.'),
+        ('data_fim',              '91009', 'Operação bloqueada: o prazo da campanha não pode ser alterado depois que ela começa de verdade.'),
+        ('data_inicio',           '91010', 'Operação bloqueada: a data de início da campanha não pode ser alterada depois que ela começa de verdade.')
+    ) AS v(campo, errcode, mensagem)
+    WHERE NOT p_rejeitada AND v.campo = p_campo;
+$$;
+
+CREATE OR REPLACE FUNCTION public.contribuicoes_recebidas_pesquisador()
+RETURNS TABLE (
+    id_contribuicao INT,
+    id_campanha INT,
+    titulo_campanha VARCHAR,
+    apoiador VARCHAR,
+    valor DECIMAL,
+    meio_pagamento meio_pagamento,
+    status status_contribuicao,
+    criado_em TIMESTAMPTZ,
+    recompensas TEXT
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    IF public.id_usuario_atual() IS NULL THEN
+        RAISE EXCEPTION 'É necessário estar autenticado para ver as contribuições recebidas.'
+            USING ERRCODE = '92041';
+    END IF;
+
+    RETURN QUERY
+    SELECT c.id_contribuicao,
+           c.id_campanha,
+           ca.titulo,
+           CASE
+               WHEN c.anonima OR u.id_usuario IS NULL OR u.deletado THEN 'Apoiador anônimo'
+               ELSE u.nome
+           END::VARCHAR,
+           c.valor,
+           c.meio_pagamento,
+           c.status,
+           c.criado_em,
+           recompensas.nomes
+    FROM contribuicao c
+    JOIN campanha ca ON ca.id_campanha = c.id_campanha
+    LEFT JOIN usuario u ON u.id_usuario = c.id_usuario
+    LEFT JOIN LATERAL (
+        SELECT string_agg(
+                   r.titulo || CASE WHEN cr.quantidade > 1 THEN ' (x' || cr.quantidade::TEXT || ')' ELSE '' END,
+                   ', ' ORDER BY r.valor_minimo
+               ) AS nomes
+        FROM contribuicao_recompensa cr
+        JOIN recompensa r ON r.id_recompensa = cr.id_recompensa
+        WHERE cr.id_contribuicao = c.id_contribuicao
+    ) recompensas ON TRUE
+    WHERE ca.id_usuario = public.id_usuario_atual()
+      AND c.status IN ('confirmado', 'repassado')
+    ORDER BY c.criado_em DESC, c.id_contribuicao DESC;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.contribuicoes_recebidas_pesquisador() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.contribuicoes_recebidas_pesquisador() TO app_nestjs;

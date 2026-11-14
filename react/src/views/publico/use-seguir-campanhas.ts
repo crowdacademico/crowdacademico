@@ -67,7 +67,7 @@ export function useSeguirCampanhas(auth: UseAuthReturn) {
       }
       setResultadoSeguidas((resultado) => {
         const atuais =
-          resultado?.idUsuario === idUsuario ? resultado.ids : new Set<number>();
+          resultado && resultado.idUsuario === idUsuario ? resultado.ids : new Set<number>();
         const novas = new Set(atuais);
         if (segue) novas.delete(idCampanha);
         else novas.add(idCampanha);

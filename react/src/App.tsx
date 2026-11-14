@@ -6,7 +6,6 @@ import { AdminLayout } from './components/layout/painel-admin/admin-layout';
 import { campoTestes } from './services/router/campo-testes-opcional';
 import { LayoutPublico } from './components/layout/layout-publico';
 import type { ReactNode } from 'react';
-import type { UseAuthReturn } from './services/3-auth/hook/use-auth';
 
 // useAuth() chamado uma vez só, aqui em cima: os layouts e cada página recebem o mesmo `auth`
 // por prop, nunca cada um com sua própria sessão. Rotas vêm de services/router/rotas.constants (fonte única,

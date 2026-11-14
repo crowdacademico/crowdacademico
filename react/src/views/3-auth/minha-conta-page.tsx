@@ -36,6 +36,7 @@ import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { AuthResponseSessions } from '../../services/3-auth/type/auth.type';
 import type { UsuarioPapelResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
+import type { TipoVinculo, TituloAcademico } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import type { SuspensaoResponseDto } from '../../services/constant/type/suspensao.type';
 import { EstadoVazio } from '../../components/crud/estado-vazio';
 import { BadgeStatusPesquisador } from '../../components/crud/badge-status-pesquisador';
@@ -108,7 +109,7 @@ export function MinhaConta({ auth }: PropsPagina) {
             o formulário nasceria com o nome vazio. Trocar a key quando o usuário chega remonta a aba já com o
             nome certo. */}
         {aba === 'perfil' && (
-          <AbaPerfil key={auth.usuario?.idUsuario ?? 'carregando'} auth={auth} />
+          <AbaPerfil key={auth.usuario.idUsuario} auth={auth} />
         )}
         {aba === 'seguranca' && <AbaSeguranca auth={auth} />}
         {aba === 'papeis' && <AbaPapeis auth={auth} />}
@@ -252,7 +253,8 @@ function AbaPerfil({ auth }: AbaPerfilProps) {
     if (auth.usuario.ehPesquisador === false) {
       return;
     }
-    setErroCarregamentoPerfil(null);
+    // Sem `setErroCarregamentoPerfil(null)` aqui: a aba é remontada quando a conta muda (key = idUsuario),
+    // então o erro já nasce vazio a cada carga.
     void Promise.allSettled([
       perfilPesquisadorApi.buscar(auth.authFetch, auth.usuario.idUsuario),
       perfilPesquisadorApi.buscarSuspensao(auth.authFetch, auth.usuario.idUsuario),
@@ -307,16 +309,14 @@ function AbaPerfil({ auth }: AbaPerfilProps) {
                 <CampoFicha rotulo="Vínculo institucional" valor={perfil.vinculoInstitucional} />
                 <CampoFicha rotulo="Pontuação atual" valor={perfil.scoreAtual} />
               </SecaoFicha>
-              {auth.usuario && (
-                <SecaoFicha titulo="Links acadêmicos" nivel={2}>
-                  <LinksAcademicosDoUsuario
-                    auth={auth}
-                    idUsuario={auth.usuario.idUsuario}
-                    nomeUsuario={auth.usuario.nome}
-                    contaPropria
-                  />
-                </SecaoFicha>
-              )}
+              <SecaoFicha titulo="Links acadêmicos" nivel={2}>
+                <LinksAcademicosDoUsuario
+                  auth={auth}
+                  idUsuario={auth.usuario.idUsuario}
+                  nomeUsuario={auth.usuario.nome}
+                  contaPropria
+                />
+              </SecaoFicha>
               <SecaoContestacaoScore authFetch={auth.authFetch} />
               <SecaoRecebimento authFetch={auth.authFetch} />
             </>

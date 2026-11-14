@@ -2169,7 +2169,7 @@ AS $$
     END;
 $$;
 
--- Código e mensagem de cada campo congelado (os mesmos de sempre, 91004 a 91010, 91023, 91024, 91027 e 91030).
+-- Código e mensagem de cada campo congelado (91004 a 91010, 91023, 91024, 91058 e, na rejeitada esgotada, 91027).
 CREATE OR REPLACE FUNCTION public.fn_campanha_erro_congelamento(p_campo TEXT, p_rejeitada BOOLEAN)
 RETURNS TABLE (errcode TEXT, mensagem TEXT)
 LANGUAGE sql
@@ -2187,7 +2187,7 @@ AS $$
         ('descricao',             '91008', 'Fraude bloqueada: não é permitido alterar a descrição após a aprovação da campanha.'),
         ('video_apresentacao_url','91023', 'Fraude bloqueada: não é permitido alterar o vídeo de apresentação após a aprovação da campanha.'),
         ('id_area_conhecimento',  '91024', 'Operação bloqueada: a área do conhecimento não pode ser alterada após a aprovação da campanha.'),
-        ('id_imagem_capa',       '91030', 'Não é permitido alterar a imagem de capa após a aprovação da campanha.'),
+        ('id_imagem_capa',       '91058', 'Operação bloqueada: a imagem de capa não pode ser alterada após a aprovação da campanha.'),
         ('data_fim',              '91009', 'Operação bloqueada: o prazo da campanha não pode ser alterado depois que ela começa de verdade.'),
         ('data_inicio',           '91010', 'Operação bloqueada: a data de início da campanha não pode ser alterada depois que ela começa de verdade.')
     ) AS v(campo, errcode, mensagem)
@@ -2437,7 +2437,8 @@ $$;
 -- Função:     contribuicoes_recebidas_pesquisador
 -- Assinatura: () -> TABLE (dados individuais das contribuições das próprias campanhas)
 -- Bloco:      [05-K-2]
--- Regra:      Lista apenas contribuições pagas (confirmado) das campanhas do pesquisador logado. A identidade de
+-- Regra:      Lista apenas contribuições pagas (confirmado ou já repassado) das campanhas do pesquisador logado, a
+--             mesma régua da contagem pública (contar_apoios_publicos_campanha). A identidade de
 --             apoios anônimos (ou sem conta) nunca é retornada; SECURITY DEFINER não amplia pol_contribuicao_select.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.contribuicoes_recebidas_pesquisador()
@@ -2460,7 +2461,7 @@ AS $$
 BEGIN
     IF public.id_usuario_atual() IS NULL THEN
         RAISE EXCEPTION 'É necessário estar autenticado para ver as contribuições recebidas.'
-            USING ERRCODE = '92038';
+            USING ERRCODE = '92041';
     END IF;
 
     RETURN QUERY
@@ -2489,7 +2490,7 @@ BEGIN
         WHERE cr.id_contribuicao = c.id_contribuicao
     ) recompensas ON TRUE
     WHERE ca.id_usuario = public.id_usuario_atual()
-      AND c.status = 'confirmado'
+      AND c.status IN ('confirmado', 'repassado')
     ORDER BY c.criado_em DESC, c.id_contribuicao DESC;
 END;
 $$;

@@ -57,7 +57,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90019 | `fn_valida_pares_min_max_configuracoes` | `configuracoes` | O mínimo de um par (prazo, orçamento, cronograma, tamanho de arquivo) não pode ser maior que o máximo (constraint trigger, roda no `COMMIT`). Leva `dados` no corpo: `chaveMinimo`, `valorMinimo`, `chaveMaximo`, `valorMaximo` |
 | 90020 | `suspender_usuario` / `suspender_pesquisador` | `usuario` / `perfil_pesquisador` | Motivo da suspensão é obrigatório |
 | 90021 | `criar_campanha_para_outro` | `campanha` | O usuário escolhido não é um pesquisador ativo |
-| 90022 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_anexo` | `usuario` / `arquivo_atualizacao`, `arquivo_recompensa` | O arquivo escolhido (foto ou anexo) não existe mais ou foi removido |
+| 90022 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_imagem_capa_campanha` / `fn_valida_posse_anexo` | `usuario` / `campanha` / `arquivo_atualizacao`, `arquivo_recompensa` | O arquivo escolhido (foto, capa ou anexo) não existe mais ou foi removido (a capa também precisa ser imagem) |
 | 90023 | `suspender_usuario` / `suspender_papel_usuario` / `suspender_pesquisador` | `usuario` / `usuario_papel` / `perfil_pesquisador` | A data final da suspensão precisa estar no futuro |
 | 90024 | `trg_valida_escopo_tipolink` | `link_academico` / `link_atualizacao` / `link_recompensa` | O endereço do link não é de nenhum dos domínios do tipo (ex.: Lattes fora de lattes.cnpq.br), RF-022 |
 | 90025 | `trg_valida_escopo_tipolink` | `link_academico` / `link_atualizacao` / `link_recompensa` | O link não segue o formato (`regex`) do tipo |
@@ -108,7 +108,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91026 | `fn_valida_transicao_campanha` | `campanha` | Prazo para reenviar a campanha rejeitada já venceu |
 | 91027 | `fn_congela_regras_campanha` / `fn_congela_orcamento_campanha` / `fn_congela_marco_cronograma` | `campanha` / `orcamento_campanha` / `marco_cronograma` | Campanha rejeitada sem reenvios restantes é somente leitura |
 | 91028 | `fn_exige_historico_rejeicao` | `campanha` | Rejeição sem registro em `historico_rejeicao` na mesma transação (constraint trigger, roda no `COMMIT`) |
-| 91029 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_anexo` | `usuario` / `arquivo_atualizacao`, `arquivo_recompensa` | O arquivo escolhido (foto ou anexo) já está em uso em outro lugar |
+| 91029 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_imagem_capa_campanha` / `fn_valida_posse_anexo` | `usuario` / `campanha` / `arquivo_atualizacao`, `arquivo_recompensa` | O arquivo escolhido (foto, capa ou anexo) já está em uso em outro lugar |
 | 91030 | `suspender_usuario` / `suspender_papel_usuario` / `excluir_conta_usuario` / `fn_protege_ultimo_admin` | `usuario` / `usuario_papel` | Não é possível suspender, excluir ou tirar o papel do último administrador ativo do sistema |
 | 91031 | `excluir_conta_usuario` | `usuario` | Não é possível excluir a conta enquanto houver campanha ativa |
 | 91032 | `fn_protege_termo_aceito` | `termos_de_uso` | Versão do Termo já aceita não pode ser excluída, RF-095 |
@@ -135,6 +135,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91055 | `reenviar_notificacao` | `notificacao` | A conta do e-mail foi excluída: não há para onde reenviar |
 | 91056 | `fn_valida_contestacao_pendente` | `denuncia` | Decidida a contestação, a situação da denúncia não muda mais (RF-115) |
 | 91057 | `fn_valida_link_recompensa` | `recompensa`, `link_recompensa` | Recompensa ativa de acesso antecipado ou entrega digital sem o link especial (RF-103) |
+| 91058 | `fn_congela_regras_campanha` (via `fn_campanha_erro_congelamento`) | `campanha` | Imagem de capa alterada depois da aprovação da campanha (o mesmo congelamento do título e do vídeo) |
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
 
@@ -164,7 +165,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92022 | `suspender_papel_usuario` | `usuario_papel` | Sem permissão para suspender papel de usuário |
 | 92023 | `revogar_suspensao_papel_usuario` | `usuario_papel` | Sem permissão para revogar suspensão de papel de usuário |
 | 92024 | `alterar_perfil_pesquisador_de_outro` | `perfil_pesquisador` | Sem permissão para alterar perfil de pesquisador de outro usuário |
-| 92025 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_anexo` | `usuario` / `arquivo_atualizacao`, `arquivo_recompensa` | Só é possível usar como foto ou anexar um arquivo que você mesmo enviou |
+| 92025 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_imagem_capa_campanha` / `fn_valida_posse_anexo` | `usuario` / `campanha` / `arquivo_atualizacao`, `arquivo_recompensa` | Só é possível usar como foto, como capa ou anexar um arquivo que você mesmo enviou |
 | 92026 | `trg_valida_escopo_tipolink` | `link_academico` | Só pesquisador tem links acadêmicos |
 | 92027 | `suspender_usuario` | `usuario` | Ninguém suspende a própria conta |
 | 92029 | `fn_valida_denuncia_alvo` | `denuncia` | Não é possível denunciar a própria campanha nem o próprio perfil |
@@ -179,6 +180,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92038 | `resumo_contribuicoes_campanha` | `contribuicao` | Só o dono da campanha ou quem tem `contribuicao_visualizar_sensivel` vê o resumo das contribuições dela |
 | 92039 | `reenviar_notificacao`, `cancelar_notificacao` | `notificacao` | Sem permissão (`notificacao_processar`) para reenviar ou cancelar e-mails |
 | 92040 | `fn_atualizacao_ocultacao` | `atualizacao_campanha` | Atualização excluída pela moderação (mantendo o registro): o dono não a põe de volta |
+| 92041 | `contribuicoes_recebidas_pesquisador` | `contribuicao` | Consulta das contribuições recebidas sem sessão (a rota do Nest já exige login; é a defesa do banco) |
 
 ## 93xxx - Limite de taxa (429)
 
