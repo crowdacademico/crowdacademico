@@ -716,6 +716,9 @@ $$;
 -- pesquisador ATIVO (mesma regra do self-service, checada aqui em vez de RLS): só troca QUEM pode disparar
 -- o INSERT em nome de outro. Validação de prazo/meta/limite de campanhas simultâneas NÃO é duplicada aqui:
 -- continua toda em trigger (05_regras_negocio.sql) e dispara igual para INSERT via SECURITY DEFINER.
+-- p_id_imagem_capa (14-11-2026): a capa enviada por quem cria (o admin); fn_valida_posse_imagem_capa_campanha (05) confere
+-- que foi a conta atual que enviou. DROP antes: com um parâmetro a mais, CREATE OR REPLACE criaria uma sobrecarga.
+DROP FUNCTION IF EXISTS public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT);
 CREATE OR REPLACE FUNCTION public.criar_campanha_para_outro(
     p_id_usuario INT,
     p_id_area_conhecimento INT,
@@ -725,7 +728,8 @@ CREATE OR REPLACE FUNCTION public.criar_campanha_para_outro(
     p_descricao TEXT,
     p_data_inicio TIMESTAMPTZ,
     p_data_fim TIMESTAMPTZ,
-    p_video_apresentacao_url TEXT
+    p_video_apresentacao_url TEXT,
+    p_id_imagem_capa INT DEFAULT NULL
 )
 RETURNS INT
 LANGUAGE plpgsql
@@ -748,11 +752,11 @@ BEGIN
 
     INSERT INTO campanha (
         id_usuario, id_area_conhecimento, titulo, modelo,
-        meta_financeira, descricao, data_inicio, data_fim, video_apresentacao_url
+        meta_financeira, descricao, data_inicio, data_fim, video_apresentacao_url, id_imagem_capa
     )
     VALUES (
         p_id_usuario, p_id_area_conhecimento, p_titulo, COALESCE(p_modelo, 'all-or-nothing'),
-        p_meta_financeira, p_descricao, p_data_inicio, p_data_fim, p_video_apresentacao_url
+        p_meta_financeira, p_descricao, p_data_inicio, p_data_fim, p_video_apresentacao_url, p_id_imagem_capa
     )
     RETURNING id_campanha INTO v_id_campanha;
 

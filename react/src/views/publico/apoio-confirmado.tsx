@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
+import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -132,6 +133,9 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
   const [financeiroAtual, setFinanceiroAtual] = useState<CampanhaResponse | null>(null);
   const [erroConsulta, setErroConsulta] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
+  const { obterNumero, obterConfiguracao } = useConfiguracoes();
+  const prazoDesistencia = obterNumero('desistencia_prazo_dias', 7);
+  const emailSuporte = String(obterConfiguracao('email_suporte', 'o e-mail de suporte') ?? 'o e-mail de suporte');
   const segundosRestantes = useSegundosRestantes(estado?.contribuicao.pix?.expiraEm);
   const pixExpirado = segundosRestantes === 0;
 
@@ -270,7 +274,7 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
               <p className="rotulo mb-2">Cobrança PIX expirada</p>
               <p className="paragrafo texto-padrao mb-4">
                 O prazo deste código terminou em {new Date(contribuicao.pix?.expiraEm ?? '').toLocaleString('pt-BR')}.
-                Não pague com ele. Se você já pagou, aguarde: a confirmação ainda pode chegar do servidor.
+                Não pague com ele. Se você já pagou, aguarde: a confirmação ainda pode chegar.
               </p>
               <Link to={`/checkout?idCampanha=${contribuicao.idCampanha}`} className="btn btn-primary w-full justify-center">
                 Gerar nova cobrança
@@ -284,13 +288,13 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
               {qrCode && (
                 <img
                   src={qrCode}
-                  alt="QR Code PIX fornecido pelo servidor"
+                  alt="QR Code do Pix"
                   className="w-56 h-56 mx-auto border borda-padrao p-3 rounded-xl mb-6 fundo-cartao shadow-lg"
                 />
               )}
               {!qrCode && (
                 <p className="paragrafo texto-padrao mb-4">
-                  O servidor não forneceu uma imagem de QR Code válida. Use o código PIX abaixo no aplicativo do seu
+                  Não foi possível mostrar o QR Code. Use o código Pix abaixo no aplicativo do seu
                   banco.
                 </p>
               )}
@@ -320,10 +324,22 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
                 {contribuicao.pix
                   ? new Date(contribuicao.pix.expiraEm).toLocaleString('pt-BR')
                   : 'data não informada'}
-                . O pagamento só será confirmado após atualização do status pelo servidor.
+                . Esta página atualiza sozinha quando o pagamento for confirmado.
               </p>
             </div>
           )}
+
+          {/* CDC, art. 49: quem apoiou com conta desiste pela Minha Conta; sem conta, só pelo suporte, com o protocolo. */}
+          <div className="text-left rounded-xl border borda-padrao fundo-sutil p-4 mb-6 text-sm texto-padrao" role="note">
+            <p className="font-semibold texto-forte mb-1">
+              Guarde o protocolo <span className="font-dado">{contribuicao.idContribuicao}</span>
+            </p>
+            <p className="leading-relaxed">
+              {auth.usuario
+                ? `Até ${prazoDesistencia} dias depois de apoiar, você pode desistir e receber o valor de volta em Minha Conta > Financeiro (a tarifa do meio de pagamento não volta).`
+                : `Até ${prazoDesistencia} dias depois de apoiar, você pode desistir e receber o valor de volta pelo suporte (${emailSuporte}), informando este protocolo e o comprovante do pagamento. A tarifa do meio de pagamento não volta.`}
+            </p>
+          </div>
 
           <div className="text-left rounded-xl border borda-padrao overflow-hidden mb-6">
             <div className="fundo-sutil px-5 py-3 border-b borda-padrao">
@@ -390,7 +406,7 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
               <li className="flex gap-2">
                 <span className="font-bold texto-info">1.</span>
                 {pagamentoConfirmado
-                  ? 'O pagamento foi confirmado pelo servidor.'
+                  ? 'Pagamento confirmado.'
                   : 'Pague o PIX e aguarde a atualização automática do status.'}
               </li>
               <li className="flex gap-2">
@@ -407,7 +423,7 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <button type="button" disabled title="Recibo indisponível: a API não fornece geração de recibo." className="btn btn-secondary justify-center disabled:opacity-50">
+            <button type="button" disabled title="O recibo ainda não está disponível." className="btn btn-secondary justify-center disabled:opacity-50">
               <i className="fa-solid fa-file-arrow-down" aria-hidden="true" /> Recibo indisponível
             </button>
             <button

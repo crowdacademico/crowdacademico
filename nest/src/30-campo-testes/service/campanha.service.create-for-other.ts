@@ -31,7 +31,8 @@ export class CampanhaServiceCreateForOther {
         ${dto.descricao ?? null},
         ${dto.dataInicio ? new Date(dto.dataInicio) : null}::timestamptz,
         ${dto.dataFim ? new Date(dto.dataFim) : null}::timestamptz,
-        ${dto.videoApresentacaoUrl ?? null}
+        ${dto.videoApresentacaoUrl ?? null},
+        ${dto.idImagemCapa ?? null}::int
       )
     `.execute(this.database.getDb());
     return this.findOne.executar(resultado.rows[0].criar_campanha_para_outro);

@@ -211,7 +211,11 @@ export interface Denuncia {
   contestacao_status: StatusContestacao | null;
   contestada_em: Timestamp | null;
   criado_em: Generated<Timestamp>;
+  comentario_conteudo: string | null;
+  comentario_endossado: boolean | null;
+  comentario_id_campanha: number | null;
   id_campanha_alvo: number | null;
+  id_comentario: number | null;
   id_denuncia: Generated<number>;
   id_julgador: number | null;
   id_julgador_contestacao: number | null;

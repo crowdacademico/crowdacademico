@@ -90,12 +90,6 @@ function ControlesCarrossel({
   );
 }
 
-function nosUltimosSeteDias(campanha: CampanhaResponse) {
-  if (!campanha.dataFim || campanha.status !== 'ativo' || emBreve(campanha)) return false;
-  const dias = (Date.parse(campanha.dataFim) - Date.now()) / 86_400_000;
-  return dias >= 0 && dias <= 7;
-}
-
 function BlocoCampanhas({
   campanhas,
   carregando,
@@ -185,7 +179,6 @@ export function Home({ auth }: PropsPagina) {
     [campanhasRecebidas],
   );
   const carrosselDestaque = useRef<HTMLDivElement>(null);
-  const carrosselUltimosDias = useRef<HTMLDivElement>(null);
   const carrosselEmBreve = useRef<HTMLDivElement>(null);
   const areas = useMemo(() => {
     const idsAreasEmCampanhas = new Set((campanhas ?? []).map((campanha) => campanha.idAreaConhecimento));
@@ -204,10 +197,6 @@ export function Home({ auth }: PropsPagina) {
     [campanhas],
   );
   const projetosDestaque = captacao.slice(0, 8);
-  const ultimosDias = useMemo(
-    () => porArrecadacao((campanhas ?? []).filter(nosUltimosSeteDias)),
-    [campanhas],
-  );
   const futuras = useMemo(
     () => (campanhas ?? []).filter(emBreve).sort(
       (a, b) => Date.parse(a.dataInicio ?? '') - Date.parse(b.dataInicio ?? ''),
@@ -340,29 +329,6 @@ export function Home({ auth }: PropsPagina) {
             </Link>
           </div>
         </div>
-
-        <div>
-          <div className="flex justify-between items-center mb-8 gap-4">
-            <h2 className="titulo-secao texto-forte">Últimos Dias</h2>
-            <ControlesCarrossel
-              desabilitado={Boolean(erro) || carregando}
-              quantidade={ultimosDias.length}
-              rotulo="campanhas encerrando em breve"
-              trilhoRef={carrosselUltimosDias}
-            />
-          </div>
-          <BlocoCampanhas
-            campanhas={ultimosDias.slice(0, 8)}
-            carregando={carregando}
-            erro={erro}
-            vazio="Não há campanhas ativas com encerramento previsto para os próximos sete dias."
-            trilhoRef={carrosselUltimosDias}
-            seguidas={seguimento.seguidas}
-            carregandoSeguimento={seguimento.carregando}
-            emAtualizacao={seguimento.emAtualizacao}
-            aoAlternarSeguir={seguimento.alternarSeguir}
-          />
-        </div>
       </section>
 
       <section id="home-secao-em-breve" className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-20 pb-20">
@@ -452,12 +418,12 @@ export function Home({ auth }: PropsPagina) {
             </details>
             <details className="home-perguntas__item">
               <summary className="home-perguntas__pergunta">Como apoio financeiramente?<i className="fa-solid fa-plus" aria-hidden="true" /></summary>
-              <p className="paragrafo texto-padrao">A opção de apoio financeiro ainda não está disponível nesta versão pública do aplicativo.</p>
+              <p className="paragrafo texto-padrao">Na página da campanha, clique em "Apoiar esta pesquisa", escolha o valor e pague o Pix gerado.</p>
             </details>
           </div>
           <div className="text-center mt-8">
-            <Link to="/como-funciona" className="inline-flex items-center gap-2 texto-marca font-bold hover:underline">
-              Saiba como funciona <i className="fa-solid fa-arrow-right" aria-hidden="true" />
+            <Link to="/perguntas-frequentes" className="inline-flex items-center gap-2 texto-marca font-bold hover:underline">
+              Ver todas as perguntas <i className="fa-solid fa-arrow-right" aria-hidden="true" />
             </Link>
           </div>
         </div>

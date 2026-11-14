@@ -768,6 +768,14 @@ CREATE TABLE denuncia (
     id_usuario          INT  NOT NULL,
     id_campanha_alvo    INT,
     id_pesquisador_alvo INT,
+    -- Denúncia de COMENTÁRIO (14-11-2026): é uma denúncia contra o perfil do autor (id_pesquisador_alvo, preenchido pelo
+    -- banco a partir do comentário) que leva junto o comentário. Os três campos comentario_* são a cópia do momento da
+    -- denúncia: o comentário pode ser editado ou apagado depois, e a moderação precisa julgar o que foi denunciado.
+    -- Ver fn_denuncia_comentario_preenche e fn_denuncia_comentario_oculta (05, [05-K-3]).
+    id_comentario          INT,
+    comentario_conteudo    TEXT,
+    comentario_endossado   BOOLEAN,
+    comentario_id_campanha INT,
     id_motivo           INT  NOT NULL,
     relato              TEXT,-- descrição adicional pro denunciante.
     status              status_denuncia NOT NULL DEFAULT 'pendente',
@@ -798,11 +806,14 @@ CREATE TABLE denuncia (
     CONSTRAINT "FK_DENUNCIA_CAMPANHA_ALVO" FOREIGN KEY (id_campanha_alvo) REFERENCES campanha(id_campanha) ON DELETE RESTRICT,
     CONSTRAINT "FK_DENUNCIA_PESQUISADOR_ALVO" FOREIGN KEY (id_pesquisador_alvo) REFERENCES usuario(id_usuario) ON DELETE RESTRICT,
     CONSTRAINT "FK_DENUNCIA_MOTIVO" FOREIGN KEY (id_motivo) REFERENCES motivo_denuncia(id_motivo),
+    -- SET NULL: o comentário pode ser apagado; a denúncia fica com a cópia (comentario_conteudo).
+    CONSTRAINT "FK_DENUNCIA_COMENTARIO" FOREIGN KEY (id_comentario) REFERENCES comentario(id_comentario) ON DELETE SET NULL,
     -- SET NULL: a conta de quem julgou pode ser excluída; a denúncia continua, só perde a trava da contestação.
     CONSTRAINT "FK_DENUNCIA_JULGADOR" FOREIGN KEY (id_julgador) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
     CONSTRAINT "FK_DENUNCIA_JULGADOR_CONTESTACAO" FOREIGN KEY (id_julgador_contestacao) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
     CONSTRAINT "UK_DENUNCIA_USUARIO_CAMPANHA_ALVO" UNIQUE (id_usuario, id_campanha_alvo),
-    CONSTRAINT "UK_DENUNCIA_USUARIO_PESQUISADOR_ALVO" UNIQUE (id_usuario, id_pesquisador_alvo),
+    -- UK_DENUNCIA_USUARIO_PESQUISADOR_ALVO virou índice único PARCIAL (02): uma denúncia por perfil, mas cada comentário
+    -- do mesmo autor pode ser denunciado à parte (UK_DENUNCIA_USUARIO_COMENTARIO).
     -- Nada garantia exatamente um alvo preenchido (dava pra ter os dois ou nenhum).
     CONSTRAINT "CK_DENUNCIA_ALVO_XOR" CHECK (
         (id_campanha_alvo IS NOT NULL AND id_pesquisador_alvo IS NULL)

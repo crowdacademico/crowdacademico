@@ -9,7 +9,9 @@ import { seguirCampanhaApi } from '../../services/16-seguir/api/seguir-campanha.
 import { comentarioApi } from '../../services/17-comentario/api/comentario.api';
 import type { ComentarioMeuResponse } from '../../services/17-comentario/type/comentario.type';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
+import { STATUS_ACEITA_DENUNCIA } from '../../services/12-campanha/constants/status-campanha.constants';
 import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
+import { API_BASE_URL } from '../../services/constant/constants/api.constants';
 import { useSeguirCampanhas } from './use-seguir-campanhas';
 
 interface AcoesCampanhaProps {
@@ -47,7 +49,9 @@ export function CartaoAcoesCampanha({ auth, campanha }: AcoesCampanhaProps) {
   const ehDono = auth.usuario?.idUsuario === campanha.idUsuario;
   const segue = seguidas.has(idCampanha);
   const ocupado = carregando || emAtualizacao.has(idCampanha);
-  const endereco = `${window.location.origin}/campanha/${idCampanha}`;
+  // O link compartilhado é o da prévia (Nest, GET /compartilhar/campanha/:id): o robô do WhatsApp/LinkedIn/X lê dali o
+  // título e a capa (Open Graph), e quem clica é mandado na hora para a página da campanha.
+  const endereco = `${API_BASE_URL.replace(/\/+$/, '')}/compartilhar/campanha/${idCampanha}`;
   const textoCompartilhar = `Apoie a pesquisa "${campanha.titulo}" no CrowdAcadêmico`;
   const podeCompartilharNativo = typeof navigator.share === 'function';
 
@@ -141,7 +145,7 @@ export function CartaoAcoesCampanha({ auth, campanha }: AcoesCampanhaProps) {
         </div>
       </div>
 
-      {!ehDono && (
+      {!ehDono && STATUS_ACEITA_DENUNCIA.has(campanha.status) && (
         <div className="border-t borda-padrao pt-4">
           {denunciada ? (
             <p className="legenda" role="status">Denúncia registrada. A moderação vai analisar.</p>

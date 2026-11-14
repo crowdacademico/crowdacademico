@@ -1,6 +1,7 @@
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import { STATUS_VISIVEL_PUBLICAMENTE } from '../../services/12-campanha/constants/status-campanha.constants';
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
+import type { AtualizacaoCampanhaResponse } from '../../services/15-atualizacao-campanha/type/atualizacao-campanha.type';
 
 const DATA = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' });
 const NUMERO = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 });
@@ -60,4 +61,12 @@ export function campanhaVisivelNoCatalogo(campanha: CampanhaResponse): boolean {
 
   const fim = Date.parse(campanha.dataFim);
   return !Number.isFinite(fim) || fim > Date.now();
+}
+
+// Mais recente primeiro, só as publicadas (ativo). Uma regra só para a página da campanha, a página de atualizações
+// e as publicações do perfil do pesquisador.
+export function ordenarAtualizacoes(lista: AtualizacaoCampanhaResponse[]): AtualizacaoCampanhaResponse[] {
+  return lista
+    .filter((atualizacao) => atualizacao.ativo)
+    .sort((a, b) => Date.parse(b.publicadoEm) - Date.parse(a.publicadoEm));
 }

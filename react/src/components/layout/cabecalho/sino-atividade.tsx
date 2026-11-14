@@ -6,6 +6,7 @@ import { notificacaoInternaApi } from '../../../services/27-notificacao/api/mode
 import { useFecharAoClicarFora } from '../../../services/constant/hook/use-fechar-ao-clicar-fora';
 import { formatarDataHora } from '../../../services/constant/util/formatacao.util';
 import { Carregando } from '../carregando';
+import { ModalFicha } from '../../crud/modal-ficha';
 import type { UseAuthReturn } from '../../../services/3-auth/hook/use-auth';
 import type { LogAuditoriaResponse, OperacaoLogAuditoria } from '../../../services/28-log-auditoria/type/log-auditoria.type';
 import type { NotificacaoInternaResponse } from '../../../services/27-notificacao/type/modelo-mensagem.type';
@@ -36,6 +37,8 @@ export function SinoAtividade({ auth }: SinoAtividadeProps) {
   const [avisos, setAvisos] = useState<NotificacaoInternaResponse[]>([]);
   const [atividade, setAtividade] = useState<LogAuditoriaResponse[] | null>(null);
   const [naoLidas, setNaoLidas] = useState(0);
+  // Aviso aberto no modal (clicar no aviso, fora do "Marcar como lida"): texto inteiro, sem cortar.
+  const [lendo, setLendo] = useState<NotificacaoInternaResponse | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -132,25 +135,37 @@ export function SinoAtividade({ auth }: SinoAtividadeProps) {
                 <p className="paragrafo px-4 py-6 texto-fraco text-center">Nenhuma notificação por enquanto.</p>
               ) : (
                 avisos.map((aviso) => (
-                  <button
-                    key={aviso.idNotificacao}
-                    type="button"
-                    onClick={() => !aviso.lidaEm && marcarLido(aviso.idNotificacao)}
-                    className="w-full text-left px-4 py-3 border-b borda-padrao last:border-b-0 flex gap-3 hover-fundo-sutil"
-                  >
-                    <span
-                      className={'mt-1.5 w-2 h-2 rounded-full shrink-0 ' + (aviso.lidaEm ? '' : 'fundo-marca')}
-                      aria-hidden="true"
-                    ></span>
-                    <span className="min-w-0">
-                      <span className="block paragrafo enfase texto-forte">
-                        {aviso.titulo}
-                        {!aviso.lidaEm && <span className="sr-only"> (não lida)</span>}
+                  <div key={aviso.idNotificacao} className="border-b borda-padrao last:border-b-0 hover-fundo-sutil">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!aviso.lidaEm) marcarLido(aviso.idNotificacao);
+                        setLendo(aviso);
+                        setAberto(false);
+                      }}
+                      className="w-full text-left px-4 pt-3 pb-1 flex gap-3"
+                    >
+                      <span
+                        className={'mt-1.5 w-2 h-2 rounded-full shrink-0 ' + (aviso.lidaEm ? '' : 'fundo-marca')}
+                        aria-hidden="true"
+                      ></span>
+                      <span className="min-w-0">
+                        <span className="block paragrafo enfase texto-forte">
+                          {aviso.titulo}
+                          {!aviso.lidaEm && <span className="sr-only"> (não lida)</span>}
+                        </span>
+                        <span className="block paragrafo texto-padrao mt-0.5 line-clamp-2">{aviso.mensagem}</span>
                       </span>
-                      <span className="block paragrafo texto-padrao mt-0.5">{aviso.mensagem}</span>
-                      <span className="block legenda texto-fraco mt-0.5">{formatarDataHora(aviso.criadoEm)}</span>
-                    </span>
-                  </button>
+                    </button>
+                    <div className="flex items-center justify-between gap-3 pl-9 pr-4 pb-3">
+                      <span className="legenda texto-fraco">{formatarDataHora(aviso.criadoEm)}</span>
+                      {!aviso.lidaEm && (
+                        <button type="button" onClick={() => marcarLido(aviso.idNotificacao)} className="legenda enfase texto-marca hover-texto-forte">
+                          Marcar como lida
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 ))
               )
             ) : !atividade || atividade.length === 0 ? (
@@ -176,6 +191,12 @@ export function SinoAtividade({ auth }: SinoAtividadeProps) {
             </div>
           )}
         </div>
+      )}
+
+      {lendo && (
+        <ModalFicha titulo={lendo.titulo} subtitulo={formatarDataHora(lendo.criadoEm)} aoFechar={() => setLendo(null)} fecharAoClicarFora>
+          <p className="paragrafo texto-padrao whitespace-pre-wrap">{lendo.mensagem}</p>
+        </ModalFicha>
       )}
     </div>
   );

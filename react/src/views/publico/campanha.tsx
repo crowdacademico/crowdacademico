@@ -28,11 +28,15 @@ import {
   campanhaAceitaApoios,
   diasRestantes,
   formatarData,
+  ordenarAtualizacoes,
   percentualArrecadado,
 } from './util-campanhas';
 import { CartaoAcoesCampanha, FormComentarCampanha } from './acoes-campanha';
+import { ModalAtualizacoes } from './lista-atualizacoes';
+import { AvatarUsuario } from '../../components/layout/avatar-usuario';
+import { ModalDenunciar } from '../19-denuncia/modal-denunciar';
 
-type AbaCampanha = 'sobre' | 'orcamento' | 'cronograma' | 'atualizacoes';
+type AbaCampanha = 'sobre' | 'orcamento' | 'cronograma' | 'atualizacoes' | 'comentar';
 
 interface EstadoSecundario<T> {
   dados: T[];
@@ -60,6 +64,8 @@ export function Campanha({ auth }: PropsPagina) {
   const [erroApoios, setErroApoios] = useState(false);
   const [carregando, setCarregando] = useState(idValido);
   const [aba, setAba] = useState<AbaCampanha>('sobre');
+  const [vendoAtualizacoes, setVendoAtualizacoes] = useState(false);
+  const [denunciandoComentario, setDenunciandoComentario] = useState<ComentarioResponse | null>(null);
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
 
   useEffect(() => {
@@ -108,7 +114,7 @@ export function Campanha({ auth }: PropsPagina) {
             erro: cronograma.status === 'rejected',
           });
           setAtualizacoes({
-            dados: novidades.status === 'fulfilled' ? novidades.value.filter((atualizacao) => atualizacao.ativo) : [],
+            dados: novidades.status === 'fulfilled' ? ordenarAtualizacoes(novidades.value) : [],
             erro: novidades.status === 'rejected',
           });
           setComentarios({
@@ -139,11 +145,19 @@ export function Campanha({ auth }: PropsPagina) {
   const publicada = campanha ? STATUS_PUBLICADA.has(campanha.status) : false;
   const dias = campanha ? diasRestantes(campanha.dataFim) : null;
   const aceitaApoios = campanha !== null && campanhaAceitaApoios(campanha);
+  // Aba Comentar: só para pesquisador logado que não é o dono, em campanha publicada que aceita comentário (RF-096).
+  const podeComentar =
+    publicada &&
+    auth.usuario?.ehPesquisador === true &&
+    auth.usuario.idUsuario !== campanha?.idUsuario &&
+    campanha?.status !== 'encerrado_moderacao';
   const abas: { chave: AbaCampanha; rotulo: string }[] = [
     { chave: 'sobre', rotulo: 'Sobre o projeto' },
     { chave: 'orcamento', rotulo: 'Orçamento' },
     { chave: 'cronograma', rotulo: 'Cronograma' },
+    // Atualizações abre um modal estilo blog (não troca o painel): ver ModalAtualizacoes.
     { chave: 'atualizacoes', rotulo: 'Atualizações' },
+    ...(podeComentar ? [{ chave: 'comentar' as const, rotulo: 'Comentar' }] : []),
   ];
 
   return (
@@ -157,17 +171,6 @@ export function Campanha({ auth }: PropsPagina) {
             className="campanha-detalhe__hero pt-14 pb-24 relative overflow-hidden texto-sobre-escuro superficie-escura"
             style={{ background: 'var(--cor-cianotipo-800)' }}
           >
-            {campanha.imagemCapaUrl && (
-              <>
-                <img
-                  src={campanha.imagemCapaUrl}
-                  alt=""
-                  aria-hidden="true"
-                  className="campanha-detalhe__imagem-capa"
-                />
-                <div className="campanha-detalhe__capa-sobreposicao" aria-hidden="true" />
-              </>
-            )}
             <div className="absolute inset-0 grade-medicao" aria-hidden="true" />
             <div className="max-w-7xl mx-auto px-4 relative z-10">
               <p className="text-sm font-medium texto-sobre-escuro mb-6 flex items-center gap-2">
@@ -182,9 +185,6 @@ export function Campanha({ auth }: PropsPagina) {
                 <i className="fa-solid fa-flask" aria-hidden="true" />
                 Projeto {ROTULO_MODELO_CAMPANHA[campanha.modelo]}
               </span>
-              <div className="mb-4 flex">
-                <span className={`badge ${classeBadgeCampanha(campanha)}`}>{rotuloStatusCampanha(campanha)}</span>
-              </div>
               <h1 className="titulo-pagina texto-sobre-escuro-forte max-w-4xl mb-6">{campanha.titulo}</h1>
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 texto-sobre-escuro text-sm font-medium">
                 <Link className="flex items-center gap-2 hover:underline" to={`/pesquisador/${campanha.idUsuario}`}>
@@ -193,17 +193,32 @@ export function Campanha({ auth }: PropsPagina) {
                   </span>
                   {campanha.nomePesquisador ?? 'Pesquisador não informado'}
                 </Link>
-                <span aria-hidden="true" className="hidden sm:inline">|</span>
-                <span className="inline-flex items-center gap-2 veu-claro texto-marca-sobre-escuro microrrotulo px-3 py-1 rounded-full">
-                  {campanha.nomeArea ?? 'Área não informada'}
-                </span>
+                {campanha.instituicaoPesquisador && (
+                  <>
+                    <span aria-hidden="true" className="hidden sm:inline">|</span>
+                    <span className="inline-flex items-center gap-2 veu-claro texto-marca-sobre-escuro microrrotulo px-3 py-1 rounded-full">
+                      <i className="fa-solid fa-building-columns" aria-hidden="true" />
+                      {campanha.instituicaoPesquisador}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </section>
 
           <div className="max-w-7xl mx-auto px-4 -mt-16 pb-16 flex flex-col lg:flex-row gap-10 relative z-10">
             <div className="flex-1 min-w-0">
+              {/* Decisão de 14-11-2026: a imagem de capa ocupa este espaço quando não há vídeo; com vídeo, o vídeo manda
+                  e a capa vira o fundo atrás do botão de play. Sem campo nem caixinha a mais no cadastro. */}
               <div className="campanha-detalhe__video w-full aspect-video rounded-xl overflow-hidden relative flex items-center justify-center mb-10 shadow-2xl">
+                {campanha.imagemCapaUrl && (
+                  <img
+                    src={campanha.imagemCapaUrl}
+                    alt={campanha.videoApresentacaoUrl ? '' : `Imagem de capa da campanha ${campanha.titulo}`}
+                    aria-hidden={campanha.videoApresentacaoUrl ? true : undefined}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                )}
                 {campanha.videoApresentacaoUrl ? (
                   <a
                     className="absolute inset-0 flex flex-col items-center justify-center gap-4 texto-sobre-escuro-forte bg-black/50 hover:bg-black/60 transition-colors group"
@@ -219,7 +234,7 @@ export function Campanha({ auth }: PropsPagina) {
                       Vídeo de apresentação
                     </span>
                   </a>
-                ) : (
+                ) : campanha.imagemCapaUrl ? null : (
                   <div className="flex flex-col items-center gap-3 texto-sobre-escuro text-center px-6">
                     <i className="fa-solid fa-circle-play text-5xl opacity-70" aria-hidden="true" />
                     <p className="paragrafo texto-sobre-escuro-forte">
@@ -229,15 +244,16 @@ export function Campanha({ auth }: PropsPagina) {
                 )}
               </div>
 
-              <div id="project-tab-buttons" role="tablist" aria-label="Detalhes da campanha" className="campanha-detalhe__abas sticky top-sticky z-10 fundo-cartao rounded-xl shadow-sm border borda-padrao mb-8 p-2 flex items-center gap-2 overflow-x-auto hide-scrollbar">
+              <div id="project-tab-buttons" role="tablist" aria-label="Detalhes da campanha" className="campanha-detalhe__abas fundo-cartao rounded-xl shadow-sm border borda-padrao mb-8 p-2 flex items-center gap-2 overflow-x-auto hide-scrollbar">
                 {abas.map((item) => (
                   <button
                     aria-controls={`tab-${item.chave}`}
                     aria-selected={aba === item.chave}
+                    aria-haspopup={item.chave === 'atualizacoes' ? 'dialog' : undefined}
                     className={`whitespace-nowrap rounded-lg px-4 py-2 font-semibold transition-colors ${aba === item.chave ? 'fundo-realce texto-forte' : 'texto-padrao hover-fundo-sutil'}`}
                     id={`tab-btn-${item.chave}`}
                     key={item.chave}
-                    onClick={() => setAba(item.chave)}
+                    onClick={() => (item.chave === 'atualizacoes' ? setVendoAtualizacoes(true) : setAba(item.chave))}
                     role="tab"
                     type="button"
                   >
@@ -266,7 +282,7 @@ export function Campanha({ auth }: PropsPagina) {
                     {publicada && (
                       <section className="mt-8 border-t borda-padrao pt-6" aria-labelledby="comentarios-endossados-titulo">
                         <h3 id="comentarios-endossados-titulo" className="subtitulo texto-forte mb-4">
-                          Comentários endossados
+                          Endosso
                         </h3>
                         {comentariosCarregando && <Carregando />}
                         {!comentariosCarregando && comentarios.erro && (
@@ -280,23 +296,39 @@ export function Campanha({ auth }: PropsPagina) {
                         {!comentariosCarregando && !comentarios.erro && comentarios.dados.length > 0 && (
                           <ul className="space-y-4">
                             {comentarios.dados.map((comentario) => (
-                              <li key={comentario.idComentario} className="rounded-lg fundo-sutil border borda-padrao p-4">
-                                <div className="flex items-center justify-between gap-3 mb-2">
-                                  <span className="paragrafo enfase texto-forte">
-                                    {comentario.nomePesquisador ?? 'Pesquisador'}
-                                  </span>
-                                  {comentario.ordemEndosso !== null && (
-                                    <span className="badge badge-sucesso">Endosso #{comentario.ordemEndosso}</span>
+                              <li key={comentario.idComentario} className="rounded-lg fundo-sutil border borda-padrao p-4 flex gap-3">
+                                <AvatarUsuario nome={comentario.nomePesquisador} foto={comentario.fotoPesquisador} tamanho="md" />
+                                <div className="min-w-0 flex-1">
+                                  {comentario.idPesquisador !== null ? (
+                                    <Link to={`/pesquisador/${comentario.idPesquisador}`} className="paragrafo enfase texto-forte hover:underline">
+                                      {comentario.nomePesquisador ?? 'Pesquisador'}
+                                    </Link>
+                                  ) : (
+                                    <span className="paragrafo enfase texto-forte">{comentario.nomePesquisador ?? 'Pesquisador'}</span>
+                                  )}
+                                  <p className="paragrafo texto-padrao whitespace-pre-wrap mt-1">{comentario.conteudo}</p>
+                                  {auth.autenticado && comentario.idPesquisador !== auth.usuario?.idUsuario && (
+                                    <button
+                                      type="button"
+                                      className="legenda texto-fraco hover:underline mt-2"
+                                      onClick={() => setDenunciandoComentario(comentario)}
+                                    >
+                                      <i className="fa-solid fa-flag mr-1" aria-hidden="true" /> Denunciar comentário
+                                    </button>
                                   )}
                                 </div>
-                                <p className="paragrafo texto-padrao whitespace-pre-wrap">{comentario.conteudo}</p>
                               </li>
                             ))}
                           </ul>
                         )}
                       </section>
                     )}
-                    {publicada && <FormComentarCampanha auth={auth} campanha={campanha} />}
+                  </section>
+                )}
+                {aba === 'comentar' && podeComentar && (
+                  <section id="tab-comentar" aria-labelledby="tab-btn-comentar" role="tabpanel">
+                    <h2 className="titulo-secao texto-forte mb-2">Comentar</h2>
+                    <FormComentarCampanha auth={auth} campanha={campanha} />
                   </section>
                 )}
                 {aba === 'orcamento' && (
@@ -342,35 +374,6 @@ export function Campanha({ auth }: PropsPagina) {
                             </li>
                           ))}
                       </ol>
-                    )}
-                  </section>
-                )}
-                {aba === 'atualizacoes' && (
-                  <section id="tab-atualizacoes" aria-labelledby="tab-btn-atualizacoes" role="tabpanel">
-                    <h2 className="titulo-secao texto-forte mb-5">Atualizações</h2>
-                    {!publicada && <p className="paragrafo texto-fraco">As atualizações públicas ainda não estão disponíveis para esta campanha.</p>}
-                    {publicada && atualizacoes.erro && <p className="paragrafo texto-fraco">Não foi possível carregar as atualizações.</p>}
-                    {publicada && !atualizacoes.erro && atualizacoes.dados.length === 0 && (
-                      <p className="paragrafo texto-fraco">Ainda não há atualizações públicas para esta campanha.</p>
-                    )}
-                    {publicada && !atualizacoes.erro && atualizacoes.dados.length > 0 && (
-                      <ul className="flex flex-col gap-5">
-                        {atualizacoes.dados.map((atualizacao) => (
-                          <li className="border-b borda-padrao pb-5 last:border-0 last:pb-0" key={atualizacao.idAtualizacao}>
-                            <h3 className="subtitulo">{atualizacao.titulo}</h3>
-                            <p className="legenda mt-1">{formatarData(atualizacao.publicadoEm)}</p>
-                            <p className="paragrafo texto-padrao mt-3 whitespace-pre-wrap">{atualizacao.conteudo}</p>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {publicada && atualizacoes.dados.length > 0 && (
-                      <Link
-                        className="inline-flex texto-marca font-bold hover:underline mt-6"
-                        to={`/campanha/${campanha.idCampanha}/atualizacoes`}
-                      >
-                        Ver todas as atualizações
-                      </Link>
                     )}
                   </section>
                 )}
@@ -463,7 +466,9 @@ export function Campanha({ auth }: PropsPagina) {
                     </div>
                     <div>
                       <p className="font-bold texto-forte text-base">{campanha.nomePesquisador ?? 'Pesquisador não informado'}</p>
-                      <p className="text-xs texto-fraco mb-0.5">{campanha.nomeArea ?? 'Área de conhecimento não informada'}</p>
+                      {campanha.instituicaoPesquisador && (
+                        <p className="text-xs texto-fraco mb-0.5">{campanha.instituicaoPesquisador}</p>
+                      )}
                     </div>
                   </Link>
                   <Link
@@ -477,6 +482,22 @@ export function Campanha({ auth }: PropsPagina) {
               </div>
             </aside>
           </div>
+          {denunciandoComentario && (
+            <ModalDenunciar
+              authFetch={auth.authFetch}
+              alvo={{ idComentario: denunciandoComentario.idComentario }}
+              nomeAlvo={`o comentário de ${denunciandoComentario.nomePesquisador ?? 'pesquisador'}`}
+              aoFechar={() => setDenunciandoComentario(null)}
+            />
+          )}
+          {vendoAtualizacoes && (
+            <ModalAtualizacoes
+              titulo={campanha.titulo}
+              atualizacoes={publicada ? atualizacoes.dados : []}
+              erro={atualizacoes.erro}
+              aoFechar={() => setVendoAtualizacoes(false)}
+            />
+          )}
         </>
       )}
     </main>

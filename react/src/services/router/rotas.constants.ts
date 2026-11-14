@@ -31,6 +31,7 @@ import { ListarNotificacoes } from '../../views/27-notificacao/listar-notificaco
 import { campoTestes } from './campo-testes-opcional';
 import { ComoFunciona } from '../../views/publico/como-funciona';
 import { Transparencia } from '../../views/publico/transparencia';
+import { PerguntasFrequentes } from '../../views/publico/perguntas-frequentes';
 import { Sobre } from '../../views/publico/sobre';
 import { TermosUso } from '../../views/publico/termos-uso';
 import { AtualizacoesCampanha } from '../../views/publico/atualizacoes-campanha';
@@ -86,6 +87,7 @@ export const ROTAS: Rota[] = [
   { caminho: '/apoio-confirmado', elemento: ApoioConfirmado, rotuloBreadcrumb: 'Confirmação do apoio' },
   { caminho: '/como-funciona', elemento: ComoFunciona, rotuloBreadcrumb: 'Como funciona' },
   { caminho: '/transparencia', elemento: Transparencia, rotuloBreadcrumb: 'Transparência' },
+  { caminho: '/perguntas-frequentes', elemento: PerguntasFrequentes, rotuloBreadcrumb: 'Perguntas frequentes' },
   { caminho: '/sobre', elemento: Sobre, rotuloBreadcrumb: 'Sobre' },
   { caminho: '/termos', elemento: TermosUso, rotuloBreadcrumb: 'Termo de Uso' },
   { caminho: '/pesquisador/:idUsuario', elemento: PerfilPesquisador, rotuloBreadcrumb: 'Pesquisador' },

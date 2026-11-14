@@ -20,6 +20,11 @@ export interface DenunciaResponse {
   statusCampanha: StatusCampanha | null;
   idPesquisadorAlvo: number | null;
   nomePesquisadorAlvo: string | null;
+  // Denúncia de comentário: o comentário como estava na hora da denúncia (null nas outras).
+  idComentario: number | null;
+  comentarioConteudo: string | null;
+  comentarioEndossado: boolean | null;
+  comentarioIdCampanha: number | null;
   idMotivo: number;
   motivo: string;
   tipoMotivo: TipoMotivoDenuncia;
@@ -56,7 +61,11 @@ export interface DenunciaContraMimResponse {
 }
 
 // Espelha denuncia.request-create.ts: exatamente um alvo.
-export type AlvoDenuncia = { idCampanhaAlvo: number; idPesquisadorAlvo?: never } | { idPesquisadorAlvo: number; idCampanhaAlvo?: never };
+export type AlvoDenuncia =
+  | { idCampanhaAlvo: number; idPesquisadorAlvo?: never; idComentario?: never }
+  | { idPesquisadorAlvo: number; idCampanhaAlvo?: never; idComentario?: never }
+  // Denúncia de comentário: o banco põe o autor como alvo e guarda a cópia do comentário (motivos de perfil).
+  | { idComentario: number; idCampanhaAlvo?: never; idPesquisadorAlvo?: never };
 
 export type DenunciaRequestCreate = AlvoDenuncia & {
   idMotivo: number;

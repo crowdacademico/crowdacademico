@@ -1,7 +1,7 @@
 import type { MouseEvent } from 'react';
 import { Outlet } from 'react-router';
 import { BarraCarregamento } from './barra-carregamento/barra-carregamento';
-import { FooterPublico } from './footer-publico';
+import { Footer } from './footer';
 import { HeaderPublico } from './header-publico';
 import { LimiteErro } from './limite-erro';
 import { useAlturaTopoFixo, useTopoAoTrocarDePagina } from './use-posicao-da-tela';
@@ -47,7 +47,7 @@ export function LayoutPublico({ auth }: LayoutPublicoProps) {
           <Outlet />
         </LimiteErro>
       </div>
-      <FooterPublico />
+      <Footer />
     </div>
   );
 }

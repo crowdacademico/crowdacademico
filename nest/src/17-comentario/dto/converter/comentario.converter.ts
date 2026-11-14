@@ -7,7 +7,10 @@ type ComentarioComNome = ComentarioEntity & {
 };
 
 export class ComentarioConverter {
-  static paraResponseDto(entity: ComentarioComNome): ComentarioResponse {
+  static paraResponseDto(
+    entity: ComentarioComNome,
+    fotoPesquisador: string | null = null,
+  ): ComentarioResponse {
     return {
       idComentario: entity.id_comentario,
       idCampanha: entity.id_campanha,
@@ -18,6 +21,7 @@ export class ComentarioConverter {
       ordemEndosso: entity.ordem_endosso,
       ativo: entity.ativo,
       nomePesquisador: entity.nome_pesquisador ?? null,
+      fotoPesquisador,
     };
   }
 }

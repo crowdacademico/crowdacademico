@@ -4,15 +4,12 @@ import { Carregando } from '../../components/layout/carregando';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { atualizacaoCampanhaApi } from '../../services/15-atualizacao-campanha/api/atualizacao-campanha.api';
-import { ROTULO_FASE_ATUALIZACAO } from '../../services/15-atualizacao-campanha/constants/atualizacao-campanha.constants';
+import { ListaAtualizacoes } from './lista-atualizacoes';
+import { ordenarAtualizacoes } from './util-campanhas';
 import type { AtualizacaoCampanhaResponse } from '../../services/15-atualizacao-campanha/type/atualizacao-campanha.type';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import type { PropsPagina } from '../../services/router/pagina.type';
-
-function dataPublicacao(valor: string) {
-  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date(valor));
-}
 
 export function AtualizacoesCampanha({ auth }: PropsPagina) {
   const { id } = useParams();
@@ -35,7 +32,7 @@ export function AtualizacoesCampanha({ auth }: PropsPagina) {
       .then(([resultadoCampanha, resultadoAtualizacoes]) => {
         if (ativo) {
           setCampanha(resultadoCampanha);
-          setAtualizacoes(resultadoAtualizacoes.filter((atualizacao) => atualizacao.ativo));
+          setAtualizacoes(ordenarAtualizacoes(resultadoAtualizacoes));
           limparErro();
         }
       })
@@ -79,37 +76,7 @@ export function AtualizacoesCampanha({ auth }: PropsPagina) {
         )}
 
         {!carregando && !erro && atualizacoes.length > 0 && (
-          <ol className="flex flex-col gap-5">
-            {atualizacoes.map((atualizacao) => (
-              <li key={atualizacao.idAtualizacao}>
-                <article className="fundo-cartao border borda-padrao rounded-xl p-6">
-                  <p className="rotulo-leitura texto-marca mb-2">
-                    {ROTULO_FASE_ATUALIZACAO[atualizacao.fase]}
-                  </p>
-                  <h2 className="subtitulo">{atualizacao.titulo}</h2>
-                  <p className="legenda mt-2">{dataPublicacao(atualizacao.publicadoEm)}</p>
-                  <p className="paragrafo texto-padrao mt-4 whitespace-pre-wrap">{atualizacao.conteudo}</p>
-                  {atualizacao.anexos.length > 0 && (
-                    <ul className="mt-5 flex flex-col gap-2 border-t borda-padrao pt-4">
-                      {atualizacao.anexos.map((anexo) => (
-                        <li key={`${anexo.tipo}-${anexo.idAnexo}`}>
-                          <a
-                            href={anexo.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="paragrafo texto-marca hover:underline"
-                          >
-                            <i className="fa-solid fa-arrow-up-right-from-square mr-2" aria-hidden="true" />
-                            {anexo.nome}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </article>
-              </li>
-            ))}
-          </ol>
+          <ListaAtualizacoes atualizacoes={atualizacoes} />
         )}
       </div>
     </div>

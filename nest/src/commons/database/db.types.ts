@@ -251,6 +251,11 @@ export interface DenunciaTable {
   id_usuario: number;
   id_campanha_alvo: number | null;
   id_pesquisador_alvo: number | null;
+  // Denúncia de comentário: o banco preenche o alvo e a cópia (fn_denuncia_comentario_preenche, 05).
+  id_comentario: number | null;
+  comentario_conteudo: Generated<string | null>;
+  comentario_endossado: Generated<boolean | null>;
+  comentario_id_campanha: Generated<number | null>;
   id_motivo: number;
   relato: string | null;
   status: Generated<StatusDenuncia>;

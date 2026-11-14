@@ -261,49 +261,6 @@
     box-shadow: var(--shadow-xl);
   }
 
-  .footer-publico {
-    border-color: var(--cor-rodape-borda);
-    background: var(--cor-institucional-fundo);
-    color: var(--cor-rodape-texto);
-  }
-
-  .footer-publico .footer-publico__link {
-    color: var(--cor-rodape-texto);
-  }
-
-  .footer-publico .footer-publico__link:hover {
-    color: var(--cor-texto-marca);
-  }
-
-  .footer-publico .texto-rodape-forte {
-    color: var(--cor-rodape-forte);
-  }
-
-  .footer-publico .texto-rodape-apagado {
-    color: var(--cor-rodape-apagado);
-  }
-
-  .footer-publico .borda-rodape {
-    border-color: var(--cor-rodape-borda);
-  }
-
-  .footer-publico .header-publico__marca {
-    width: 3.125rem;
-    height: 3.125rem;
-    border-radius: 0.875rem;
-    font-size: 1.25rem;
-  }
-
-  .footer-publico .paragrafo {
-    font-size: 1rem;
-    line-height: 1.5;
-  }
-
-  .layout-publico .footer-publico .microrrotulo {
-    font-size: 0.75rem;
-    letter-spacing: 0.08em;
-  }
-
   .home-comunidades {
     display: flex;
     flex-wrap: wrap;
@@ -826,10 +783,15 @@
       font-weight: 700;
     }
 
+    /* Uma linha só, com reticências (o nome inteiro vai no title): nome ou instituição longos não podem
+       mudar a altura do card (cards da mesma fileira sempre do mesmo tamanho) nem quebrar palavra no meio
+       (o antigo overflow-wrap: anywhere quebrava "Universida-de"). */
     .cartao-campanha__nome-pesquisador,
     .cartao-campanha__area-pesquisador {
       display: block;
-      overflow-wrap: anywhere;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
 
     .cartao-campanha__nome-pesquisador {
@@ -1275,29 +1237,13 @@
       }
     }
 
+    /* "Restrita manda" (14-11-2026): a área pública usa as MESMAS cores, fontes, raios e sombras da restrita
+       (1-cores.css, tailwind-theme.css). Antes, este bloco trocava esses tokens pelos do protótipo (texto, borda,
+       fundo, marca, Georgia no lugar da DM Serif Display...). Aqui ficam só os tokens que a restrita não tem, das
+       peças que só existem na área pública (hero escuro, rodapé, véus). */
     .layout-publico {
-      --font-serif: Georgia, 'Times New Roman', serif;
-      --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
-      --font-size-sm: 0.875rem;
-      --font-size-2xl: 1.875rem;
-      --font-size-3xl: 2.25rem;
-      --radius-xl: 1rem;
       --radius-2xl: 1.5rem;
-      --shadow-sm: 0 1px 2px rgb(22 33 31 / 5%);
-      --shadow-md: 0 10px 20px rgb(22 33 31 / 6%);
       --shadow-xl: 0 28px 60px -20px rgb(22 33 31 / 20%);
-      --cor-texto-forte: #16211f;
-      --cor-texto: #3a4644;
-      --cor-texto-fraco: #6b7a77;
-      --cor-borda: #c3cdca;
-      --cor-borda-forte: #93a19e;
-      --cor-fundo-sutil: #ebefee;
-      --cor-fundo-pagina: #fafbfe;
-      --cor-fundo-cartao: #fff;
-      --cor-fundo-elevado: #fff;
-      --cor-fundo-hover: #ebefee;
-      --cor-fundo-marca-forte: #0b7a45;
-      --cor-texto-marca: #0b7a45;
       --cor-marca-sutil: #e8f7ef;
       --cor-marca-borda: #94dbb8;
       --cor-cianotipo-900: #041722;
@@ -1311,10 +1257,6 @@
       --cor-divisoria-sobre-escuro: rgb(255 255 255 / 12%);
       --cor-marca-sobre-escuro: #5fc796;
       --cor-rodape-fundo: var(--cor-institucional-fundo);
-      --cor-rodape-texto: #8aa3b5;
-      --cor-rodape-forte: #fff;
-      --cor-rodape-apagado: #475569;
-      --cor-rodape-borda: rgb(255 255 255 / 14%);
       --gradiente-hero: linear-gradient(
         155deg,
         var(--cor-cianotipo-900) 0%,
@@ -1323,23 +1265,9 @@
         #0a4a3c 100%
       );
       min-height: 100vh;
-      color: var(--cor-texto-forte);
-      font-size: 1rem;
     }
 
     :root[data-tema-efetivo='escuro'] .layout-publico {
-      --cor-texto-forte: #f1f5f4;
-      --cor-texto: #c9d3d1;
-      --cor-texto-fraco: #93a19e;
-      --cor-borda: #2a3a38;
-      --cor-borda-forte: #3c504d;
-      --cor-fundo-sutil: #1e313c;
-      --cor-fundo-pagina: #0e1a22;
-      --cor-fundo-cartao: #16252e;
-      --cor-fundo-elevado: #1e313c;
-      --cor-fundo-hover: #29404d;
-      --cor-fundo-marca-forte: #0b7a45;
-      --cor-texto-marca: #5fc796;
       --cor-marca-sutil: rgb(62 207 142 / 12%);
       --cor-marca-borda: rgb(62 207 142 / 28%);
       --shadow-xl: 0 28px 60px -20px rgb(0 0 0 / 70%), 0 0 0 1px rgb(255 255 255 / 7%);
@@ -1358,22 +1286,6 @@
       letter-spacing: 0.1em;
       line-height: 1.2;
       color: var(--cor-texto-fraco);
-    }
-
-    .layout-publico .titulo-secao {
-      font-family: var(--font-serif);
-      font-size: 1.875rem;
-      font-weight: 600;
-      line-height: 1.2;
-      letter-spacing: -0.02em;
-    }
-
-    .layout-publico .titulo-pagina {
-      font-family: var(--font-serif);
-      font-size: 2.25rem;
-      font-weight: 600;
-      line-height: 1.15;
-      letter-spacing: -0.022em;
     }
 
     .layout-publico .titulo-hero {
@@ -1410,14 +1322,6 @@
       font-size: var(--font-size-subtitulo);
       line-height: 1.3;
       letter-spacing: -0.01em;
-    }
-
-    .layout-publico .titulo-secao {
-      font-size: var(--font-size-titulo-secao);
-    }
-
-    .layout-publico .titulo-pagina {
-      font-size: var(--font-size-titulo-pagina);
     }
 
     .layout-publico .numero {
@@ -1462,14 +1366,6 @@
     .layout-publico .texto-marca-sobre-escuro {
       color: var(--cor-marca-sobre-escuro);
     }
-
-    .layout-publico .footer-publico {
-      background: var(--cor-rodape-fundo);
-    }
-
-    .layout-publico .footer-publico .paragrafo {
-        line-height: 1.5;
-      }
 
     .campanha-detalhe__video {
       border: 4px solid var(--cor-fundo-cartao);

@@ -4,6 +4,7 @@ import { ControleFonte } from './cabecalho/controle-fonte';
 import { ControleTema } from './cabecalho/controle-tema';
 import { MenuUsuario } from './cabecalho/menu-usuario';
 import { SinoAtividade } from './cabecalho/sino-atividade';
+import { DevLoginRapido } from './cabecalho/dev-login-rapido';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
 interface HeaderPublicoProps {
@@ -153,6 +154,13 @@ export function HeaderPublico({ auth }: HeaderPublicoProps) {
             </div>
           </nav>
       </div>
+      {/* O mesmo DevLoginRapido do cabeçalho da restrita (header.tsx), que tinha ficado de fora quando a área pública
+          ganhou cabeçalho próprio. Só em `npm run dev`: nunca vai para o build (ver a nota em header.tsx). */}
+      {import.meta.env.DEV && !auth.autenticado && !auth.carregando && (
+        <div className="absolute top-full mt-2 right-1 sm:right-2">
+          <DevLoginRapido auth={auth} />
+        </div>
+      )}
     </header>
   );
 }

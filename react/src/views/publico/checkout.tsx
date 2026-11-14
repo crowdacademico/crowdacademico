@@ -146,7 +146,7 @@ export function Checkout({ auth }: PropsPagina) {
       ) {
         setEnvioBloqueado(true);
         setErroEnvio(
-          'O servidor não retornou uma cobrança PIX válida. Não tente gerar outra cobrança agora; procure o suporte.',
+          'Não foi possível gerar o Pix. Não tente de novo agora; fale com o suporte.',
         );
         return;
       }
@@ -176,8 +176,7 @@ export function Checkout({ auth }: PropsPagina) {
       <div className="max-w-4xl mx-auto px-4">
         <h1 className="titulo-pagina mb-3">Finalizar apoio</h1>
         <p className="max-w-4xl text-sm texto-fraco mb-6">
-          Gere uma cobrança PIX real para apoiar a campanha. O status será atualizado somente após a confirmação
-          recebida pelo servidor; o prazo de expiração é informado pelo provedor.
+          Escolha o valor e gere o Pix para apoiar a campanha. O apoio é confirmado assim que o pagamento é recebido.
         </p>
         {carregandoCampanha && <Carregando />}
         {idCampanha === null && (
@@ -241,7 +240,7 @@ export function Checkout({ auth }: PropsPagina) {
                   aria-describedby="checkout-valor-ajuda"
                 />
                 <p id="checkout-valor-ajuda" className="text-xs texto-fraco mt-2 text-left">
-                  Mínimo de R$ 5,00. A campanha e o valor também serão validados pelo servidor.
+                  Mínimo de R$ 5,00.
                 </p>
                 {!valorValido && (
                   <p className="text-xs texto-erro mt-2 text-left" role="alert">
@@ -312,7 +311,7 @@ export function Checkout({ auth }: PropsPagina) {
 
               <h3 className="subtitulo texto-forte mb-2">Escaneie o QR Code</h3>
               <p className="text-sm texto-fraco mb-8 max-w-sm">
-                O QR Code será exibido após a cobrança ser criada pelo servidor. Ainda não há um código para pagar.
+                O QR Code aparece depois que você gerar o Pix.
               </p>
               <div
                 className="w-56 h-56 border-2 borda-padrao p-3 rounded-xl mb-8 fundo-cartao shadow-lg flex items-center justify-center"
@@ -340,7 +339,7 @@ export function Checkout({ auth }: PropsPagina) {
                 </div>
               </div>
               <div className="inline-flex items-center gap-3 font-dado fundo-info border borda-padrao texto-info px-5 py-2.5 rounded-lg text-sm font-bold">
-                A validade será informada pelo servidor após gerar o PIX.
+                O Pix tem prazo de validade, mostrado depois de gerado.
               </div>
             </div>
           </div>
@@ -362,7 +361,7 @@ export function Checkout({ auth }: PropsPagina) {
                 </div>
                 <div className="flex justify-between">
                   <span className="texto-fraco font-medium">Taxa de Transação</span>
-                  <span className="texto-padrao text-right">Informada pelo servidor</span>
+                  <span className="texto-padrao text-right">Calculada ao gerar o Pix</span>
                 </div>
                 <div className="border-t-2 border-dashed borda-padrao pt-5 mt-5 flex justify-between items-center gap-4">
                   <span className="font-black texto-forte uppercase tracking-wider text-xs">Total a pagar</span>
@@ -375,8 +374,7 @@ export function Checkout({ auth }: PropsPagina) {
               <div className="fundo-destaque border borda-padrao rounded-xl p-4 mb-6 text-sm texto-padrao">
                 <p className="font-semibold texto-forte mb-2">Regras de contribuição</p>
                 <p className="leading-relaxed">
-                  Esta solicitação utiliza PIX. O valor mínimo padrão é <strong>R$ 5,00</strong>; as regras vigentes
-                  da campanha serão confirmadas pelo servidor.
+                  O pagamento é por Pix e o valor mínimo é <strong>R$ 5,00</strong>. Veja as taxas na página de Transparência.
                 </p>
               </div>
               {!flexivel && (
@@ -461,7 +459,7 @@ export function Checkout({ auth }: PropsPagina) {
             </div>
 
             <p className="texto-fraco text-sm font-bold flex items-center justify-center gap-2 py-2">
-              <i className="fa-solid fa-lock" aria-hidden="true" /> Pagamento só será confirmado pelo servidor
+              <i className="fa-solid fa-lock" aria-hidden="true" /> Pagamento seguro, confirmado automaticamente
             </p>
           </div>
         </div>

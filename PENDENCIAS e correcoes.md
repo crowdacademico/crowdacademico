@@ -125,6 +125,16 @@ A Alexia trouxe a área pública para dentro do sistema (branch `tentativadeinte
   - `DOCUMENTACAO_BACKEND.md`: o `POST /contribuicao` recebe `cienteModeloFlexivel` e recusa campanha flexível sem ele (422).
   - `DOCUMENTACAO_FRONTEND.md`: o modal de criar campanha unificado (a cópia pública saiu); no checkout, as recompensas pelo valor (RF-105) e a ciência do modelo (RF-041); a contagem do Pix em `apoio-confirmado` (RF-085); `views/publico/acoes-campanha.tsx` (seguir com contagem, compartilhar, denunciar e comentar); as métricas do Estúdio (RF-090/091); o status das campanhas seguidas (RF-089); a página `/transparencia` (RF-063).
   - `MATRIZ-RASTREABILIDADE-RF.md`: RF-041, RF-063, RF-085, RF-089, RF-090, RF-091, RF-096 e RF-105 na área pública.
+- **Terceira rodada (14-11-2026), ainda sem documentar:**
+  - Desistir do apoio (CDC, art. 49; decisão do Lucas: segue o CDC e a plataforma nunca arca com nada): `desistir_contribuicao()` (05), parâmetro `desistencia_prazo_dias` (7), Grupo CN, rota `POST /contribuicao/:id/desistir`, ação "Desistir do apoio" em Minha Conta > Financeiro. Devolve só o valor (a tarifa fica com o provedor); a campanha não muda de status; o repasse pendente desconta sozinho (`reservar_proximo_repasse`). Atualizar o `DOCUMENTACAO_FINANCEIRO.md` 7.2 (a regra do Catarse saiu: vale só o prazo do CDC), o BD, o BACKEND e o FRONTEND. Os códigos 91059, 91060, 91061 e 92042 já estão no `DOCUMENTACAO_ERRCODE.md`.
+  - **Texto do Termo de Uso sobre a desistência:** quem escreve é o Administrador, pelo painel. Falta escrever.
+  - Prévia do link (Open Graph): `GET /compartilhar/campanha/:id` no Nest (12-campanha, `campanha.controller.share.ts`), e os botões de compartilhar apontam para ela. Documentar no BACKEND e no FRONTEND.
+  - CSS: a área pública deixou de sobrescrever as cores, fontes, raios e sombras da restrita (`7-publico.css`, bloco `.layout-publico`). Ainda sobram as paletas do protótipo (cianotipo, verde, ipê...) em `1b-tokens-prototipo.css`, usadas por peças que só existem na pública.
+- **Quarta rodada (14-11-2026), ainda sem documentar:**
+  - Moderação de comentário (Grupo CO): `denuncia.id_comentario` + cópia do comentário; o banco preenche o autor como alvo; denúncia feita pelo dono da campanha tira o comentário do ar na hora; procedente tira o comentário e o endosso. UK_DENUNCIA_USUARIO_PESQUISADOR_ALVO virou índice parcial (+ UK_DENUNCIA_USUARIO_COMENTARIO). Códigos 90040 e 90041 já no ERRCODE. BD, BACKEND, FRONTEND.
+  - `criar_campanha_para_outro` com `p_id_imagem_capa` (Grupo CP).
+  - Comentários listados com `fotoPesquisador` (GET /comentario).
+  - Telas: página da campanha (capa no lugar do vídeo, Endosso com foto, aba Comentar, Atualizações em modal), perfil do pesquisador refeito, Home sem "Últimos Dias" (prazo em vermelho nos 3 últimos dias), `/perguntas-frequentes` (saiu de Como funciona), notificação abre modal, rodapé único (`footer-publico.tsx` apagado), denúncias recebidas em Minhas atividades, Termo de Uso v2 reescrito no seed.
 
 ---
 

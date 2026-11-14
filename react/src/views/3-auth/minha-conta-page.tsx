@@ -41,7 +41,6 @@ import type { TipoVinculo, TituloAcademico } from '../../services/6-perfil-pesqu
 import type { SuspensaoResponseDto } from '../../services/constant/type/suspensao.type';
 import { EstadoVazio } from '../../components/crud/estado-vazio';
 import { BadgeStatusPesquisador } from '../../components/crud/badge-status-pesquisador';
-import { SecaoContestacaoScore } from '../19-denuncia/secao-contestacao-score';
 import { SecaoRecebimento } from '../24-conta-recebimento/secao-recebimento';
 import { SENHA_MINIMO_CARACTERES } from '../../services/3-auth/constants/senha.constants';
 import { AbaMinhasContribuicoes } from '../22-contribuicao/aba-minhas-contribuicoes';
@@ -688,7 +687,6 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
             </ul>
           ))}
       </div>
-      {auth.usuario?.ehPesquisador && <SecaoContestacaoScore authFetch={auth.authFetch} />}
       {senhaModalAberto && (
         <ModalFicha
           titulo="Alterar senha"

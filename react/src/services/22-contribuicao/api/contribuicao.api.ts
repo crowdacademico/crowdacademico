@@ -18,6 +18,9 @@ export const contribuicaoApi = {
   resumoDaCampanha: (authFetch: AuthFetch, idCampanha: number): Promise<ResumoContribuicoes> =>
     authFetch(`${BASE}/campanha/${idCampanha}/resumo`).then(tratarResposta<ResumoContribuicoes>),
   // O histórico de contribuições da conta logada (RF-009, RF-089), com a recompensa escolhida.
+  // Desistir do apoio (CDC, art. 49): a regra toda é do banco (desistir_contribuicao, 05).
+  desistir: (authFetch: AuthFetch, idContribuicao: number): Promise<void> =>
+    authFetch(`${BASE}/${idContribuicao}/desistir`, { method: 'POST' }).then(tratarResposta<void>),
   minhas: (authFetch: AuthFetch): Promise<MinhaContribuicao[]> =>
     authFetch(`${BASE}/minhas`).then(tratarResposta<MinhaContribuicao[]>),
   // Apoios recebidos nas campanhas do pesquisador; identidades anônimas são omitidas no servidor.

@@ -30,11 +30,13 @@ const ACOES_SISTEMA: DefinicaoAcao<AcaoSistema>[] = [
 
 // Ações próprias das páginas públicas.
 
-export type AcaoPublica = 'endossarComentario' | 'removerEndosso';
+export type AcaoPublica = 'endossarComentario' | 'removerEndosso' | 'desistirApoio';
 
 const ACOES_PUBLICAS: DefinicaoAcao<AcaoPublica>[] = [
   { acao: 'endossarComentario', rotulo: 'Endossar comentário', icone: 'fa-heart', variante: 'alterar' },
   { acao: 'removerEndosso', rotulo: 'Remover endosso', icone: 'fa-heart-crack' },
+  // Minha Conta > Financeiro: direito de arrependimento (CDC, art. 49), dentro de desistencia_prazo_dias.
+  { acao: 'desistirApoio', rotulo: 'Desistir do apoio', icone: 'fa-rotate-left', variante: 'erro' },
 ];
 
 // Ações do Campo de Testes

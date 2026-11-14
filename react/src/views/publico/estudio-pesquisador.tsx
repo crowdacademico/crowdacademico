@@ -489,9 +489,9 @@ function PainelAtualizacoes({ auth, campanhas }: { auth: PropsPagina['auth']; ca
         nivelTitulo={2}
         ajuda="Publique o andamento da pesquisa e registre resultados para quem acompanha suas campanhas."
         acaoTopo={campanhasPublicaveis.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <label className="sr-only" htmlFor="estudio-campanha-atualizacao">Campanha da nova atualização</label>
-            <select id="estudio-campanha-atualizacao" className="input-padrao" value={selecionada} onChange={(evento) => setCampanhaNova(evento.target.value)}>
+            <select id="estudio-campanha-atualizacao" className="input-padrao min-w-0 max-w-xs truncate" value={selecionada} onChange={(evento) => setCampanhaNova(evento.target.value)}>
               {campanhasPublicaveis.map((campanha) => <option key={campanha.idCampanha} value={campanha.idCampanha}>{campanha.titulo}</option>)}
             </select>
             <BotaoCriar rotulo="Nova atualização" aoClicar={() => setEditando({ campanha: Number(selecionada) })} />

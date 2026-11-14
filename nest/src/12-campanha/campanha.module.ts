@@ -5,6 +5,7 @@ import { CampanhaControllerShiftDates } from './controllers/campanha.controller.
 import { CampanhaControllerSubmit } from './controllers/campanha.controller.submit';
 import { CampanhaControllerFindAll } from './controllers/campanha.controller.findall';
 import { CampanhaControllerFindOne } from './controllers/campanha.controller.findone';
+import { CampanhaControllerShare } from './controllers/campanha.controller.share';
 import { CampanhaControllerReject } from './controllers/campanha.controller.reject';
 import { CampanhaControllerRemove } from './controllers/campanha.controller.remove';
 import { CampanhaControllerUpdate } from './controllers/campanha.controller.update';
@@ -26,6 +27,7 @@ import { CampanhaServiceUpdate } from './service/campanha.service.update';
     CampanhaControllerCreate,
     CampanhaControllerFindAll,
     CampanhaControllerFindOne,
+    CampanhaControllerShare,
     CampanhaControllerUpdate,
     CampanhaControllerSubmit,
     CampanhaControllerShiftDates,

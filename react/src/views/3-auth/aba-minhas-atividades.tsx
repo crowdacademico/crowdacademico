@@ -16,6 +16,7 @@ import type { SeguirPesquisadorResponse } from '../../services/16-seguir/type/se
 import { comentarioApi } from '../../services/17-comentario/api/comentario.api';
 import type { ComentarioMeuResponse } from '../../services/17-comentario/type/comentario.type';
 import { denunciaApi } from '../../services/19-denuncia/api/denuncia.api';
+import { SecaoContestacaoScore } from '../19-denuncia/secao-contestacao-score';
 import {
   CLASSE_BADGE_STATUS_DENUNCIA,
   ROTULO_STATUS_DENUNCIA,
@@ -191,6 +192,9 @@ export function AbaMinhasAtividades({ auth }: AbaMinhasAtividadesProps) {
         listar={listarDenuncias}
         vazio={{ icone: 'fa-flag', titulo: 'Você ainda não fez denúncias.' }}
       />
+
+      {/* Denúncias recebidas (decisão de 14-11-2026): junto das enviadas, aqui em Minhas atividades, não mais em Segurança. */}
+      {auth.usuario?.ehPesquisador && <SecaoContestacaoScore authFetch={auth.authFetch} />}
 
       {auth.usuario?.ehPesquisador && (
         <GenericTable<ComentarioLinha>

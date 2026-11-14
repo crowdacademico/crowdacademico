@@ -1738,3 +1738,266 @@ GRANT EXECUTE ON FUNCTION public.contribuicoes_recebidas_pesquisador() TO app_ne
 --      POST /contribuicao recusa campanha flexível sem a ciência e grava NOW() aqui.
 -- ============================================================================
 ALTER TABLE contribuicao ADD COLUMN IF NOT EXISTS ciencia_modelo_em TIMESTAMPTZ;
+
+-- ============================================================================
+-- GRUPO CN (14-11-2026) - Desistir do apoio (direito de arrependimento, CDC art. 49). IDEMPOTENTE.
+-- Não precisa parar o Nest: só cria uma função, um parâmetro e o GRANT (nenhuma tabela ou policy muda).
+-- Cole depois do CM. Suba o Nest novo junto (rota POST /contribuicao/:id/desistir).
+-- ATUALIZADO depois de colado (14-11-2026): quem desiste agora perde as recompensas. COLE O CN DE NOVO (é idempotente).
+--
+-- O que muda:
+--   1. Parâmetro novo desistencia_prazo_dias (7): dias, contados da contribuição, para quem apoiou desistir.
+--   2. Função desistir_contribuicao: quem apoiou com conta desiste da contribuição paga dentro do prazo, em qualquer
+--      momento da campanha (inclusive depois do fim; a campanha não muda de status). A contribuição vai para
+--      a_devolver: o estorno devolve o valor (a tarifa fica com o provedor) e o repasse pendente já desconta sozinho.
+--   Códigos novos: 92042, 91059, 91060, 91061.
+-- ============================================================================
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
+(NULL, 'desistencia_prazo_dias', '7', 'inteiro', 'Dias, contados da contribuição, em que quem apoiou pode desistir e receber o valor de volta (CDC, art. 49)', TRUE, TRUE)
+ON CONFLICT (chave) DO NOTHING;
+
+-- ----------------------------------------------------------------------------
+-- Função:     desistir_contribuicao
+-- Assinatura: (p_id_contribuicao INT) -> VOID
+-- Bloco:      [05-K-2]
+-- Regra:      Direito de arrependimento (CDC, art. 49): quem apoiou com conta desiste da própria contribuição paga em
+--             até configuracoes.desistencia_prazo_dias (padrão 7) contados da contribuição. Vale em qualquer momento da
+--             campanha, inclusive depois do fim: a campanha não muda de status (bem-sucedida continua bem-sucedida).
+--             O caminho é o de sempre: confirmado -> a_devolver; o worker de estorno devolve o VALOR (a tarifa do meio de
+--             pagamento fica com o provedor: a plataforma nunca arca com nada) e reservar_proximo_repasse() já tira do
+--             repasse pendente o que deixou de estar 'confirmado'. Como a carência do repasse (15 dias) é maior que o
+--             prazo de desistência, o dinheiro ainda não saiu; se o repasse já estiver em transferência, recusa (91061).
+--             Quem desiste perde as recompensas que a contribuição deu (decisão do Lucas, 14-11-2026; na devolução do
+--             tudo-ou-nada elas ficam, porque a pessoa não desistiu). Códigos: 92042 (sem sessão, ou contribuição que não é de quem pede), 91059 (não está
+--             paga), 91060 (prazo passou), 91061 (repasse já em transferência). SECURITY DEFINER: a autorização é a
+--             conferência de id_usuario contra id_usuario_atual().
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.desistir_contribuicao(p_id_contribuicao INT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_usuario INT := public.id_usuario_atual();
+    v         RECORD;
+BEGIN
+    IF v_usuario IS NULL THEN
+        RAISE EXCEPTION 'Entre na sua conta para desistir de um apoio.' USING ERRCODE = '92042';
+    END IF;
+
+    SELECT c.status, c.criado_em, r.status AS status_repasse
+    INTO v
+    FROM contribuicao c
+    LEFT JOIN repasse r ON r.id_repasse = c.id_repasse
+    WHERE c.id_contribuicao = p_id_contribuicao AND c.id_usuario = v_usuario
+    FOR UPDATE OF c;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Contribuição não encontrada.' USING ERRCODE = '92042';
+    END IF;
+    IF v.status <> 'confirmado' THEN
+        RAISE EXCEPTION 'Só dá para desistir de uma contribuição paga e ainda não devolvida.' USING ERRCODE = '91059';
+    END IF;
+    IF v.criado_em + public.config_numero('desistencia_prazo_dias', 7) * INTERVAL '1 day' < NOW() THEN
+        RAISE EXCEPTION 'O prazo para desistir deste apoio já passou.' USING ERRCODE = '91060';
+    END IF;
+    IF v.status_repasse IS NOT NULL AND v.status_repasse <> 'pendente' THEN
+        RAISE EXCEPTION 'O repasse desta campanha já está em andamento. Fale com o suporte.' USING ERRCODE = '91061';
+    END IF;
+
+    PERFORM public.atualizar_status_contribuicao(p_id_contribuicao, 'a_devolver');
+    DELETE FROM contribuicao_recompensa WHERE id_contribuicao = p_id_contribuicao;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.desistir_contribuicao(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.desistir_contribuicao(INT) TO app_nestjs;
+
+-- ============================================================================
+-- GRUPO CO (14-11-2026) - Denúncia de comentário e moderação de comentário ofensivo. IDEMPOTENTE.
+-- PARE O NEST antes de colar: o grupo altera a tabela denuncia (colunas, FK e índices), e isso pede uma trava que pode
+-- esperar para sempre (ou dar deadlock) com o Nest usando a tabela, a mesma regra do Grupo BS. Suba o Nest novo junto.
+-- Cole depois do CN.
+--
+-- O que muda:
+--   1. denuncia ganha id_comentario e a cópia do comentário (conteúdo, se estava endossado, a campanha).
+--   2. Uma denúncia por perfil continua valendo, mas cada comentário do mesmo autor pode ser denunciado à parte
+--      (a constraint UK_DENUNCIA_USUARIO_PESQUISADOR_ALVO vira índice único parcial, com o mesmo nome).
+--   3. O banco preenche o alvo (o autor) a partir do comentário. O comentário sai do ar na hora quando quem denuncia é
+--      o dono da campanha, e quando a moderação julga a denúncia procedente.
+--   Códigos novos: 90040, 90041.
+-- ============================================================================
+ALTER TABLE denuncia ADD COLUMN IF NOT EXISTS id_comentario INT;
+ALTER TABLE denuncia ADD COLUMN IF NOT EXISTS comentario_conteudo TEXT;
+ALTER TABLE denuncia ADD COLUMN IF NOT EXISTS comentario_endossado BOOLEAN;
+ALTER TABLE denuncia ADD COLUMN IF NOT EXISTS comentario_id_campanha INT;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_DENUNCIA_COMENTARIO') THEN
+        ALTER TABLE denuncia ADD CONSTRAINT "FK_DENUNCIA_COMENTARIO"
+            FOREIGN KEY (id_comentario) REFERENCES comentario(id_comentario) ON DELETE SET NULL;
+    END IF;
+END $$;
+
+ALTER TABLE denuncia DROP CONSTRAINT IF EXISTS "UK_DENUNCIA_USUARIO_PESQUISADOR_ALVO";
+CREATE UNIQUE INDEX IF NOT EXISTS "UK_DENUNCIA_USUARIO_PESQUISADOR_ALVO" ON denuncia(id_usuario, id_pesquisador_alvo) WHERE id_comentario IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS "UK_DENUNCIA_USUARIO_COMENTARIO"       ON denuncia(id_usuario, id_comentario)       WHERE id_comentario IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_denuncia_comentario ON denuncia(id_comentario);
+
+GRANT INSERT (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_comentario, id_motivo, relato) ON denuncia TO app_nestjs;
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_denuncia_comentario_preenche
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      Denúncia de comentário (14-11-2026). Quem denuncia manda só id_comentario: o banco preenche o alvo (o perfil
+--             do autor, id_pesquisador_alvo) e guarda a cópia do comentário naquele momento (conteúdo, se estava
+--             endossado, a campanha). Roda como quem denuncia (sem SECURITY DEFINER): só dá para denunciar um comentário
+--             que a pessoa consegue ver (pol_comentario_select, 04). Nome com "a_" de propósito: triggers BEFORE rodam em
+--             ordem alfabética, e esta precisa vir antes de trg_denuncia_valida_alvo e trg_denuncia_valida_tipo_motivo,
+--             que conferem o alvo. Códigos: 90040 (comentário não encontrado), 90041 (autor sem conta).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_denuncia_comentario_preenche()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v RECORD;
+BEGIN
+    IF NEW.id_comentario IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    SELECT id_pesquisador, conteudo, endossado, id_campanha INTO v
+    FROM comentario WHERE id_comentario = NEW.id_comentario;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Comentário não encontrado.' USING ERRCODE = '90040';
+    END IF;
+    IF v.id_pesquisador IS NULL THEN
+        RAISE EXCEPTION 'O autor deste comentário não tem mais conta na plataforma.' USING ERRCODE = '90041';
+    END IF;
+
+    NEW.id_pesquisador_alvo    := v.id_pesquisador;
+    NEW.id_campanha_alvo       := NULL;
+    NEW.comentario_conteudo    := v.conteudo;
+    NEW.comentario_endossado   := v.endossado;
+    NEW.comentario_id_campanha := v.id_campanha;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_denuncia_a_comentario ON denuncia;
+CREATE TRIGGER trg_denuncia_a_comentario
+BEFORE INSERT ON denuncia
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_denuncia_comentario_preenche();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_denuncia_comentario_oculta
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      O comentário denunciado sai do ar (ativo = FALSE, sem endosso) em dois momentos:
+--               - na hora, quando quem denuncia é o dono da campanha: denunciar e deixar de ver é uma ação só, e o
+--                 autor não comenta mais ali (o comentário inativo ocupa a vaga de um por campanha);
+--               - quando a moderação julga a denúncia procedente ('resolvida').
+--             Quem endossou um comentário julgado ofensivo pode ser punido pelo caminho normal: a tela do julgamento
+--             mostra que ele estava endossado (comentario_endossado) e a moderação abre uma denúncia contra a campanha.
+--             As triggers de comentario continuam valendo: tirar o endosso exige ser o dono da campanha ou ter
+--             comentario_moderar (validar_comentario_endosso_autor), que são justamente quem dispara esta função.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_denuncia_comentario_oculta()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NEW.id_comentario IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    IF (TG_OP = 'INSERT' AND EXISTS (
+            SELECT 1 FROM campanha WHERE id_campanha = NEW.comentario_id_campanha AND id_usuario = NEW.id_usuario))
+       OR (TG_OP = 'UPDATE' AND NEW.status = 'resolvida' AND OLD.status IS DISTINCT FROM NEW.status) THEN
+        UPDATE comentario
+        SET ativo = FALSE, endossado = FALSE, ordem_endosso = NULL
+        WHERE id_comentario = NEW.id_comentario AND (ativo OR endossado);
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_denuncia_comentario_oculta ON denuncia;
+CREATE TRIGGER trg_denuncia_comentario_oculta
+AFTER INSERT OR UPDATE OF status ON denuncia
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_denuncia_comentario_oculta();
+
+-- ============================================================================
+-- GRUPO CP (14-11-2026) - "Criar para outro" (Campo de Testes, T2) com imagem de capa. IDEMPOTENTE.
+-- Não precisa parar o Nest: só troca uma função (nenhuma tabela ou policy muda). Suba o Nest novo junto: o antigo
+-- chama a função com um argumento a menos e continuaria funcionando, mas sem a capa.
+-- Cole depois do CO.
+--
+-- O que muda:
+--   1. criar_campanha_para_outro ganha p_id_imagem_capa: a capa enviada pelo admin vai junto com a campanha.
+-- ============================================================================
+-- [03-E-1] criar_campanha_para_outro: pol_campanha_insert (04) exige id_usuario = id_usuario_atual() E
+-- pesquisador ativo, então não dá para criar em nome de um pesquisador escolhido sem personificação (mesma
+-- classe de criar_perfil_pesquisador_para_outro, [03-P-2]). Esta função é o caminho separado, gateado por
+-- campanha_criar_para_outro (ver 07); o self-service (POST /campanha) não a usa. Continua exigindo
+-- pesquisador ATIVO (mesma regra do self-service, checada aqui em vez de RLS): só troca QUEM pode disparar
+-- o INSERT em nome de outro. Validação de prazo/meta/limite de campanhas simultâneas NÃO é duplicada aqui:
+-- continua toda em trigger (05_regras_negocio.sql) e dispara igual para INSERT via SECURITY DEFINER.
+-- p_id_imagem_capa (14-11-2026): a capa enviada por quem cria (o admin); fn_valida_posse_imagem_capa_campanha (05) confere
+-- que foi a conta atual que enviou. DROP antes: com um parâmetro a mais, CREATE OR REPLACE criaria uma sobrecarga.
+DROP FUNCTION IF EXISTS public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT);
+CREATE OR REPLACE FUNCTION public.criar_campanha_para_outro(
+    p_id_usuario INT,
+    p_id_area_conhecimento INT,
+    p_titulo TEXT,
+    p_modelo modelo_campanha,
+    p_meta_financeira DECIMAL,
+    p_descricao TEXT,
+    p_data_inicio TIMESTAMPTZ,
+    p_data_fim TIMESTAMPTZ,
+    p_video_apresentacao_url TEXT,
+    p_id_imagem_capa INT DEFAULT NULL
+)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_id_campanha INT;
+BEGIN
+    IF NOT public.tem_permissao('campanha_criar_para_outro') THEN
+        RAISE EXCEPTION 'Sem permissão para criar campanha em nome de outro pesquisador.' USING ERRCODE = '92018';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM perfil_pesquisador
+        WHERE id_usuario = p_id_usuario AND status_pesquisador = 'ativo'
+    ) THEN
+        RAISE EXCEPTION 'O usuário escolhido não é um pesquisador ativo.' USING ERRCODE = '90021';
+    END IF;
+
+    INSERT INTO campanha (
+        id_usuario, id_area_conhecimento, titulo, modelo,
+        meta_financeira, descricao, data_inicio, data_fim, video_apresentacao_url, id_imagem_capa
+    )
+    VALUES (
+        p_id_usuario, p_id_area_conhecimento, p_titulo, COALESCE(p_modelo, 'all-or-nothing'),
+        p_meta_financeira, p_descricao, p_data_inicio, p_data_fim, p_video_apresentacao_url, p_id_imagem_capa
+    )
+    RETURNING id_campanha INTO v_id_campanha;
+
+    RETURN v_id_campanha;
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT, INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT, INT) TO app_nestjs;

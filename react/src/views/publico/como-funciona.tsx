@@ -108,34 +108,6 @@ const REQUISITOS_PESQUISADOR = [
   },
 ] as const;
 
-const DUVIDAS = [
-  {
-    pergunta: 'Como conheço uma campanha?',
-    resposta:
-      'A página da campanha reúne a proposta, o orçamento, o cronograma e as informações públicas do pesquisador.',
-  },
-  {
-    pergunta: 'Preciso criar uma conta para apoiar?',
-    resposta:
-      'As formas de apoio disponíveis dependem da campanha e aparecem no checkout antes da confirmação.',
-  },
-  {
-    pergunta: 'O que acontece se a campanha não atingir a meta?',
-    resposta:
-      'O resultado depende do modelo de financiamento informado na campanha. Consulte essa informação antes de apoiar.',
-  },
-  {
-    pergunta: 'Como acompanho o andamento do projeto?',
-    resposta:
-      'As atualizações publicadas pelo pesquisador podem ser consultadas na página da campanha.',
-  },
-  {
-    pergunta: 'Quais são as taxas e tarifas?',
-    resposta:
-      'As taxas e os valores aplicáveis são informados na página da campanha e no checkout antes da confirmação do apoio.',
-  },
-] as const;
-
 const ABAS = [
   { chave: 'apoiar', rotulo: 'Quero apoiar' },
   { chave: 'pesquisador', rotulo: 'Sou pesquisador' },
@@ -340,19 +312,6 @@ export function ComoFunciona() {
           </div>
         </section>
 
-        <section aria-labelledby="perguntas-frequentes">
-          <h2 id="perguntas-frequentes" className="titulo-secao mb-6">
-            Perguntas frequentes
-          </h2>
-          <div className="flex flex-col gap-3">
-            {DUVIDAS.map((duvida) => (
-              <details key={duvida.pergunta} className="pagina-publica__faq">
-                <summary>{duvida.pergunta}</summary>
-                <p className="paragrafo texto-padrao mt-3">{duvida.resposta}</p>
-              </details>
-            ))}
-          </div>
-        </section>
       </div>
     </div>
   );

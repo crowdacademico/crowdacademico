@@ -36,6 +36,8 @@ export function CartaoCampanha({
   const percentual = percentualArrecadado(campanha);
   const aguardandoInicio = emBreve(campanha);
   const diasAteFim = diasRestantes(campanha.dataFim);
+  // Reta final: nos 3 últimos dias o prazo fica em vermelho (substitui a antiga seção "Últimos Dias" da Home).
+  const reta = campanha.status === 'ativo' && diasAteFim !== null && diasAteFim <= 3;
   const rotuloTempo = campanha.status === 'ativo'
     ? diasAteFim === null
       ? 'Prazo não informado'
@@ -96,6 +98,7 @@ export function CartaoCampanha({
             {campanha.nomePesquisador ? (
               <Link
                 className="cartao-campanha__nome-pesquisador"
+                title={campanha.nomePesquisador}
                 to={`/pesquisador/${campanha.idUsuario}`}
               >
                 {campanha.nomePesquisador}
@@ -103,7 +106,7 @@ export function CartaoCampanha({
             ) : (
               <span className="cartao-campanha__nome-pesquisador">Pesquisador não informado</span>
             )}
-            <span className="cartao-campanha__area-pesquisador">
+            <span className="cartao-campanha__area-pesquisador" title={campanha.instituicaoPesquisador ?? undefined}>
               {campanha.instituicaoPesquisador ?? 'Instituição não informada'}
             </span>
           </div>
@@ -156,7 +159,7 @@ export function CartaoCampanha({
                 <span className="fundo-realce px-2 py-1 rounded-md">
                   Meta: {formatarMoeda(campanha.metaFinanceira)}
                 </span>
-                <span className="fundo-realce px-2 py-1 rounded-md">
+                <span className={`px-2 py-1 rounded-md ${reta ? 'fundo-erro texto-erro font-bold' : 'fundo-realce'}`}>
                   <i className="fa-regular fa-clock mr-1" aria-hidden="true" />
                   {rotuloTempo}
                 </span>

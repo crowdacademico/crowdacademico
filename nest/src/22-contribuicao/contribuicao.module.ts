@@ -6,12 +6,14 @@ import { ContribuicaoControllerFindAllMine } from './controllers/contribuicao.co
 import { ContribuicaoControllerFindAllReceived } from './controllers/contribuicao.controller.findall-received';
 import { ContribuicaoControllerPublicCount } from './controllers/contribuicao.controller.public-count';
 import { ContribuicaoControllerSummary } from './controllers/contribuicao.controller.summary';
+import { ContribuicaoControllerWithdraw } from './controllers/contribuicao.controller.withdraw';
 import { ContribuicaoServiceCreate } from './service/contribuicao.service.create';
 import { ContribuicaoServiceFind } from './service/contribuicao.service.find';
 import { ContribuicaoServiceFindAllMine } from './service/contribuicao.service.findall-mine';
 import { ContribuicaoServiceFindAllReceived } from './service/contribuicao.service.findall-received';
 import { ContribuicaoServicePublicCount } from './service/contribuicao.service.public-count';
 import { ContribuicaoServiceSummary } from './service/contribuicao.service.summary';
+import { ContribuicaoServiceWithdraw } from './service/contribuicao.service.withdraw';
 
 @Module({
   imports: [PagamentoModule],
@@ -22,6 +24,7 @@ import { ContribuicaoServiceSummary } from './service/contribuicao.service.summa
     ContribuicaoControllerFind,
     ContribuicaoControllerSummary,
     ContribuicaoControllerPublicCount,
+    ContribuicaoControllerWithdraw,
   ],
   providers: [
     ContribuicaoServiceCreate,
@@ -30,6 +33,7 @@ import { ContribuicaoServiceSummary } from './service/contribuicao.service.summa
     ContribuicaoServiceFindAllReceived,
     ContribuicaoServiceSummary,
     ContribuicaoServicePublicCount,
+    ContribuicaoServiceWithdraw,
   ],
 })
 export class ContribuicaoModule {}

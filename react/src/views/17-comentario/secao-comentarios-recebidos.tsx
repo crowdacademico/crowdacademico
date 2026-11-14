@@ -85,10 +85,14 @@ export function SecaoComentariosRecebidos({ auth, idCampanha, publicada }: Secao
       {denunciando && denunciando.idPesquisador !== null && (
         <ModalDenunciar
           authFetch={auth.authFetch}
-          alvo={{ idPesquisadorAlvo: denunciando.idPesquisador }}
-          nomeAlvo={denunciando.nomePesquisador ?? 'Pesquisador removido'}
-          relatoInicial={`Comentário denunciado: "${denunciando.conteudo}"`}
+          alvo={{ idComentario: denunciando.idComentario }}
+          nomeAlvo={`o comentário de ${denunciando.nomePesquisador ?? 'pesquisador removido'}`}
           aoFechar={() => setDenunciando(null)}
+          // Denunciar como dono da campanha já tira o comentário do ar (fn_denuncia_comentario_oculta, 05).
+          aoDenunciado={() => {
+            setDenunciando(null);
+            recarregar();
+          }}
         />
       )}
       {excluindo && (
