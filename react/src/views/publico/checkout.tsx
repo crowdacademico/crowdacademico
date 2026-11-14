@@ -195,7 +195,7 @@ export function Checkout({ auth }: PropsPagina) {
       {!carregandoCampanha && campanha && campanhaAtiva && (
         <div className="max-w-4xl mx-auto px-4 flex flex-col md:flex-row gap-8">
           <div className="flex-1 fundo-cartao rounded-2xl border borda-padrao shadow-xl overflow-hidden">
-            <div className="bg-[var(--cor-institucional-fundo)] px-8 py-5 flex justify-between items-center">
+            <div className="bg-[var(--cor-escura)] px-8 py-5 flex justify-between items-center">
               <div className="flex items-center gap-3">
                 <i className="fa-brands fa-pix texto-marca-sobre-escuro text-2xl" aria-hidden="true" />
                 <h2 className="subtitulo texto-sobre-escuro-forte">Pagamento Instantâneo</h2>
