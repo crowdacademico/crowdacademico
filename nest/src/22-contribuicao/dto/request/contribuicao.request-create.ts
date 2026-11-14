@@ -43,4 +43,10 @@ export class ContribuicaoRequestCreate {
   @IsOptional()
   @IsBoolean()
   anonima?: boolean;
+
+  // RF-041: obrigatório (true) em campanha flexível; o serviço checa, porque só ele sabe o modelo da campanha. Em
+  // all-or-nothing é ignorado.
+  @IsOptional()
+  @IsBoolean()
+  cienteModeloFlexivel?: boolean;
 }

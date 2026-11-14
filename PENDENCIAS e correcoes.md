@@ -47,12 +47,10 @@ Os requisitos são atualizados com a revisão externa; aqui fica só o que preci
 
 > **Nota (27-09-2026):** 18, 19, 20 e 26 podem ganhar tela na área administrativa (nem que seja na área de testes) antes da página pública existir. Não é para fazer agora, mas o lado Nest desses módulos não depende da página pública.
 
-### Precisam da área pública (anotado em 19-10-2026; o lado Nest e o que cabe no painel já estão prontos)
+### Fluxos públicos ainda pendentes (a área pública já existe)
 
-A área pública não pode ser feita agora (primeiro termina a área restrita). Estes itens ficam esperando por ela:
-
-- **Links acadêmicos no formulário do upgrade (RF-022):** o requisito pede os links (até 5) no próprio formulário do upgrade; hoje o upgrade não recebe links, eles entram depois, pelo perfil. Quando a área pública tiver o formulário, pedir os links na mesma tela (apontado pela revisão externa de 01-11-2026).
-- **Seguir pesquisador (RF-029):** o botão "Seguir" e a contagem de seguidores na página pública do perfil. A API existe (`/seguir-pesquisador`, `/seguir-pesquisador/:id/seguidores`); hoje se segue pelo coração da T1 e a lista fica na T4.
+- ✅ **Links acadêmicos no formulário do upgrade (RF-022):** o upgrade agora coleta até o limite configurado antes de criar o perfil e grava os links pela API existente. Se algum link falhar, ele permanece na tela para correção ou nova tentativa. Implementado em 14-11-2026.
+- ✅ **Seguir pesquisador (RF-029):** perfil público permite seguir e deixar de seguir, e mostra a contagem de seguidores. A API é `/seguir-pesquisador` e `/seguir-pesquisador/:id/seguidores`.
 - **Recompensas no checkout (RF-105):** mostrar, conforme o valor digitado, quais recompensas a pessoa vai ganhar (ninguém escolhe: o banco liga sozinho todas as que o valor alcança, desde 04-11-2026).
 - **Checkout:** o aviso do modelo da campanha com a confirmação de ciência (RF-041; a API ainda não registra a ciência), o checkbox do termo de pagamento (RF-086; o aceite com IP já é gravado), a contagem regressiva do Pix (RF-085) e a tela de cada meio (RF-081).
 - **Painel "Projetos Criados" do pesquisador (RF-090, RF-091):** a lista com as métricas e o líquido estimado (o `GET /campanha/:id` já devolve `valorLiquidoEstimado`).
@@ -76,13 +74,16 @@ A área pública não pode ser feita agora (primeiro termina a área restrita). 
 
 #### 🟡 Ainda aberto no pagamento
 
-- **Checkout e painel de quem apoia** (`views/29-dashboard/doador`, pasta vazia; `views/22-contribuicao` hoje só tem a aba Contribuições da Minha Conta): a tela pública de apoiar. Hoje uma contribuição nasce pela T5 ou pela API. Junto vem o **aviso ao apoiador** sobre o modelo da campanha (tudo-ou-nada devolve, flexível não) com confirmação de ciência.
+- **Checkout público:** a tela e a criação de cobrança Pix já existem. Faltam mostrar as recompensas alcançadas pelo valor (RF-105), registrar pela API a ciência específica do modelo da campanha (RF-041), exibir a contagem regressiva até a expiração do Pix (RF-085) e oferecer cartão e boleto (RF-081). A explicação do modelo e o aceite dos Termos de Uso com registro de IP já aparecem.
+- **Painel de quem apoia (RF-089):** o histórico já existe na Minha Conta, aba Contribuições; falta uma área própria para o apoiador fora do painel administrativo.
 
-### Página pública da campanha (ainda não existe)
+### Pendências da página pública da campanha
 
 - **Botões de compartilhar** (WhatsApp, Facebook, copiar link) e **prévia de link** (Open Graph, um endpoint pequeno no Nest que devolve as meta tags). Ideias do Atlas (P1 e P2 do roteiro).
-- **Quantas pessoas seguem a campanha, na página pública:** a contagem pública (`GET /seguir-campanha/:id/seguidores`, só o número) já aparece no Consultar da campanha desde 24-10-2026; falta mostrar na página pública.
-- Telas públicas de denúncia, recompensa, atualização, comentário e seguir (hoje atualização, comentário e seguir só existem nas telas de teste do painel). Painel do pesquisador (`views/29-dashboard/pesquisador`, pasta vazia).
+- **Quantas pessoas seguem a campanha:** a contagem pública (`GET /seguir-campanha/:id/seguidores`, só o número) já aparece no Consultar da campanha; falta mostrá-la na página pública. O botão de seguir campanha já aparece nas listas públicas, e seguir pesquisador já está no perfil público.
+- **Ações públicas na campanha:** ainda faltam criar comentário e denunciar pela página pública; os comentários endossados e as atualizações publicadas já são exibidos.
+- **Compartilhamento e prévia do link:** faltam botões para WhatsApp, Facebook e copiar link, além de metadados Open Graph para a prévia.
+- **Painel de projetos do pesquisador (RF-090/091):** o Estúdio já lista e permite gerenciar campanhas; faltam as métricas previstas e o valor líquido estimado nessa área.
 
 
 
@@ -108,6 +109,32 @@ Ideia detalhada e registrada aqui pra não se perder. **Decisão: não construir
 **Onde moraria**: backend, `26-arquivo` (módulo já existe, dono natural) - 2 endpoints novos (resumo com agregados, listagem paginada com filtro), ambos protegidos por permissão de administrador. Frontend, uma tela de listagem no padrão já repetido há meses.
 
 
+
+### Documentação da integração da área pública (anotado em 14-11-2026; fica para depois, a pedido do Lucas)
+
+A Alexia trouxe a área pública para dentro do sistema (branch `tentativadeintegracao`, continuada na `area-publica`). O código e o banco estão sendo consertados; a documentação fica para o fim:
+
+- ✅ **`DOCUMENTACAO_BD.md`:** coluna `campanha.id_imagem_capa`, funções novas, posse da capa, faxina de órfãos e o `[07-B-4]` marcado como removido (feito em 14-11-2026 e conferido contra o SQL).
+- **`DOCUMENTACAO_BACKEND.md`:** as rotas novas `GET /contribuicao/recebidas` e `GET /contribuicao/campanha/:id/apoios` (pública) e os campos novos da resposta da campanha (`idImagemCapa`, `imagemCapaUrl`, `instituicaoPesquisador`).
+- ✅ **`DOCUMENTACAO_FRONTEND.md`:** layout público, `views/publico/`, Minha Conta fora do painel, Estúdio com seção na URL e `podeAcessarPainelAdmin` (feito em 14-11-2026 e conferido contra o código).
+- **`informacoes/ESTUDO_PERMISSOES_PESQUISADOR_NO_PAINEL.md`:** cita o `[07-B-4]` como regra em vigor.
+- **`MATRIZ-RASTREABILIDADE-RF.md`:** os RFs que a área pública passou a atender.
+- Já feito: `DOCUMENTACAO_ERRCODE.md` (códigos 91058 e 92041, e a capa nos códigos 90022, 91029 e 92025).
+- **Acrescentado em 14-11-2026 (segunda rodada), ainda sem documentar:**
+  - `DOCUMENTACAO_BD.md`: coluna `contribuicao.ciencia_modelo_em` (RF-041, Grupo CM). A regra mora no Nest, não numa trigger, porque o seed e os scripts de `informacoes/testes-banco` inserem contribuições flexíveis direto no banco.
+  - `DOCUMENTACAO_BACKEND.md`: o `POST /contribuicao` recebe `cienteModeloFlexivel` e recusa campanha flexível sem ele (422).
+  - `DOCUMENTACAO_FRONTEND.md`: o modal de criar campanha unificado (a cópia pública saiu); no checkout, as recompensas pelo valor (RF-105) e a ciência do modelo (RF-041); a contagem do Pix em `apoio-confirmado` (RF-085); `views/publico/acoes-campanha.tsx` (seguir com contagem, compartilhar, denunciar e comentar); as métricas do Estúdio (RF-090/091); o status das campanhas seguidas (RF-089); a página `/transparencia` (RF-063).
+  - `MATRIZ-RASTREABILIDADE-RF.md`: RF-041, RF-063, RF-085, RF-089, RF-090, RF-091, RF-096 e RF-105 na área pública.
+- **Terceira rodada (14-11-2026), ainda sem documentar:**
+  - Desistir do apoio (CDC, art. 49; decisão do Lucas: segue o CDC e a plataforma nunca arca com nada): `desistir_contribuicao()` (05), parâmetro `desistencia_prazo_dias` (7), Grupo CN, rota `POST /contribuicao/:id/desistir`, ação "Desistir do apoio" em Minha Conta > Financeiro. Devolve só o valor (a tarifa fica com o provedor); a campanha não muda de status; o repasse pendente desconta sozinho (`reservar_proximo_repasse`). Atualizar o `DOCUMENTACAO_FINANCEIRO.md` 7.2 (a regra do Catarse saiu: vale só o prazo do CDC), o BD, o BACKEND e o FRONTEND. Os códigos 91059, 91060, 91061 e 92042 já estão no `DOCUMENTACAO_ERRCODE.md`.
+  - **Texto do Termo de Uso sobre a desistência:** quem escreve é o Administrador, pelo painel. Falta escrever.
+  - Prévia do link (Open Graph): `GET /compartilhar/campanha/:id` no Nest (12-campanha, `campanha.controller.share.ts`), e os botões de compartilhar apontam para ela. Documentar no BACKEND e no FRONTEND.
+  - CSS: a área pública deixou de sobrescrever as cores, fontes, raios e sombras da restrita (`7-publico.css`, bloco `.layout-publico`). Ainda sobram as paletas do protótipo (cianotipo, verde, ipê...) em `1b-tokens-prototipo.css`, usadas por peças que só existem na pública.
+- **Quarta rodada (14-11-2026), ainda sem documentar:**
+  - Moderação de comentário (Grupo CO): `denuncia.id_comentario` + cópia do comentário; o banco preenche o autor como alvo; denúncia feita pelo dono da campanha tira o comentário do ar na hora; procedente tira o comentário e o endosso. UK_DENUNCIA_USUARIO_PESQUISADOR_ALVO virou índice parcial (+ UK_DENUNCIA_USUARIO_COMENTARIO). Códigos 90040 e 90041 já no ERRCODE. BD, BACKEND, FRONTEND.
+  - `criar_campanha_para_outro` com `p_id_imagem_capa` (Grupo CP).
+  - Comentários listados com `fotoPesquisador` (GET /comentario).
+  - Telas: página da campanha (capa no lugar do vídeo, Endosso com foto, aba Comentar, Atualizações em modal), perfil do pesquisador refeito, Home sem "Últimos Dias" (prazo em vermelho nos 3 últimos dias), `/perguntas-frequentes` (saiu de Como funciona), notificação abre modal, rodapé único (`footer-publico.tsx` apagado), denúncias recebidas em Minhas atividades, Termo de Uso v2 reescrito no seed.
 
 ---
 

@@ -28,6 +28,17 @@ const ACOES_SISTEMA: DefinicaoAcao<AcaoSistema>[] = [
   { acao: 'excluir', rotulo: 'Excluir', icone: 'fa-trash', variante: 'excluir' },
 ];
 
+// Ações próprias das páginas públicas.
+
+export type AcaoPublica = 'endossarComentario' | 'removerEndosso' | 'desistirApoio';
+
+const ACOES_PUBLICAS: DefinicaoAcao<AcaoPublica>[] = [
+  { acao: 'endossarComentario', rotulo: 'Endossar comentário', icone: 'fa-heart', variante: 'alterar' },
+  { acao: 'removerEndosso', rotulo: 'Remover endosso', icone: 'fa-heart-crack' },
+  // Minha Conta > Financeiro: direito de arrependimento (CDC, art. 49), dentro de desistencia_prazo_dias.
+  { acao: 'desistirApoio', rotulo: 'Desistir do apoio', icone: 'fa-rotate-left', variante: 'erro' },
+];
+
 // Ações do Campo de Testes
 
 export type AcaoCampoTestes =
@@ -60,7 +71,7 @@ const ACOES_CAMPO_TESTES: DefinicaoAcao<AcaoCampoTestes>[] = [
 
 // Coluna
 
-export type AcaoPadrao = AcaoSistema | AcaoCampoTestes;
+export type AcaoPadrao = AcaoSistema | AcaoPublica | AcaoCampoTestes;
 
 export type AcoesLinha<T> = Partial<Record<AcaoPadrao, (linha: T) => void>>;
 
@@ -107,7 +118,7 @@ export function CelulaAcoes<T>({ acoes, linha, indisponivel, coluna, emColuna }:
   return (
     <td className={coluna ? CLASSE_COLUNA_PROPRIA : CLASSE_COLUNA_ACOES}>
       <div className="crud-tabela__acoes">
-        {[...ACOES_SISTEMA, ...ACOES_CAMPO_TESTES].filter(({ acao }) => mostra(acao)).map(({ acao, ...visual }) => {
+        {[...ACOES_SISTEMA, ...ACOES_PUBLICAS, ...ACOES_CAMPO_TESTES].filter(({ acao }) => mostra(acao)).map(({ acao, ...visual }) => {
           const aoClicar = acoes[acao];
           const motivo = indisponivel?.(linha, acao);
           return (

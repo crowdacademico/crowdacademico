@@ -1,11 +1,11 @@
 import { Link, matchPath, useLocation } from 'react-router';
-import { ROTAS, ROTAS_ADMIN } from '../../services/router/rotas.constants';
+import { ROTAS, ROTAS_ADMIN, ROTAS_CONTA } from '../../services/router/rotas.constants';
 import type { Rota } from '../../services/router/rotas.constants';
 
-// Rótulos vêm de services/router/rotas.constants.ts (ROTAS + ROTAS_ADMIN)
+// Rótulos vêm de services/router/rotas.constants.ts (ROTAS + ROTAS_CONTA + ROTAS_ADMIN)
 // - mesma fonte que App.tsx usa pras rotas e admin-menu.constants.ts usa
 // pro menu lateral, nunca uma lista própria separada.
-const TODAS_AS_ROTAS: Rota[] = [...ROTAS, ...ROTAS_ADMIN];
+const TODAS_AS_ROTAS: Rota[] = [...ROTAS, ...ROTAS_CONTA, ...ROTAS_ADMIN];
 
 // Aparece embaixo do cabeçalho em toda página cujo rotuloBreadcrumb não seja null: só um jeito rápido de
 // voltar. A aba padrão do admin (/admin/dashboard) tem rotuloBreadcrumb: null de propósito: mostrar "Início >
@@ -15,11 +15,11 @@ const TODAS_AS_ROTAS: Rota[] = [...ROTAS, ...ROTAS_ADMIN];
 // (Alterar/Consultar/Excluir/Criar, ver rotas.constants.ts) aponta para o `caminho` absoluto da própria
 // listagem via `paiCaminho`; sobe essa cadeia até não ter mais pai (a maioria das rotas, sem aninhamento, já
 // para na 1ª volta).
-export function Breadcrumb() {
+export function Breadcrumb({ noCabecalho = false }: { noCabecalho?: boolean }) {
   const location = useLocation();
 
   // matchPath (não comparação exata de string) porque existem rotas com
-  // parâmetro (ex.: /admin/minha-conta/:aba): comparando o pathname literal,
+  // parâmetro (ex.: /minha-conta/:aba): comparando o pathname literal,
   // ":aba" nunca bateria com o valor de verdade da URL.
   const rota = TODAS_AS_ROTAS.find((r) => matchPath(r.caminho, location.pathname));
   if (!rota?.rotuloBreadcrumb) {
@@ -42,8 +42,21 @@ export function Breadcrumb() {
     // sticky top-16: o breadcrumb acompanha o cabeçalho conforme a página rola; 16 = 4rem = a altura do
     // <Header> (h-16), que também é sticky top-0; z-40 (menor que o z-50 do Header) garante que o cabeçalho
     // sempre fica por cima quando os dois grudam juntos no topo.
-    <nav data-topo-fixo className="fundo-sutil border-b borda-padrao sticky top-16 z-40">
-      <div className="paragrafo largura-site py-3 flex items-center gap-2 flex-wrap texto-herdado">
+    <nav
+      data-topo-fixo={noCabecalho ? undefined : true}
+      className={
+        noCabecalho
+          ? 'paragrafo mb-4 flex items-center gap-2 flex-wrap texto-herdado'
+          : 'fundo-sutil border-b borda-padrao sticky top-16 z-40'
+      }
+    >
+      <div
+        className={
+          noCabecalho
+            ? 'flex items-center gap-2 flex-wrap'
+            : 'paragrafo largura-site py-3 flex items-center gap-2 flex-wrap texto-herdado'
+        }
+      >
         <Link to="/" className="texto-marca enfase hover:underline">
           Início
         </Link>

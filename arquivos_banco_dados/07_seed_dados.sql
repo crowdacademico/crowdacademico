@@ -475,15 +475,20 @@ O cadastro exige informações verdadeiras, completas e atualizadas. Cada pessoa
 3. PERFIL DE PESQUISADOR
 Para submeter e gerenciar campanhas, o usuário deve solicitar o upgrade para perfil de pesquisador, que tem termo próprio, aceito no momento do upgrade.
 
-4. CAMPANHAS
-Toda campanha passa por aprovação administrativa antes de ficar visível ao público. O CrowdAcadêmico não garante o sucesso de nenhuma campanha nem se responsabiliza pelo uso dos recursos arrecadados após o repasse ao pesquisador responsável.
+4. CAMPANHAS E REPASSE
+4.1. Toda campanha passa por aprovação administrativa antes de ficar visível ao público. O CrowdAcadêmico não garante o sucesso de nenhuma campanha nem se responsabiliza pelo uso dos recursos arrecadados após o repasse ao pesquisador responsável.
+4.2. Taxa da plataforma. Do valor arrecadado, a plataforma retém a taxa vigente na aprovação da campanha, nunca menor que o valor mínimo por repasse informado na página de Transparência. A taxa de uma campanha não muda depois da aprovação.
+4.3. Carência. O repasse ao pesquisador só é feito depois de um prazo de carência contado do encerramento da campanha, para cobrir devoluções, desistências e contestações de pagamento. O que for devolvido nesse prazo sai do valor repassado. Depois do repasse, eventual ressarcimento é de responsabilidade do pesquisador.
 
 5. CONTRIBUIÇÕES
 5.1. Natureza. A contribuição é voluntária e destinada ao financiamento do projeto de pesquisa descrito na campanha. O CrowdAcadêmico atua como intermediário entre apoiador e pesquisador, não é parte na relação de pesquisa e não garante os resultados científicos do projeto apoiado.
-5.2. Modelo de arrecadação e repasse. Conforme o modelo da campanha, informado na própria página antes da contribuição, o valor é repassado ao pesquisador somente se a meta for atingida (tudo ou nada) ou pode ser repassado mesmo sem atingi-la (flexível).
-5.3. Reembolso. A contribuição é devolvida nos casos previstos nas regras da plataforma, como a campanha tudo ou nada que não atinge a meta ou a campanha encerrada por moderação antes do repasse. Fora desses casos, a contribuição é definitiva a partir da confirmação do pagamento.
-5.4. Aceite por contribuição. A cada contribuição, o apoiador confirma estes Termos e as regras do modelo da campanha. A plataforma registra a data, a hora, a versão destes Termos vigente naquele momento, o identificador da transação e o endereço IP de onde a contribuição foi feita (inclusive na contribuição anônima), para fins de auditoria e de defesa em eventual contestação do pagamento. O endereço IP é guardado por 5 (cinco) anos, o prazo para reclamações de consumo (Código de Defesa do Consumidor, art. 27), e depois é apagado; os demais registros da contribuição seguem o item 5.5. A versão registrada é a que se aplica àquela contribuição, mesmo que uma versão nova seja publicada depois.
-5.5. Dados de pagamento. Os dados de pagamento são processados pelo meio de pagamento escolhido (Pix, cartão ou boleto). A plataforma guarda o registro da contribuição e do aceite pelo prazo exigido em lei, mesmo que a conta seja encerrada.
+5.2. Modelo de arrecadação. O modelo da campanha é informado na página antes da contribuição. No modelo tudo ou nada, o valor só é repassado ao pesquisador se a meta for atingida até o fim do prazo; caso contrário, é devolvido. No modelo flexível, o valor é cobrado na confirmação do pagamento e repassado ao pesquisador no encerramento da campanha, mesmo que a meta não seja atingida, e o apoiador confirma ciência disso antes de contribuir.
+5.3. Tarifas. A tarifa do meio de pagamento (Pix, cartão ou boleto) é cobrada pelo provedor de pagamento e paga pelo apoiador, por cima do valor da contribuição. A tarifa não entra no valor arrecadado e não é devolvida em nenhum caso, porque fica com o provedor.
+5.4. Desistência. Em até 7 (sete) dias contados da contribuição, o apoiador pode desistir dela e receber de volta o valor contribuído, pelo mesmo meio de pagamento, conforme o art. 49 do Código de Defesa do Consumidor. Quem contribuiu com conta desiste pela área Minha Conta; quem contribuiu sem conta, pelo suporte, informando o protocolo da contribuição. A desistência não altera o resultado da campanha: uma campanha encerrada como bem-sucedida continua bem-sucedida, e o valor devolvido sai do repasse ao pesquisador.
+5.5. Outras devoluções. A contribuição também é devolvida quando a campanha tudo ou nada não atinge a meta e quando a campanha é encerrada por moderação. Fora desses casos e do prazo do item 5.4, a contribuição é definitiva a partir da confirmação do pagamento.
+5.6. Recompensas. As recompensas são simbólicas (reconhecimento, acesso antecipado ou conteúdo digital), sem entrega física. O apoiador com conta recebe automaticamente todas as recompensas ativas cujo valor mínimo a sua contribuição alcança. Quem desiste da contribuição perde as recompensas que ela deu.
+5.7. Aceite por contribuição. A cada contribuição, o apoiador confirma estes Termos e as regras do modelo da campanha. A plataforma registra a data, a hora, a versão destes Termos vigente naquele momento, o identificador da transação e o endereço IP de onde a contribuição foi feita (inclusive na contribuição anônima), para fins de auditoria e de defesa em eventual contestação do pagamento. O endereço IP é guardado por 5 (cinco) anos, o prazo para reclamações de consumo (Código de Defesa do Consumidor, art. 27), e depois é apagado; os demais registros da contribuição seguem o item 5.8. A versão registrada é a que se aplica àquela contribuição, mesmo que uma versão nova seja publicada depois.
+5.8. Dados de pagamento. Os dados de pagamento são processados pelo meio de pagamento escolhido (Pix, cartão ou boleto). A plataforma guarda o registro da contribuição e do aceite pelo prazo exigido em lei, mesmo que a conta seja encerrada.
 
 6. PROPRIEDADE INTELECTUAL
 O conteúdo publicado por pesquisadores (descrição de projeto, atualizações, materiais anexados) permanece de titularidade do autor. Ao publicar, o pesquisador concede ao CrowdAcadêmico licença não exclusiva para exibição pública do conteúdo na plataforma, pelo tempo em que a campanha ou o perfil permanecerem ativos.
@@ -491,8 +496,10 @@ O conteúdo publicado por pesquisadores (descrição de projeto, atualizações,
 7. PROTEÇÃO DE DADOS PESSOAIS (LGPD)
 O tratamento de dados pessoais nesta plataforma segue a Lei Geral de Proteção de Dados Pessoais (Lei 13.709/2018). Coletamos apenas os dados necessários para cadastro, validação de identidade, processamento de contribuições e cumprimento de obrigações legais. O titular dos dados tem direito a: confirmação da existência de tratamento; acesso aos dados; correção de dados incompletos ou desatualizados; anonimização, bloqueio ou eliminação de dados desnecessários; portabilidade; e revogação do consentimento, a qualquer momento, mediante solicitação pelos canais oficiais da plataforma. Dados sensíveis, como CPF, são armazenados de forma protegida e nunca exibidos publicamente em sua forma completa.
 
-8. MODERAÇÃO E DENÚNCIAS
-A equipe administrativa pode suspender ou encerrar campanhas, perfis ou contas que violem estes Termos, mediante denúncia fundamentada ou verificação própria, assegurado o direito de manifestação do usuário afetado.
+8. MODERAÇÃO, COMENTÁRIOS E DENÚNCIAS
+8.1. A equipe administrativa pode suspender ou encerrar campanhas, perfis ou contas que violem estes Termos, mediante denúncia fundamentada ou verificação própria, assegurado o direito de manifestação do usuário afetado.
+8.2. Comentários. Pesquisadores podem comentar campanhas de outros pesquisadores. O autor da campanha pode endossar, excluir ou bloquear comentários recebidos. É proibido publicar conteúdo ofensivo, discriminatório, ilegal ou que viole direitos de terceiros. Quem endossa um comentário assume a responsabilidade de exibi-lo publicamente na campanha.
+8.3. Denúncias. Qualquer usuário cadastrado pode denunciar campanhas, perfis e comentários. As denúncias são analisadas pela administração, que pode aplicar as medidas do item 8.1 tanto ao autor do conteúdo quanto a quem o endossou.
 
 9. ENCERRAMENTO DE CONTA
 O usuário pode solicitar o encerramento de sua conta a qualquer momento. Dados vinculados a obrigações legais ou financeiras, como o histórico de contribuições, podem ser mantidos pelo prazo exigido pela legislação aplicável, mesmo após o encerramento.
@@ -663,6 +670,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'repasse_backoff_base_minutos',           '15',   'inteiro', 'Espera, em minutos, antes da 2ª tentativa de repasse (dobra a cada falha)',                 TRUE, FALSE),
 (NULL, 'repasse_backoff_max_minutos',            '1440', 'inteiro', 'Maior espera, em minutos, entre tentativas de repasse',                                     TRUE, FALSE),
 (NULL, 'estorno_prazo_pix_dias',                 '90',   'inteiro', 'Dias, contados do pagamento, em que o provedor ainda aceita devolver um Pix',               TRUE, FALSE),
+(NULL, 'desistencia_prazo_dias',                 '7',    'inteiro', 'Dias, contados da contribuição, em que quem apoiou pode desistir e receber o valor de volta (CDC, art. 49)', TRUE, TRUE),
 (NULL, 'estorno_max_tentativas',                 '8',    'inteiro', 'Tentativas de devolução de uma contribuição antes de ir para reembolso manual',             TRUE, FALSE),
 (NULL, 'estorno_backoff_base_minutos',           '15',   'inteiro', 'Espera, em minutos, antes da 2ª tentativa de devolução (dobra a cada falha)',              TRUE, FALSE),
 (NULL, 'estorno_backoff_max_minutos',            '1440', 'inteiro', 'Maior espera, em minutos, entre tentativas de devolução',                                   TRUE, FALSE),
@@ -849,25 +857,6 @@ INSERT INTO permissao (nome) VALUES
 ('campanha_criar_para_outro'),
 ('campanha_excluir_forcado')
 ON CONFLICT (nome) DO NOTHING;
-
--- [07-B-4] DESENVOLVIMENTO: toda conta logada VÊ tudo (nunca altera). O papel 'usuario', que todo cadastro
--- recebe, ganha só as permissões de LEITURA, para qualquer papel conseguir testar todas as telas. As de alterar
--- (gerenciar, editar, aprovar, suspender...) continuam só com quem já tinha. REMOVER antes do deploy (entra no
--- bloco "modo produção", ver PENDENCIAS e correcoes.md).
-INSERT INTO papel_permissao (id_papel, id_permissao)
-SELECT p.id_papel, perm.id_permissao
-FROM papel p
-JOIN permissao perm ON TRUE
-WHERE p.codigo = 'usuario'
-  AND perm.nome IN (
-    'relatorio_visualizar',
-    'usuario_visualizar_sensivel',
-    'perfil_pesquisador_visualizar_sensivel',
-    'contribuicao_visualizar_sensivel',
-    'auditoria_financeira_visualizar',
-    'log_visualizar'
-  )
-ON CONFLICT DO NOTHING;
 
 -- [07-C-4] arquivo: vazio. O seed não tem imagens nem documentos no armazenamento, e uma linha aqui apontaria
 -- para um arquivo que não existe (foto "cadastrada" sem imagem, anexo que não abre). Ninguém nasce com foto de

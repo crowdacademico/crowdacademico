@@ -181,7 +181,7 @@ REVOKE EXECUTE ON FUNCTION public.criar_perfil_pesquisador_para_outro(INT, TEXT,
 -- alterar_perfil_pesquisador_de_outro(...): ver [03-P-3].
 REVOKE EXECUTE ON FUNCTION public.alterar_perfil_pesquisador_de_outro(INT, tipo_vinculo, TEXT, titulo_academico) FROM PUBLIC;
 -- criar_campanha_para_outro(...) / forcar_exclusao_campanha(INT): ver [03-E-1] e [03-E-2].
-REVOKE EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT, INT) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.forcar_exclusao_campanha(INT) FROM PUBLIC;
 -- suspender_usuario / revogar_suspensao_usuario / suspender_papel_usuario / revogar_suspensao_papel_usuario: ver [03-N].
 REVOKE EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)         FROM PUBLIC;
@@ -205,7 +205,7 @@ GRANT EXECUTE ON FUNCTION public.reativar_pesquisadores_vencidos()        TO app
 GRANT EXECUTE ON FUNCTION public.corrigir_cpf_pesquisador(INT, TEXT, TEXT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.criar_perfil_pesquisador_para_outro(INT, TEXT, TEXT, tipo_vinculo, TEXT, titulo_academico) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.alterar_perfil_pesquisador_de_outro(INT, tipo_vinculo, TEXT, titulo_academico) TO app_nestjs;
-GRANT EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT) TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT, INT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.forcar_exclusao_campanha(INT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)      TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.revogar_suspensao_usuario(INT)                 TO app_nestjs;
@@ -270,7 +270,7 @@ REVOKE EXECUTE ON FUNCTION public.decidir_solicitacao_encerramento(INT, BOOLEAN,
 GRANT EXECUTE ON FUNCTION public.decidir_solicitacao_encerramento(INT, BOOLEAN, TEXT) TO app_nestjs;
 -- denuncia: quem denuncia grava só autor, alvo, motivo e relato (a denúncia nasce pendente, sem contestação); quem
 -- julga só muda o status e a justificativa (pol_denuncia_update, 04). A contestação só pelas funções (03).
-GRANT INSERT (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_motivo, relato) ON denuncia TO app_nestjs;
+GRANT INSERT (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_comentario, id_motivo, relato) ON denuncia TO app_nestjs;
 GRANT UPDATE (status, justificativa_moderacao) ON denuncia TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.encerrar_campanha_por_denuncia(INT, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.encerrar_campanha_por_denuncia(INT, TEXT) TO app_nestjs;
@@ -295,14 +295,14 @@ GRANT DELETE ON campanha TO app_nestjs;
 -- carimbo ficam de fora, então toda campanha nasce 'rascunho' (o DEFAULT) e só chega à fila ou ao ar pelas
 -- transições que fn_valida_transicao_campanha e fn_valida_completude_campanha (05) conferem.
 GRANT INSERT (
-    id_usuario, id_area_conhecimento, titulo, modelo, meta_financeira,
+    id_usuario, id_area_conhecimento, id_imagem_capa, titulo, modelo, meta_financeira,
     descricao, data_inicio, data_fim, video_apresentacao_url
 ) ON campanha TO app_nestjs;
 -- UPDATE por coluna: campo calculado (valor_bruto_arrecadado, taxa_plataforma, encerrado_em, enviado_aprovacao_em) e imutável
 -- (id_usuario) só mudam por função SECURITY DEFINER ou trigger. Ver DOCUMENTACAO_BD.md [05-K-2-C]. modelo muda até a
 -- aprovação; depois o banco o barra (91005, fn_campanha_erro_congelamento em 05).
 GRANT UPDATE (
-    titulo, descricao, id_area_conhecimento, meta_financeira, modelo,
+    titulo, descricao, id_area_conhecimento, id_imagem_capa, meta_financeira, modelo,
     data_inicio, data_fim, video_apresentacao_url,
     status, aprovado_em, id_admin
 ) ON campanha TO app_nestjs;
@@ -377,6 +377,8 @@ REVOKE EXECUTE ON FUNCTION public.cartao_a_liberar() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.cartao_a_liberar() TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.criar_repasse_campanha(INT, BOOLEAN) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.devolver_contribuicoes_campanha(INT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.desistir_contribuicao(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.desistir_contribuicao(INT) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.destino_dinheiro_campanha(INT) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.expirar_contribuicoes_pendentes() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.expirar_contribuicoes_pendentes() TO app_nestjs;
@@ -450,6 +452,10 @@ REVOKE EXECUTE ON FUNCTION public.registrar_falha_evento_pagamento(INT, TEXT) FR
 GRANT EXECUTE ON FUNCTION public.registrar_falha_evento_pagamento(INT, TEXT) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.resumo_contribuicoes_campanha(INT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.resumo_contribuicoes_campanha(INT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.contar_apoios_publicos_campanha(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.contar_apoios_publicos_campanha(INT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.contribuicoes_recebidas_pesquisador() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.contribuicoes_recebidas_pesquisador() TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.liquido_repasse(DECIMAL, DECIMAL) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.liquido_repasse(DECIMAL, DECIMAL) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.eventos_para_reprocessar(VARCHAR, INT) FROM PUBLIC;

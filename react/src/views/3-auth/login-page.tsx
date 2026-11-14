@@ -3,7 +3,6 @@ import { MensagemErro } from '../../components/crud/mensagem-erro';
 import type { FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { IconeGoogle } from '../../components/auth/icone-google';
-import { LogoMarca } from '../../components/layout/logo-marca';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { Campo } from '../../components/input/campo';
 import { ErroHttp } from '../../services/constant/api/http.util';
@@ -82,20 +81,41 @@ export function LoginPage({ auth }: PropsPagina) {
   };
 
   return (
-    <div className="pagina-centralizada">
-      <div className="max-w-(--largura-cartao-solto) w-full fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden">
-        <div className="p-10 text-center border-b borda-padrao relative overflow-hidden fundo-sutil">
-          <div
-            className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 brilho-marca brilho-marca-forte rounded-full blur-3xl"
-          ></div>
-          <LogoMarca className="h-14 mx-auto mb-5 relative z-10" />
-          <h1 className="titulo-pagina mb-2 relative z-10">Bem-vindo(a)</h1>
-          <p className="paragrafo texto-fraco relative z-10">
+    <div className="pagina-centralizada auth-login">
+      <div className="auth-login__cartao w-full fundo-cartao rounded-2xl sombra-cartao-solto border borda-padrao overflow-hidden lg:grid lg:grid-cols-2">
+        <aside className="auth-login__painel relative overflow-hidden hidden lg:flex flex-col justify-between p-10">
+          <div className="absolute inset-0 grade-medicao" aria-hidden="true" />
+          <div className="relative z-10">
+            <span className="header-publico__marca mb-8 text-2xl" aria-hidden="true">
+              <i className="fa-solid fa-flask" />
+            </span>
+            <h2 className="titulo-secao texto-sobre-escuro-forte mb-4">
+              Ciência financiada por quem acredita nela.
+            </h2>
+            <p className="texto-sobre-escuro leading-relaxed">
+              Conheça projetos de pesquisadores, acompanhe os avanços e participe da ciência brasileira.
+            </p>
+          </div>
+          <div className="relative z-10 flex items-center gap-3 texto-sobre-escuro">
+            <i className="fa-solid fa-shield-halved text-xl texto-marca-sobre-escuro" aria-hidden="true" />
+            <p className="text-sm">Projetos com informações públicas e curadoria.</p>
+          </div>
+        </aside>
+
+        <section className="auth-login__formulario">
+          <header className="auth-login__mobile-cabecalho p-8 text-center border-b borda-padrao fundo-sutil lg:hidden">
+            <span className="header-publico__marca mx-auto mb-5 text-2xl" aria-hidden="true">
+              <i className="fa-solid fa-flask" />
+            </span>
+            <h1 className="titulo-pagina texto-forte mb-2">Bem-vindo(a)</h1>
+            <p className="text-sm texto-fraco font-medium">Acesse sua conta para apoiar a ciência brasileira.</p>
+          </header>
+
+          <form onSubmit={aoEntrar} noValidate className="p-8 sm:p-10 space-y-6">
+          <h1 className="hidden lg:block titulo-pagina texto-forte mb-2">Bem-vindo(a)</h1>
+          <p className="hidden lg:block text-sm texto-fraco font-medium -mt-4">
             Acesse sua conta para apoiar a ciência brasileira.
           </p>
-        </div>
-
-        <form onSubmit={aoEntrar} noValidate className="p-10 space-y-6">
           <MensagemErro texto={erro || recusa} className="paragrafo enfase texto-erro text-center whitespace-pre-line" />
 
           <Campo rotulo="Seu E-mail" erro={erroEmail}>
@@ -186,6 +206,7 @@ export function LoginPage({ auth }: PropsPagina) {
             </Link>
           </p>
         </form>
+        </section>
       </div>
     </div>
   );

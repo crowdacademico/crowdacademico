@@ -63,6 +63,14 @@ export const perfilPesquisadorApi = {
       method: 'PATCH',
       body: JSON.stringify(dados),
     }).then(tratarResposta<void>),
+  atualizarProprio: (
+    authFetch: AuthFetch,
+    dados: PerfilPesquisadorRequestUpdate,
+  ): Promise<PerfilPesquisadorResponse> =>
+    authFetch('/perfil-pesquisador', {
+      method: 'PATCH',
+      body: JSON.stringify(dados),
+    }).then(tratarResposta<PerfilPesquisadorResponse>),
   // Endpoint separado do atualizar() acima, de propósito (RF-017): correção de CPF é ação de suporte/admin
   // (perfil_pesquisador_corrigir_cpf), nunca um PATCH comum.
   corrigirCpf: (authFetch: AuthFetch, id: number | string, dados: PerfilPesquisadorRequestFixCpf): Promise<void> =>

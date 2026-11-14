@@ -13,6 +13,7 @@ export interface UseAuthReturn {
   usuario: UsuarioResponse | null;
   papeis: string[];
   ehAdmin: boolean;
+  podeAcessarPainelAdmin: boolean;
   // RF-015: a conta ainda não aceitou a versão vigente do Termo de Uso (AdminLayout mostra o aceite no lugar do
   // painel).
   aceitePendente: boolean;
@@ -268,6 +269,7 @@ export function useAuth(): UseAuthReturn {
     usuario,
     papeis,
     ehAdmin: papeis.includes('admin'),
+    podeAcessarPainelAdmin: papeis.some((papel) => papel !== 'usuario' && papel !== 'pesquisador'),
     aceitePendente,
     carregando,
     autenticado: accessToken !== null,

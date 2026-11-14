@@ -9,4 +9,6 @@ export class ComentarioResponse {
   ativo: boolean;
   // Só na listagem (GET /comentario); nas outras respostas fica null.
   nomePesquisador: string | null;
+  // Só na listagem: a foto de perfil do autor (URL pública), para o bloco Endosso da página da campanha.
+  fotoPesquisador: string | null;
 }

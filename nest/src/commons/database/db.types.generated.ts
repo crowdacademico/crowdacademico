@@ -143,6 +143,7 @@ export interface Campanha {
   enviado_aprovacao_em: Timestamp | null;
   id_admin: number | null;
   id_area_conhecimento: number;
+  id_imagem_capa: number | null;
   id_campanha: Generated<number>;
   id_usuario: number;
   meta_financeira: Numeric;
@@ -210,7 +211,11 @@ export interface Denuncia {
   contestacao_status: StatusContestacao | null;
   contestada_em: Timestamp | null;
   criado_em: Generated<Timestamp>;
+  comentario_conteudo: string | null;
+  comentario_endossado: boolean | null;
+  comentario_id_campanha: number | null;
   id_campanha_alvo: number | null;
+  id_comentario: number | null;
   id_denuncia: Generated<number>;
   id_julgador: number | null;
   id_julgador_contestacao: number | null;

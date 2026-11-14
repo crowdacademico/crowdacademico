@@ -116,6 +116,11 @@ CREATE INDEX idx_comentario_campanha        ON comentario(id_campanha);
 CREATE INDEX idx_comentario_pesquisador     ON comentario(id_pesquisador, criado_em);
 CREATE INDEX idx_denuncia_alvo_campanha     ON denuncia(id_campanha_alvo);
 CREATE INDEX idx_denuncia_alvo_pesq         ON denuncia(id_pesquisador_alvo);
+-- Uma denúncia por pessoa contra o mesmo perfil (fora as de comentário) e uma por comentário. Nome igual ao da antiga
+-- constraint de propósito: a mensagem de duplicidade do Nest (mensagens-duplicidade.constants.ts) acha pelo nome.
+CREATE UNIQUE INDEX "UK_DENUNCIA_USUARIO_PESQUISADOR_ALVO" ON denuncia(id_usuario, id_pesquisador_alvo) WHERE id_comentario IS NULL;
+CREATE UNIQUE INDEX "UK_DENUNCIA_USUARIO_COMENTARIO"       ON denuncia(id_usuario, id_comentario)       WHERE id_comentario IS NOT NULL;
+CREATE INDEX idx_denuncia_comentario       ON denuncia(id_comentario);
 -- Acelera o painel de moderação filtrando por motivo (ex.: "ver todas as denúncias de plágio").
 CREATE INDEX idx_denuncia_motivo            ON denuncia(id_motivo);
 CREATE INDEX idx_recompensa_campanha        ON recompensa(id_campanha);

@@ -4,20 +4,15 @@ import { AvatarUsuario } from '../avatar-usuario';
 import { useFecharAoClicarFora } from '../../../services/constant/hook/use-fechar-ao-clicar-fora';
 import type { UseAuthReturn } from '../../../services/3-auth/hook/use-auth';
 
-function placeholder(mensagem: string): () => void {
-  return () => window.alert(mensagem);
-}
-
 interface MenuUsuarioProps {
-  auth: Pick<UseAuthReturn, 'carregando' | 'autenticado' | 'usuario' | 'ehAdmin' | 'logout'>;
+  auth: Pick<UseAuthReturn, 'carregando' | 'autenticado' | 'usuario' | 'podeAcessarPainelAdmin' | 'logout'>;
 }
 
 // Dropdown do cabeçalho: avatar NÃO substitui os controles soltos (fonte, tema, sino), só guarda
 // identidade/conta, mesmo padrão GitHub/Linear/Notion.
 //
 // "Minha Conta" linka para /minha-conta: a seção "Preferências" de lá cobre o que seria um item "Configurações"
-// à parte, por isso ele não existe aqui. "Notificações" fica placeholder até 27-notificacao existir: o sino ao
-// lado já cobre "o que aconteceu recentemente" nesse meio tempo.
+// à parte, por isso ele não existe aqui.
 export function MenuUsuario({ auth }: MenuUsuarioProps) {
   const [aberto, setAberto] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -56,22 +51,54 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
               </div>
 
               <Link
-                to="/admin/minha-conta"
+                to="/minha-conta/perfil"
                 onClick={() => setAberto(false)}
                 className="paragrafo enfase flex items-center gap-3 px-4 py-2.5 texto-padrao hover-fundo-sutil transition-colors"
               >
                 <i className="fa-solid fa-user w-4" aria-hidden="true"></i>
                 Minha Conta
               </Link>
-              <ItemMenu
-                icone="fa-bell"
-                rotulo="Notificações"
-                onClick={placeholder(
-                  'Módulo de notificações ainda não existe, veja "Atividade recente" no sino ao lado.',
-                )}
-              />
+              <Link
+                to="/notificacoes"
+                onClick={() => setAberto(false)}
+                className="paragrafo enfase flex items-center gap-3 px-4 py-2.5 texto-padrao hover-fundo-sutil transition-colors"
+              >
+                <i className="fa-solid fa-bell w-4" aria-hidden="true"></i>
+                Notificações
+              </Link>
+              {auth.usuario?.ehPesquisador ? (
+                <Link
+                  to="/estudio-pesquisador"
+                  onClick={() => setAberto(false)}
+                  className="paragrafo enfase flex items-center gap-3 px-4 py-2.5 texto-padrao hover-fundo-sutil transition-colors"
+                >
+                  <i className="fa-solid fa-flask w-4" aria-hidden="true"></i>
+                  Estúdio do pesquisador
+                </Link>
+              ) : (
+                <div className="px-4 py-2.5" aria-label="Estúdio do pesquisador indisponível">
+                  <button
+                    type="button"
+                    disabled
+                    className="paragrafo enfase flex items-center gap-3 texto-fraco w-full text-left cursor-not-allowed"
+                  >
+                    <i className="fa-solid fa-flask w-4" aria-hidden="true"></i>
+                    Estúdio do pesquisador
+                  </button>
+                  <p className="legenda texto-fraco mt-1 pl-7">
+                    Acesso exclusivo para pesquisadores. Faça upgrade da conta para acessar.
+                  </p>
+                  <Link
+                    to="/minha-conta/perfil"
+                    onClick={() => setAberto(false)}
+                    className="legenda texto-marca hover:underline mt-2 ml-7 inline-block"
+                  >
+                    Fazer upgrade
+                  </Link>
+                </div>
+              )}
 
-              {auth.ehAdmin && (
+              {auth.podeAcessarPainelAdmin && (
                 <>
                   <div className="border-t borda-padrao"></div>
                   <Link
@@ -118,24 +145,5 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
         </div>
       )}
     </div>
-  );
-}
-
-interface ItemMenuProps {
-  icone: string;
-  rotulo: string;
-  onClick: () => void;
-}
-
-function ItemMenu({ icone, rotulo, onClick }: ItemMenuProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="paragrafo enfase w-full flex items-center gap-3 px-4 py-2.5 texto-padrao hover-fundo-sutil transition-colors text-left"
-    >
-      <i className={'fa-solid ' + icone + ' w-4'} aria-hidden="true"></i>
-      {rotulo}
-    </button>
   );
 }

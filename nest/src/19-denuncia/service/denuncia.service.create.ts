@@ -22,6 +22,7 @@ export class DenunciaServiceCreate {
         id_usuario: idUsuario,
         id_campanha_alvo: dto.idCampanhaAlvo ?? null,
         id_pesquisador_alvo: dto.idPesquisadorAlvo ?? null,
+        id_comentario: dto.idComentario ?? null,
         id_motivo: dto.idMotivo,
         relato: dto.relato?.trim() ? dto.relato.trim() : null,
       })

@@ -183,6 +183,19 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
             <CampoFicha rotulo="Detalhes adicionais" valor={denuncia.relato} largura="cheia" />
           </SecaoFicha>
 
+          {denuncia.idComentario !== null || denuncia.comentarioConteudo !== null ? (
+            <SecaoFicha titulo="Comentário denunciado" destaque>
+              <CampoFicha rotulo="Texto (como estava na denúncia)" valor={denuncia.comentarioConteudo} largura="cheia" />
+              <CampoFicha rotulo="ID da campanha do comentário" valor={denuncia.comentarioIdCampanha} />
+              <CampoFicha rotulo="Estava endossado" valor={denuncia.comentarioEndossado ? 'Sim' : 'Não'} />
+              <p className="legenda col-span-full">
+                Julgar procedente tira o comentário do ar e o endosso dele.
+                {denuncia.comentarioEndossado &&
+                  ' O autor da campanha endossou este comentário: se o endosso também foi abusivo, denuncie a campanha pela página dela (a denúncia segue o fluxo normal, com direito de contestação).'}
+              </p>
+            </SecaoFicha>
+          ) : null}
+
           <SecaoFicha titulo="Denunciante" destaque>
             <CampoFicha rotulo="ID do denunciante" valor={denuncia.idUsuario} />
             <CampoFicha rotulo="Denunciante" valor={denuncia.nomeDenunciante} />

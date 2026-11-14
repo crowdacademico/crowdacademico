@@ -14,6 +14,12 @@ export class CampanhaServiceUpdate {
     id: number,
     dto: CampanhaRequestUpdate,
   ): Promise<CampanhaResponse> {
+    if (dto.videoApresentacaoUrl?.trim() && dto.idImagemCapa != null) {
+      throw new BadRequestException(
+        'Escolha o vídeo de apresentação ou a imagem de capa, não os dois.',
+      );
+    }
+
     const campos = {
       ...(dto.titulo !== undefined ? { titulo: dto.titulo } : {}),
       ...(dto.idAreaConhecimento !== undefined
@@ -30,6 +36,9 @@ export class CampanhaServiceUpdate {
       ...(dto.dataFim !== undefined ? { data_fim: new Date(dto.dataFim) } : {}),
       ...(dto.videoApresentacaoUrl !== undefined
         ? { video_apresentacao_url: dto.videoApresentacaoUrl }
+        : {}),
+      ...(dto.idImagemCapa !== undefined
+        ? { id_imagem_capa: dto.idImagemCapa }
         : {}),
     };
     if (Object.keys(campos).length === 0) {

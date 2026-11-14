@@ -1,6 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
+import { ARMAZENAMENTO_SERVICE } from '../../commons/storage/storage.constants';
+import type { ArmazenamentoService } from '../../commons/storage/storage.service.interface';
 import { CAMPO_BLOQUEADO_PARA_DTO } from '../constants/campanha.constants';
 import { CampanhaConverter } from '../dto/converter/campanha.converter';
 import { CampanhaResponse } from '../dto/response/campanha.response';
@@ -8,7 +10,11 @@ import { selecionarCampanhaComNomes } from '../util/campanha.util.with-names';
 
 @Injectable()
 export class CampanhaServiceFindOne {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    @Inject(ARMAZENAMENTO_SERVICE)
+    private readonly armazenamento: ArmazenamentoService,
+  ) {}
 
   async executar(id: number): Promise<CampanhaResponse> {
     const linha = await selecionarCampanhaComNomes(this.database.getDb())
@@ -24,7 +30,10 @@ export class CampanhaServiceFindOne {
       throw new NotFoundException('Campanha não encontrada.');
     }
 
-    const resposta = CampanhaConverter.paraResponseDto(linha);
+    const resposta = CampanhaConverter.paraResponseDto(
+      linha,
+      this.armazenamento,
+    );
     if (linha.status === 'rejeitado') {
       await this.preencherReenvios(resposta);
     }

@@ -14,8 +14,7 @@ import { ORDEM_TIPO_CHAVE_PIX, ROTULO_TIPO_CHAVE_PIX } from '../../services/24-c
 import { rotuloSituacaoRepasse } from '../../services/23-pagamento/constants/status-repasse.constants';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
-import type { CartaoALiberarResponse, ContaRecebimentoResponse, RepasseResponse } from '../../services/24-conta-recebimento/type/conta-recebimento.type';
-import { formatarData, formatarMoeda } from '../../services/constant/util/formatacao.util';
+import type { ContaRecebimentoResponse, RepasseResponse } from '../../services/24-conta-recebimento/type/conta-recebimento.type';
 import type { TipoChavePix } from '../../services/constant/type/enums-do-banco.gerado';
 
 // Recebimento do pesquisador, em Minha Conta > Acadêmico: a chave Pix para onde vai o repasse das campanhas dele e a
@@ -29,14 +28,12 @@ export function SecaoRecebimento({ authFetch }: { authFetch: AuthFetch }) {
   const [chave, setChave] = useState('');
   const [removendo, setRemovendo] = useState(false);
   const [chaveRecarga, setChaveRecarga] = useState(0);
-  const [cartaoALiberar, setCartaoALiberar] = useState<CartaoALiberarResponse[]>([]);
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { mostrar } = useToast();
   const { ocupado, executar } = useEnvio(reportarErro, limparErro);
 
   useEffect(() => {
     contaRecebimentoApi.buscar(authFetch).then(setConta).catch(reportarErro);
-    contaRecebimentoApi.listarCartaoALiberar(authFetch).then(setCartaoALiberar).catch(reportarErro);
   }, [authFetch, reportarErro, chaveRecarga]);
 
   // Repasse pendente sem chave Pix confirmada: espera a conta do pesquisador (a etiqueta diz isso).
@@ -116,7 +113,7 @@ export function SecaoRecebimento({ authFetch }: { authFetch: AuthFetch }) {
         </CaixaAviso>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 mb-12">
         {mostrarFormulario ? (
           <>
             <button type="button" className="btn btn-primary" disabled={ocupado || chave.trim() === ''} onClick={() => void cadastrar()}>
@@ -140,18 +137,6 @@ export function SecaoRecebimento({ authFetch }: { authFetch: AuthFetch }) {
         )}
         <Tooltip texto="O dinheiro das suas campanhas, menos a taxa da plataforma, vai para esta chave quando a campanha fecha. Ela precisa estar no seu CPF: o sistema confere no diretório Pix." />
       </div>
-
-      {cartaoALiberar.length > 0 && (
-        <SecaoFicha titulo="Cartão a liberar" nivel={2}>
-          {cartaoALiberar.map((item) => (
-            <CampoFicha
-              key={item.idCampanha}
-              rotulo={item.tituloCampanha}
-              valor={`${formatarMoeda(item.valor)}, liberado em ${formatarData(item.previstoPara)} (previsão)`}
-            />
-          ))}
-        </SecaoFicha>
-      )}
 
       <GenericTable<RepasseResponse>
         titulo="Meus repasses"

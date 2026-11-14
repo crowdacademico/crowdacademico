@@ -6,6 +6,7 @@ import { useFecharComAviso } from '../../components/crud/use-alteracao-nao-salva
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { IndicadorEtapas } from '../../components/crud/indicador-etapas';
 import { Campo } from '../../components/input/campo';
+import { SeletorImagemCapaCampanha } from '../../components/input/seletor-imagem-capa-campanha';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
@@ -58,6 +59,8 @@ interface FormDadosCampanha {
   dataInicio: string;
   dataFim: string;
   videoApresentacaoUrl: string;
+  idImagemCapa: number | null;
+  imagemCapaUrl: string | null;
 }
 
 const FORM_VAZIO: FormDadosCampanha = {
@@ -69,6 +72,8 @@ const FORM_VAZIO: FormDadosCampanha = {
   dataInicio: '',
   dataFim: '',
   videoApresentacaoUrl: '',
+  idImagemCapa: null,
+  imagemCapaUrl: null,
 };
 
 type Etapa = 'dados' | 'orcamento' | 'cronograma' | 'revisao';
@@ -136,6 +141,8 @@ export function ModalCriarCampanha({
           dataInicio: campanha.dataInicio ? dataLocal(campanha.dataInicio) : '',
           dataFim: campanha.dataFim ? dataLocal(campanha.dataFim) : '',
           videoApresentacaoUrl: campanha.videoApresentacaoUrl ?? '',
+          idImagemCapa: campanha.idImagemCapa,
+          imagemCapaUrl: campanha.imagemCapaUrl,
         };
         setForm(salvo);
         setFormSalvo(salvo);
@@ -157,7 +164,7 @@ export function ModalCriarCampanha({
     area: form.idAreaConhecimento === '' && 'Escolha a área do conhecimento.',
     meta: form.metaFinanceira === '' ? 'Informe a meta.' : metaAbaixoDoMinimo && textoMetaMinima,
     inicio: form.dataInicio === '' ? 'Informe a data de início.' : form.dataInicio < hoje && 'O início precisa ser hoje ou depois.',
-    fim: (form.dataFim === '' || !duracaoValida) && 'prazo',
+    fim: (form.dataFim === '' || form.dataFim < hoje || !duracaoValida) && 'prazo',
     descricao:
       erroLimiteCaracteres(form.descricao, regras.limiteDescricao, 'A descrição'),
   }));
@@ -171,18 +178,19 @@ export function ModalCriarCampanha({
     dataInicio: inicioDoDia(form.dataInicio),
     dataFim: fimDoDia(form.dataFim),
     ...(form.descricao.trim() ? { descricao: form.descricao.trim() } : {}),
-    ...(form.videoApresentacaoUrl.trim() ? { videoApresentacaoUrl: form.videoApresentacaoUrl.trim() } : {}),
+    videoApresentacaoUrl: form.videoApresentacaoUrl.trim() || null,
+    idImagemCapa: form.idImagemCapa,
   });
 
   // Mudança na etapa Dados que ainda não foi gravada (antes de o rascunho existir, qualquer coisa digitada).
   const sujo = JSON.stringify(form) !== JSON.stringify(formSalvo);
 
-  // Sair da etapa Dados (pelo Próximo ou clicando noutra etapa) grava o formulário antes: cria o rascunho na
+  // Sair da etapa Dados grava o formulário antes: cria o rascunho na
   // primeira vez, altera nas outras. Rascunho sem mudança nos Dados só troca de etapa: um rascunho antigo (com o
   // início já no passado, por exemplo) ainda deixa ver orçamento e cronograma, e a Revisão aponta o que corrigir.
-  const avancarDosDados = async (destino: Etapa = 'orcamento') => {
+  const gravarDados = async (aposGravar: () => void) => {
     if (idCampanha !== null && !sujo) {
-      setEtapa(destino);
+      aposGravar();
       return;
     }
     if (!tentarEnviar()) {
@@ -198,9 +206,17 @@ export function ModalCriarCampanha({
       }
       setFormSalvo(form);
       aoMudar();
-      setEtapa(destino);
+      aposGravar();
     });
   };
+
+  const avancarDosDados = (destino: Etapa = 'orcamento') =>
+    gravarDados(() => setEtapa(destino));
+
+  const salvarDadosESair = () => gravarDados(() => {
+    mostrar('Rascunho salvo.');
+    aoFechar();
+  });
 
   const irPara = (destino: Etapa) => {
     if (etapa === 'dados') {
@@ -257,19 +273,28 @@ export function ModalCriarCampanha({
     etapa === 'dados' ? (
       <RodapeAcoes
         aoCancelar={fechar}
-        acao={{ rotulo: 'Salvar rascunho', rotuloOcupado: 'Salvando...', ocupado: trabalhando, aoClicar: () => void avancarDosDados() }}
+        acao={[
+          { rotulo: 'Salvar rascunho', rotuloOcupado: 'Salvando...', ocupado: trabalhando, aoClicar: () => void salvarDadosESair() },
+          { rotulo: 'Próximo', rotuloOcupado: 'Salvando...', ocupado: trabalhando, aoClicar: () => void avancarDosDados() },
+        ]}
       />
     ) : etapa === 'orcamento' ? (
       <RodapeAcoes
         aoCancelar={() => setEtapa('dados')}
         rotuloCancelar="Voltar"
-        acao={{ rotulo: 'Próximo', aoClicar: () => setEtapa('cronograma') }}
+        acao={[
+          { rotulo: 'Salvar rascunho', desabilitado: trabalhando, aoClicar: salvarRascunhoESair },
+          { rotulo: 'Próximo', aoClicar: () => setEtapa('cronograma') },
+        ]}
       />
     ) : etapa === 'cronograma' ? (
       <RodapeAcoes
         aoCancelar={() => setEtapa('orcamento')}
         rotuloCancelar="Voltar"
-        acao={{ rotulo: 'Próximo', aoClicar: () => setEtapa('revisao') }}
+        acao={[
+          { rotulo: 'Salvar rascunho', desabilitado: trabalhando, aoClicar: salvarRascunhoESair },
+          { rotulo: 'Próximo', aoClicar: () => setEtapa('revisao') },
+        ]}
       />
     ) : (
       <RodapeAcoes
@@ -470,6 +495,7 @@ export function ModalCriarCampanha({
                 className={'legenda sm:col-span-2 -mt-2 texto-herdado ' + (prazoComErro ? 'texto-erro enfase' : 'texto-fraco')}
               >
                 {form.dataFim === '' && erroDe('fim') ? 'Informe a data de fim. ' : ''}
+                {form.dataFim !== '' && form.dataFim < hoje ? 'A data de fim precisa ser hoje ou depois. ' : ''}
                 {duracao !== null ? `Duração: ${duracao} ${duracao === 1 ? 'dia' : 'dias'}. ` : ''}A campanha precisa durar
                 entre {regras.prazoMinimoDias} e {regras.prazoMaximoDias} dias, começando hoje ou depois. Sugestão:{' '}
                 {regras.prazoSugeridoDias} dias.
@@ -480,12 +506,30 @@ export function ModalCriarCampanha({
                     {...atributos}
                     type="url"
                     value={form.videoApresentacaoUrl}
-                    onChange={(evento) => setForm({ ...form, videoApresentacaoUrl: evento.target.value })}
+                    onChange={(evento) =>
+                      setForm({
+                        ...form,
+                        videoApresentacaoUrl: evento.target.value,
+                        ...(evento.target.value.trim() ? { idImagemCapa: null, imagemCapaUrl: null } : {}),
+                      })
+                    }
                     className="input-padrao"
                     placeholder="https://"
                   />
                 )}
               </Campo>
+              <p className="legenda sm:col-span-2 -mt-2 texto-fraco">
+                Escolha um vídeo ou uma imagem de capa. Ao preencher um, o outro será removido.
+              </p>
+              <SeletorImagemCapaCampanha
+                authFetch={auth.authFetch}
+                idArquivo={form.idImagemCapa}
+                url={form.imagemCapaUrl}
+                aoAlterar={(idImagemCapa, imagemCapaUrl) =>
+                  setForm({ ...form, idImagemCapa, imagemCapaUrl, videoApresentacaoUrl: '' })
+                }
+                desabilitado={trabalhando}
+              />
             </SecaoFicha>
           </>
         )}

@@ -11,4 +11,18 @@ export interface ComentarioResponse {
   ativo: boolean;
   // Só na listagem; `null` também quando a conta do autor foi excluída.
   nomePesquisador: string | null;
+  // Só na listagem: URL da foto de perfil do autor (null = sem foto).
+  fotoPesquisador: string | null;
+}
+
+export interface ComentarioMeuResponse {
+  idComentario: number;
+  idCampanha: number;
+  tituloCampanha: string;
+  idPesquisador: number | null;
+  conteudo: string;
+  endossado: boolean;
+  criadoEm: string;
+  ordemEndosso: number | null;
+  ativo: boolean;
 }

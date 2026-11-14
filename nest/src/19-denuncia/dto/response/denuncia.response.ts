@@ -15,6 +15,11 @@ export class DenunciaResponse {
   statusCampanha: StatusCampanha | null;
   idPesquisadorAlvo: number | null;
   nomePesquisadorAlvo: string | null;
+  // Denúncia de comentário: o comentário como estava na hora da denúncia (null nas outras denúncias).
+  idComentario: number | null;
+  comentarioConteudo: string | null;
+  comentarioEndossado: boolean | null;
+  comentarioIdCampanha: number | null;
   idMotivo: number;
   motivo: string;
   tipoMotivo: TipoMotivoDenuncia;

@@ -117,7 +117,7 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Para achar tudo sobre
 
 A pontuação dos pesquisadores é pública: todo papel a vê, sem permissão própria.
 
-> Durante o desenvolvimento, toda conta logada vê todas as telas (só leitura), para testar ([07-B-4]); isso sai no deploy.
+> O papel `usuario` não possui permissões administrativas; o acesso ao painel administrativo é restrito a contas com papéis de gestão (`admin`, `moderador`, `revisor`, `suporte`, `curador`), enquanto doadores e pesquisadores utilizam a área pública e suas respectivas telas (`Minha Conta`, `Estúdio do Pesquisador`).
 
 ---
 
@@ -199,6 +199,7 @@ A pontuação dos pesquisadores é pública: todo papel a vê, sem permissão pr
   * **`taxa_plataforma` carimbada na aprovação** (RF-062): `trg_campanha_carimba_taxa` ([05-K-2]) copia `configuracoes.taxa_plataforma_padrao` no instante em que `aprovado_em` deixa de ser `NULL`, se ainda não houver uma taxa própria; a trigger de congelamento protege o valor dali em diante.
   * **Sugestão de 30 dias** (RF-073): `configuracoes.prazo_sugerido_campanha_dias` (30, pública), lida só pela tela para preencher a data de fim. É sugestão, não regra: a regra continua sendo o mínimo e o máximo. Não entra no par mínimo/máximo; uma sugestão fora do intervalo aparece em vermelho no aviso de prazo, e o banco recusa no envio.
   * **`video_apresentacao_url`** (`VARCHAR(500)`, opcional): vídeo de apresentação em destaque (YouTube, Vimeo). Só a URL; o vídeo não é armazenado. Congela na aprovação, como o título.
+  * **`id_imagem_capa`** (`INT`, opcional, FK para `arquivo(id_arquivo)`): imagem de capa em destaque da campanha, enviada pelo pesquisador (contexto `campanha`). Mutuamente exclusiva com o vídeo (`CK_CAMPANHA_VIDEO_OU_IMAGEM_CAPA`: vídeo ou imagem de capa, nunca ambos). Congela na aprovação da campanha (`fn_campanha_campos_bloqueados`, código 91058). Posse e uso exclusivo validados por trigger (`trg_valida_posse_imagem_capa_campanha`, [05-G]), e exclusão protegida na rotina de arquivos órfãos.
 * **`atualizacao_campanha`:** postagens de acompanhamento do projeto. `ativo` permite ocultar sem perder o histórico; `ocultada_moderacao` diz quem tirou do ar (TRUE = a moderação excluiu mantendo o registro, a situação "Excluída"; FALSE = o próprio dono ocultou), e só a trigger `trg_atualizacao_ocultacao` grava nela. Limite técnico de 20.000 caracteres (`CK_ATUALIZACAO_CAMPANHA_CONTEUDO_TAMANHO`) e de negócio de 5.000 (`configuracoes.limite_caracteres_conteudo_atualizacao`).
 * **`orcamento_campanha` e `marco_cronograma`:** orçamento estruturado (itens com categoria e valor, que viram gráfico) e cronograma estruturado (marcos com título, descrição e data prevista), inspirados no Experiment.com. **Os dois são obrigatórios** para aprovar uma campanha.
   * **Regras (em [05-K-2]):** o orçamento congela na aprovação (sem exceção nem para o admin); o cronograma congela quando a campanha começa de fato; a data de um marco não pode ser anterior a `data_inicio` (pode passar de `data_fim`); a soma de `orcamento_campanha.valor` precisa bater **exatamente** com `campanha.meta_financeira` na aprovação.
@@ -552,12 +553,12 @@ O arquivo segue os blocos do `01`.
 * **[04-F-1] `link_recompensa`:** quem **ganhou** a recompensa lê o link; editar e remover é só do dono da campanha ou de `campanha_editar`, porque o link é fornecido por quem oferece a recompensa.
 
 #### [04-G] ARQUIVO
-* **Tabelas:** `arquivo_atualizacao`, `arquivo_recompensa`.
-* **Vínculo de mídia** restrito ao dono da campanha ou à administração. **[04-G-1] `arquivo_recompensa` (UPDATE):** trocar a imagem principal da recompensa. A posse do arquivo é conferida por trigger ([05-G]).
+* **Tabelas:** `arquivo`, `arquivo_atualizacao`, `arquivo_recompensa`.
+* **Vínculo de mídia** restrito ao dono da campanha ou à administração. `pol_arquivo_update` (desativar o arquivo) libera quem tem `arquivo_gerenciar`, o dono da foto de perfil (`usuario.id_imagem_perfil`), o dono da campanha da capa (`campanha.id_imagem_capa`, ou quem tem `campanha_editar`), o dono da campanha do anexo de atualização (ou quem tem `atualizacao_moderar`) e o dono da campanha do anexo de recompensa (ou quem tem `campanha_editar`). Ter enviado o arquivo, sozinho, não libera: o que conta é onde ele está em uso. **[04-G-1] `arquivo_recompensa` (UPDATE):** trocar a imagem principal da recompensa. A posse do arquivo é conferida por trigger ([05-G]).
 
 #### [04-H] CONTRIBUIÇÃO
 * **Tabelas:** `contribuicao`, `auditoria_financeira`, `contribuicao_recompensa`, `aceite_termo_contribuicao`.
-* **Leitura:** quem contribuiu vê as próprias (com conta, por `id_usuario`; sem conta, pelo `token_sessao` da contribuição, lido de `app.token_sessao_atual`); `contribuicao_visualizar_sensivel` vê todas; o dono da campanha vê o resumo pela função `resumo_contribuicoes_campanha` (92038).
+* **Leitura:** quem contribuiu vê as próprias (com conta, por `id_usuario`; sem conta, pelo `token_sessao` da contribuição, lido de `app.token_sessao_atual`); `contribuicao_visualizar_sensivel` vê todas; o dono da campanha vê o resumo pela função `resumo_contribuicoes_campanha` (92038). O pesquisador lista as contribuições das próprias campanhas pela função `SECURITY DEFINER` `contribuicoes_recebidas_pesquisador()` (exige autenticação, 92041; lista status `confirmado` e `repassado`, anonimizando apoiadores anônimos ou sem conta). A contagem agregada de apoios pagos de campanhas públicas é consultada de forma anônima por `contar_apoios_publicos_campanha(idCampanha)`.
 * **[04-H-0] `contribuicao` sem policy de `UPDATE`:** o `app_nestjs` não tem `UPDATE` na tabela ([06-H]) e toda mudança passa por `atualizar_status_contribuicao()` e pelas outras funções `SECURITY DEFINER` de `05`. **Por quê:** uma policy aberta "só como documentação" convidaria a devolver o `GRANT` e reabrir a fraude de confirmar a própria contribuição por `UPDATE` direto. **Caso-limite:** se um dia o Nest precisar alterar uma coluna de `contribuicao` direto, vem um `GRANT` por coluna e uma policy com regra de verdade.
 * **[04-H-1] `auditoria_financeira`:** só leitura (`pol_auditoria_select`): quem contribuiu vê as linhas da própria contribuição, e `auditoria_financeira_visualizar` vê todas. Sem policy nem `GRANT` de escrita: toda linha é gravada pelas funções `SECURITY DEFINER` de `05`.
 * **[04-H-2] `aceite_termo_contribuicao` (SELECT):** quem contribuiu sem conta relê o próprio aceite pelo mesmo `token_sessao` com que o gravou.
@@ -848,10 +849,10 @@ Regras conferidas no PGlite com o banco inteiro, usando o papel real `app_nestjs
 
 **Em palavras simples:** duas regras do banco para arquivos. Uma "trava": só se usa como foto, ou se anexa, um arquivo que a própria pessoa enviou e que ninguém mais está usando. Uma "faxina", todo dia às 4h: o arquivo que ninguém usou em 24 horas é apagado.
 
-* **Posse da foto** (`trg_valida_posse_imagem_perfil`, função `fn_valida_posse_imagem_perfil`, `SECURITY DEFINER`) e **dos anexos** (`trg_valida_posse_anexo_atualizacao`, `trg_valida_posse_anexo_recompensa`, função `fn_valida_posse_anexo`): o arquivo precisa estar ativo (90022), ter sido enviado por quem está logado (92025) e não estar em uso em outro lugar (91029).
-* **Cada arquivo mora num lugar só:** ou a foto de alguém, ou o anexo de **uma** atualização, ou o de **uma** recompensa. Como segunda proteção, `UK_ARQUIVO_ATUALIZACAO_ARQUIVO` e `UK_ARQUIVO_RECOMPENSA_ARQUIVO` (`01`) são só pelo arquivo; o Nest traduz em "Este arquivo já está anexado em outro lugar.". Para usar o mesmo PDF em dois lugares, envia-se de novo.
-* **Por quê:** a posse da foto ou do anexo dá permissão de apagar o arquivo (`pol_arquivo_update`, `04`); sem a trava, qualquer conta apontaria a própria foto para o arquivo de outra pessoa e poderia apagá-lo. E um arquivo compartilhado faria a remoção de um lugar levar o outro junto.
-* **Faxina:** `desativar_arquivos_orfaos()` desativa todo arquivo ativo que ninguém adotou em `configuracoes.arquivo_horas_para_vincular` (24; 0 = desligado), devolve as chaves para o Nest apagar do armazenamento e deixa uma linha de rastro no log. **Por quê:** o upload é confirmado antes de salvar (a tela mostra a foto antes), então todo "enviou e não salvou" vira órfão.
+* **Posse da foto** (`trg_valida_posse_imagem_perfil`, função `fn_valida_posse_imagem_perfil`, `SECURITY DEFINER`), **da imagem de capa da campanha** (`trg_valida_posse_imagem_capa_campanha`, função `fn_valida_posse_imagem_capa_campanha`, `SECURITY DEFINER`) e **dos anexos** (`trg_valida_posse_anexo_atualizacao`, `trg_valida_posse_anexo_recompensa`, função `fn_valida_posse_anexo`): o arquivo precisa estar ativo (90022), ter sido enviado por quem está logado (92025) e não estar em uso em outro lugar (91029).
+* **Cada arquivo mora num lugar só:** ou a foto de alguém, ou a imagem de capa de **uma** campanha, ou o anexo de **uma** atualização, ou o de **uma** recompensa. Como segunda proteção, `UK_ARQUIVO_ATUALIZACAO_ARQUIVO` e `UK_ARQUIVO_RECOMPENSA_ARQUIVO` (`01`) são só pelo arquivo; o Nest traduz em "Este arquivo já está anexado em outro lugar.". Para usar o mesmo PDF em dois lugares, envia-se de novo.
+* **Por quê:** a posse da foto, da capa ou do anexo dá permissão de apagar o arquivo (`pol_arquivo_update`, `04`); sem a trava, qualquer conta apontaria a própria foto para o arquivo de outra pessoa e poderia apagá-lo. E um arquivo compartilhado faria a remoção de um lugar levar o outro junto.
+* **Faxina:** `desativar_arquivos_orfaos()` desativa todo arquivo ativo que ninguém adotou em `configuracoes.arquivo_horas_para_vincular` (24; 0 = desligado; ignora fotos de perfil, anexos de atualização/recompensa e capas de campanha), devolve as chaves para o Nest apagar do armazenamento e deixa uma linha de rastro no log. **Por quê:** o upload é confirmado antes de salvar (a tela mostra a foto antes), então todo "enviou e não salvou" vira órfão.
 * **O que acontece quando...** (com alguém logado):
 
   | Situação | Resultado |
@@ -1043,7 +1044,7 @@ Concede à role `app_nestjs` (criada no `01`) exatamente os privilégios que a R
 ### Visão Geral
 
 📌 **Um arquivo só, em duas partes.**
-- **Em palavras simples:** o `07` tem primeiro o que o sistema precisa para funcionar em qualquer banco (a pontuação, os papéis e as permissões, os tipos de link, as áreas, os motivos de denúncia, a versão **vigente** de cada termo e os parâmetros). Depois do marcador `[07-DEMONSTRACAO]` vem a demonstração: contas (senha `DevTcc123!`), perfis, campanhas, contribuições, comentários, denúncias, as versões antigas dos termos, a leitura liberada de desenvolvimento ([07-B-4]) e as permissões das ferramentas de teste.
+- **Em palavras simples:** o `07` tem primeiro o que o sistema precisa para funcionar em qualquer banco (a pontuação, os papéis e as permissões, os tipos de link, as áreas, os motivos de denúncia, a versão **vigente** de cada termo e os parâmetros). Depois do marcador `[07-DEMONSTRACAO]` vem a demonstração: contas (senha `DevTcc123!`), perfis, campanhas, contribuições, comentários, denúncias, as versões antigas dos termos e as permissões das ferramentas de teste.
 - **Uso:** no desenvolvimento e na sala de aula, o arquivo roda inteiro. Num banco de produção, roda **só até o marcador**: o banco nasce sem nenhuma conta, sem as permissões de teste e sem a leitura liberada. A primeira pessoa se cadastra pelo site e quem administra o banco a promove a admin uma vez (`INSERT INTO usuario_papel` com o papel `admin`; `.Tutorial-rodar-projeto.md`).
 - **Caso-limite:** a versão antiga de um termo, que a demonstração precisa para o histórico de aceites, entra já desativada (a vigente nasce antes, na referência). Conferido pela suíte 33 do PGlite, que monta o banco de produção cortando o `07` no marcador.
 
@@ -1092,26 +1093,25 @@ Concede à role `app_nestjs` (criada no `01`) exatamente os privilégios que a R
 | 13 | `configuracoes` (limites de upload) | `[07-G]` |
 | 14 | `modelo_mensagem` (o texto de cada aviso, por evento e canal) | `[07-D-9]` |
 | - | **Marcador `[07-DEMONSTRACAO]`**: daqui para baixo, só desenvolvimento e aula | - |
-| 15 | Leitura liberada de desenvolvimento | `[07-B-4]` |
-| 16 | `arquivo` (vazio) | `[07-C-4]` |
-| 17 | `usuario` | `[07-D-1]` |
-| 18 | `usuario_papel` | `[07-D-2]` |
-| 19 | `termos_de_uso` (versões antigas), `usuario_termo` e o parâmetro pessoal do admin | `[07-D-6]` |
-| 20 | `perfil_pesquisador` (com chave Pix e aceite do termo de pesquisador) | `[07-D-3]` |
-| 21 | `verificacao_email` | `[07-D-8]` |
-| 22 | `link_academico` | `[07-F-1]` |
-| 23 | `campanha` | `[07-E-1]` |
-| 24 | `orcamento_campanha` e `marco_cronograma` | `[07-E-1b]` |
-| 25 | `historico_rejeicao` | `[07-E-6]` |
-| 26 | `atualizacao_campanha` | `[07-E-3]` |
-| 27 | `comentario` (e os endossos, como o dono) | `[07-E-7]` |
-| 28 | `seguir_campanha` e `seguir_pesquisador` | `[07-E-2]`, `[07-D-4]` |
-| 29 | `contribuicao` (todas nascem pendentes) | `[07-H-1]` |
-| 30 | `aceite_termo_contribuicao` | `[07-H-3]` |
-| 31 | A vida de cada contribuição pelas funções do sistema: avisos do provedor, auditoria financeira, repasses, denúncias, pedidos de encerramento e contestações | `[07-H-5]` |
-| 32 | `recompensa`, `link_recompensa`, `contribuicao_recompensa` | `[07-E-8]` |
-| 33 | `notificacao` | `[07-D-7]` |
-| 34 | `termos_de_uso` (rascunhos da próxima versão) | `[07-H-4]` |
+| 15 | `arquivo` (vazio) | `[07-C-4]` |
+| 16 | `usuario` | `[07-D-1]` |
+| 17 | `usuario_papel` | `[07-D-2]` |
+| 18 | `termos_de_uso` (versões antigas), `usuario_termo` e o parâmetro pessoal do admin | `[07-D-6]` |
+| 19 | `perfil_pesquisador` (com chave Pix e aceite do termo de pesquisador) | `[07-D-3]` |
+| 20 | `verificacao_email` | `[07-D-8]` |
+| 21 | `link_academico` | `[07-F-1]` |
+| 22 | `campanha` | `[07-E-1]` |
+| 23 | `orcamento_campanha` e `marco_cronograma` | `[07-E-1b]` |
+| 24 | `historico_rejeicao` | `[07-E-6]` |
+| 25 | `atualizacao_campanha` | `[07-E-3]` |
+| 26 | `comentario` (e os endossos, como o dono) | `[07-E-7]` |
+| 27 | `seguir_campanha` e `seguir_pesquisador` | `[07-E-2]`, `[07-D-4]` |
+| 28 | `contribuicao` (todas nascem pendentes) | `[07-H-1]` |
+| 29 | `aceite_termo_contribuicao` | `[07-H-3]` |
+| 30 | A vida de cada contribuição pelas funções do sistema: avisos do provedor, auditoria financeira, repasses, denúncias, pedidos de encerramento e contestações | `[07-H-5]` |
+| 31 | `recompensa`, `link_recompensa`, `contribuicao_recompensa` | `[07-E-8]` |
+| 32 | `notificacao` | `[07-D-7]` |
+| 33 | `termos_de_uso` (rascunhos da próxima versão) | `[07-H-4]` |
 | - | Resumo da demonstração e como entrar no sistema | `[07-D-5]` |
 | 35 | `recalcular_todos_os_scores()` (rede de segurança) | `[07-I-3]` |
 
@@ -1124,7 +1124,7 @@ Concede à role `app_nestjs` (criada no `01`) exatamente os privilégios que a R
   * **Só o admin muda a pontuação** (`score_editar`): os requisitos dizem que pesos e faixas são do Administrador. O revisor que tenta salvar não recebe erro do banco (a RLS filtra: 0 linhas), e o Nest transforma isso em falta de permissão. Suíte 41.
   * **O curador aprova e rejeita campanhas e cuida dos catálogos; o Termo de Uso é só do admin:** publicar uma versão nova obriga todas as contas a aceitar de novo, e documento jurídico fica com o dono do sistema. O curador tem `relatorio_visualizar`, sem a qual a fila de aprovação ficaria vazia para ele.
   * **O revisor só lê** (`relatorio_visualizar`, `auditoria_financeira_visualizar`, `log_visualizar`), sem dados pessoais (LGPD), como o "Viewer" do Google Cloud.
-* **[07-B-4] Desenvolvimento: toda conta logada lê tudo.** O papel `usuario` recebe as 6 permissões de **leitura** (`relatorio_visualizar`, `usuario_visualizar_sensivel`, `perfil_pesquisador_visualizar_sensivel`, `contribuicao_visualizar_sensivel`, `auditoria_financeira_visualizar`, `log_visualizar`), para qualquer papel testar todas as telas. Nenhuma permissão de alterar. Como fica depois do marcador, o banco de produção nasce sem elas; as suítes de teste do banco rodam as regras de produção sem essas permissões.
+* **[07-B-4] (removido em 14-11-2026) Desenvolvimento: toda conta logada lia tudo.** O papel `usuario` recebia as 6 permissões de **leitura** (`relatorio_visualizar`, `usuario_visualizar_sensivel`, `perfil_pesquisador_visualizar_sensivel`, `contribuicao_visualizar_sensivel`, `auditoria_financeira_visualizar`, `log_visualizar`) para qualquer papel testar todas as telas do painel. **Por que saiu:** com a área pública, a conta comum e o pesquisador são testados nas telas deles (Minha Conta, Estúdio do Pesquisador, checkout), e o painel passou a receber só papéis de gestão. Bancos já criados tiram essas permissões pelo Grupo CJ do `ATUALIZAR O SUPABASE.sql`.
 * **[07-C-5] `configuracoes`:** agrupado por domínio; a ordem do `INSERT` é a ordem que a tela de Parâmetros mostra (`id_config`). **Sem "alavanca fantasma":** chave sem nenhum consumidor não entra, porque o admin mudaria algo e nada aconteceria (pior que um valor fixo, porque parece que devia funcionar). A **descrição** de cada parâmetro é o que o admin lê primeiro na tela de Parâmetros: sem número de RF, sem nome de coluna nem de outra chave. Janelas de tempo de produto (validade da sessão, do link de verificação, do pedido de nova senha) são parâmetros; parâmetros de segurança, como o custo do bcrypt, ficam no código.
 * **[07-I-2] Constantes do score:** `score_frequencia_esperada_mensal` e `score_denuncias_para_zerar`, para o admin ajustar a régua pelo painel.
 * **[07-L] Retenção do log:** `log_auditoria_retencao_dias` (365) e `ip_aceite_contribuicao_retencao_dias` (1825) ([05-L]).

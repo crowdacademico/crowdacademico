@@ -1498,6 +1498,94 @@ CREATE TRIGGER trg_denuncia_valida_alvo
     FOR EACH ROW
     EXECUTE FUNCTION public.fn_valida_denuncia_alvo();
 
+-- ----------------------------------------------------------------------------
+-- Função:     fn_denuncia_comentario_preenche
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      Denúncia de comentário (14-11-2026). Quem denuncia manda só id_comentario: o banco preenche o alvo (o perfil
+--             do autor, id_pesquisador_alvo) e guarda a cópia do comentário naquele momento (conteúdo, se estava
+--             endossado, a campanha). Roda como quem denuncia (sem SECURITY DEFINER): só dá para denunciar um comentário
+--             que a pessoa consegue ver (pol_comentario_select, 04). Nome com "a_" de propósito: triggers BEFORE rodam em
+--             ordem alfabética, e esta precisa vir antes de trg_denuncia_valida_alvo e trg_denuncia_valida_tipo_motivo,
+--             que conferem o alvo. Códigos: 90040 (comentário não encontrado), 90041 (autor sem conta).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_denuncia_comentario_preenche()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v RECORD;
+BEGIN
+    IF NEW.id_comentario IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    SELECT id_pesquisador, conteudo, endossado, id_campanha INTO v
+    FROM comentario WHERE id_comentario = NEW.id_comentario;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Comentário não encontrado.' USING ERRCODE = '90040';
+    END IF;
+    IF v.id_pesquisador IS NULL THEN
+        RAISE EXCEPTION 'O autor deste comentário não tem mais conta na plataforma.' USING ERRCODE = '90041';
+    END IF;
+
+    NEW.id_pesquisador_alvo    := v.id_pesquisador;
+    NEW.id_campanha_alvo       := NULL;
+    NEW.comentario_conteudo    := v.conteudo;
+    NEW.comentario_endossado   := v.endossado;
+    NEW.comentario_id_campanha := v.id_campanha;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_denuncia_a_comentario ON denuncia;
+CREATE TRIGGER trg_denuncia_a_comentario
+BEFORE INSERT ON denuncia
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_denuncia_comentario_preenche();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_denuncia_comentario_oculta
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      O comentário denunciado sai do ar (ativo = FALSE, sem endosso) em dois momentos:
+--               - na hora, quando quem denuncia é o dono da campanha: denunciar e deixar de ver é uma ação só, e o
+--                 autor não comenta mais ali (o comentário inativo ocupa a vaga de um por campanha);
+--               - quando a moderação julga a denúncia procedente ('resolvida').
+--             Quem endossou um comentário julgado ofensivo pode ser punido pelo caminho normal: a tela do julgamento
+--             mostra que ele estava endossado (comentario_endossado) e a moderação abre uma denúncia contra a campanha.
+--             As triggers de comentario continuam valendo: tirar o endosso exige ser o dono da campanha ou ter
+--             comentario_moderar (validar_comentario_endosso_autor), que são justamente quem dispara esta função.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_denuncia_comentario_oculta()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NEW.id_comentario IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    IF (TG_OP = 'INSERT' AND EXISTS (
+            SELECT 1 FROM campanha WHERE id_campanha = NEW.comentario_id_campanha AND id_usuario = NEW.id_usuario))
+       OR (TG_OP = 'UPDATE' AND NEW.status = 'resolvida' AND OLD.status IS DISTINCT FROM NEW.status) THEN
+        UPDATE comentario
+        SET ativo = FALSE, endossado = FALSE, ordem_endosso = NULL
+        WHERE id_comentario = NEW.id_comentario AND (ativo OR endossado);
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_denuncia_comentario_oculta ON denuncia;
+CREATE TRIGGER trg_denuncia_comentario_oculta
+AFTER INSERT OR UPDATE OF status ON denuncia
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_denuncia_comentario_oculta();
+
 -- ============================================================================
 --  [05-K-2] REGRAS TRANSVERSAIS - CAMPANHAS E FINANCEIRO
 --  Descrição: Proteções de fluxo financeiro, congelamento de regras pós-aprovação
@@ -2159,17 +2247,17 @@ AS $$
     SELECT CASE
         WHEN p.status = 'rejeitado' AND public.fn_campanha_reenvios_esgotados(p.id_campanha) THEN
             ARRAY['titulo', 'descricao', 'meta_financeira', 'modelo', 'data_inicio', 'data_fim',
-                  'id_area_conhecimento', 'video_apresentacao_url']
+                  'id_area_conhecimento', 'video_apresentacao_url', 'id_imagem_capa']
         WHEN public.fn_status_pos_aprovacao(p.status) THEN
             ARRAY['meta_financeira', 'modelo', 'taxa_plataforma', 'titulo', 'descricao',
-                  'video_apresentacao_url', 'id_area_conhecimento']
+                  'video_apresentacao_url', 'id_area_conhecimento', 'id_imagem_capa']
             || CASE WHEN p.data_inicio IS NOT NULL AND p.data_inicio <= NOW()
                     THEN ARRAY['data_fim', 'data_inicio'] ELSE ARRAY[]::TEXT[] END
         ELSE ARRAY[]::TEXT[]
     END;
 $$;
 
--- Código e mensagem de cada campo congelado (os mesmos de sempre, 91004 a 91010, 91023, 91024 e 91027 na rejeitada esgotada).
+-- Código e mensagem de cada campo congelado (91004 a 91010, 91023, 91024, 91058 e, na rejeitada esgotada, 91027).
 CREATE OR REPLACE FUNCTION public.fn_campanha_erro_congelamento(p_campo TEXT, p_rejeitada BOOLEAN)
 RETURNS TABLE (errcode TEXT, mensagem TEXT)
 LANGUAGE sql
@@ -2187,6 +2275,7 @@ AS $$
         ('descricao',             '91008', 'Fraude bloqueada: não é permitido alterar a descrição após a aprovação da campanha.'),
         ('video_apresentacao_url','91023', 'Fraude bloqueada: não é permitido alterar o vídeo de apresentação após a aprovação da campanha.'),
         ('id_area_conhecimento',  '91024', 'Operação bloqueada: a área do conhecimento não pode ser alterada após a aprovação da campanha.'),
+        ('id_imagem_capa',       '91058', 'Operação bloqueada: a imagem de capa não pode ser alterada após a aprovação da campanha.'),
         ('data_fim',              '91009', 'Operação bloqueada: o prazo da campanha não pode ser alterado depois que ela começa de verdade.'),
         ('data_inicio',           '91010', 'Operação bloqueada: a data de início da campanha não pode ser alterada depois que ela começa de verdade.')
     ) AS v(campo, errcode, mensagem)
@@ -2411,6 +2500,90 @@ END;
 $$;
 
 -- ----------------------------------------------------------------------------
+-- Função:     contar_apoios_publicos_campanha
+-- Assinatura: (p_id_campanha INT) -> INT
+-- Regra:      Conta apenas contribuições pagas de campanhas que podem ser vistas publicamente. Não retorna dados
+--             individuais nem informa se uma campanha não publicada existe.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.contar_apoios_publicos_campanha(p_id_campanha INT)
+RETURNS INT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+    SELECT count(c.id_contribuicao)::INT
+    FROM campanha ca
+    LEFT JOIN contribuicao c
+      ON c.id_campanha = ca.id_campanha
+     AND c.status IN ('confirmado', 'repassado')
+    WHERE ca.id_campanha = p_id_campanha
+      AND ca.status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado')
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     contribuicoes_recebidas_pesquisador
+-- Assinatura: () -> TABLE (dados individuais das contribuições das próprias campanhas)
+-- Bloco:      [05-K-2]
+-- Regra:      Lista apenas contribuições pagas (confirmado ou já repassado) das campanhas do pesquisador logado, a
+--             mesma régua da contagem pública (contar_apoios_publicos_campanha). A identidade de
+--             apoios anônimos (ou sem conta) nunca é retornada; SECURITY DEFINER não amplia pol_contribuicao_select.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.contribuicoes_recebidas_pesquisador()
+RETURNS TABLE (
+    id_contribuicao INT,
+    id_campanha INT,
+    titulo_campanha VARCHAR,
+    apoiador VARCHAR,
+    valor DECIMAL,
+    meio_pagamento meio_pagamento,
+    status status_contribuicao,
+    criado_em TIMESTAMPTZ,
+    recompensas TEXT
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    IF public.id_usuario_atual() IS NULL THEN
+        RAISE EXCEPTION 'É necessário estar autenticado para ver as contribuições recebidas.'
+            USING ERRCODE = '92041';
+    END IF;
+
+    RETURN QUERY
+    SELECT c.id_contribuicao,
+           c.id_campanha,
+           ca.titulo,
+           CASE
+               WHEN c.anonima OR u.id_usuario IS NULL OR u.deletado THEN 'Apoiador anônimo'
+               ELSE u.nome
+           END::VARCHAR,
+           c.valor,
+           c.meio_pagamento,
+           c.status,
+           c.criado_em,
+           recompensas.nomes
+    FROM contribuicao c
+    JOIN campanha ca ON ca.id_campanha = c.id_campanha
+    LEFT JOIN usuario u ON u.id_usuario = c.id_usuario
+    LEFT JOIN LATERAL (
+        SELECT string_agg(
+                   r.titulo || CASE WHEN cr.quantidade > 1 THEN ' (x' || cr.quantidade::TEXT || ')' ELSE '' END,
+                   ', ' ORDER BY r.valor_minimo
+               ) AS nomes
+        FROM contribuicao_recompensa cr
+        JOIN recompensa r ON r.id_recompensa = cr.id_recompensa
+        WHERE cr.id_contribuicao = c.id_contribuicao
+    ) recompensas ON TRUE
+    WHERE ca.id_usuario = public.id_usuario_atual()
+      AND c.status IN ('confirmado', 'repassado')
+    ORDER BY c.criado_em DESC, c.id_contribuicao DESC;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
 -- Função:     liquido_repasse
 -- Assinatura: (p_bruto DECIMAL, p_liquido_percentual DECIMAL) -> DECIMAL
 -- Bloco:      [05-K-2]
@@ -2579,6 +2752,61 @@ BEGIN
     LOOP
         PERFORM public.atualizar_status_contribuicao(v_id, 'a_devolver');
     END LOOP;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     desistir_contribuicao
+-- Assinatura: (p_id_contribuicao INT) -> VOID
+-- Bloco:      [05-K-2]
+-- Regra:      Direito de arrependimento (CDC, art. 49): quem apoiou com conta desiste da própria contribuição paga em
+--             até configuracoes.desistencia_prazo_dias (padrão 7) contados da contribuição. Vale em qualquer momento da
+--             campanha, inclusive depois do fim: a campanha não muda de status (bem-sucedida continua bem-sucedida).
+--             O caminho é o de sempre: confirmado -> a_devolver; o worker de estorno devolve o VALOR (a tarifa do meio de
+--             pagamento fica com o provedor: a plataforma nunca arca com nada) e reservar_proximo_repasse() já tira do
+--             repasse pendente o que deixou de estar 'confirmado'. Como a carência do repasse (15 dias) é maior que o
+--             prazo de desistência, o dinheiro ainda não saiu; se o repasse já estiver em transferência, recusa (91061).
+--             Quem desiste perde as recompensas que a contribuição deu (decisão do Lucas, 14-11-2026; na devolução do
+--             tudo-ou-nada elas ficam, porque a pessoa não desistiu). Códigos: 92042 (sem sessão, ou contribuição que não é de quem pede), 91059 (não está
+--             paga), 91060 (prazo passou), 91061 (repasse já em transferência). SECURITY DEFINER: a autorização é a
+--             conferência de id_usuario contra id_usuario_atual().
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.desistir_contribuicao(p_id_contribuicao INT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_usuario INT := public.id_usuario_atual();
+    v         RECORD;
+BEGIN
+    IF v_usuario IS NULL THEN
+        RAISE EXCEPTION 'Entre na sua conta para desistir de um apoio.' USING ERRCODE = '92042';
+    END IF;
+
+    SELECT c.status, c.criado_em, r.status AS status_repasse
+    INTO v
+    FROM contribuicao c
+    LEFT JOIN repasse r ON r.id_repasse = c.id_repasse
+    WHERE c.id_contribuicao = p_id_contribuicao AND c.id_usuario = v_usuario
+    FOR UPDATE OF c;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Contribuição não encontrada.' USING ERRCODE = '92042';
+    END IF;
+    IF v.status <> 'confirmado' THEN
+        RAISE EXCEPTION 'Só dá para desistir de uma contribuição paga e ainda não devolvida.' USING ERRCODE = '91059';
+    END IF;
+    IF v.criado_em + public.config_numero('desistencia_prazo_dias', 7) * INTERVAL '1 day' < NOW() THEN
+        RAISE EXCEPTION 'O prazo para desistir deste apoio já passou.' USING ERRCODE = '91060';
+    END IF;
+    IF v.status_repasse IS NOT NULL AND v.status_repasse <> 'pendente' THEN
+        RAISE EXCEPTION 'O repasse desta campanha já está em andamento. Fale com o suporte.' USING ERRCODE = '91061';
+    END IF;
+
+    PERFORM public.atualizar_status_contribuicao(p_id_contribuicao, 'a_devolver');
+    DELETE FROM contribuicao_recompensa WHERE id_contribuicao = p_id_contribuicao;
 END;
 $$;
 
@@ -3453,7 +3681,7 @@ EXECUTE FUNCTION fn_sincroniza_arrecadado_campanha();
 --             confirmado       -> repassado | a_devolver | reembolsado | reembolso_manual
 --             a_devolver       -> devolvido | reembolso_manual
 --             reembolso_manual -> devolvido   (só por concluir_reembolso_manual: uma pessoa devolveu pelo painel do provedor)
---             'devolvido' é só da devolução do tudo-ou-nada (automática em lote, ou manual depois que o automático desistiu);
+--             'devolvido' é da devolução do tudo-ou-nada (automática em lote, ou manual depois que o automático desistiu) e da desistência de quem apoiou;
 --             qualquer outro estorno é 'reembolsado'.
 --             repassado, devolvido, reembolsado, erro e expirado são estados finais; reembolso_manual só sai para devolvido.
 -- ----------------------------------------------------------------------------
@@ -4404,7 +4632,7 @@ $$;
 --             se o processo morrer no meio, o banco solta o lock sozinho e a contribuição volta para a fila (e a chave de
 --             idempotência do gateway impede estornar duas vezes na nova tentativa).
 --             Um estorno por contribuição, nunca em lote (diferente do repasse). Só o caminho a_devolver -> devolvido é
---             tratado aqui, ou seja, só o lote automático do tudo-ou-nada; estorno individual ('reembolsado': contestação,
+--             tratado aqui: o lote automático do tudo-ou-nada e a desistência de quem apoiou (desistir_contribuicao); estorno individual ('reembolsado': contestação,
 --             fraude, moderação) é outra decisão de negócio e não passa por este worker.
 --             valor_liquido é o valor INTEIRO da contribuição: quem apoiou recebe de volta tudo o que contribuiu. valor_bruto
 --             é o que foi cobrado (valor + taxa_pagamento); a diferença é a tarifa do provedor, paga por quem apoiou e que o
@@ -6481,6 +6709,7 @@ BEGIN
         RAISE EXCEPTION 'Só é possível usar como foto um arquivo que você mesmo enviou.' USING ERRCODE = '92025';
     END IF;
     IF EXISTS (SELECT 1 FROM usuario WHERE id_imagem_perfil = NEW.id_imagem_perfil AND id_usuario <> NEW.id_usuario)
+       OR EXISTS (SELECT 1 FROM campanha WHERE id_imagem_capa = NEW.id_imagem_perfil)
        OR EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_imagem_perfil)
        OR EXISTS (SELECT 1 FROM arquivo_recompensa WHERE id_arquivo = NEW.id_imagem_perfil) THEN
         RAISE EXCEPTION 'Este arquivo já está em uso em outro lugar.' USING ERRCODE = '91029';
@@ -6500,6 +6729,56 @@ DROP TRIGGER IF EXISTS trg_valida_posse_imagem_perfil ON usuario;
 CREATE TRIGGER trg_valida_posse_imagem_perfil
 BEFORE INSERT OR UPDATE OF id_imagem_perfil ON usuario
 FOR EACH ROW EXECUTE FUNCTION public.fn_valida_posse_imagem_perfil();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_posse_imagem_capa_campanha
+-- Uso:        Invocada por trg_valida_posse_imagem_capa_campanha
+-- Regra:      A capa deve ser imagem ativa enviada pela conta atual e não pode estar vinculada a outro registro.
+--             SECURITY DEFINER para conferir vínculos protegidos por RLS.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_posse_imagem_capa_campanha()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_atual   INT := public.id_usuario_atual();
+    v_arquivo arquivo%ROWTYPE;
+BEGIN
+    IF NEW.id_imagem_capa IS NULL
+       OR (TG_OP = 'UPDATE' AND NEW.id_imagem_capa IS NOT DISTINCT FROM OLD.id_imagem_capa)
+       OR v_atual IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    SELECT * INTO v_arquivo FROM arquivo WHERE id_arquivo = NEW.id_imagem_capa;
+    IF NOT FOUND OR v_arquivo.ativo IS NOT TRUE OR v_arquivo.tipo_mime NOT LIKE 'image/%' THEN
+        RAISE EXCEPTION 'A imagem de capa não existe mais ou foi removida. Envie a imagem de novo.' USING ERRCODE = '90022';
+    END IF;
+    IF v_arquivo.id_usuario_upload IS DISTINCT FROM v_atual THEN
+        RAISE EXCEPTION 'Só é possível usar como capa uma imagem que você mesmo enviou.' USING ERRCODE = '92025';
+    END IF;
+    IF EXISTS (SELECT 1 FROM usuario WHERE id_imagem_perfil = NEW.id_imagem_capa)
+       OR EXISTS (SELECT 1 FROM campanha WHERE id_imagem_capa = NEW.id_imagem_capa AND id_campanha <> NEW.id_campanha)
+       OR EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_imagem_capa)
+       OR EXISTS (SELECT 1 FROM arquivo_recompensa WHERE id_arquivo = NEW.id_imagem_capa) THEN
+        RAISE EXCEPTION 'Esta imagem já está em uso em outro lugar.' USING ERRCODE = '91029';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_valida_posse_imagem_capa_campanha
+-- Tabela:    campanha
+-- Momento:   BEFORE INSERT OR UPDATE OF id_imagem_capa
+-- Função:    fn_valida_posse_imagem_capa_campanha()
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_valida_posse_imagem_capa_campanha ON campanha;
+CREATE TRIGGER trg_valida_posse_imagem_capa_campanha
+BEFORE INSERT OR UPDATE OF id_imagem_capa ON campanha
+FOR EACH ROW EXECUTE FUNCTION public.fn_valida_posse_imagem_capa_campanha();
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_valida_posse_anexo
@@ -6545,7 +6824,9 @@ BEGIN
         v_em_uso := EXISTS (SELECT 1 FROM arquivo_recompensa WHERE id_arquivo = NEW.id_arquivo AND id_arq_recompensa IS DISTINCT FROM NEW.id_arq_recompensa)
                  OR EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_arquivo);
     END IF;
-    IF v_em_uso OR EXISTS (SELECT 1 FROM usuario WHERE id_imagem_perfil = NEW.id_arquivo) THEN
+    IF v_em_uso
+       OR EXISTS (SELECT 1 FROM usuario WHERE id_imagem_perfil = NEW.id_arquivo)
+       OR EXISTS (SELECT 1 FROM campanha WHERE id_imagem_capa = NEW.id_arquivo) THEN
         RAISE EXCEPTION 'Este arquivo já está em uso em outro lugar.' USING ERRCODE = '91029';
     END IF;
     RETURN NEW;
@@ -6604,6 +6885,7 @@ BEGIN
      WHERE a.ativo = TRUE
        AND a.criado_em < v_corte
        AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.id_imagem_perfil = a.id_arquivo)
+       AND NOT EXISTS (SELECT 1 FROM campanha c WHERE c.id_imagem_capa = a.id_arquivo)
        AND NOT EXISTS (SELECT 1 FROM arquivo_atualizacao aa WHERE aa.id_arquivo = a.id_arquivo)
        AND NOT EXISTS (SELECT 1 FROM arquivo_recompensa ar WHERE ar.id_arquivo = a.id_arquivo)
     RETURNING a.id_arquivo, a.chave::TEXT;

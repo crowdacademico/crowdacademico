@@ -15,6 +15,7 @@ export const CAMPANHA_COLUNAS_SELECT = [
   'aprovado_em',
   'enviado_aprovacao_em',
   'encerrado_em',
+  'id_imagem_capa',
   'video_apresentacao_url',
   'criado_em',
 ] as const;
@@ -27,6 +28,7 @@ export const CAMPO_BLOQUEADO_PARA_DTO: Record<string, string> = {
   modelo: 'modelo',
   taxa_plataforma: 'taxaPlataforma',
   id_area_conhecimento: 'idAreaConhecimento',
+  id_imagem_capa: 'idImagemCapa',
   video_apresentacao_url: 'videoApresentacaoUrl',
   data_inicio: 'dataInicio',
   data_fim: 'dataFim',

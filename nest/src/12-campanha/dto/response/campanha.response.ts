@@ -22,12 +22,15 @@ export class CampanhaResponse {
   enviadoAprovacaoEm: Date | null;
   encerradoEm: Date | null;
   videoApresentacaoUrl: string | null;
+  idImagemCapa: number | null;
+  imagemCapaUrl: string | null;
   criadoEm: Date;
   // Só preenchidos por GET /campanha/:id, e só para campanha 'rejeitado'
   // (ciclo de rejeição e reenvio, ver REQUISITOS_V7). A tela e o e-mail de
   // rejeição precisam desses números, e calculá-los no cliente duplicaria a
   // regra. Nas demais respostas ficam null/false.
   nomePesquisador: string | null;
+  instituicaoPesquisador: string | null;
   nomeArea: string | null;
   // Sinal para o admin na fila de aprovação; null fora dela ou para quem não aprova.
   precisaRevisaoScore: boolean | null;

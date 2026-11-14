@@ -30,15 +30,17 @@ export function AdminLayout({ auth }: AdminLayoutProps) {
     if (idUsuario !== undefined) registrarAcesso(idUsuario, local.pathname);
   }, [idUsuario, local.pathname]);
 
-  // Guarda única do painel: sem login, qualquer /admin/* vai para o login, que devolve a pessoa para a página
-  // pedida depois de entrar. Só confere se HÁ sessão, não o papel: qualquer conta logada vê o painel, e o que
-  // cada papel pode ler ou alterar continua decidido pelo backend (guards do Nest e RLS). Enquanto a sessão
-  // salva está sendo restaurada (F5), espera em vez de mandar para o login por engano.
+  // Contas com papel usuario e/ou pesquisador não entram no painel; os demais papéis preservam
+  // o acesso às telas correspondentes às permissões que possuem.
+  // Minha Conta e Minhas Campanhas ficam em rotas próprias fora desta casca.
   if (auth.carregando) {
     return null;
   }
   if (!auth.usuario) {
     return <Navigate to="/login" replace state={{ voltarPara: local.pathname + local.search }} />;
+  }
+  if (!auth.podeAcessarPainelAdmin) {
+    return <Navigate to="/minha-conta/perfil" replace />;
   }
   // RF-015: versão nova do Termo de Uso ainda não aceita; o painel volta sozinho depois do aceite.
   if (auth.aceitePendente) {

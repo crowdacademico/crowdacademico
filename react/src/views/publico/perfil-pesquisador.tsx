@@ -1,0 +1,383 @@
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router';
+import { AvatarUsuario } from '../../components/layout/avatar-usuario';
+import { useToast } from '../../components/layout/toast/use-toast';
+import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
+import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
+import { atualizacaoCampanhaApi } from '../../services/15-atualizacao-campanha/api/atualizacao-campanha.api';
+import type { AtualizacaoCampanhaResponse } from '../../services/15-atualizacao-campanha/type/atualizacao-campanha.type';
+import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
+import { ROTULO_TIPO_VINCULO, ROTULO_TITULO_ACADEMICO } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
+import type {
+  PerfilPesquisadorResponse,
+  PerfilPesquisadorResponseScore,
+} from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
+import { seguirPesquisadorApi } from '../../services/16-seguir/api/seguir-pesquisador.api';
+import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
+import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
+import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
+import type { PropsPagina } from '../../services/router/pagina.type';
+import { ModalDenunciar } from '../19-denuncia/modal-denunciar';
+import { CartaoCampanha } from './componentes-campanhas';
+import { ListaAtualizacoes } from './lista-atualizacoes';
+import { ordenarAtualizacoes } from './util-campanhas';
+
+interface DadosPagina {
+  idUsuario: string;
+  perfil: PerfilPesquisadorResponse | null;
+  pesquisador: UsuarioResponse | null;
+  campanhas: CampanhaResponse[] | null;
+  score: PerfilPesquisadorResponseScore | null;
+}
+
+interface EstadoSeguimento {
+  chave: string;
+  seguidores: number | null;
+  seguindo: boolean | null;
+  enviando: boolean;
+}
+
+// Página pública do pesquisador (ajustes de 14-11-2026, lista do Lucas e da Alexia): foto grande no topo, Seguir com
+// um menu ao lado (denunciar o perfil, copiar o link), pontuação no cartão lateral, formação e vínculo em pílulas,
+// campanhas separadas em ativas e encerradas, e as publicações (as atualizações de todas as campanhas dele, a mais
+// recente em cima).
+export function PerfilPesquisador({ auth }: PropsPagina) {
+  const { idUsuario } = useParams();
+  const navegar = useNavigate();
+  const { mostrar } = useToast();
+  const [pagina, setPagina] = useState<DadosPagina | null>(null);
+  const [publicacoes, setPublicacoes] = useState<{ chave: string; lista: AtualizacaoCampanhaResponse[] | null } | null>(null);
+  const [seguimento, setSeguimento] = useState<EstadoSeguimento | null>(null);
+  const [menuAberto, setMenuAberto] = useState(false);
+  const [denunciando, setDenunciando] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const id = Number(idUsuario);
+  const idValido = idUsuario !== undefined && /^\d+$/.test(idUsuario) && Number.isSafeInteger(id) && id > 0;
+  const dados = pagina?.idUsuario === idUsuario ? pagina : null;
+  const carregando = idValido && dados === null;
+  const perfil = dados?.perfil ?? null;
+  const pesquisador = dados?.pesquisador ?? null;
+  const campanhas = dados?.campanhas ?? null;
+  const score = dados?.score ?? null;
+  const naoEncontrado = !idValido || (!carregando && perfil === null);
+  const idVisualizador = auth.usuario?.idUsuario ?? null;
+  const ehProprio = idVisualizador === id;
+  const chaveSeguimento = `${id}:${idVisualizador ?? 0}`;
+  const dadosSeguimento = seguimento?.chave === chaveSeguimento ? seguimento : null;
+
+  useEffect(() => {
+    if (!idValido) return;
+    let ativo = true;
+    void Promise.allSettled([
+      perfilPesquisadorApi.buscar(auth.authFetch, id),
+      usuarioApi.buscar(auth.authFetch, id),
+      campanhaApi.listar(auth.authFetch, { idUsuario: id }),
+      perfilPesquisadorApi.buscarScore(auth.authFetch, id),
+    ]).then(([rPerfil, rUsuario, rCampanhas, rScore]) => {
+      if (!ativo) return;
+      setPagina({
+        idUsuario,
+        perfil: rPerfil.status === 'fulfilled' ? rPerfil.value : null,
+        pesquisador: rUsuario.status === 'fulfilled' ? rUsuario.value : null,
+        campanhas: rCampanhas.status === 'fulfilled' ? rCampanhas.value : null,
+        score: rScore.status === 'fulfilled' ? rScore.value : null,
+      });
+    });
+    return () => {
+      ativo = false;
+    };
+  }, [auth.authFetch, id, idValido, idUsuario]);
+
+  // Publicações: as atualizações de todas as campanhas do pesquisador, juntas e pela data.
+  useEffect(() => {
+    if (!campanhas || idUsuario === undefined) return;
+    let ativo = true;
+    void Promise.allSettled(campanhas.map((campanha) => atualizacaoCampanhaApi.listar(auth.authFetch, campanha.idCampanha))).then(
+      (resultados) => {
+        if (!ativo) return;
+        const todas = resultados.flatMap((resultado) => (resultado.status === 'fulfilled' ? resultado.value : []));
+        const falhouTudo = resultados.length > 0 && resultados.every((resultado) => resultado.status === 'rejected');
+        setPublicacoes({ chave: idUsuario, lista: falhouTudo ? null : ordenarAtualizacoes(todas) });
+      },
+    );
+    return () => {
+      ativo = false;
+    };
+  }, [auth.authFetch, campanhas, idUsuario]);
+
+  useEffect(() => {
+    if (!idValido || auth.carregando) return;
+    let ativo = true;
+    void Promise.allSettled([
+      seguirPesquisadorApi.contarSeguidores(auth.authFetch, id),
+      auth.autenticado ? seguirPesquisadorApi.listarMinhas(auth.authFetch) : Promise.resolve(null),
+    ]).then(([rContagem, rLista]) => {
+      if (!ativo) return;
+      setSeguimento({
+        chave: chaveSeguimento,
+        seguidores: rContagem.status === 'fulfilled' ? rContagem.value.seguidores : null,
+        seguindo:
+          rLista.status === 'fulfilled' && rLista.value !== null ? rLista.value.some((item) => item.idPesquisador === id) : null,
+        enviando: false,
+      });
+    });
+    return () => {
+      ativo = false;
+    };
+  }, [auth.authFetch, auth.autenticado, auth.carregando, chaveSeguimento, id, idValido]);
+
+  // Fecha o menu ao clicar fora ou apertar Esc.
+  useEffect(() => {
+    if (!menuAberto) return;
+    const fecharFora = (evento: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(evento.target as Node)) setMenuAberto(false);
+    };
+    const fecharEsc = (evento: KeyboardEvent) => {
+      if (evento.key === 'Escape') setMenuAberto(false);
+    };
+    document.addEventListener('mousedown', fecharFora);
+    document.addEventListener('keydown', fecharEsc);
+    return () => {
+      document.removeEventListener('mousedown', fecharFora);
+      document.removeEventListener('keydown', fecharEsc);
+    };
+  }, [menuAberto]);
+
+  async function alternarSeguir(): Promise<void> {
+    if (!auth.autenticado) {
+      void navegar('/login', { state: { voltarPara: `/pesquisador/${id}` } });
+      return;
+    }
+    if (!dadosSeguimento || dadosSeguimento.seguindo === null || dadosSeguimento.enviando) return;
+    const seguia = dadosSeguimento.seguindo;
+    setSeguimento({ ...dadosSeguimento, enviando: true });
+    try {
+      if (seguia) await seguirPesquisadorApi.deixarDeSeguir(auth.authFetch, id);
+      else await seguirPesquisadorApi.seguir(auth.authFetch, id);
+      setSeguimento((atual) =>
+        atual?.chave === chaveSeguimento
+          ? {
+              ...atual,
+              seguindo: !seguia,
+              enviando: false,
+              seguidores: atual.seguidores === null ? null : Math.max(0, atual.seguidores + (seguia ? -1 : 1)),
+            }
+          : atual,
+      );
+    } catch (erro: unknown) {
+      mostrar(traduzirErro(erro), undefined, 'erro');
+      setSeguimento((atual) => (atual?.chave === chaveSeguimento ? { ...atual, enviando: false } : atual));
+    }
+  }
+
+  async function copiarLink(): Promise<void> {
+    setMenuAberto(false);
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/pesquisador/${id}`);
+      mostrar('Link do perfil copiado.');
+    } catch {
+      mostrar('Não foi possível copiar. Copie o endereço pela barra do navegador.', undefined, 'erro');
+    }
+  }
+
+  function denunciar(): void {
+    setMenuAberto(false);
+    if (!auth.autenticado) {
+      void navegar('/login', { state: { voltarPara: `/pesquisador/${id}` } });
+      return;
+    }
+    setDenunciando(true);
+  }
+
+  const ativas = campanhas?.filter((campanha) => campanha.status === 'ativo') ?? [];
+  const encerradas = campanhas?.filter((campanha) => campanha.status !== 'ativo') ?? [];
+  const lista = publicacoes !== null && publicacoes.chave === idUsuario ? publicacoes.lista : undefined;
+  const tituloPorCampanha = new Map(campanhas?.map((campanha) => [campanha.idCampanha, campanha.titulo]) ?? []);
+  const nome = pesquisador?.nome ?? (carregando ? 'Carregando…' : 'Pesquisador');
+  const pontuacao = score?.scoreTotal ?? perfil?.scoreAtual ?? null;
+
+  const botaoSeguir = !ehProprio && (
+    <div className="flex items-center gap-2" ref={menuRef}>
+      <button
+        type="button"
+        className={`btn ${dadosSeguimento?.seguindo ? 'btn-secondary' : 'btn-primary'}`}
+        disabled={auth.autenticado && (!dadosSeguimento || dadosSeguimento.seguindo === null || dadosSeguimento.enviando)}
+        aria-pressed={dadosSeguimento?.seguindo ?? false}
+        onClick={() => void alternarSeguir()}
+      >
+        <i className={`fa-${dadosSeguimento?.seguindo ? 'solid' : 'regular'} fa-bell`} aria-hidden="true" />
+        {dadosSeguimento?.enviando ? 'Atualizando…' : dadosSeguimento?.seguindo ? 'Seguindo' : 'Seguir'}
+      </button>
+      <div className="relative">
+        <button
+          type="button"
+          className="btn btn-secondary px-3"
+          aria-haspopup="menu"
+          aria-expanded={menuAberto}
+          aria-label="Mais opções do perfil"
+          onClick={() => setMenuAberto((aberto) => !aberto)}
+        >
+          <i className="fa-solid fa-chevron-down" aria-hidden="true" />
+        </button>
+        {menuAberto && (
+          <div role="menu" className="absolute right-0 mt-2 w-56 fundo-cartao border borda-padrao rounded-xl shadow-xl py-2 z-20 text-left">
+            <button type="button" role="menuitem" className="w-full px-4 py-2 text-sm texto-padrao hover-fundo-sutil text-left" onClick={() => void copiarLink()}>
+              <i className="fa-solid fa-link mr-2 texto-fraco" aria-hidden="true" /> Copiar link do perfil
+            </button>
+            <button type="button" role="menuitem" className="w-full px-4 py-2 text-sm texto-erro hover-fundo-sutil text-left" onClick={denunciar}>
+              <i className="fa-solid fa-flag mr-2" aria-hidden="true" /> Denunciar perfil
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div id="view-perfil-pesquisador" className="pagina-publica view-section flex-grow fundo-pagina min-h-screen pb-16">
+      <header id="perfil-pesquisador-capa" className="superficie-escura relative mb-10 overflow-hidden py-14">
+        <div className="mx-auto max-w-5xl px-4 flex flex-col sm:flex-row sm:items-center gap-8">
+          <div className="shrink-0">
+            {pesquisador?.avatarUrl ? (
+              <img
+                src={pesquisador.avatarUrl}
+                alt={`Foto de ${nome}`}
+                className="w-36 h-36 sm:w-44 sm:h-44 rounded-full object-cover border-4 border-white/20 shadow-2xl"
+              />
+            ) : (
+              <div className="scale-125 sm:scale-150 origin-left">
+                <AvatarUsuario nome={pesquisador?.nome} tamanho="xxl" />
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="microrrotulo texto-marca-sobre-escuro mb-3">Perfil de pesquisador</p>
+            <h1 className="titulo-pagina texto-sobre-escuro-forte">{nome}</h1>
+            {perfil && (
+              <ul className="flex flex-wrap gap-2 mt-4" aria-label="Formação e vínculo">
+                <li className="veu-claro texto-sobre-escuro-forte microrrotulo px-3 py-1.5 rounded-full inline-flex items-center gap-2">
+                  <i className="fa-solid fa-graduation-cap" aria-hidden="true" />
+                  {ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico]}
+                </li>
+                <li className="veu-claro texto-sobre-escuro-forte microrrotulo px-3 py-1.5 rounded-full inline-flex items-center gap-2">
+                  <i className="fa-solid fa-building-columns" aria-hidden="true" />
+                  {perfil.tipoVinculo === 'institucional' && perfil.vinculoInstitucional
+                    ? perfil.vinculoInstitucional
+                    : ROTULO_TIPO_VINCULO[perfil.tipoVinculo]}
+                </li>
+              </ul>
+            )}
+            {naoEncontrado && (
+              <p className="paragrafo texto-sobre-escuro mt-4">Não encontramos um perfil público de pesquisador neste endereço.</p>
+            )}
+            {!naoEncontrado && <div className="mt-6">{botaoSeguir}</div>}
+          </div>
+        </div>
+      </header>
+
+      {!naoEncontrado && (
+        <div className="mx-auto max-w-5xl px-4">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <div className="space-y-10 lg:col-span-2">
+              <SecaoCampanhas titulo="Campanhas ativas" campanhas={ativas} carregando={campanhas === null && carregando} vazio="Nenhuma campanha arrecadando agora." />
+              <SecaoCampanhas titulo="Campanhas encerradas" campanhas={encerradas} carregando={campanhas === null && carregando} vazio="Nenhuma campanha encerrada." />
+
+              <section id="perfil-pesquisador-publicacoes" aria-labelledby="perfil-publicacoes-titulo">
+                <h2 id="perfil-publicacoes-titulo" className="titulo-secao mb-4">Publicações</h2>
+                {lista === undefined && <p className="paragrafo texto-fraco">Carregando…</p>}
+                {lista === null && <p className="paragrafo texto-fraco">Não foi possível carregar as publicações.</p>}
+                {lista && lista.length === 0 && <p className="paragrafo texto-fraco">Sem publicações recentes.</p>}
+                {lista && lista.length > 0 && (
+                  <ListaAtualizacoes atualizacoes={lista} tituloCampanha={(idCampanha) => tituloPorCampanha.get(idCampanha)} />
+                )}
+              </section>
+            </div>
+
+            <aside>
+              <div className="pagina-publica__cartao cartao sticky top-24 space-y-5" id="perfil-pesquisador-cta">
+                <h2 className="subtitulo">Acompanhe a pesquisa</h2>
+                {pontuacao !== null && (
+                  <div>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="rotulo">Pontuação acadêmica</span>
+                      <span className="numero font-bold texto-forte">{Math.round(pontuacao)}/100</span>
+                    </div>
+                    <div
+                      className="h-2 rounded-full fundo-realce overflow-hidden mt-2"
+                      role="progressbar"
+                      aria-label="Pontuação acadêmica"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={Math.round(pontuacao)}
+                    >
+                      <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(0, Math.min(100, pontuacao))}%` }} />
+                    </div>
+                    {score?.rotulo && <p className="legenda mt-2">{score.rotulo}</p>}
+                  </div>
+                )}
+                <dl className="grid grid-cols-3 gap-3 text-center">
+                  <div className="fundo-destaque rounded-xl p-3 border borda-padrao">
+                    <dt className="microrrotulo texto-fraco">Seguidores</dt>
+                    <dd className="numero text-xl font-bold texto-forte">{dadosSeguimento?.seguidores ?? '—'}</dd>
+                  </div>
+                  <div className="fundo-destaque rounded-xl p-3 border borda-padrao">
+                    <dt className="microrrotulo texto-fraco">Ativas</dt>
+                    <dd className="numero text-xl font-bold texto-forte">{campanhas ? ativas.length : '—'}</dd>
+                  </div>
+                  <div className="fundo-destaque rounded-xl p-3 border borda-padrao">
+                    <dt className="microrrotulo texto-fraco">Encerradas</dt>
+                    <dd className="numero text-xl font-bold texto-forte">{campanhas ? encerradas.length : '—'}</dd>
+                  </div>
+                </dl>
+                {botaoSeguir}
+              </div>
+            </aside>
+          </div>
+        </div>
+      )}
+
+      {denunciando && (
+        <ModalDenunciar
+          authFetch={auth.authFetch}
+          alvo={{ idPesquisadorAlvo: id }}
+          nomeAlvo={nome}
+          aoFechar={() => setDenunciando(false)}
+          aoDenunciado={() => {
+            setDenunciando(false);
+            mostrar('Denúncia registrada. A moderação vai analisar.');
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function SecaoCampanhas({
+  titulo,
+  campanhas,
+  carregando,
+  vazio,
+}: {
+  titulo: string;
+  campanhas: CampanhaResponse[];
+  carregando: boolean;
+  vazio: string;
+}) {
+  return (
+    <section>
+      <h2 className="titulo-secao mb-4">{titulo}</h2>
+      {carregando ? (
+        <p className="paragrafo texto-fraco">Carregando…</p>
+      ) : campanhas.length === 0 ? (
+        <p className="paragrafo texto-fraco">{vazio}</p>
+      ) : (
+        <div className="grade-campanhas grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {campanhas.map((campanha) => (
+            <CartaoCampanha campanha={campanha} key={campanha.idCampanha} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}

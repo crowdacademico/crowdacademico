@@ -1,37 +1,47 @@
-import { Navigate, Route, Routes } from 'react-router';
+import { Navigate, Route, Routes, useLocation } from 'react-router';
 import { Layout } from './components/layout/layout';
 import { useAuth } from './services/3-auth/hook/use-auth';
-import { ROTAS, ROTAS_ADMIN } from './services/router/rotas.constants';
+import { ROTAS, ROTAS_ADMIN, ROTAS_CONTA } from './services/router/rotas.constants';
 import { AdminLayout } from './components/layout/painel-admin/admin-layout';
 import { campoTestes } from './services/router/campo-testes-opcional';
+import { LayoutPublico } from './components/layout/layout-publico';
+import type { ReactNode } from 'react';
 
-// useAuth() chamado uma vez só, aqui em cima: Header (dentro de Layout) e cada página recebem o mesmo `auth`
+// useAuth() chamado uma vez só, aqui em cima: os layouts e cada página recebem o mesmo `auth`
 // por prop, nunca cada um com sua própria sessão. Rotas vêm de services/router/rotas.constants (fonte única,
 // compartilhada com o breadcrumb e o menu lateral): adicionar uma página nova é só acrescentar uma linha lá,
 // não mexer aqui.
 //
-// "/" redireciona para /admin/dashboard (a aba padrão): as abas do painel são rotas de verdade, então "/" não
-// pode ser todas ao mesmo tempo.
+// A Home pública usa "/"; o painel administrativo mantém sua rota própria em "/admin/dashboard".
 function App() {
   const auth = useAuth();
 
   const rotas = (
     <Routes>
-      <Route element={<Layout auth={auth} />}>
-        <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
-
+      <Route element={<LayoutPublico auth={auth} />}>
         {ROTAS.map(({ caminho, elemento: Elemento }) => (
           <Route key={caminho} path={caminho} element={<Elemento auth={auth} />} />
         ))}
+      </Route>
 
-        <Route path="/admin" element={<AdminLayout auth={auth} />}>
-          {/* Redirect da rota base sem aba: "/admin/minha-conta" sozinho não é uma página própria (só o link
-              antigo, menu-usuario.tsx, aponta para cá); a aba padrão é Perfil. */}
+      <Route element={<Layout auth={auth} />}>
+        {ROTAS_CONTA.map(({ caminho, elemento: Elemento }) => (
           <Route
-            path="minha-conta"
-            element={<Navigate to="/admin/minha-conta/perfil" replace />}
+            key={caminho}
+            path={caminho}
+            element={(
+              <ExigirLogin auth={auth}>
+                <Elemento auth={auth} />
+              </ExigirLogin>
+            )}
           />
-
+        ))}
+        <Route path="/admin/minhas-campanhas" element={<Navigate to="/estudio-pesquisador" replace />} />
+        <Route path="/minhas-campanhas" element={<Navigate to="/estudio-pesquisador" replace />} />
+        <Route path="/apoiar" element={<RedirecionarMantendoBusca para="/checkout" />} />
+        <Route path="/admin/minha-conta" element={<Navigate to="/minha-conta/perfil" replace />} />
+        <Route path="/admin/minha-conta/:aba" element={<Navigate to="/minha-conta/perfil" replace />} />
+        <Route path="/admin" element={<AdminLayout auth={auth} />}>
           {/* Endereços antigos (as telas ganharam o nome que aparece no menu): link salvo continua funcionando. */}
           <Route path="configuracoes" element={<Navigate to="/admin/parametros-sistema" replace />} />
           <Route path="encerramentos" element={<Navigate to="/admin/pedidos-encerramento" replace />} />
@@ -51,6 +61,25 @@ function App() {
   // Provider do Campo de Testes: só em desenvolvimento e só se a pasta existir (campo-testes-opcional.ts).
   const ProviderCampoTestes = campoTestes?.CampoTestesProvider;
   return ProviderCampoTestes ? <ProviderCampoTestes>{rotas}</ProviderCampoTestes> : rotas;
+}
+
+// Endereço antigo que leva parâmetro (`/apoiar?idCampanha=3`): sem repassar o `search`, o checkout abriria sem
+// saber qual campanha apoiar.
+function RedirecionarMantendoBusca({ para }: { para: string }) {
+  const { search } = useLocation();
+  return <Navigate to={{ pathname: para, search }} replace />;
+}
+
+function ExigirLogin({
+  auth,
+  children,
+}: {
+  auth: ReturnType<typeof useAuth>;
+  children: ReactNode;
+}) {
+  if (auth.carregando) return null;
+  if (!auth.usuario) return <Navigate to="/login" replace />;
+  return children;
 }
 
 export default App;

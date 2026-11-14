@@ -1,0 +1,46 @@
+/* Tokens do Projeto de Interface que NÃO existiam no CrowdAcadêmico (fonte: Projeto-de-Interface/css/1-root.css).
+   Só os que faltavam: nada aqui sobrescreve token já definido em 1-cores.css / 3-base.css.
+   Cores (--color-*), sombras e raios ficam em tailwind-theme.css (@theme), porque viram utilitário do Tailwind v4.
+   Só medida, espaço e tipografia (não mudam entre temas). As paletas de cor do protótipo saíram em 14-11-2026:
+   a área pública usa as cores da restrita ("restrita manda"). Token sem uso é apagado, não guardado. */
+:root {
+  --font-size-microrrotulo: 0.625rem;
+  --font-size-rotulo: 0.6875rem;
+  --font-size-legenda: 0.75rem;
+  --font-size-corpo-pequeno: 0.875rem;
+  --font-size-corpo: 1rem;
+  --font-size-corpo-grande: 1.125rem;
+  --font-size-subtitulo: 1.25rem;
+  --font-size-titulo-secao: 1.875rem;
+  --font-size-titulo-pagina: 2.25rem;
+  --font-size-titulo-hero: 4.5rem;
+  --font-size-numero-kpi: 1.75rem;
+  --font-size-numero-destaque: 2.5rem;
+  --font-size-numero-vitrine: 3.5rem;
+  --font-dado: 'IBM Plex Mono', ui-monospace, monospace;
+  --curva-suave: cubic-bezier(0.22, 0.8, 0.28, 1);
+  --curva-entrada: cubic-bezier(0.16, 1, 0.3, 1);
+  --espaco-2: 0.5rem;
+  --espaco-3: 0.75rem;
+  --espaco-4: 1rem;
+  --espaco-5: 1.25rem;
+  --espaco-6: 1.5rem;
+  --espaco-8: 2rem;
+  --espaco-20: 5rem;
+  --espaco-32: 8rem;
+  --espaco-secao-y: var(--espaco-20);
+  --espaco-secao-y-compacta: 3.5rem;
+  --espaco-hero-y: var(--espaco-32);
+  --espaco-cartao: var(--espaco-6);
+  --espaco-cartao-grande: var(--espaco-8);
+  --largura-conteudo: 80rem;
+  --largura-conteudo-estreita: 56rem;
+  --largura-leitura: 68ch;
+  --largura-coluna-apoio: 25rem;
+  --largura-sidebar-conta: 17.5rem;
+  --largura-sidebar-filtros: 16rem;
+  --altura-cabecalho: 4rem;
+  --deslocamento-sticky: 5.5rem;
+  --altura-capa-cartao: 14rem;
+  --altura-qrcode: 14rem;
+}

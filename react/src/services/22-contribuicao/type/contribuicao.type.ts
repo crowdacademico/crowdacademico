@@ -8,6 +8,10 @@ export interface ResumoContribuicoes {
   total: number;
 }
 
+export interface ApoiosPublicosCampanha {
+  pagas: number;
+}
+
 // Espelha nest/src/22-contribuicao/dto/response/contribuicao.response-mine.ts.
 export interface MinhaContribuicao {
   idContribuicao: number;
@@ -22,5 +26,17 @@ export interface MinhaContribuicao {
   anonima: boolean;
   criadoEm: string;
   // As recompensas ganhas, separadas por vírgula, da menor para a maior; null = nenhuma.
+  recompensas: string | null;
+}
+
+export interface ContribuicaoRecebida {
+  idContribuicao: number;
+  idCampanha: number;
+  tituloCampanha: string;
+  apoiador: string;
+  valor: number;
+  meioPagamento: MeioPagamento;
+  status: StatusContribuicao;
+  criadoEm: string;
   recompensas: string | null;
 }

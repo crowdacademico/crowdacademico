@@ -1,7 +1,7 @@
 import {
   IsDateString,
-  IsIn,
   IsInt,
+  IsIn,
   IsNumber,
   IsOptional,
   IsPositive,
@@ -53,5 +53,9 @@ export class CampanhaRequestCreate {
   @IsOptional()
   @IsUrl({}, { message: 'URL inválida.' })
   @MaxLength(500)
-  videoApresentacaoUrl?: string;
+  videoApresentacaoUrl?: string | null;
+
+  @IsOptional()
+  @IsInt()
+  idImagemCapa?: number | null;
 }
