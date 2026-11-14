@@ -12,3 +12,15 @@ export interface ComentarioResponse {
   // Só na listagem; `null` também quando a conta do autor foi excluída.
   nomePesquisador: string | null;
 }
+
+export interface ComentarioMeuResponse {
+  idComentario: number;
+  idCampanha: number;
+  tituloCampanha: string;
+  idPesquisador: number | null;
+  conteudo: string;
+  endossado: boolean;
+  criadoEm: string;
+  ordemEndosso: number | null;
+  ativo: boolean;
+}

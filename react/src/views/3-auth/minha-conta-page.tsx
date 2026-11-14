@@ -27,6 +27,7 @@ import {
   ROTULO_TITULO_ACADEMICO,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { formatarCpfExibicao, formatarDataHora, formatarMesAno } from '../../services/constant/util/formatacao.util';
+import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -45,6 +46,7 @@ import { SENHA_MINIMO_CARACTERES } from '../../services/3-auth/constants/senha.c
 import { AbaMinhasContribuicoes } from '../22-contribuicao/aba-minhas-contribuicoes';
 import { LinksAcademicosDoUsuario } from '../7-link-academico/links-academicos-do-usuario';
 import { CamposVinculoPerfil } from '../6-perfil-pesquisador/campos-vinculo-perfil';
+import { AbaMinhasAtividades } from './aba-minhas-atividades';
 
 // Minha Conta: não é um formulário só, é uma área com seções independentes, cada uma salva por conta própria.
 //
@@ -55,14 +57,14 @@ import { CamposVinculoPerfil } from '../6-perfil-pesquisador/campos-vinculo-perf
 //
 // Estrutura (referência ORCID/ResearchGate/Google Acadêmico: "portfólio profissional", abrem com uma FAIXA DE
 // IDENTIDADE larga no topo, não um cartãozinho de canto): FaixaIdentidade (larga, topo: avatar grande, nome,
-// e-mail, badges de papel, "membro desde") + abas de verdade (rota /minha-conta/:aba, não useState: mesma
+// e-mail, "membro desde") + abas de verdade (rota /minha-conta/:aba, não useState: mesma
 // decisão das abas do painel admin). Seções com o MESMO peso visual empilhadas parecem um formulário
 // longo, não um perfil, e um cartão lateral discreto não ancora a tela.
 const ABAS_MINHA_CONTA = [
   { chave: 'perfil', rotulo: 'Perfil', icone: 'fa-user' },
   { chave: 'seguranca', rotulo: 'Segurança', icone: 'fa-shield-halved' },
-  { chave: 'papeis', rotulo: 'Papéis', icone: 'fa-user-tag' },
-  { chave: 'contribuicoes', rotulo: 'Contribuições', icone: 'fa-hand-holding-heart' },
+  { chave: 'atividades', rotulo: 'Minhas atividades', icone: 'fa-heart' },
+  { chave: 'financeiro', rotulo: 'Financeiro', icone: 'fa-wallet' },
   // Privacidade por último de propósito - o botão de excluir conta mora
   // aqui dentro, atrás da confirmação por digitação: ação destrutiva
   // nunca na primeira aba que a pessoa vê.
@@ -77,6 +79,9 @@ export function MinhaConta({ auth }: PropsPagina) {
   if (!auth.usuario) {
     return <Navigate to="/login" replace state={{ voltarPara: `/minha-conta/${aba ?? 'perfil'}` }} />;
   }
+  if (aba === 'contribuicoes') {
+    return <Navigate to="/minha-conta/financeiro" replace />;
+  }
   if (!aba || !CHAVES_ABAS.includes(aba)) {
     return <Navigate to="/minha-conta/perfil" replace />;
   }
@@ -89,7 +94,7 @@ export function MinhaConta({ auth }: PropsPagina) {
     // conteúdo" (passa a ter uma largura EXPLÍCITA, não automática); `min-width: 100%` devolve ele ao tamanho
     // normal (cheio do container, até o teto de --largura-ficha) na hora de desenhar de verdade. Troque só se remover
     // a barra de abas.
-    <div className="w-0 min-w-full max-w-(--largura-ficha) mx-auto p-6 sm:p-10">
+    <div className="w-0 min-w-full max-w-(--largura-ficha) mx-auto px-8 py-6 sm:px-12 sm:py-10">
       {/* Um cartão só, do topo ao rodapé - SEM overflow-hidden (mesma
           lição já aprendida nas antigas páginas de formulário e de ficha:
           overflow-hidden cria um contexto de scroll que o `sticky` do
@@ -100,7 +105,7 @@ export function MinhaConta({ auth }: PropsPagina) {
           rodapé sticky com fundo próprio, e só ELE precisa arredondar o
           canto de baixo (rounded-b-2xl), as outras abas terminam lisas e
           o canto arredondado do wrapper já aparece sozinho por trás. */}
-      <div className="fundo-cartao rounded-2xl shadow-lg border borda-padrao">
+      <div className="fundo-cartao rounded-2xl shadow-lg border borda-padrao pb-12">
         <FaixaIdentidade auth={auth} />
         <BarraAbas abaAtiva={aba} />
 
@@ -111,35 +116,29 @@ export function MinhaConta({ auth }: PropsPagina) {
           <AbaPerfil key={auth.usuario?.idUsuario ?? 'carregando'} auth={auth} />
         )}
         {aba === 'seguranca' && <AbaSeguranca auth={auth} />}
-        {aba === 'papeis' && <AbaPapeis auth={auth} />}
-        {aba === 'contribuicoes' && <AbaMinhasContribuicoes auth={auth} />}
+        {aba === 'atividades' && <AbaMinhasAtividades auth={auth} />}
+        {aba === 'financeiro' && (
+          <>
+            {auth.usuario.ehPesquisador && (
+              <div className="px-6 sm:px-8 pt-8 pb-8">
+                <SecaoRecebimento authFetch={auth.authFetch} />
+              </div>
+            )}
+            <AbaMinhasContribuicoes auth={auth} />
+          </>
+        )}
         {aba === 'privacidade' && <AbaPrivacidade auth={auth} />}
       </div>
     </div>
   );
 }
 
-// Faixa de identidade: busca papéis por conta própria, mesmo espírito de sempre neste arquivo: a lista de
-// papéis de uma pessoa é minúscula, duplicar essa requisição pequena é mais simples e mais seguro do que subir
-// estado (a aba Papéis, abaixo, também busca a sua própria cópia, cada uma no seu tempo de vida).
 interface FaixaIdentidadeProps {
-  auth: Pick<UseAuthReturn, 'usuario' | 'authFetch'>;
+  auth: Pick<UseAuthReturn, 'usuario'>;
 }
 
 function FaixaIdentidade({ auth }: FaixaIdentidadeProps) {
   const usuario = auth.usuario;
-  const [papeis, setPapeis] = useState<UsuarioPapelResponse[] | null>(null);
-
-  useEffect(() => {
-    if (!usuario) {
-      return;
-    }
-    usuarioPapelApi
-      .listarPorUsuario(auth.authFetch, usuario.idUsuario)
-      .then(setPapeis)
-      .catch(() => setPapeis([]));
-  }, [auth.authFetch, usuario]);
-
   const membroDesde = usuario?.criadoEm ? formatarMesAno(usuario.criadoEm) : null;
 
   return (
@@ -180,15 +179,6 @@ function FaixaIdentidade({ auth }: FaixaIdentidadeProps) {
             {membroDesde && <span>Membro desde {membroDesde}</span>}
           </div>
 
-          {papeis && papeis.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-3">
-              {papeis.map((papel) => (
-                <span key={papel.idPapel} className="badge badge-neutro">
-                  {papel.nomePapel}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
 
       </div>
@@ -307,18 +297,14 @@ function AbaPerfil({ auth }: AbaPerfilProps) {
                 <CampoFicha rotulo="Vínculo institucional" valor={perfil.vinculoInstitucional} />
                 <CampoFicha rotulo="Pontuação atual" valor={perfil.scoreAtual} />
               </SecaoFicha>
-              {auth.usuario && (
-                <SecaoFicha titulo="Links acadêmicos" nivel={2}>
-                  <LinksAcademicosDoUsuario
-                    auth={auth}
-                    idUsuario={auth.usuario.idUsuario}
-                    nomeUsuario={auth.usuario.nome}
-                    contaPropria
-                  />
-                </SecaoFicha>
-              )}
-              <SecaoContestacaoScore authFetch={auth.authFetch} />
-              <SecaoRecebimento authFetch={auth.authFetch} />
+              <SecaoFicha titulo="Links acadêmicos" nivel={2}>
+                <LinksAcademicosDoUsuario
+                  auth={auth}
+                  idUsuario={auth.usuario.idUsuario}
+                  nomeUsuario={auth.usuario.nome}
+                  contaPropria
+                />
+              </SecaoFicha>
             </>
           )}
           {auth.usuario && !auth.usuario.ehPesquisador && (
@@ -331,6 +317,7 @@ function AbaPerfil({ auth }: AbaPerfilProps) {
               </button>
             </div>
           )}
+          <SecaoPapeis auth={auth} />
         </>
       )}
       {editando && auth.usuario && (
@@ -506,13 +493,13 @@ function iconePorDispositivo(userAgent: string | null): string {
   return 'fa-desktop';
 }
 
-// 2. SEGURANÇA: senha (exige a atual) + Sessões Ativas (ícone de dispositivo por sessão, "sessão atual" já vem
-// destacada em verde (badge-sucesso), encerrar é um ícone discreto em vez de botão cheio).
+// Segurança da conta: troca de senha em modal e gerenciamento de sessões.
 interface AbaSegurancaProps {
   auth: Pick<UseAuthReturn, 'usuario' | 'authFetch'>;
 }
 
 function AbaSeguranca({ auth }: AbaSegurancaProps) {
+  const [senhaModalAberto, setSenhaModalAberto] = useState(false);
   const [senhaAtual, setSenhaAtual] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
   // Mesmo formulário de senha do Cadastro: medidor de força, mostrar a senha e confirmar a nova.
@@ -536,6 +523,16 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
     confirmar: confirmarSenha === '' ? 'Confirme a nova senha.' : confirmarSenha !== novaSenha && 'As senhas não são iguais.',
   }));
 
+  const fecharModalSenha = () => {
+    setSenhaModalAberto(false);
+    setSenhaAtual('');
+    setNovaSenha('');
+    setConfirmarSenha('');
+    setMostrarSenha(false);
+    limparErrosSenha();
+    limparErro();
+  };
+
   const aoTrocarSenha = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
     const usuario = auth.usuario;
@@ -548,10 +545,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
         novaSenha,
       });
       mostrar('Senha alterada com sucesso.');
-      setSenhaAtual('');
-      setNovaSenha('');
-      setConfirmarSenha('');
-      limparErrosSenha();
+      fecharModalSenha();
     });
   };
 
@@ -602,65 +596,11 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
   return (
     <div className="px-6 sm:px-8 py-8 space-y-8">
       <div>
-        <h2 className="titulo-bloco titulo-bloco--linha">
-          Trocar senha
-        </h2>
-        <form onSubmit={aoTrocarSenha} className="space-y-4 max-w-(--largura-formulario)">
-          <MensagemErro texto={erro} className="paragrafo texto-erro" />
-          {/* O erro do backend (senha atual incorreta) também cai embaixo do campo, não só no aviso. */}
-          <Campo rotulo="Senha atual" erro={erroSenhaDe('atual') || errosCampo.senhaAtual}>
-            {({ atributos, classeErro }) => (
-              <input
-                {...atributos}
-                type="password"
-                value={senhaAtual}
-                onChange={(evento) => setSenhaAtual(evento.target.value)}
-                className={'input-padrao' + classeErro}
-                autoComplete="current-password"
-              />
-            )}
-          </Campo>
-          <Campo rotulo="Nova senha" erro={erroSenhaDe('nova') || errosCampo.novaSenha}>
-            {({ atributos, classeErro }) => (
-              <>
-                <div className="relative">
-                  <input
-                    {...atributos}
-                    type={mostrarSenha ? 'text' : 'password'}
-                    value={novaSenha}
-                    onChange={(evento) => setNovaSenha(evento.target.value)}
-                    className={'input-padrao pr-10' + classeErro}
-                    autoComplete="new-password"
-                  />
-                  <BotaoMostrarSenha mostrando={mostrarSenha} aoAlternar={() => setMostrarSenha((atual) => !atual)} />
-                </div>
-                <MedidorSenha senha={novaSenha} />
-              </>
-            )}
-          </Campo>
-          <Campo
-            rotulo="Confirmar nova senha"
-            erro={erroSenhaDe('confirmar') || (confirmarSenha.length > 0 && confirmarSenha !== novaSenha ? 'As senhas não são iguais.' : undefined)}
-          >
-            {({ atributos, classeErro }) => (
-              <input
-                {...atributos}
-                type={mostrarSenha ? 'text' : 'password'}
-                value={confirmarSenha}
-                onChange={(evento) => setConfirmarSenha(evento.target.value)}
-                className={'input-padrao' + classeErro}
-                autoComplete="new-password"
-              />
-            )}
-          </Campo>
-          <button
-            type="submit"
-            disabled={enviandoSenha}
-            className="btn btn-secondary"
-          >
-            {enviandoSenha ? 'Alterando...' : 'Alterar senha'}
-          </button>
-        </form>
+        <h2 className="titulo-bloco titulo-bloco--linha">Senha</h2>
+        <p className="paragrafo texto-fraco mb-3">Altere sua senha sem sair da conta.</p>
+        <button type="button" className="btn btn-secondary" onClick={() => setSenhaModalAberto(true)}>
+          <i className="fa-solid fa-key" aria-hidden="true"></i> Alterar senha
+        </button>
       </div>
 
       <div>
@@ -746,42 +686,103 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
             </ul>
           ))}
       </div>
+      {auth.usuario?.ehPesquisador && <SecaoContestacaoScore authFetch={auth.authFetch} />}
+      {senhaModalAberto && (
+        <ModalFicha
+          titulo="Alterar senha"
+          subtitulo="Informe sua senha atual e escolha uma nova senha."
+          erro={erro}
+          aoFechar={fecharModalSenha}
+          rodape={
+            <RodapeAcoes
+              aoCancelar={fecharModalSenha}
+              cancelarDesabilitado={enviandoSenha}
+              acao={{
+                rotulo: 'Alterar senha',
+                rotuloOcupado: 'Alterando...',
+                ocupado: enviandoSenha,
+                formulario: 'form-alterar-senha',
+              }}
+            />
+          }
+        >
+          <form id="form-alterar-senha" onSubmit={aoTrocarSenha} className="space-y-4 max-w-(--largura-formulario)">
+            <Campo rotulo="Senha atual" erro={erroSenhaDe('atual') || errosCampo.senhaAtual}>
+              {({ atributos, classeErro }) => (
+                <input
+                  {...atributos}
+                  type="password"
+                  value={senhaAtual}
+                  onChange={(evento) => setSenhaAtual(evento.target.value)}
+                  className={'input-padrao' + classeErro}
+                  autoComplete="current-password"
+                />
+              )}
+            </Campo>
+            <Campo rotulo="Nova senha" erro={erroSenhaDe('nova') || errosCampo.novaSenha}>
+              {({ atributos, classeErro }) => (
+                <>
+                  <div className="relative">
+                    <input
+                      {...atributos}
+                      type={mostrarSenha ? 'text' : 'password'}
+                      value={novaSenha}
+                      onChange={(evento) => setNovaSenha(evento.target.value)}
+                      className={'input-padrao pr-10' + classeErro}
+                      autoComplete="new-password"
+                    />
+                    <BotaoMostrarSenha mostrando={mostrarSenha} aoAlternar={() => setMostrarSenha((atual) => !atual)} />
+                  </div>
+                  <MedidorSenha senha={novaSenha} />
+                </>
+              )}
+            </Campo>
+            <Campo
+              rotulo="Confirmar nova senha"
+              erro={erroSenhaDe('confirmar') || (confirmarSenha.length > 0 && confirmarSenha !== novaSenha ? 'As senhas não são iguais.' : undefined)}
+            >
+              {({ atributos, classeErro }) => (
+                <input
+                  {...atributos}
+                  type={mostrarSenha ? 'text' : 'password'}
+                  value={confirmarSenha}
+                  onChange={(evento) => setConfirmarSenha(evento.target.value)}
+                  className={'input-padrao' + classeErro}
+                  autoComplete="new-password"
+                />
+              )}
+            </Campo>
+          </form>
+        </ModalFicha>
+      )}
     </div>
   );
 }
 
-// 3. PAPÉIS - só leitura, como sempre foi.
-interface AbaPapeisProps {
-  auth: Pick<UseAuthReturn, 'usuario' | 'authFetch'>;
-}
-
-function AbaPapeis({ auth }: AbaPapeisProps) {
-  const [papeis, setPapeis] = useState<UsuarioPapelResponse[] | null>(null);
-
-  useEffect(() => {
-    if (!auth.usuario) {
-      return;
-    }
-    usuarioPapelApi
-      .listarPorUsuario(auth.authFetch, auth.usuario.idUsuario)
-      .then(setPapeis)
-      .catch(() => setPapeis([]));
-  }, [auth.authFetch, auth.usuario]);
+function SecaoPapeis({ auth }: { auth: Pick<UseAuthReturn, 'usuario' | 'authFetch'> }) {
+  const erros = useErroToast({ mostraTexto: true });
+  const idUsuario = auth.usuario?.idUsuario;
+  const carregarPapeis = (): Promise<UsuarioPapelResponse[]> =>
+    idUsuario
+      ? usuarioPapelApi.listarPorUsuario(auth.authFetch, idUsuario)
+      : Promise.resolve([]);
+  const { dado: papeis, carregando, erro } = useBuscar(
+    carregarPapeis,
+    [auth.authFetch, idUsuario],
+    { erros, mostraTexto: true },
+  );
 
   return (
-    <div className="px-6 sm:px-8 py-8">
-      <p className="paragrafo texto-fraco mb-4">
-        O que você é na plataforma, só leitura aqui - pra alterar, um administrador precisa
-        fazer isso pelo painel de Usuários.
-      </p>
-      {papeis === null ? (
+    <section>
+      <h2 className="titulo-bloco titulo-bloco--linha">Papéis da conta</h2>
+      <MensagemErro texto={erro} />
+      {carregando ? (
         <Carregando />
-      ) : papeis.length === 0 ? (
+      ) : papeis && papeis.length === 0 ? (
         <EstadoVazio compacto icone="fa-user-tag" titulo="Nenhum papel atribuído." />
       ) : (
         <div className="flex flex-wrap gap-2">
-          {papeis.map((papel) => {
-            // Papel suspenso não vale até a data: a própria pessoa precisa ver isso aqui, não só descobrir barrada.
+          {papeis?.map((papel) => {
             const suspenso = papel.suspensoAte !== null && new Date(papel.suspensoAte) > new Date();
             return (
               <span
@@ -800,7 +801,10 @@ function AbaPapeis({ auth }: AbaPapeisProps) {
           })}
         </div>
       )}
-    </div>
+      <p className="legenda texto-fraco mt-2">
+        Para alterar seus papéis, um administrador precisa fazer a atualização pelo painel de usuários.
+      </p>
+    </section>
   );
 }
 

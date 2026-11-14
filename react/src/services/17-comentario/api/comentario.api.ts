@@ -1,12 +1,17 @@
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
-import type { ComentarioResponse } from '../type/comentario.type';
+import { desembrulharPaginado, TAMANHO_PAGINA_MAXIMO_API } from '../../constant/type/paginacao.type';
+import type { ComentarioMeuResponse, ComentarioResponse } from '../type/comentario.type';
 
 // Espelha nest/src/17-comentario. Quem pode o quê é decidido pelo banco (pol_comentario_*, 04): o dono da campanha
 // endossa, exclui (apaga de vez) e bloqueia (inativo: fica guardado e o autor não comenta mais naquela campanha); a
 // lista esconde do dono o comentário bloqueado. O autor não é avisado de nenhuma dessas ações (RF-094).
 export const comentarioApi = {
+  listarMinhas: (authFetch: AuthFetch): Promise<ComentarioMeuResponse[]> =>
+    authFetch(`/comentario/minhas?tamanho=${TAMANHO_PAGINA_MAXIMO_API}`)
+      .then(tratarResposta<ResultadoPaginado<ComentarioMeuResponse>>)
+      .then(desembrulharPaginado('comentários feitos')),
   // Comenta como a conta logada: só pesquisador ativo, nunca na própria campanha, um por campanha (regras do banco).
   criar: (authFetch: AuthFetch, idCampanha: number, conteudo: string): Promise<ComentarioResponse> =>
     authFetch('/comentario', { method: 'POST', body: JSON.stringify({ idCampanha, conteudo }) }).then(
