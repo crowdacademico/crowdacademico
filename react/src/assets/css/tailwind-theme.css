@@ -36,6 +36,7 @@
   --color-dark: #0f172a;
   --font-sans: 'Inter', sans-serif;
   --font-serif: 'DM Serif Display', serif;
+  --font-dado: 'IBM Plex Mono', ui-monospace, monospace;
   /* Largura em que o menu lateral do painel deixa de ser gaveta e vira coluna fixa: as telas usam `painel:` e
      `max-painel:` (admin-sidebar.tsx, admin-layout.tsx). O CSS do grid (6-admin-shell.css) repete o número uma
      vez no @media, porque @media não aceita variável: ao mudar aqui, mude lá também. */
@@ -43,4 +44,68 @@
   /* Largura a partir da qual o botão dev de login rápido cabe na sobra à direita do cabeçalho sem cobrir o ícone de
      login; abaixo dela ele desce para logo abaixo do cabeçalho (`dev-login:` em header.tsx). */
   --breakpoint-dev-login: 1720px;
+
+  /* ===== Vindo do tailwind.config do Projeto de Interface (Tailwind v3 -> v4) =====
+     Escala de texto: text-corpo, text-titulo-pagina... Os valores vivem em 1b-tokens-prototipo.css (--font-size-*). */
+  --text-microrrotulo: var(--font-size-microrrotulo);
+  --text-microrrotulo--line-height: 1.1;
+  --text-microrrotulo--letter-spacing: 0.14em;
+  --text-microrrotulo--font-weight: 800;
+  --text-rotulo: var(--font-size-rotulo);
+  --text-rotulo--line-height: 1.2;
+  --text-rotulo--letter-spacing: 0.1em;
+  --text-rotulo--font-weight: 800;
+  --text-legenda: var(--font-size-legenda);
+  --text-legenda--line-height: 1.45;
+  --text-corpo-pequeno: var(--font-size-corpo-pequeno);
+  --text-corpo-pequeno--line-height: 1.55;
+  --text-corpo: var(--font-size-corpo);
+  --text-corpo--line-height: 1.65;
+  --text-corpo-grande: var(--font-size-corpo-grande);
+  --text-corpo-grande--line-height: 1.6;
+  --text-subtitulo: var(--font-size-subtitulo);
+  --text-subtitulo--line-height: 1.3;
+  --text-subtitulo--letter-spacing: -0.01em;
+  --text-titulo-secao: var(--font-size-titulo-secao);
+  --text-titulo-secao--line-height: 1.2;
+  --text-titulo-secao--letter-spacing: -0.02em;
+  --text-titulo-pagina: var(--font-size-titulo-pagina);
+  --text-titulo-pagina--line-height: 1.15;
+  --text-titulo-pagina--letter-spacing: -0.022em;
+  --text-titulo-hero: var(--font-size-titulo-hero);
+  --text-titulo-hero--line-height: 1.02;
+  --text-titulo-hero--letter-spacing: -0.03em;
+  --text-numero-kpi: var(--font-size-numero-kpi);
+  --text-numero-kpi--line-height: 1;
+  --text-numero-kpi--letter-spacing: -0.02em;
+  --text-numero-destaque: var(--font-size-numero-destaque);
+  --text-numero-destaque--line-height: 1;
+  --text-numero-destaque--letter-spacing: -0.025em;
+  --text-numero-vitrine: var(--font-size-numero-vitrine);
+  --text-numero-vitrine--line-height: 1;
+  --text-numero-vitrine--letter-spacing: -0.03em;
+
+  /* Espaçamentos nomeados: p-cartao, py-secao, h-capa-cartao, w-coluna-apoio... */
+  --spacing-cartao: var(--espaco-cartao);
+  --spacing-cartao-grande: var(--espaco-cartao-grande);
+  --spacing-secao: var(--espaco-secao-y);
+  --spacing-secao-compacta: var(--espaco-secao-y-compacta);
+  --spacing-hero: var(--espaco-hero-y);
+  --spacing-sticky: var(--deslocamento-sticky);
+  --spacing-cabecalho: var(--altura-cabecalho);
+  --spacing-capa-cartao: var(--altura-capa-cartao);
+  --spacing-coluna-apoio: var(--largura-coluna-apoio);
+  --spacing-sidebar-conta: var(--largura-sidebar-conta);
+  --spacing-sidebar-filtros: var(--largura-sidebar-filtros);
+  --spacing-qrcode: var(--altura-qrcode);
+
+  /* Larguras: max-w-conteudo, max-w-leitura... (no v4 o max-w-* lê o namespace --container-*) */
+  --container-conteudo: var(--largura-conteudo);
+  --container-conteudo-estreito: var(--largura-conteudo-estreita);
+  --container-leitura: var(--largura-leitura);
+
+
+  /* Curvas: ease-suave, ease-entrada */
+  --ease-suave: var(--curva-suave);
+  --ease-entrada: var(--curva-entrada);
 }

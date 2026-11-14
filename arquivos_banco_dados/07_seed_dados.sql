@@ -850,25 +850,6 @@ INSERT INTO permissao (nome) VALUES
 ('campanha_excluir_forcado')
 ON CONFLICT (nome) DO NOTHING;
 
--- [07-B-4] DESENVOLVIMENTO: toda conta logada VÊ tudo (nunca altera). O papel 'usuario', que todo cadastro
--- recebe, ganha só as permissões de LEITURA, para qualquer papel conseguir testar todas as telas. As de alterar
--- (gerenciar, editar, aprovar, suspender...) continuam só com quem já tinha. REMOVER antes do deploy (entra no
--- bloco "modo produção", ver PENDENCIAS e correcoes.md).
-INSERT INTO papel_permissao (id_papel, id_permissao)
-SELECT p.id_papel, perm.id_permissao
-FROM papel p
-JOIN permissao perm ON TRUE
-WHERE p.codigo = 'usuario'
-  AND perm.nome IN (
-    'relatorio_visualizar',
-    'usuario_visualizar_sensivel',
-    'perfil_pesquisador_visualizar_sensivel',
-    'contribuicao_visualizar_sensivel',
-    'auditoria_financeira_visualizar',
-    'log_visualizar'
-  )
-ON CONFLICT DO NOTHING;
-
 -- [07-C-4] arquivo: vazio. O seed não tem imagens nem documentos no armazenamento, e uma linha aqui apontaria
 -- para um arquivo que não existe (foto "cadastrada" sem imagem, anexo que não abre). Ninguém nasce com foto de
 -- perfil e nenhuma atualização nasce com anexo; arquivo só entra pelo envio de verdade.

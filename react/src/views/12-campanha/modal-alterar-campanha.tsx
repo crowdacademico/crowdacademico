@@ -18,12 +18,13 @@ import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { Campo } from '../../components/input/campo';
+import { SeletorImagemCapaCampanha } from '../../components/input/seletor-imagem-capa-campanha';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 
 import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
 import { ContadorCaracteres } from '../../components/input/contador-caracteres';
 import { InputDinheiro } from '../../components/input/input-dinheiro';
-import { dataLocal, duracaoEmDias, fimDoDia, inicioDoDia } from '../../services/12-campanha/util/prazo-campanha.util';
+import { dataLocal, duracaoEmDias, fimDoDia, hojeISO, inicioDoDia } from '../../services/12-campanha/util/prazo-campanha.util';
 import { useAreasDaCampanha } from '../../services/8-area-conhecimento/hook/use-areas-da-campanha';
 import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
@@ -75,7 +76,11 @@ interface FormCampanha {
   dataInicio: string;
   dataFim: string;
   videoApresentacaoUrl: string;
+  idImagemCapa: number | null;
+  imagemCapaUrl: string | null;
 }
+
+type CampoTextoCampanha = Exclude<keyof FormCampanha, 'idImagemCapa' | 'imagemCapaUrl'>;
 
 const ROTULO_CAMPO_BLOQUEADO: Record<string, string> = {
   titulo: 'Título',
@@ -85,6 +90,7 @@ const ROTULO_CAMPO_BLOQUEADO: Record<string, string> = {
   taxaPlataforma: 'Taxa da plataforma',
   idAreaConhecimento: 'Área do conhecimento',
   videoApresentacaoUrl: 'Vídeo de apresentação',
+  idImagemCapa: 'Imagem de capa',
   dataInicio: 'Início',
   dataFim: 'Fim',
 };
@@ -102,6 +108,8 @@ const paraForm = (campanha: CampanhaResponse): FormCampanha => ({
   dataInicio: campanha.dataInicio ? dataLocal(campanha.dataInicio) : '',
   dataFim: campanha.dataFim ? dataLocal(campanha.dataFim) : '',
   videoApresentacaoUrl: campanha.videoApresentacaoUrl ?? '',
+  idImagemCapa: campanha.idImagemCapa,
+  imagemCapaUrl: campanha.imagemCapaUrl,
 });
 
 // Alterar campanha (dono, ou o admin pela Bancada da Campanha). Os campos que o banco trava agora
@@ -175,6 +183,7 @@ export function ModalAlterarCampanha({
   const podeEnviar = !edicaoTravada && (campanha?.status === 'rascunho' || campanha?.status === 'rejeitado');
   const modeloEditavel = campanha !== null && STATUS_MODELO_EDITAVEL.has(campanha.status) && !travado('modelo');
   const duracao = form ? duracaoEmDias(form.dataInicio, form.dataFim) : null;
+  const hoje = hojeISO();
   // Orçamento e cronograma completos (os critérios do "Pronta para aprovar?" do Revisar). Só muda a aparência do Enviar
   // (DS-113): incompleta, ele fica apagado mas clicável, e o banco diz o que falta. O prazo vencido não entra aqui: o
   // clique no Enviar já oferece mudar as datas.
@@ -196,11 +205,24 @@ export function ModalAlterarCampanha({
     ...(dados.descricao.trim() ? { descricao: dados.descricao.trim() } : {}),
     ...(dados.dataInicio ? { dataInicio: inicioDoDia(dados.dataInicio) } : {}),
     ...(dados.dataFim ? { dataFim: fimDoDia(dados.dataFim) } : {}),
-    ...(dados.videoApresentacaoUrl.trim() ? { videoApresentacaoUrl: dados.videoApresentacaoUrl.trim() } : {}),
+    ...(!travado('videoApresentacaoUrl')
+      ? { videoApresentacaoUrl: dados.videoApresentacaoUrl.trim() || null }
+      : {}),
+    ...(!travado('idImagemCapa') ? { idImagemCapa: dados.idImagemCapa } : {}),
   });
 
   const salvar = async () => {
     if (!form || !form.titulo.trim()) return;
+    if (
+      campanha &&
+      form.dataFim &&
+      form.dataFim < hoje &&
+      form.dataFim !== (campanha.dataFim ? dataLocal(campanha.dataFim) : '')
+    ) {
+      mostrar('A data de fim precisa ser hoje ou depois.');
+      setParte('dados');
+      return;
+    }
     await executarTrabalhando(async () => {
       await campanhaApi.atualizar(auth.authFetch, idCampanha, corpo(form));
       mostrar('Campanha alterada com sucesso.', `ID: ${idCampanha} foi alterada`);
@@ -228,7 +250,7 @@ export function ModalAlterarCampanha({
     });
   };
 
-  const campoTexto = (campo: keyof FormCampanha, rotulo: string, largura = 'sm:col-span-2', tipo = 'text') =>
+  const campoTexto = (campo: CampoTextoCampanha, rotulo: string, largura = 'sm:col-span-2', tipo = 'text') =>
     form &&
     (travado(campo) ? (
       <CampoFicha
@@ -251,7 +273,16 @@ export function ModalAlterarCampanha({
               {...atributos}
               type={tipo}
               value={form[campo]}
-              onChange={(evento) => setForm({ ...form, [campo]: evento.target.value })}
+              min={campo === 'dataFim' ? (form.dataInicio > hoje ? form.dataInicio : hoje) : undefined}
+              onChange={(evento) =>
+                setForm({
+                  ...form,
+                  [campo]: evento.target.value,
+                  ...(campo === 'videoApresentacaoUrl' && evento.target.value.trim()
+                    ? { idImagemCapa: null, imagemCapaUrl: null }
+                    : {}),
+                })
+              }
               className="input-padrao"
               disabled={travado(campo)}
               aria-describedby={descreveBloqueio(campo)}
@@ -454,7 +485,19 @@ export function ModalAlterarCampanha({
                       )}
                     </Campo>
                   )}
-                  {campoTexto('videoApresentacaoUrl', 'Vídeo de apresentação', 'sm:col-span-2', 'url')}
+                  {campoTexto('videoApresentacaoUrl', 'URL do vídeo de apresentação (opcional)', 'sm:col-span-2', 'url')}
+                  <p className="legenda sm:col-span-2 -mt-2 texto-fraco">
+                    Escolha um vídeo ou uma imagem de capa. Ao preencher um, o outro será removido.
+                  </p>
+                  <SeletorImagemCapaCampanha
+                    authFetch={auth.authFetch}
+                    idArquivo={form.idImagemCapa}
+                    url={form.imagemCapaUrl}
+                    aoAlterar={(idImagemCapa, imagemCapaUrl) =>
+                      setForm({ ...form, idImagemCapa, imagemCapaUrl, videoApresentacaoUrl: '' })
+                    }
+                    desabilitado={trabalhando || travado('idImagemCapa')}
+                  />
                 </SecaoFicha>
               </div>
             </div>

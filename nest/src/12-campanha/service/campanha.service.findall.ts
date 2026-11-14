@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
+import { ARMAZENAMENTO_SERVICE } from '../../commons/storage/storage.constants';
+import type { ArmazenamentoService } from '../../commons/storage/storage.service.interface';
 import {
   ResultadoPaginado,
   paginar,
@@ -15,7 +18,11 @@ import { selecionarCampanhaComNomes } from '../util/campanha.util.with-names';
 // nunca uma segunda camada de autorização.
 @Injectable()
 export class CampanhaServiceFindAll {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    @Inject(ARMAZENAMENTO_SERVICE)
+    private readonly armazenamento: ArmazenamentoService,
+  ) {}
 
   async executar(
     filtro: CampanhaRequestList = {},
@@ -49,7 +56,7 @@ export class CampanhaServiceFindAll {
     return {
       ...resultado,
       dados: resultado.dados.map((linha) =>
-        CampanhaConverter.paraResponseDto(linha),
+        CampanhaConverter.paraResponseDto(linha, this.armazenamento),
       ),
     };
   }

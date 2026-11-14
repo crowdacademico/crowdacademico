@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, NavLink } from 'react-router';
+import { Link, NavLink, useLocation } from 'react-router';
 import { ControleFonte } from './cabecalho/controle-fonte';
 import { ControleTema } from './cabecalho/controle-tema';
 import { MenuUsuario } from './cabecalho/menu-usuario';
@@ -18,6 +18,7 @@ const LINKS_PUBLICOS = [
 
 export function HeaderPublico({ auth }: HeaderPublicoProps) {
   const [menuAberto, setMenuAberto] = useState(false);
+  const localizacao = useLocation();
 
   useEffect(() => {
     if (!menuAberto) return;
@@ -54,7 +55,11 @@ export function HeaderPublico({ auth }: HeaderPublicoProps) {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link to="/criar-campanha" className="btn btn-primary hidden lg:block">
+          <Link
+            to="/criar-campanha"
+            state={{ voltarPara: `${localizacao.pathname}${localizacao.search}` }}
+            className="btn btn-primary hidden lg:block"
+          >
             Submeter pesquisa
           </Link>
           {auth.autenticado && !auth.aceitePendente ? (
@@ -136,6 +141,7 @@ export function HeaderPublico({ auth }: HeaderPublicoProps) {
               </Link>
               <Link
                 to="/criar-campanha"
+                state={{ voltarPara: `${localizacao.pathname}${localizacao.search}` }}
                 onClick={() => setMenuAberto(false)}
                 className="py-3 px-2 rounded-lg enfase texto-marca hover-fundo-sutil"
               >

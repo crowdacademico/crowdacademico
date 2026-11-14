@@ -1208,3 +1208,423 @@ WHERE id_usuario IS NULL AND tipo = 'decimal' AND chave IN (
 --     RETURN NULL;
 -- END;
 -- $$;
+
+-- ============================================================================
+-- GRUPO CG (12-11-2026) - O pesquisador consulta contribuições pagas recebidas. IDEMPOTENTE.
+-- Não precisa parar o Nest (função e permissão; sem alteração de tabela ou policy).
+--
+-- O que muda:
+-- 1. O pesquisador lista somente contribuições pagas (confirmado) das próprias campanhas.
+-- 2. A identidade de apoios anônimos, sem conta ou de conta excluída não é retornada.
+-- 3. A leitura é feita por função SECURITY DEFINER sem ampliar pol_contribuicao_select.
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.contribuicoes_recebidas_pesquisador()
+RETURNS TABLE (
+    id_contribuicao INT,
+    id_campanha INT,
+    titulo_campanha VARCHAR,
+    apoiador VARCHAR,
+    valor DECIMAL,
+    meio_pagamento meio_pagamento,
+    status status_contribuicao,
+    criado_em TIMESTAMPTZ,
+    recompensas TEXT
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    IF public.id_usuario_atual() IS NULL THEN
+        RAISE EXCEPTION 'É necessário estar autenticado para ver as contribuições recebidas.'
+            USING ERRCODE = '92038';
+    END IF;
+
+    RETURN QUERY
+    SELECT c.id_contribuicao,
+           c.id_campanha,
+           ca.titulo,
+           CASE
+               WHEN c.anonima OR u.id_usuario IS NULL OR u.deletado THEN 'Apoiador anônimo'
+               ELSE u.nome
+           END::VARCHAR,
+           c.valor,
+           c.meio_pagamento,
+           c.status,
+           c.criado_em,
+           recompensas.nomes
+    FROM contribuicao c
+    JOIN campanha ca ON ca.id_campanha = c.id_campanha
+    LEFT JOIN usuario u ON u.id_usuario = c.id_usuario
+    LEFT JOIN LATERAL (
+        SELECT string_agg(
+                   r.titulo || CASE WHEN cr.quantidade > 1 THEN ' (x' || cr.quantidade::TEXT || ')' ELSE '' END,
+                   ', ' ORDER BY r.valor_minimo
+               ) AS nomes
+        FROM contribuicao_recompensa cr
+        JOIN recompensa r ON r.id_recompensa = cr.id_recompensa
+        WHERE cr.id_contribuicao = c.id_contribuicao
+    ) recompensas ON TRUE
+    WHERE ca.id_usuario = public.id_usuario_atual()
+      AND c.status = 'confirmado'
+    ORDER BY c.criado_em DESC, c.id_contribuicao DESC;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.contribuicoes_recebidas_pesquisador() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.contribuicoes_recebidas_pesquisador() TO app_nestjs;
+
+-- ============================================================================
+-- GRUPO CH (12-11-2026) - Restringir contribuições recebidas às que estão pagas. IDEMPOTENTE.
+-- Cole este grupo nos bancos onde o Grupo CG já foi aplicado.
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.contribuicoes_recebidas_pesquisador()
+RETURNS TABLE (
+    id_contribuicao INT,
+    id_campanha INT,
+    titulo_campanha VARCHAR,
+    apoiador VARCHAR,
+    valor DECIMAL,
+    meio_pagamento meio_pagamento,
+    status status_contribuicao,
+    criado_em TIMESTAMPTZ,
+    recompensas TEXT
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    IF public.id_usuario_atual() IS NULL THEN
+        RAISE EXCEPTION 'É necessário estar autenticado para ver as contribuições recebidas.'
+            USING ERRCODE = '92038';
+    END IF;
+
+    RETURN QUERY
+    SELECT c.id_contribuicao,
+           c.id_campanha,
+           ca.titulo,
+           CASE
+               WHEN c.anonima OR u.id_usuario IS NULL OR u.deletado THEN 'Apoiador anônimo'
+               ELSE u.nome
+           END::VARCHAR,
+           c.valor,
+           c.meio_pagamento,
+           c.status,
+           c.criado_em,
+           recompensas.nomes
+    FROM contribuicao c
+    JOIN campanha ca ON ca.id_campanha = c.id_campanha
+    LEFT JOIN usuario u ON u.id_usuario = c.id_usuario
+    LEFT JOIN LATERAL (
+        SELECT string_agg(
+                   r.titulo || CASE WHEN cr.quantidade > 1 THEN ' (x' || cr.quantidade::TEXT || ')' ELSE '' END,
+                   ', ' ORDER BY r.valor_minimo
+               ) AS nomes
+        FROM contribuicao_recompensa cr
+        JOIN recompensa r ON r.id_recompensa = cr.id_recompensa
+        WHERE cr.id_contribuicao = c.id_contribuicao
+    ) recompensas ON TRUE
+    WHERE ca.id_usuario = public.id_usuario_atual()
+      AND c.status = 'confirmado'
+    ORDER BY c.criado_em DESC, c.id_contribuicao DESC;
+END;
+$$;
+
+-- ============================================================================
+-- GRUPO CI (12-11-2026) - Contagem pública e anônima de apoios pagos por campanha. IDEMPOTENTE.
+-- Não precisa parar o Nest: cria somente função de leitura agregada e permissões.
+--
+-- O que muda:
+--   1. Visitantes podem consultar a quantidade de apoios pagos em campanhas públicas.
+--   2. A função não retorna dados individuais nem revela campanhas não publicadas.
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.contar_apoios_publicos_campanha(p_id_campanha INT)
+RETURNS INT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+    SELECT count(c.id_contribuicao)::INT
+    FROM campanha ca
+    LEFT JOIN contribuicao c
+      ON c.id_campanha = ca.id_campanha
+     AND c.status IN ('confirmado', 'repassado')
+    WHERE ca.id_campanha = p_id_campanha
+      AND ca.status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado')
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.contar_apoios_publicos_campanha(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.contar_apoios_publicos_campanha(INT) TO app_nestjs;
+
+-- ============================================================================
+-- GRUPO CJ (12-11-2026) - Retirar permissões administrativas de leitura herdadas por usuario/pesquisador. IDEMPOTENTE.
+-- Não precisa parar o Nest: remove somente vínculos em papel_permissao.
+-- ============================================================================
+DELETE FROM papel_permissao pp
+USING papel p, permissao perm
+WHERE pp.id_papel = p.id_papel
+  AND pp.id_permissao = perm.id_permissao
+  AND p.codigo IN ('usuario', 'pesquisador')
+  AND perm.nome IN (
+    'relatorio_visualizar',
+    'usuario_visualizar_sensivel',
+    'perfil_pesquisador_visualizar_sensivel',
+    'contribuicao_visualizar_sensivel',
+    'auditoria_financeira_visualizar',
+    'log_visualizar'
+  );
+
+-- ============================================================================
+-- GRUPO CK (13-11-2026) - Imagem de capa da campanha. IDEMPOTENTE.
+-- Não precisa parar o Nest: a coluna é nullable e as rotinas novas são compatíveis com campanhas antigas.
+--
+-- O que muda:
+--   1. campanha passa a apontar para um arquivo de imagem já confirmado pelo módulo 26-arquivo.
+--   2. A validação exige arquivo ativo, imagem, enviado pela sessão atual e sem outro vínculo.
+--   3. A limpeza de órfãos passa a reconhecer capas; o dono da campanha pode remover a imagem vinculada.
+--   4. A capa fica congelada junto aos demais dados depois da aprovação.
+-- ============================================================================
+ALTER TABLE campanha ADD COLUMN IF NOT EXISTS id_imagem_capa INT;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'CK_CAMPANHA_VIDEO_OU_IMAGEM_CAPA'
+          AND conrelid = 'public.campanha'::regclass
+    ) THEN
+        ALTER TABLE campanha
+            ADD CONSTRAINT "CK_CAMPANHA_VIDEO_OU_IMAGEM_CAPA"
+            CHECK (video_apresentacao_url IS NULL OR id_imagem_capa IS NULL);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'FK_CAMPANHA_IMAGEM_CAPA'
+          AND conrelid = 'public.campanha'::regclass
+    ) THEN
+        ALTER TABLE campanha
+            ADD CONSTRAINT "FK_CAMPANHA_IMAGEM_CAPA"
+            FOREIGN KEY (id_imagem_capa) REFERENCES arquivo(id_arquivo) ON DELETE SET NULL;
+    END IF;
+END;
+$$;
+
+GRANT INSERT (id_imagem_capa) ON campanha TO app_nestjs;
+GRANT UPDATE (id_imagem_capa) ON campanha TO app_nestjs;
+
+DROP POLICY IF EXISTS pol_arquivo_update ON arquivo;
+CREATE POLICY pol_arquivo_update ON arquivo FOR UPDATE TO app_nestjs USING (
+    (SELECT public.tem_permissao('arquivo_gerenciar'))
+    OR EXISTS (
+        SELECT 1 FROM usuario u
+        WHERE u.id_usuario = (SELECT public.id_usuario_atual())
+          AND u.id_imagem_perfil = arquivo.id_arquivo
+    )
+    OR EXISTS (
+        SELECT 1 FROM campanha c
+        WHERE c.id_imagem_capa = arquivo.id_arquivo
+          AND (c.id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar')))
+    )
+    OR EXISTS (
+        SELECT 1 FROM arquivo_atualizacao aa
+        JOIN atualizacao_campanha ac ON ac.id_atualizacao = aa.id_atualizacao
+        JOIN campanha c ON c.id_campanha = ac.id_campanha
+        WHERE aa.id_arquivo = arquivo.id_arquivo
+          AND (c.id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('atualizacao_moderar')))
+    )
+    OR EXISTS (
+        SELECT 1 FROM arquivo_recompensa ar
+        JOIN recompensa r ON r.id_recompensa = ar.id_recompensa
+        JOIN campanha c ON c.id_campanha = r.id_campanha
+        WHERE ar.id_arquivo = arquivo.id_arquivo
+          AND (c.id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar')))
+    )
+);
+
+CREATE OR REPLACE FUNCTION public.fn_valida_posse_imagem_perfil()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_atual INT := public.id_usuario_atual();
+    v_arquivo arquivo%ROWTYPE;
+BEGIN
+    IF NEW.id_imagem_perfil IS NULL
+       OR (TG_OP = 'UPDATE' AND NEW.id_imagem_perfil IS NOT DISTINCT FROM OLD.id_imagem_perfil)
+       OR v_atual IS NULL THEN
+        RETURN NEW;
+    END IF;
+    SELECT * INTO v_arquivo FROM arquivo WHERE id_arquivo = NEW.id_imagem_perfil;
+    IF NOT FOUND OR v_arquivo.ativo IS NOT TRUE THEN
+        RAISE EXCEPTION 'A foto escolhida não existe mais ou foi removida. Envie a imagem de novo.' USING ERRCODE = '90022';
+    END IF;
+    IF v_arquivo.id_usuario_upload IS DISTINCT FROM v_atual THEN
+        RAISE EXCEPTION 'Só é possível usar como foto um arquivo que você mesmo enviou.' USING ERRCODE = '92025';
+    END IF;
+    IF EXISTS (SELECT 1 FROM usuario WHERE id_imagem_perfil = NEW.id_imagem_perfil AND id_usuario <> NEW.id_usuario)
+       OR EXISTS (SELECT 1 FROM campanha WHERE id_imagem_capa = NEW.id_imagem_perfil)
+       OR EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_imagem_perfil)
+       OR EXISTS (SELECT 1 FROM arquivo_recompensa WHERE id_arquivo = NEW.id_imagem_perfil) THEN
+        RAISE EXCEPTION 'Este arquivo já está em uso em outro lugar.' USING ERRCODE = '91029';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.fn_valida_posse_imagem_capa_campanha()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_atual INT := public.id_usuario_atual();
+    v_arquivo arquivo%ROWTYPE;
+BEGIN
+    IF NEW.id_imagem_capa IS NULL
+       OR (TG_OP = 'UPDATE' AND NEW.id_imagem_capa IS NOT DISTINCT FROM OLD.id_imagem_capa)
+       OR v_atual IS NULL THEN
+        RETURN NEW;
+    END IF;
+    SELECT * INTO v_arquivo FROM arquivo WHERE id_arquivo = NEW.id_imagem_capa;
+    IF NOT FOUND OR v_arquivo.ativo IS NOT TRUE OR v_arquivo.tipo_mime NOT LIKE 'image/%' THEN
+        RAISE EXCEPTION 'A imagem de capa não existe mais ou foi removida. Envie a imagem de novo.' USING ERRCODE = '90022';
+    END IF;
+    IF v_arquivo.id_usuario_upload IS DISTINCT FROM v_atual THEN
+        RAISE EXCEPTION 'Só é possível usar como capa uma imagem que você mesmo enviou.' USING ERRCODE = '92025';
+    END IF;
+    IF EXISTS (SELECT 1 FROM usuario WHERE id_imagem_perfil = NEW.id_imagem_capa)
+       OR EXISTS (SELECT 1 FROM campanha WHERE id_imagem_capa = NEW.id_imagem_capa AND id_campanha <> NEW.id_campanha)
+       OR EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_imagem_capa)
+       OR EXISTS (SELECT 1 FROM arquivo_recompensa WHERE id_arquivo = NEW.id_imagem_capa) THEN
+        RAISE EXCEPTION 'Esta imagem já está em uso em outro lugar.' USING ERRCODE = '91029';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_valida_posse_imagem_capa_campanha ON campanha;
+CREATE TRIGGER trg_valida_posse_imagem_capa_campanha
+BEFORE INSERT OR UPDATE OF id_imagem_capa ON campanha
+FOR EACH ROW EXECUTE FUNCTION public.fn_valida_posse_imagem_capa_campanha();
+
+CREATE OR REPLACE FUNCTION public.fn_valida_posse_anexo()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_atual INT := public.id_usuario_atual();
+    v_arquivo arquivo%ROWTYPE;
+    v_em_uso BOOLEAN;
+BEGIN
+    IF v_atual IS NULL OR (TG_OP = 'UPDATE' AND NEW.id_arquivo IS NOT DISTINCT FROM OLD.id_arquivo) THEN
+        RETURN NEW;
+    END IF;
+    SELECT * INTO v_arquivo FROM arquivo WHERE id_arquivo = NEW.id_arquivo;
+    IF NOT FOUND OR v_arquivo.ativo IS NOT TRUE THEN
+        RAISE EXCEPTION 'O arquivo escolhido não existe mais ou foi removido. Envie o arquivo de novo.' USING ERRCODE = '90022';
+    END IF;
+    IF v_arquivo.id_usuario_upload IS DISTINCT FROM v_atual THEN
+        RAISE EXCEPTION 'Só é possível anexar um arquivo que você mesmo enviou.' USING ERRCODE = '92025';
+    END IF;
+    IF TG_TABLE_NAME = 'arquivo_atualizacao' THEN
+        v_em_uso := EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_arquivo AND id_arq_atu IS DISTINCT FROM NEW.id_arq_atu)
+                 OR EXISTS (SELECT 1 FROM arquivo_recompensa WHERE id_arquivo = NEW.id_arquivo);
+    ELSE
+        v_em_uso := EXISTS (SELECT 1 FROM arquivo_recompensa WHERE id_arquivo = NEW.id_arquivo AND id_arq_recompensa IS DISTINCT FROM NEW.id_arq_recompensa)
+                 OR EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_arquivo);
+    END IF;
+    IF v_em_uso
+       OR EXISTS (SELECT 1 FROM usuario WHERE id_imagem_perfil = NEW.id_arquivo)
+       OR EXISTS (SELECT 1 FROM campanha WHERE id_imagem_capa = NEW.id_arquivo) THEN
+        RAISE EXCEPTION 'Este arquivo já está em uso em outro lugar.' USING ERRCODE = '91029';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.fn_campanha_campos_bloqueados(p public.campanha)
+RETURNS TEXT[]
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT CASE
+        WHEN p.status = 'rejeitado' AND public.fn_campanha_reenvios_esgotados(p.id_campanha) THEN
+            ARRAY['titulo', 'descricao', 'meta_financeira', 'modelo', 'data_inicio', 'data_fim',
+                  'id_area_conhecimento', 'video_apresentacao_url', 'id_imagem_capa']
+        WHEN public.fn_status_pos_aprovacao(p.status) THEN
+            ARRAY['meta_financeira', 'modelo', 'taxa_plataforma', 'titulo', 'descricao',
+                  'video_apresentacao_url', 'id_area_conhecimento', 'id_imagem_capa']
+            || CASE WHEN p.data_inicio IS NOT NULL AND p.data_inicio <= NOW()
+                    THEN ARRAY['data_fim', 'data_inicio'] ELSE ARRAY[]::TEXT[] END
+        ELSE ARRAY[]::TEXT[]
+    END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.fn_campanha_erro_congelamento(p_campo TEXT, p_rejeitada BOOLEAN)
+RETURNS TABLE (errcode TEXT, mensagem TEXT)
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT '91027', 'Esta campanha rejeitada já usou todos os reenvios permitidos e agora é somente leitura.'
+    WHERE p_rejeitada
+    UNION ALL
+    SELECT v.errcode, v.mensagem
+    FROM (VALUES
+        ('meta_financeira',       '91004', 'Fraude bloqueada: não é permitido alterar a meta financeira após a aprovação da campanha.'),
+        ('modelo',                '91005', 'Fraude bloqueada: não é permitido alterar o modelo de financiamento após a aprovação da campanha.'),
+        ('taxa_plataforma',       '91006', 'Operação bloqueada: a taxa da plataforma não pode ser alterada após o congelamento.'),
+        ('titulo',                '91007', 'Fraude bloqueada: não é permitido alterar o título após a aprovação da campanha.'),
+        ('descricao',             '91008', 'Fraude bloqueada: não é permitido alterar a descrição após a aprovação da campanha.'),
+        ('video_apresentacao_url','91023', 'Fraude bloqueada: não é permitido alterar o vídeo de apresentação após a aprovação da campanha.'),
+        ('id_area_conhecimento',  '91024', 'Operação bloqueada: a área do conhecimento não pode ser alterada após a aprovação da campanha.'),
+        ('id_imagem_capa',        '91030', 'Não é permitido alterar a imagem de capa após a aprovação da campanha.'),
+        ('data_fim',              '91009', 'Operação bloqueada: o prazo da campanha não pode ser alterado depois que ela começa de verdade.'),
+        ('data_inicio',           '91010', 'Operação bloqueada: a data de início da campanha não pode ser alterada depois que ela começa de verdade.')
+    ) AS v(campo, errcode, mensagem)
+    WHERE NOT p_rejeitada AND v.campo = p_campo;
+$$;
+
+CREATE OR REPLACE FUNCTION public.desativar_arquivos_orfaos()
+RETURNS TABLE (id_arquivo INT, chave TEXT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_horas INT;
+    v_corte TIMESTAMPTZ;
+    v_total INT;
+BEGIN
+    v_horas := public.config_numero('arquivo_horas_para_vincular', 24)::INT;
+    IF v_horas <= 0 THEN RETURN; END IF;
+    v_corte := NOW() - (v_horas * INTERVAL '1 hour');
+
+    RETURN QUERY
+    UPDATE arquivo a
+       SET ativo = FALSE, desativado_em = NOW()
+     WHERE a.ativo = TRUE
+       AND a.criado_em < v_corte
+       AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.id_imagem_perfil = a.id_arquivo)
+       AND NOT EXISTS (SELECT 1 FROM campanha c WHERE c.id_imagem_capa = a.id_arquivo)
+       AND NOT EXISTS (SELECT 1 FROM arquivo_atualizacao aa WHERE aa.id_arquivo = a.id_arquivo)
+       AND NOT EXISTS (SELECT 1 FROM arquivo_recompensa ar WHERE ar.id_arquivo = a.id_arquivo)
+    RETURNING a.id_arquivo, a.chave::TEXT;
+
+    GET DIAGNOSTICS v_total = ROW_COUNT;
+    IF v_total > 0 THEN
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, dados_novos)
+        VALUES ('arquivo', 'órfãos anteriores a ' || to_char(v_corte, 'YYYY-MM-DD HH24:MI'), 'UPDATE', NULL,
+                jsonb_build_object('quantidade', v_total, 'horas_para_vincular', v_horas, 'corte', v_corte));
+    END IF;
+END;
+$$;

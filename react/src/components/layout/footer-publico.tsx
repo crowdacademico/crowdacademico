@@ -6,14 +6,14 @@ const COLUNAS = [
     links: [
       { rotulo: 'Explorar campanhas', to: '/explorar' },
       { rotulo: 'Sobre e curadoria', to: '/sobre' },
+      { rotulo: 'Termos da plataforma', to: '/termos' },
     ],
   },
   {
     titulo: 'Para pesquisadores',
     links: [
       { rotulo: 'Como funciona', to: '/como-funciona' },
-      { rotulo: 'Validação via Lattes', to: '/cadastro' },
-      { rotulo: 'Taxas e repasses', to: '/transparencia' },
+      { rotulo: 'Estúdio do pesquisador', to: '/estudio-pesquisador' },
     ],
   },
 ];

@@ -50,6 +50,13 @@ export const ROTULO_MODELO_CAMPANHA: Record<ModeloCampanha, string> = {
   flexivel: 'Flexível',
 };
 
+export const EXPLICACAO_PUBLICA_MODELO_CAMPANHA: Record<ModeloCampanha, string> = {
+  'all-or-nothing':
+    'O pesquisador recebe o valor arrecadado somente se a meta for atingida até o fim do prazo. Se a meta não for alcançada, as contribuições são devolvidas.',
+  flexivel:
+    'O pesquisador pode receber o valor arrecadado mesmo que a meta não seja atingida. O cartão de crédito está disponível apenas neste modelo.',
+};
+
 // A dica (ⓘ) do campo Modelo, igual no Criar e no Alterar.
 export const EXPLICACAO_MODELO_CAMPANHA =
   'Tudo ou nada: o pesquisador só recebe se a meta for batida até o fim do prazo; senão, todo o dinheiro volta para quem apoiou. ' +
@@ -93,6 +100,14 @@ export const STATUS_ACEITA_SEGUIR: ReadonlySet<StatusCampanha> = new Set<StatusC
 
 // Onde o banco aceita denúncia de campanha (fn_valida_denuncia_alvo, 91035; RF-110): só campanha ativa.
 export const STATUS_ACEITA_DENUNCIA: ReadonlySet<StatusCampanha> = new Set<StatusCampanha>(['ativo']);
+
+// Estados liberados para visitantes em pol_campanha_select (04_rls_policies.sql).
+export const STATUS_VISIVEL_PUBLICAMENTE: ReadonlySet<StatusCampanha> = new Set<StatusCampanha>([
+  'ativo',
+  'sucesso',
+  'nao_atingido',
+  'encerrado',
+]);
 
 // Campanha que já foi ao ar (aprovada em algum momento): tem comentários e atualizações para mostrar.
 export const STATUS_PUBLICADA: ReadonlySet<StatusCampanha> = new Set<StatusCampanha>(['ativo', 'sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao']);

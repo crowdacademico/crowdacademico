@@ -40,6 +40,15 @@
     --respiro-efetivo: min(var(--respiro-dados, 0px), var(--respiro-dados-maximo));
   }
 
+  .estudio-comentarios .crud-tabela__wrapper {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .estudio-comentarios .crud-tabela__wrapper::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Altura da linha (DS-100): toda linha de uma linha só mede o mesmo, qualquer que seja a peça dentro dela. A célula
      tem altura fixa e o conteúdo fica centralizado; o respiro vertical é pequeno, então pílula, botão de dica e botão
      pequeno cabem sem empurrar a linha e sem serem encolhidos. `height` em célula é piso: conteúdo de verdade maior

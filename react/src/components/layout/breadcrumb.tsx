@@ -1,11 +1,11 @@
 import { Link, matchPath, useLocation } from 'react-router';
-import { ROTAS, ROTAS_ADMIN } from '../../services/router/rotas.constants';
+import { ROTAS, ROTAS_ADMIN, ROTAS_CONTA } from '../../services/router/rotas.constants';
 import type { Rota } from '../../services/router/rotas.constants';
 
-// Rótulos vêm de services/router/rotas.constants.ts (ROTAS + ROTAS_ADMIN)
+// Rótulos vêm de services/router/rotas.constants.ts (ROTAS + ROTAS_CONTA + ROTAS_ADMIN)
 // - mesma fonte que App.tsx usa pras rotas e admin-menu.constants.ts usa
 // pro menu lateral, nunca uma lista própria separada.
-const TODAS_AS_ROTAS: Rota[] = [...ROTAS, ...ROTAS_ADMIN];
+const TODAS_AS_ROTAS: Rota[] = [...ROTAS, ...ROTAS_CONTA, ...ROTAS_ADMIN];
 
 // Aparece embaixo do cabeçalho em toda página cujo rotuloBreadcrumb não seja null: só um jeito rápido de
 // voltar. A aba padrão do admin (/admin/dashboard) tem rotuloBreadcrumb: null de propósito: mostrar "Início >
@@ -19,7 +19,7 @@ export function Breadcrumb({ noCabecalho = false }: { noCabecalho?: boolean }) {
   const location = useLocation();
 
   // matchPath (não comparação exata de string) porque existem rotas com
-  // parâmetro (ex.: /admin/minha-conta/:aba): comparando o pathname literal,
+  // parâmetro (ex.: /minha-conta/:aba): comparando o pathname literal,
   // ":aba" nunca bateria com o valor de verdade da URL.
   const rota = TODAS_AS_ROTAS.find((r) => matchPath(r.caminho, location.pathname));
   if (!rota?.rotuloBreadcrumb) {

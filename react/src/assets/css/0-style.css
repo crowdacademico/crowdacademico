@@ -1,11 +1,13 @@
 /* Um arquivo por responsabilidade, nesta ordem (main.tsx importa este e o tailwind-theme.css):
-   - 1 a 3: fundação (cores, tipografia, variáveis e tag crua);
+   - 1 a 3: fundação (cores, tokens, tipografia e tag crua);
    - 4 a 6: peças (botão, campo, selo; tabelas e modais; menu lateral e área do painel);
+   - 7: telas públicas e seus componentes;
    - 8: só o Campo de Testes.
    O ajuste de celular de cada peça mora junto da peça. Toda regra de peça fica dentro de @layer: o utilitário
    do Tailwind sempre ganha. */
 
 @import url('./1-cores.css');
+@import url('./1b-tokens-prototipo.css');
 @import url('./2-tipografia.css');
 @import url('./3-base.css');
 @import url('./4-componentes.css');

@@ -172,6 +172,11 @@ CREATE POLICY pol_arquivo_update ON arquivo FOR UPDATE TO app_nestjs USING (
           AND u.id_imagem_perfil = arquivo.id_arquivo
     )
     OR EXISTS (
+        SELECT 1 FROM campanha c
+        WHERE c.id_imagem_capa = arquivo.id_arquivo
+          AND (c.id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar')))
+    )
+    OR EXISTS (
         SELECT 1 FROM arquivo_atualizacao aa
         JOIN atualizacao_campanha ac ON ac.id_atualizacao = aa.id_atualizacao
         JOIN campanha c ON c.id_campanha = ac.id_campanha

@@ -6,13 +6,18 @@ import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { BarraBuscaPublica } from '../../components/search/barra-busca-publica';
 import { GrupoFiltroExpansivel } from '../../components/search/grupo-filtro-expansivel';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
-import { emBreve, ROTULO_MODELO_CAMPANHA } from '../../services/12-campanha/constants/status-campanha.constants';
+import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
+import {
+  emBreve,
+  ROTULO_MODELO_CAMPANHA,
+} from '../../services/12-campanha/constants/status-campanha.constants';
 import type { ModeloCampanha } from '../../services/12-campanha/type/campanha.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import { CartaoCampanha, EstadoVazio } from './componentes-campanhas';
-import { percentualArrecadado } from './util-campanhas';
+import { campanhaVisivelNoCatalogo, percentualArrecadado } from './util-campanhas';
+import { useSeguirCampanhas } from './use-seguir-campanhas';
 
 type FiltroStatus = 'todos' | 'captacao' | 'em-breve' | 'financiados';
 type FiltroModelo = 'todos' | ModeloCampanha;
@@ -29,11 +34,25 @@ function filtrarStatus(campanha: CampanhaResponse, filtro: FiltroStatus) {
 }
 
 export function Explorar({ auth }: PropsPagina) {
-  const [parametros] = useSearchParams();
-  const { dado: campanhas, carregando, erro } = useBuscar(
+  const [parametros, setParametros] = useSearchParams();
+  const { dado: campanhasRecebidas, carregando, erro } = useBuscar(
     () => campanhaApi.listar(auth.authFetch),
     [auth.authFetch],
   );
+  const {
+    dado: areasConhecimento,
+    carregando: carregandoAreas,
+    erro: erroAreas,
+  } = useBuscar(() => areaConhecimentoApi.listarPublico(), []);
+  const seguimento = useSeguirCampanhas(auth);
+  const campanhas = useMemo(
+    () => campanhasRecebidas?.filter(campanhaVisivelNoCatalogo) ?? null,
+    [campanhasRecebidas],
+  );
+  const idAreaBaseParam = Number(parametros.get('areaBase'));
+  const idAreaBase = Number.isSafeInteger(idAreaBaseParam) && idAreaBaseParam > 0 ? idAreaBaseParam : null;
+  const carregandoConsulta = carregando || (idAreaBase !== null && carregandoAreas);
+  const erroConsulta = erro || (idAreaBase !== null ? erroAreas : '');
   const [busca, setBusca] = useState('');
   const [areasSelecionadas, setAreasSelecionadas] = useState<string[]>(() => {
     const area = parametros.get('area');
@@ -55,6 +74,10 @@ export function Explorar({ auth }: PropsPagina) {
       const texto = normalizar([campanha.titulo, campanha.descricao ?? '', campanha.nomePesquisador ?? '', campanha.nomeArea ?? ''].join(' '));
       return (
         (!termo || texto.includes(termo)) &&
+        (idAreaBase === null ||
+          areasConhecimento?.some(
+            (area) => area.idAreaConhecimento === campanha.idAreaConhecimento && area.idPai === idAreaBase,
+          ) === true) &&
         (areasSelecionadas.length === 0 || areasSelecionadas.includes(campanha.nomeArea ?? '')) &&
         filtrarStatus(campanha, status) &&
         (modelo === 'todos' || campanha.modelo === modelo)
@@ -68,13 +91,17 @@ export function Explorar({ auth }: PropsPagina) {
       }
       return Date.parse(b.criadoEm) - Date.parse(a.criadoEm);
     });
-  }, [areasSelecionadas, busca, campanhas, modelo, ordenacao, status]);
+  }, [areasConhecimento, areasSelecionadas, busca, campanhas, idAreaBase, modelo, ordenacao, status]);
   const tamanhoPagina = 12;
   const totalPaginas = Math.max(1, Math.ceil(resultados.length / tamanhoPagina));
   const paginaAtual = Math.min(pagina, totalPaginas);
   const resultadosPagina = resultados.slice((paginaAtual - 1) * tamanhoPagina, paginaAtual * tamanhoPagina);
 
   function limparFiltros() {
+    const novosParametros = new URLSearchParams(parametros);
+    novosParametros.delete('area');
+    novosParametros.delete('areaBase');
+    setParametros(novosParametros);
     setBusca('');
     setAreasSelecionadas([]);
     setStatus('todos');
@@ -90,7 +117,7 @@ export function Explorar({ auth }: PropsPagina) {
           titulo="Explorar campanhas"
         >
           <p id="explorar-contagem" className="paragrafo-denso mt-3" aria-live="polite">
-            {carregando ? 'Carregando campanhas…' : `${resultados.length} campanhas nesta consulta`}
+            {carregandoConsulta ? 'Carregando campanhas…' : `${resultados.length} campanhas nesta consulta`}
           </p>
         </CabecalhoPagina>
 
@@ -200,26 +227,34 @@ export function Explorar({ auth }: PropsPagina) {
           </div>
         </section>
 
-        {carregando && <Carregando />}
-        {!carregando && erro && <MensagemErro texto={erro} />}
-        {!carregando && !erro && resultados.length === 0 && (
+        {carregandoConsulta && <Carregando />}
+        {!carregandoConsulta && erroConsulta && <MensagemErro texto={erroConsulta} />}
+        {!carregandoConsulta && !erroConsulta && resultados.length === 0 && (
           <EstadoVazio>
             {campanhas?.length
               ? 'Nenhuma campanha corresponde aos filtros selecionados.'
               : 'Nenhuma campanha está disponível nesta consulta.'}
           </EstadoVazio>
         )}
-        {!carregando && !erro && resultados.length > 0 && (
+        {!carregandoConsulta && !erroConsulta && resultados.length > 0 && (
           <div
             id="explorar-grade"
             className={`grade-campanhas ${modoLista ? 'explorar-grade--lista' : ''}`}
           >
             {resultadosPagina.map((campanha) => (
-              <CartaoCampanha campanha={campanha} key={campanha.idCampanha} lista={modoLista} />
+              <CartaoCampanha
+                campanha={campanha}
+                key={campanha.idCampanha}
+                seguindo={seguimento.seguidas.has(campanha.idCampanha)}
+                seguirDesabilitado={
+                  seguimento.carregando || seguimento.emAtualizacao.has(campanha.idCampanha)
+                }
+                aoAlternarSeguir={seguimento.alternarSeguir}
+              />
             ))}
           </div>
         )}
-        {!carregando && !erro && resultados.length > tamanhoPagina && (
+        {!carregandoConsulta && !erroConsulta && resultados.length > tamanhoPagina && (
           <nav id="explorar-paginacao" aria-label="Paginação das campanhas" className="mt-10 flex items-center justify-center gap-4">
             <button
               className="btn"

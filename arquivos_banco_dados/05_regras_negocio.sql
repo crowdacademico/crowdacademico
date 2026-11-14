@@ -2159,17 +2159,17 @@ AS $$
     SELECT CASE
         WHEN p.status = 'rejeitado' AND public.fn_campanha_reenvios_esgotados(p.id_campanha) THEN
             ARRAY['titulo', 'descricao', 'meta_financeira', 'modelo', 'data_inicio', 'data_fim',
-                  'id_area_conhecimento', 'video_apresentacao_url']
+                  'id_area_conhecimento', 'video_apresentacao_url', 'id_imagem_capa']
         WHEN public.fn_status_pos_aprovacao(p.status) THEN
             ARRAY['meta_financeira', 'modelo', 'taxa_plataforma', 'titulo', 'descricao',
-                  'video_apresentacao_url', 'id_area_conhecimento']
+                  'video_apresentacao_url', 'id_area_conhecimento', 'id_imagem_capa']
             || CASE WHEN p.data_inicio IS NOT NULL AND p.data_inicio <= NOW()
                     THEN ARRAY['data_fim', 'data_inicio'] ELSE ARRAY[]::TEXT[] END
         ELSE ARRAY[]::TEXT[]
     END;
 $$;
 
--- Código e mensagem de cada campo congelado (os mesmos de sempre, 91004 a 91010, 91023, 91024 e 91027 na rejeitada esgotada).
+-- Código e mensagem de cada campo congelado (os mesmos de sempre, 91004 a 91010, 91023, 91024, 91027 e 91030).
 CREATE OR REPLACE FUNCTION public.fn_campanha_erro_congelamento(p_campo TEXT, p_rejeitada BOOLEAN)
 RETURNS TABLE (errcode TEXT, mensagem TEXT)
 LANGUAGE sql
@@ -2187,6 +2187,7 @@ AS $$
         ('descricao',             '91008', 'Fraude bloqueada: não é permitido alterar a descrição após a aprovação da campanha.'),
         ('video_apresentacao_url','91023', 'Fraude bloqueada: não é permitido alterar o vídeo de apresentação após a aprovação da campanha.'),
         ('id_area_conhecimento',  '91024', 'Operação bloqueada: a área do conhecimento não pode ser alterada após a aprovação da campanha.'),
+        ('id_imagem_capa',       '91030', 'Não é permitido alterar a imagem de capa após a aprovação da campanha.'),
         ('data_fim',              '91009', 'Operação bloqueada: o prazo da campanha não pode ser alterado depois que ela começa de verdade.'),
         ('data_inicio',           '91010', 'Operação bloqueada: a data de início da campanha não pode ser alterada depois que ela começa de verdade.')
     ) AS v(campo, errcode, mensagem)
@@ -2407,6 +2408,89 @@ BEGIN
     SELECT (count(*) FILTER (WHERE c.status IN ('confirmado', 'repassado')))::INT, count(*)::INT
     FROM contribuicao c
     WHERE c.id_campanha = p_id_campanha;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     contar_apoios_publicos_campanha
+-- Assinatura: (p_id_campanha INT) -> INT
+-- Regra:      Conta apenas contribuições pagas de campanhas que podem ser vistas publicamente. Não retorna dados
+--             individuais nem informa se uma campanha não publicada existe.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.contar_apoios_publicos_campanha(p_id_campanha INT)
+RETURNS INT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+    SELECT count(c.id_contribuicao)::INT
+    FROM campanha ca
+    LEFT JOIN contribuicao c
+      ON c.id_campanha = ca.id_campanha
+     AND c.status IN ('confirmado', 'repassado')
+    WHERE ca.id_campanha = p_id_campanha
+      AND ca.status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado')
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     contribuicoes_recebidas_pesquisador
+-- Assinatura: () -> TABLE (dados individuais das contribuições das próprias campanhas)
+-- Bloco:      [05-K-2]
+-- Regra:      Lista apenas contribuições pagas (confirmado) das campanhas do pesquisador logado. A identidade de
+--             apoios anônimos (ou sem conta) nunca é retornada; SECURITY DEFINER não amplia pol_contribuicao_select.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.contribuicoes_recebidas_pesquisador()
+RETURNS TABLE (
+    id_contribuicao INT,
+    id_campanha INT,
+    titulo_campanha VARCHAR,
+    apoiador VARCHAR,
+    valor DECIMAL,
+    meio_pagamento meio_pagamento,
+    status status_contribuicao,
+    criado_em TIMESTAMPTZ,
+    recompensas TEXT
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    IF public.id_usuario_atual() IS NULL THEN
+        RAISE EXCEPTION 'É necessário estar autenticado para ver as contribuições recebidas.'
+            USING ERRCODE = '92038';
+    END IF;
+
+    RETURN QUERY
+    SELECT c.id_contribuicao,
+           c.id_campanha,
+           ca.titulo,
+           CASE
+               WHEN c.anonima OR u.id_usuario IS NULL OR u.deletado THEN 'Apoiador anônimo'
+               ELSE u.nome
+           END::VARCHAR,
+           c.valor,
+           c.meio_pagamento,
+           c.status,
+           c.criado_em,
+           recompensas.nomes
+    FROM contribuicao c
+    JOIN campanha ca ON ca.id_campanha = c.id_campanha
+    LEFT JOIN usuario u ON u.id_usuario = c.id_usuario
+    LEFT JOIN LATERAL (
+        SELECT string_agg(
+                   r.titulo || CASE WHEN cr.quantidade > 1 THEN ' (x' || cr.quantidade::TEXT || ')' ELSE '' END,
+                   ', ' ORDER BY r.valor_minimo
+               ) AS nomes
+        FROM contribuicao_recompensa cr
+        JOIN recompensa r ON r.id_recompensa = cr.id_recompensa
+        WHERE cr.id_contribuicao = c.id_contribuicao
+    ) recompensas ON TRUE
+    WHERE ca.id_usuario = public.id_usuario_atual()
+      AND c.status = 'confirmado'
+    ORDER BY c.criado_em DESC, c.id_contribuicao DESC;
 END;
 $$;
 
@@ -6481,6 +6565,7 @@ BEGIN
         RAISE EXCEPTION 'Só é possível usar como foto um arquivo que você mesmo enviou.' USING ERRCODE = '92025';
     END IF;
     IF EXISTS (SELECT 1 FROM usuario WHERE id_imagem_perfil = NEW.id_imagem_perfil AND id_usuario <> NEW.id_usuario)
+       OR EXISTS (SELECT 1 FROM campanha WHERE id_imagem_capa = NEW.id_imagem_perfil)
        OR EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_imagem_perfil)
        OR EXISTS (SELECT 1 FROM arquivo_recompensa WHERE id_arquivo = NEW.id_imagem_perfil) THEN
         RAISE EXCEPTION 'Este arquivo já está em uso em outro lugar.' USING ERRCODE = '91029';
@@ -6500,6 +6585,56 @@ DROP TRIGGER IF EXISTS trg_valida_posse_imagem_perfil ON usuario;
 CREATE TRIGGER trg_valida_posse_imagem_perfil
 BEFORE INSERT OR UPDATE OF id_imagem_perfil ON usuario
 FOR EACH ROW EXECUTE FUNCTION public.fn_valida_posse_imagem_perfil();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_posse_imagem_capa_campanha
+-- Uso:        Invocada por trg_valida_posse_imagem_capa_campanha
+-- Regra:      A capa deve ser imagem ativa enviada pela conta atual e não pode estar vinculada a outro registro.
+--             SECURITY DEFINER para conferir vínculos protegidos por RLS.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_posse_imagem_capa_campanha()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_atual   INT := public.id_usuario_atual();
+    v_arquivo arquivo%ROWTYPE;
+BEGIN
+    IF NEW.id_imagem_capa IS NULL
+       OR (TG_OP = 'UPDATE' AND NEW.id_imagem_capa IS NOT DISTINCT FROM OLD.id_imagem_capa)
+       OR v_atual IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    SELECT * INTO v_arquivo FROM arquivo WHERE id_arquivo = NEW.id_imagem_capa;
+    IF NOT FOUND OR v_arquivo.ativo IS NOT TRUE OR v_arquivo.tipo_mime NOT LIKE 'image/%' THEN
+        RAISE EXCEPTION 'A imagem de capa não existe mais ou foi removida. Envie a imagem de novo.' USING ERRCODE = '90022';
+    END IF;
+    IF v_arquivo.id_usuario_upload IS DISTINCT FROM v_atual THEN
+        RAISE EXCEPTION 'Só é possível usar como capa uma imagem que você mesmo enviou.' USING ERRCODE = '92025';
+    END IF;
+    IF EXISTS (SELECT 1 FROM usuario WHERE id_imagem_perfil = NEW.id_imagem_capa)
+       OR EXISTS (SELECT 1 FROM campanha WHERE id_imagem_capa = NEW.id_imagem_capa AND id_campanha <> NEW.id_campanha)
+       OR EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_imagem_capa)
+       OR EXISTS (SELECT 1 FROM arquivo_recompensa WHERE id_arquivo = NEW.id_imagem_capa) THEN
+        RAISE EXCEPTION 'Esta imagem já está em uso em outro lugar.' USING ERRCODE = '91029';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_valida_posse_imagem_capa_campanha
+-- Tabela:    campanha
+-- Momento:   BEFORE INSERT OR UPDATE OF id_imagem_capa
+-- Função:    fn_valida_posse_imagem_capa_campanha()
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_valida_posse_imagem_capa_campanha ON campanha;
+CREATE TRIGGER trg_valida_posse_imagem_capa_campanha
+BEFORE INSERT OR UPDATE OF id_imagem_capa ON campanha
+FOR EACH ROW EXECUTE FUNCTION public.fn_valida_posse_imagem_capa_campanha();
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_valida_posse_anexo
@@ -6545,7 +6680,9 @@ BEGIN
         v_em_uso := EXISTS (SELECT 1 FROM arquivo_recompensa WHERE id_arquivo = NEW.id_arquivo AND id_arq_recompensa IS DISTINCT FROM NEW.id_arq_recompensa)
                  OR EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_arquivo);
     END IF;
-    IF v_em_uso OR EXISTS (SELECT 1 FROM usuario WHERE id_imagem_perfil = NEW.id_arquivo) THEN
+    IF v_em_uso
+       OR EXISTS (SELECT 1 FROM usuario WHERE id_imagem_perfil = NEW.id_arquivo)
+       OR EXISTS (SELECT 1 FROM campanha WHERE id_imagem_capa = NEW.id_arquivo) THEN
         RAISE EXCEPTION 'Este arquivo já está em uso em outro lugar.' USING ERRCODE = '91029';
     END IF;
     RETURN NEW;
@@ -6604,6 +6741,7 @@ BEGIN
      WHERE a.ativo = TRUE
        AND a.criado_em < v_corte
        AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.id_imagem_perfil = a.id_arquivo)
+       AND NOT EXISTS (SELECT 1 FROM campanha c WHERE c.id_imagem_capa = a.id_arquivo)
        AND NOT EXISTS (SELECT 1 FROM arquivo_atualizacao aa WHERE aa.id_arquivo = a.id_arquivo)
        AND NOT EXISTS (SELECT 1 FROM arquivo_recompensa ar WHERE ar.id_arquivo = a.id_arquivo)
     RETURNING a.id_arquivo, a.chave::TEXT;

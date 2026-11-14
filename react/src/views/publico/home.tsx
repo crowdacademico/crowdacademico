@@ -5,11 +5,13 @@ import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { Carregando } from '../../components/layout/carregando';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { emBreve } from '../../services/12-campanha/constants/status-campanha.constants';
+import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import { CartaoCampanha, EstadoVazio } from './componentes-campanhas';
-import { formatarMoeda, percentualArrecadado } from './util-campanhas';
+import { campanhaVisivelNoCatalogo, formatarNumeroCompacto, percentualArrecadado } from './util-campanhas';
+import { useSeguirCampanhas } from './use-seguir-campanhas';
 
 function iconeDaArea(nome: string) {
   const area = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
@@ -100,12 +102,20 @@ function BlocoCampanhas({
   erro,
   vazio,
   trilhoRef,
+  seguidas,
+  carregandoSeguimento,
+  emAtualizacao,
+  aoAlternarSeguir,
 }: {
   campanhas: CampanhaResponse[];
   carregando: boolean;
   erro: string | null;
   vazio: string;
   trilhoRef: RefObject<HTMLDivElement | null>;
+  seguidas: ReadonlySet<number>;
+  carregandoSeguimento: boolean;
+  emAtualizacao: ReadonlySet<number>;
+  aoAlternarSeguir: (idCampanha: number, titulo: string) => void;
 }) {
   useEffect(() => {
     const trilho = trilhoRef.current;
@@ -146,7 +156,13 @@ function BlocoCampanhas({
     <div className="carrossel-cartoes">
       <div className="carrossel-cartoes__trilho" ref={trilhoRef}>
         {campanhas.map((campanha) => (
-          <CartaoCampanha campanha={campanha} key={campanha.idCampanha} />
+          <CartaoCampanha
+            campanha={campanha}
+            key={campanha.idCampanha}
+            seguindo={seguidas.has(campanha.idCampanha)}
+            seguirDesabilitado={carregandoSeguimento || emAtualizacao.has(campanha.idCampanha)}
+            aoAlternarSeguir={aoAlternarSeguir}
+          />
         ))}
       </div>
     </div>
@@ -154,17 +170,33 @@ function BlocoCampanhas({
 }
 
 export function Home({ auth }: PropsPagina) {
-  const { dado: campanhas, carregando, erro } = useBuscar(
+  const { dado: campanhasRecebidas, carregando, erro } = useBuscar(
     () => campanhaApi.listar(auth.authFetch),
     [auth.authFetch],
+  );
+  const {
+    dado: areasConhecimento,
+    carregando: carregandoAreas,
+    erro: erroAreas,
+  } = useBuscar(() => areaConhecimentoApi.listarPublico(), []);
+  const seguimento = useSeguirCampanhas(auth);
+  const campanhas = useMemo(
+    () => campanhasRecebidas?.filter(campanhaVisivelNoCatalogo) ?? null,
+    [campanhasRecebidas],
   );
   const carrosselDestaque = useRef<HTMLDivElement>(null);
   const carrosselUltimosDias = useRef<HTMLDivElement>(null);
   const carrosselEmBreve = useRef<HTMLDivElement>(null);
-  const areas = useMemo(
-    () => [...new Set((campanhas ?? []).map((campanha) => campanha.nomeArea).filter((nome): nome is string => Boolean(nome)))],
-    [campanhas],
-  );
+  const areas = useMemo(() => {
+    const idsAreasEmCampanhas = new Set((campanhas ?? []).map((campanha) => campanha.idAreaConhecimento));
+    return (areasConhecimento ?? [])
+      .filter((area) => area.idPai === null)
+      .filter((raiz) =>
+        (areasConhecimento ?? []).some(
+          (area) => area.idPai === raiz.idAreaConhecimento && idsAreasEmCampanhas.has(area.idAreaConhecimento),
+        ),
+      );
+  }, [areasConhecimento, campanhas]);
   const captacao = useMemo(
     () => porArrecadacao((campanhas ?? []).filter(
       (campanha) => campanha.status === 'ativo' && !emBreve(campanha),
@@ -256,18 +288,19 @@ export function Home({ auth }: PropsPagina) {
             {areas.map((area) => (
               <Link
                 className="home-comunidade"
-                key={area}
-                to={`/explorar?area=${encodeURIComponent(area)}`}
+                key={area.idAreaConhecimento}
+                to={`/explorar?areaBase=${area.idAreaConhecimento}`}
               >
                 <span className="home-comunidade__icone" aria-hidden="true">
-                  <i className={`fa-solid ${iconeDaArea(area)}`} />
+                  <i className={`fa-solid ${iconeDaArea(area.nome)}`} />
                 </span>
-                <span>{area}</span>
+                <span>{area.nome}</span>
               </Link>
             ))}
           </div>
         )}
-        {!carregando && !erro && areas.length === 0 && (
+        {!carregandoAreas && erroAreas && <MensagemErro texto={erroAreas} />}
+        {!carregando && !erro && !carregandoAreas && !erroAreas && areas.length === 0 && (
           <p className="paragrafo texto-fraco text-center">
             As comunidades serão exibidas quando campanhas públicas forem vinculadas às áreas de conhecimento.
           </p>
@@ -296,6 +329,10 @@ export function Home({ auth }: PropsPagina) {
             erro={erro}
             vazio="Nenhuma campanha está em captação no momento."
             trilhoRef={carrosselDestaque}
+            seguidas={seguimento.seguidas}
+            carregandoSeguimento={seguimento.carregando}
+            emAtualizacao={seguimento.emAtualizacao}
+            aoAlternarSeguir={seguimento.alternarSeguir}
           />
           <div className="mt-12 text-center">
             <Link to="/explorar" className="fundo-cartao border-2 borda-padrao texto-padrao font-bold py-3 px-8 rounded-xl hover-fundo-sutil hover-borda-forte hover-texto-forte transition-all shadow-sm">
@@ -320,6 +357,10 @@ export function Home({ auth }: PropsPagina) {
             erro={erro}
             vazio="Não há campanhas ativas com encerramento previsto para os próximos sete dias."
             trilhoRef={carrosselUltimosDias}
+            seguidas={seguimento.seguidas}
+            carregandoSeguimento={seguimento.carregando}
+            emAtualizacao={seguimento.emAtualizacao}
+            aoAlternarSeguir={seguimento.alternarSeguir}
           />
         </div>
       </section>
@@ -340,6 +381,10 @@ export function Home({ auth }: PropsPagina) {
           erro={erro}
           vazio="Nenhuma campanha aprovada tem início futuro informado no momento."
           trilhoRef={carrosselEmBreve}
+          seguidas={seguimento.seguidas}
+          carregandoSeguimento={seguimento.carregando}
+          emAtualizacao={seguimento.emAtualizacao}
+          aoAlternarSeguir={seguimento.alternarSeguir}
         />
       </section>
 
@@ -347,16 +392,16 @@ export function Home({ auth }: PropsPagina) {
         <div className="absolute inset-0 grade-medicao" aria-hidden="true" />
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
           <article className="home-stat">
-            <div className="home-stat__valor">{valorEstatistica(campanhas?.length ?? 0)}</div>
+            <div className="home-stat__valor">{valorEstatistica(formatarNumeroCompacto(campanhas?.length ?? 0))}</div>
             <div className="rotulo">Campanhas públicas</div>
           </article>
           <article className="home-stat">
-            <div className="home-stat__valor">{valorEstatistica(numeroPesquisadores)}</div>
+            <div className="home-stat__valor">{valorEstatistica(formatarNumeroCompacto(numeroPesquisadores))}</div>
             <div className="rotulo">Pesquisadores</div>
           </article>
           <article className="home-stat">
             <div className="home-stat__valor">
-              {valorEstatistica(formatarMoeda(totalArrecadado))}
+              {valorEstatistica(formatarNumeroCompacto(totalArrecadado, true))}
             </div>
             <div className="rotulo">Arrecadado nas campanhas</div>
           </article>

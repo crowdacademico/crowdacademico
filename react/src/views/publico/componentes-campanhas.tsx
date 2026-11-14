@@ -6,7 +6,7 @@ import {
   rotuloStatusCampanha,
 } from '../../services/12-campanha/constants/status-campanha.constants';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
-import { formatarData, formatarMoeda, percentualArrecadado } from './util-campanhas';
+import { diasRestantes, formatarData, formatarMoeda, percentualArrecadado } from './util-campanhas';
 
 function iniciaisPesquisador(nome: string | null): string {
   if (!nome) {
@@ -23,23 +23,52 @@ function iniciaisPesquisador(nome: string | null): string {
 
 export function CartaoCampanha({
   campanha,
-  lista = false,
+  seguindo = false,
+  seguirDesabilitado = false,
+  aoAlternarSeguir,
 }: {
   campanha: CampanhaResponse;
-  lista?: boolean;
+  seguindo?: boolean;
+  seguirDesabilitado?: boolean;
+  aoAlternarSeguir?: (idCampanha: number, titulo: string) => void;
 }) {
   const percentual = percentualArrecadado(campanha);
   const aguardandoInicio = emBreve(campanha);
+  const diasAteFim = diasRestantes(campanha.dataFim);
+  const rotuloTempo = campanha.status === 'ativo'
+    ? diasAteFim === null
+      ? 'Prazo não informado'
+      : `${diasAteFim} dia${diasAteFim === 1 ? '' : 's'} restante${diasAteFim === 1 ? '' : 's'}`
+    : `Encerrada em ${formatarData(campanha.dataFim)}`;
 
   return (
-    <article className={`cartao-campanha fundo-cartao border borda-padrao rounded-xl overflow-hidden flex flex-col ${lista ? 'sm:flex-row' : ''}`}>
-      <div className={`cartao-campanha__capa relative flex items-center justify-center ${lista ? 'sm:w-56 sm:h-auto' : ''}`}>
-        <div className="cartao-campanha__arte" aria-hidden="true">
-          <i className="fa-solid fa-flask" />
-        </div>
+    <article className="cartao-campanha fundo-cartao border borda-padrao rounded-xl overflow-hidden flex flex-col">
+      <div className="cartao-campanha__capa relative flex items-center justify-center">
+        {campanha.imagemCapaUrl ? (
+          <img
+            className="cartao-campanha__imagem-capa"
+            src={campanha.imagemCapaUrl}
+            alt=""
+            aria-hidden="true"
+          />
+        ) : (
+          <div className="cartao-campanha__arte" aria-hidden="true">
+            <i className="fa-solid fa-flask" />
+          </div>
+        )}
         <span className="cartao-campanha__modelo">
           {ROTULO_MODELO_CAMPANHA[campanha.modelo]}
         </span>
+        <button
+          type="button"
+          className={`botao-seguir ${seguindo ? 'botao-seguir--ativo' : ''}`}
+          aria-pressed={seguindo}
+          aria-label={seguindo ? 'Deixar de seguir esta campanha' : 'Seguir esta campanha'}
+          disabled={seguirDesabilitado}
+          onClick={() => aoAlternarSeguir?.(campanha.idCampanha, campanha.titulo)}
+        >
+          <i className={`${seguindo ? 'fa-solid' : 'fa-regular'} fa-heart`} aria-hidden="true" />
+        </button>
         <span className={`badge ${classeBadgeCampanha(campanha)} cartao-campanha__status`}>
           {rotuloStatusCampanha(campanha)}
         </span>
@@ -53,7 +82,7 @@ export function CartaoCampanha({
             {campanha.titulo}
           </Link>
         </h3>
-        <p className="cartao-campanha__descricao paragrafo texto-padrao mt-3 line-clamp-3">
+        <p className="cartao-campanha__descricao paragrafo texto-padrao mt-3">
           {campanha.descricao || 'Esta campanha ainda não possui uma descrição pública.'}
         </p>
         <div className="cartao-campanha__pesquisador mt-3">
@@ -74,23 +103,29 @@ export function CartaoCampanha({
               <span className="cartao-campanha__nome-pesquisador">Pesquisador não informado</span>
             )}
             <span className="cartao-campanha__area-pesquisador">
-              {campanha.nomeArea ?? 'Área não informada'}
+              {campanha.instituicaoPesquisador ?? 'Instituição não informada'}
             </span>
           </div>
         </div>
         <div className="cartao-campanha__detalhes mt-auto pt-5">
           {aguardandoInicio ? (
-            <div className="cartao-campanha__em-breve">
-              <i className="fa-regular fa-clock text-lg shrink-0" aria-hidden="true" />
-              <div>
-                <span className="font-bold text-sm block">
-                  {campanha.dataInicio
-                    ? `Início em ${formatarData(campanha.dataInicio)}`
-                    : 'Início previsto'}
-                </span>
-                <span className="paragrafo-denso">Meta: {formatarMoeda(campanha.metaFinanceira)}</span>
+            <>
+              <div className="cartao-campanha__em-breve">
+                <i className="fa-regular fa-clock text-lg shrink-0" aria-hidden="true" />
+                <div>
+                  <span className="font-bold text-sm block">
+                    {campanha.dataInicio
+                      ? `Início em ${formatarData(campanha.dataInicio)}`
+                      : 'Início previsto'}
+                  </span>
+                  <span className="paragrafo-denso">Meta: {formatarMoeda(campanha.metaFinanceira)}</span>
+                </div>
               </div>
-            </div>
+              <span className="fundo-realce px-2 py-1 rounded-md legenda mt-3 inline-block">
+                <i className="fa-regular fa-clock mr-1" aria-hidden="true" />
+                {rotuloTempo}
+              </span>
+            </>
           ) : (
             <>
               <div className="flex justify-between items-end gap-3 mb-1.5">
@@ -116,24 +151,17 @@ export function CartaoCampanha({
                   </div>
                 </div>
               )}
-              <div className="flex justify-between gap-3 legenda mt-3">
+              <div className="flex flex-nowrap justify-between items-center gap-2 legenda mt-3">
                 <span className="fundo-realce px-2 py-1 rounded-md">
                   Meta: {formatarMoeda(campanha.metaFinanceira)}
+                </span>
+                <span className="fundo-realce px-2 py-1 rounded-md">
+                  <i className="fa-regular fa-clock mr-1" aria-hidden="true" />
+                  {rotuloTempo}
                 </span>
               </div>
             </>
           )}
-        </div>
-        <div className="flex flex-wrap justify-between gap-3 mt-4 pt-4 border-t borda-padrao legenda">
-          <span>
-            <i className="fa-regular fa-clock mr-1" aria-hidden="true" />
-            {aguardandoInicio
-              ? `Início em ${formatarData(campanha.dataInicio)}`
-              : `Encerra em ${formatarData(campanha.dataFim)}`}
-          </span>
-          <Link className="texto-marca font-bold hover:underline" to={`/campanha/${campanha.idCampanha}`}>
-            Ver projeto <span aria-hidden="true">→</span>
-          </Link>
         </div>
       </div>
     </article>

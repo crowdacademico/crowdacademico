@@ -20,7 +20,7 @@ export function AvisoSoPesquisador({ situacao, fazem, fazer, className = '' }: A
       ) : (
         <p>
           Só pesquisadores {fazem}.{' '}
-          <Link to="/admin/minha-conta/academico" className="link-texto link-texto--cor-herdada">
+          <Link to="/minha-conta/perfil" className="link-texto link-texto--cor-herdada">
             Tornar-me pesquisador
           </Link>{' '}
           (Minha Conta, aba Acadêmico).

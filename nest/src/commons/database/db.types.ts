@@ -422,6 +422,7 @@ export interface CampanhaTable {
   valor_bruto_arrecadado: Generated<string>;
   taxa_plataforma: string | null;
   descricao: string | null;
+  id_imagem_capa: number | null;
   data_inicio: Date | null;
   data_fim: Date | null;
   status: Generated<StatusCampanha>;

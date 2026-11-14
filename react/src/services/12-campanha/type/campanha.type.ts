@@ -24,10 +24,13 @@ export interface CampanhaResponse {
   enviadoAprovacaoEm: string | null;
   encerradoEm: string | null;
   videoApresentacaoUrl: string | null;
+  idImagemCapa: number | null;
+  imagemCapaUrl: string | null;
   criadoEm: string;
-  // Nome resolvido pelo backend em listar e consultar; null nas outras respostas ou se a RLS escondeu o
-  // usuário. precisaRevisaoScore: sinal para quem aprova, só na fila de aprovação, senão null.
+  // Dados públicos resolvidos pelo backend em listar e consultar; nulos nas outras respostas ou se a RLS escondeu
+  // o usuário/perfil. precisaRevisaoScore: sinal para quem aprova, só na fila de aprovação, senão null.
   nomePesquisador: string | null;
+  instituicaoPesquisador: string | null;
   nomeArea: string | null;
   precisaRevisaoScore: boolean | null;
   // Só vêm preenchidos em GET /campanha/:id de uma campanha 'rejeitado'
@@ -69,9 +72,12 @@ export interface CampanhaRequestCreate {
   descricao?: string;
   dataInicio?: string;
   dataFim?: string;
-  videoApresentacaoUrl?: string;
+  videoApresentacaoUrl?: string | null;
+  idImagemCapa?: number | null;
 }
 
 // Espelha campanha.request-update.ts: os mesmos campos, todos opcionais. Status nunca muda por aqui (só por
 // enviar/aprovar/rejeitar).
-export type CampanhaRequestUpdate = Partial<CampanhaRequestCreate>;
+export type CampanhaRequestUpdate = Omit<Partial<CampanhaRequestCreate>, 'idImagemCapa'> & {
+  idImagemCapa?: number | null;
+};

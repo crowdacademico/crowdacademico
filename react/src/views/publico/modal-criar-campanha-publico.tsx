@@ -1,0 +1,544 @@
+import { useEffect, useId, useState } from 'react';
+import type { ReactNode } from 'react';
+import { SecaoFicha } from '../../components/crud/ficha-consulta';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
+import { useFecharComAviso } from '../../components/crud/use-alteracao-nao-salva';
+import { ModalFicha } from '../../components/crud/modal-ficha';
+import { IndicadorEtapas } from '../../components/crud/indicador-etapas';
+import { Campo } from '../../components/input/campo';
+import { SeletorImagemCapaCampanha } from '../../components/input/seletor-imagem-capa-campanha';
+import { useErroToast } from '../../components/layout/toast/use-erro-toast';
+import { useToast } from '../../components/layout/toast/use-toast';
+import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
+import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
+import { dataLocal, duracaoEmDias, fimDoDia, hojeISO, inicioDoDia, somarDias } from '../../services/12-campanha/util/prazo-campanha.util';
+import { useAreasDaCampanha } from '../../services/8-area-conhecimento/hook/use-areas-da-campanha';
+import { formatarMoeda } from '../../services/constant/util/formatacao.util';
+import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
+import { ContadorCaracteres } from '../../components/input/contador-caracteres';
+import { erroLimiteCaracteres } from '../../services/constant/util/validacao.util';
+import { PainelOrcamentoCronograma } from '../12-campanha/painel-orcamento-cronograma';
+import { EtapaRevisaoCampanha } from '../12-campanha/etapa-revisao-campanha';
+import { SecaoRecompensasCampanha } from '../18-recompensa/secao-recompensas-campanha';
+import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
+import type { CampanhaRequestCreate, CampanhaResponse, ModeloCampanha } from '../../services/12-campanha/type/campanha.type';
+import { EXPLICACAO_MODELO_CAMPANHA, ROTULO_MODELO_CAMPANHA } from '../../services/12-campanha/constants/status-campanha.constants';
+import { Tooltip } from '../../components/layout/tooltip';
+import { InputDinheiro } from '../../components/input/input-dinheiro';
+
+interface ModalCriarCampanhaProps {
+  auth: Pick<UseAuthReturn, 'authFetch'>;
+  // Continuar um rascunho que já existe: o mesmo passo a passo, com os dados dele, sempre a partir da etapa 1. O
+  // rascunho só é editado aqui (Minhas Campanhas e a Bancada da Campanha mandam para cá); o Alterar comum fica para os outros status.
+  idRascunho?: number;
+  // Cria a campanha com os dados da etapa 1. Padrão: em nome de quem está logado (POST /campanha). A Bancada
+  // da Campanha passa o endpoint de suporte, em nome do pesquisador escolhido.
+  criar?: (dados: CampanhaRequestCreate) => Promise<CampanhaResponse>;
+  // Campos a mais no topo da etapa 1 (a Bancada da Campanha põe o "Dono da campanha") e se eles já estão válidos.
+  camposExtras?: ReactNode;
+  camposExtrasValidos?: boolean;
+  subtituloDados?: string;
+  // Texto que fica na frente do subtítulo em todas as etapas (a Bancada da Campanha põe "Pesquisador: fulano.").
+  contexto?: string;
+  // Botão "Coloque recompensas" na Revisão, que abre as recompensas num modal: só quando quem está logado é o dono
+  // (Minhas Campanhas). A Bancada da Campanha cria em nome de outro pesquisador, e só o dono cadastra recompensa
+  // (pol_recompensa_insert).
+  comRecompensas?: boolean;
+  // A lista de quem abriu precisa recarregar (campanha criada, alterada ou enviada).
+  aoMudar: () => void;
+  aoFechar: () => void;
+}
+
+interface FormDadosCampanha {
+  titulo: string;
+  idAreaConhecimento: string;
+  modelo: ModeloCampanha;
+  metaFinanceira: string;
+  descricao: string;
+  dataInicio: string;
+  dataFim: string;
+  videoApresentacaoUrl: string;
+  idImagemCapa: number | null;
+  imagemCapaUrl: string | null;
+}
+
+const FORM_VAZIO: FormDadosCampanha = {
+  titulo: '',
+  idAreaConhecimento: '',
+  modelo: 'all-or-nothing',
+  metaFinanceira: '',
+  descricao: '',
+  dataInicio: '',
+  dataFim: '',
+  videoApresentacaoUrl: '',
+  idImagemCapa: null,
+  imagemCapaUrl: null,
+};
+
+type Etapa = 'dados' | 'orcamento' | 'cronograma' | 'revisao';
+
+const ETAPAS = [
+  { chave: 'dados', rotulo: 'Dados' },
+  { chave: 'orcamento', rotulo: 'Orçamento' },
+  { chave: 'cronograma', rotulo: 'Cronograma' },
+  { chave: 'revisao', rotulo: 'Revisão' },
+] as const;
+
+// Criar campanha em 4 etapas do MESMO modal: Dados, Orçamento, Cronograma e Revisão, com o indicador de etapas no
+// topo. Os itens de orçamento e os marcos só existem depois de a campanha ter um id (FK), por isso o botão da etapa
+// Dados se chama "Salvar rascunho": ele cria a campanha como rascunho e avança; voltando para Dados e avançando de novo, ela é ALTERADA (PATCH),
+// nunca criada outra vez. O mínimo de itens e de marcos só é exigido no envio: dá para fechar e continuar depois,
+// e o rascunho reabre neste mesmo passo a passo (idRascunho).
+//
+// O selo no topo ("Rascunho #N salvo") fica à vista em todas as etapas: o aviso flutuante some, e a pessoa
+// precisa saber que a campanha já está guardada. Na Revisão, "Salvar rascunho" fecha o modal (tudo já está
+// gravado) e "Enviar para aprovação" parece indisponível enquanto o checklist tiver item vermelho, mas continua
+// clicável: quem cobra orçamento, soma, cronograma e prazo é o banco (trg_campanha_valida_completude), e o erro
+// chega traduzido. Se falhar, o modal continua aberto e a campanha continua rascunho: nada se perde.
+export function ModalCriarCampanha({
+  auth,
+  idRascunho,
+  criar,
+  camposExtras,
+  camposExtrasValidos = true,
+  subtituloDados = 'A campanha é salva como rascunho a cada etapa: dá para fechar e continuar depois.',
+  contexto,
+  comRecompensas = false,
+  aoMudar,
+  aoFechar,
+}: ModalCriarCampanhaProps) {
+  const [vendoRecompensas, setVendoRecompensas] = useState(false);
+  const { mostrar } = useToast();
+  const { reportarErro } = useErroToast();
+  const { ocupado: trabalhando, executar: executarTrabalhando } = useEnvio(reportarErro);
+  const regras = useRegrasCampanha();
+  const idPrazoDica = useId();
+  const areas = useAreasDaCampanha(auth.authFetch);
+  const [form, setForm] = useState<FormDadosCampanha>(FORM_VAZIO);
+  // O que está gravado no banco (vazio antes de o rascunho existir): diz se a etapa Dados tem mudança não salva.
+  const [formSalvo, setFormSalvo] = useState<FormDadosCampanha>(FORM_VAZIO);
+  const [etapa, setEtapa] = useState<Etapa>('dados');
+  const [idCampanha, setIdCampanha] = useState<number | null>(idRascunho ?? null);
+  const [carregandoRascunho, setCarregandoRascunho] = useState(idRascunho !== undefined);
+  // O checklist da Revisão está todo verde (só muda a aparência do Enviar).
+  const [revisaoPronta, setRevisaoPronta] = useState(false);
+
+  // Rascunho que já existe: o formulário da etapa 1 começa com o que está salvo.
+  useEffect(() => {
+    if (idRascunho === undefined) {
+      return;
+    }
+    campanhaApi
+      .buscar(auth.authFetch, String(idRascunho))
+      .then((campanha) => {
+        const salvo: FormDadosCampanha = {
+          titulo: campanha.titulo,
+          idAreaConhecimento: String(campanha.idAreaConhecimento),
+          modelo: campanha.modelo,
+          metaFinanceira: String(campanha.metaFinanceira),
+          descricao: campanha.descricao ?? '',
+          dataInicio: campanha.dataInicio ? dataLocal(campanha.dataInicio) : '',
+          dataFim: campanha.dataFim ? dataLocal(campanha.dataFim) : '',
+          videoApresentacaoUrl: campanha.videoApresentacaoUrl ?? '',
+          idImagemCapa: campanha.idImagemCapa,
+          imagemCapaUrl: campanha.imagemCapaUrl,
+        };
+        setForm(salvo);
+        setFormSalvo(salvo);
+      })
+      .catch(reportarErro)
+      .finally(() => setCarregandoRascunho(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idRascunho]);
+
+  const hoje = hojeISO();
+  const duracao = duracaoEmDias(form.dataInicio, form.dataFim);
+  const duracaoValida = duracao !== null && duracao >= regras.prazoMinimoDias && duracao <= regras.prazoMaximoDias;
+  const metaAbaixoDoMinimo = form.metaFinanceira !== '' && Number(form.metaFinanceira) < regras.metaMinima;
+  const textoMetaMinima = `Meta mínima: ${formatarMoeda(regras.metaMinima)}.`;
+  // "Próximo" fica sempre clicável: clicando com algo faltando, cada campo mostra o próprio erro.
+  const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
+    extras: !camposExtrasValidos && 'Preencha os campos acima.',
+    titulo: form.titulo.trim() === '' && 'Informe o título.',
+    area: form.idAreaConhecimento === '' && 'Escolha a área do conhecimento.',
+    meta: form.metaFinanceira === '' ? 'Informe a meta.' : metaAbaixoDoMinimo && textoMetaMinima,
+    inicio: form.dataInicio === '' ? 'Informe a data de início.' : form.dataInicio < hoje && 'O início precisa ser hoje ou depois.',
+    fim: (form.dataFim === '' || form.dataFim < hoje || !duracaoValida) && 'prazo',
+    descricao:
+      erroLimiteCaracteres(form.descricao, regras.limiteDescricao, 'A descrição'),
+  }));
+  const prazoComErro = Boolean(erroDe('fim')) || (duracao !== null && !duracaoValida);
+
+  const corpo = (): CampanhaRequestCreate => ({
+    titulo: form.titulo.trim(),
+    idAreaConhecimento: Number(form.idAreaConhecimento),
+    modelo: form.modelo,
+    metaFinanceira: Number(form.metaFinanceira),
+    dataInicio: inicioDoDia(form.dataInicio),
+    dataFim: fimDoDia(form.dataFim),
+    ...(form.descricao.trim() ? { descricao: form.descricao.trim() } : {}),
+    videoApresentacaoUrl: form.videoApresentacaoUrl.trim() || null,
+    idImagemCapa: form.idImagemCapa,
+  });
+
+  // Mudança na etapa Dados que ainda não foi gravada (antes de o rascunho existir, qualquer coisa digitada).
+  const sujo = JSON.stringify(form) !== JSON.stringify(formSalvo);
+
+  // Sair da etapa Dados grava o formulário antes: cria o rascunho na
+  // primeira vez, altera nas outras. Rascunho sem mudança nos Dados só troca de etapa: um rascunho antigo (com o
+  // início já no passado, por exemplo) ainda deixa ver orçamento e cronograma, e a Revisão aponta o que corrigir.
+  const gravarDados = async (aposGravar: () => void) => {
+    if (idCampanha !== null && !sujo) {
+      aposGravar();
+      return;
+    }
+    if (!tentarEnviar()) {
+      return;
+    }
+    await executarTrabalhando(async () => {
+      if (idCampanha === null) {
+        const nova = criar ? await criar(corpo()) : await campanhaApi.criar(auth.authFetch, corpo());
+        setIdCampanha(nova.idCampanha);
+        mostrar('Campanha criada como rascunho.', `ID: ${nova.idCampanha}. Agora, o orçamento.`);
+      } else {
+        await campanhaApi.atualizar(auth.authFetch, idCampanha, corpo());
+      }
+      setFormSalvo(form);
+      aoMudar();
+      aposGravar();
+    });
+  };
+
+  const avancarDosDados = (destino: Etapa = 'orcamento') =>
+    gravarDados(() => setEtapa(destino));
+
+  const salvarDadosESair = () => gravarDados(() => {
+    mostrar('Rascunho salvo.');
+    aoFechar();
+  });
+
+  const irPara = (destino: Etapa) => {
+    if (etapa === 'dados') {
+      void avancarDosDados(destino);
+    } else {
+      setEtapa(destino);
+    }
+  };
+
+  const enviarParaAprovacao = async () => {
+    if (idCampanha === null) {
+      return;
+    }
+    await executarTrabalhando(async () => {
+      await campanhaApi.enviar(auth.authFetch, idCampanha);
+      mostrar('Campanha enviada para aprovação.', `ID: ${idCampanha}`);
+      aoMudar();
+      aoFechar();
+    });
+  };
+
+  // Tudo já está gravado (os Dados ao sair da etapa, orçamento e cronograma na hora): só fecha e confirma.
+  const salvarRascunhoESair = () => {
+    if (idCampanha === null) {
+      return;
+    }
+    mostrar('Rascunho salvo.', `ID: ${idCampanha}. Dá para continuar depois, de onde parou.`);
+    aoFechar();
+  };
+
+  // Fechar com mudança não gravada na etapa Dados pergunta antes. Orçamento e cronograma gravam na hora.
+  const fechar = useFecharComAviso(sujo, aoFechar);
+
+  const subtitulo = [
+    contexto,
+    idCampanha === null ? subtituloDados : undefined,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  // O selo do topo: diz, em todas as etapas, se a campanha já está guardada.
+  const selo =
+    idCampanha === null ? (
+      <span key="selo" className="badge badge-neutro">Ainda não salva</span>
+    ) : etapa === 'dados' && sujo ? (
+      <span key="selo" className="badge badge-aviso">Rascunho #{idCampanha}: alterações não salvas</span>
+    ) : (
+      <span key="selo" className="badge badge-sucesso">
+        <i className="fa-solid fa-circle-check" aria-hidden="true"></i> Rascunho #{idCampanha} salvo
+      </span>
+    );
+
+  const rodape =
+    etapa === 'dados' ? (
+      <RodapeAcoes
+        aoCancelar={fechar}
+        acao={[
+          { rotulo: 'Salvar rascunho', rotuloOcupado: 'Salvando...', ocupado: trabalhando, aoClicar: () => void salvarDadosESair() },
+          { rotulo: 'Próximo', rotuloOcupado: 'Salvando...', ocupado: trabalhando, aoClicar: () => void avancarDosDados() },
+        ]}
+      />
+    ) : etapa === 'orcamento' ? (
+      <RodapeAcoes
+        aoCancelar={() => setEtapa('dados')}
+        rotuloCancelar="Voltar"
+        acao={[
+          { rotulo: 'Salvar rascunho', desabilitado: trabalhando, aoClicar: salvarRascunhoESair },
+          { rotulo: 'Próximo', aoClicar: () => setEtapa('cronograma') },
+        ]}
+      />
+    ) : etapa === 'cronograma' ? (
+      <RodapeAcoes
+        aoCancelar={() => setEtapa('orcamento')}
+        rotuloCancelar="Voltar"
+        acao={[
+          { rotulo: 'Salvar rascunho', desabilitado: trabalhando, aoClicar: salvarRascunhoESair },
+          { rotulo: 'Próximo', aoClicar: () => setEtapa('revisao') },
+        ]}
+      />
+    ) : (
+      <RodapeAcoes
+        aoCancelar={() => setEtapa('cronograma')}
+        rotuloCancelar="Voltar"
+        acao={[
+          { rotulo: 'Salvar rascunho', desabilitado: trabalhando, aoClicar: salvarRascunhoESair },
+          {
+            rotulo: 'Enviar para aprovação',
+            rotuloOcupado: 'Enviando...',
+            ocupado: trabalhando,
+            aparenciaIndisponivel: !revisaoPronta,
+            aoClicar: () => void enviarParaAprovacao(),
+          },
+        ]}
+      />
+    );
+
+  return (
+    <>
+      <ModalFicha
+        variasTelas
+        titulo={idRascunho === undefined ? 'Criar Campanha' : 'Continuar rascunho'}
+        carregando={carregandoRascunho}
+        // Um clique sem querer no fundo escurecido derrubaria o passo a passo; só fecha por Cancelar ou pelo X.
+        // Depois da etapa 1 a campanha já está salva como rascunho: fechar não perde nada.
+        fecharAoClicarFora={false}
+        subtitulo={subtitulo}
+        badges={[selo]}
+        aoFechar={fechar}
+        rodape={rodape}
+      >
+        <IndicadorEtapas
+          etapas={ETAPAS}
+          atual={etapa}
+          aoEscolher={trabalhando ? undefined : irPara}
+          // Antes de o rascunho existir, só dá para avançar pelo Próximo (que valida e cria).
+          liberada={(chave) => chave === 'dados' || idCampanha !== null}
+        />
+        {etapa === 'revisao' && idCampanha !== null ? (
+          <EtapaRevisaoCampanha
+            auth={auth}
+            idCampanha={idCampanha}
+            titulo={form.titulo}
+            nomeArea={areas.find((area) => String(area.idAreaConhecimento) === form.idAreaConhecimento)?.nome ?? ''}
+            meta={Number(form.metaFinanceira)}
+            dataInicio={form.dataInicio}
+            dataFim={form.dataFim}
+            duracaoDias={duracao}
+            prazoValido={duracaoValida && form.dataInicio >= hoje}
+            minimoItensOrcamento={regras.minimoItensOrcamento}
+            minimoMarcosCronograma={regras.minimoMarcosCronograma}
+            aoAvaliar={setRevisaoPronta}
+            botaoRecompensas={
+              comRecompensas && (
+                <button type="button" className="btn btn-secondary" onClick={() => setVendoRecompensas(true)}>
+                  <i className="fa-solid fa-gift" aria-hidden="true"></i> Coloque recompensas
+                </button>
+              )
+            }
+          />
+        ) : (etapa === 'orcamento' || etapa === 'cronograma') && idCampanha !== null ? (
+          <SecaoFicha titulo={etapa === 'orcamento' ? 'Orçamento' : 'Cronograma'}>
+            <div className="sm:col-span-2">
+              <PainelOrcamentoCronograma
+                // `key`: a etapa troca só a prop `abaFixa`, e o painel guarda a aba no próprio estado; sem remontar,
+                // Cronograma continuaria mostrando a tabela de Orçamento.
+                key={etapa}
+                auth={auth}
+                idCampanha={idCampanha}
+                podeEditar
+                abaFixa={etapa}
+                dataInicioCampanha={form.dataInicio}
+              />
+            </div>
+          </SecaoFicha>
+        ) : (
+          <>
+            {camposExtras}
+            {erroDe('extras') && <p className="legenda enfase texto-erro -mt-2 mb-3">{erroDe('extras')}</p>}
+            <SecaoFicha titulo="Dados">
+              <Campo rotulo="Título" className="sm:col-span-2" erro={erroDe('titulo')}>
+                {({ atributos, classeErro }) => (
+                  <input
+                    {...atributos}
+                    type="text"
+                    value={form.titulo}
+                    onChange={(evento) => setForm({ ...form, titulo: evento.target.value })}
+                    className={'input-padrao' + classeErro}
+                  />
+                )}
+              </Campo>
+              <Campo rotulo="Área do conhecimento" erro={erroDe('area')}>
+                {({ atributos, classeErro }) => (
+                  <select
+                    {...atributos}
+                    value={form.idAreaConhecimento}
+                    onChange={(evento) => setForm({ ...form, idAreaConhecimento: evento.target.value })}
+                    className={'input-padrao' + classeErro}
+                  >
+                    <option value="">Selecione...</option>
+                    {areas.map((area) => (
+                      <option key={area.idAreaConhecimento} value={area.idAreaConhecimento}>
+                        {area.nome}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </Campo>
+              <Campo
+                rotulo="Meta (R$)"
+                dica={`Meta mínima: ${formatarMoeda(regras.metaMinima)}.`}
+                erro={erroDe('meta') ?? (metaAbaixoDoMinimo && textoMetaMinima)}
+              >
+                {({ atributos, classeErro }) => (
+                  <InputDinheiro
+                    {...atributos}
+                    valor={form.metaFinanceira}
+                    aoMudar={(metaFinanceira) => setForm({ ...form, metaFinanceira })}
+                    className={'input-padrao' + classeErro}
+                  />
+                )}
+              </Campo>
+              <Campo
+                rotulo={
+                  <>
+                    Modelo de financiamento <Tooltip texto={EXPLICACAO_MODELO_CAMPANHA} />
+                  </>
+                }
+                className="sm:col-span-2"
+              >
+                {({ atributos }) => (
+                  <select
+                    {...atributos}
+                    value={form.modelo}
+                    onChange={(evento) => setForm({ ...form, modelo: evento.target.value as ModeloCampanha })}
+                    className="input-padrao"
+                  >
+                    {(Object.keys(ROTULO_MODELO_CAMPANHA) as ModeloCampanha[]).map((modelo) => (
+                      <option key={modelo} value={modelo}>
+                        {ROTULO_MODELO_CAMPANHA[modelo]}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </Campo>
+              <Campo rotulo="Descrição (opcional)" className="sm:col-span-2" erro={erroDe('descricao')}>
+                {({ atributos, classeErro }) => (
+                  <>
+                    <textarea
+                      {...atributos}
+                      rows={3}
+                      value={form.descricao}
+                      onChange={(evento) => setForm({ ...form, descricao: evento.target.value })}
+                      className={'input-padrao' + classeErro}
+                    />
+                    <ContadorCaracteres texto={form.descricao} limite={regras.limiteDescricao} />
+                  </>
+                )}
+              </Campo>
+              <Campo rotulo="Início" erro={erroDe('inicio')}>
+                {({ atributos, classeErro }) => (
+                  <input
+                    {...atributos}
+                    type="date"
+                    value={form.dataInicio}
+                    min={hoje}
+                    // Sem data de fim ainda, sugere a duração padrão (RF-073); a pessoa muda o fim se quiser.
+                    onChange={(evento) => {
+                      const dataInicio = evento.target.value;
+                      const dataFim =
+                        form.dataFim === '' && dataInicio !== '' ? somarDias(dataInicio, regras.prazoSugeridoDias) : form.dataFim;
+                      setForm({ ...form, dataInicio, dataFim });
+                    }}
+                    className={'input-padrao' + classeErro}
+                  />
+                )}
+              </Campo>
+              {/* O aviso de prazo vale para as duas datas e ocupa a linha inteira abaixo delas, por isso fica fora do
+                  Campo e é ligado ao campo "Fim" à mão; fica vermelho também quando o fim está vazio e já houve uma
+                  tentativa de avançar. */}
+              <Campo rotulo="Fim">
+                {({ atributos }) => (
+                  <input
+                    {...atributos}
+                    aria-invalid={prazoComErro}
+                    aria-describedby={idPrazoDica}
+                    type="date"
+                    value={form.dataFim}
+                    min={form.dataInicio || hoje}
+                    onChange={(evento) => setForm({ ...form, dataFim: evento.target.value })}
+                    className={'input-padrao' + (prazoComErro ? ' borda-erro' : '')}
+                  />
+                )}
+              </Campo>
+              <p
+                id={idPrazoDica}
+                className={'legenda sm:col-span-2 -mt-2 texto-herdado ' + (prazoComErro ? 'texto-erro enfase' : 'texto-fraco')}
+              >
+                {form.dataFim === '' && erroDe('fim') ? 'Informe a data de fim. ' : ''}
+                {form.dataFim !== '' && form.dataFim < hoje ? 'A data de fim precisa ser hoje ou depois. ' : ''}
+                {duracao !== null ? `Duração: ${duracao} ${duracao === 1 ? 'dia' : 'dias'}. ` : ''}A campanha precisa durar
+                entre {regras.prazoMinimoDias} e {regras.prazoMaximoDias} dias, começando hoje ou depois. Sugestão:{' '}
+                {regras.prazoSugeridoDias} dias.
+              </p>
+              <Campo rotulo="URL do vídeo de apresentação (opcional)" className="sm:col-span-2">
+                {({ atributos }) => (
+                  <input
+                    {...atributos}
+                    type="url"
+                    value={form.videoApresentacaoUrl}
+                    onChange={(evento) =>
+                      setForm({
+                        ...form,
+                        videoApresentacaoUrl: evento.target.value,
+                        ...(evento.target.value.trim() ? { idImagemCapa: null, imagemCapaUrl: null } : {}),
+                      })
+                    }
+                    className="input-padrao"
+                    placeholder="https://"
+                  />
+                )}
+              </Campo>
+              <p className="legenda sm:col-span-2 -mt-2 texto-fraco">
+                Escolha um vídeo ou uma imagem de capa. Ao preencher um, o outro será removido.
+              </p>
+              <SeletorImagemCapaCampanha
+                authFetch={auth.authFetch}
+                idArquivo={form.idImagemCapa}
+                url={form.imagemCapaUrl}
+                aoAlterar={(idImagemCapa, imagemCapaUrl) =>
+                  setForm({ ...form, idImagemCapa, imagemCapaUrl, videoApresentacaoUrl: '' })
+                }
+                desabilitado={trabalhando}
+              />
+            </SecaoFicha>
+          </>
+        )}
+      </ModalFicha>
+      {vendoRecompensas && idCampanha !== null && (
+        <ModalFicha titulo="Recompensas" subtitulo={form.titulo} aoFechar={() => setVendoRecompensas(false)}>
+          <SecaoRecompensasCampanha auth={auth} idCampanha={idCampanha} podeGerenciar />
+        </ModalFicha>
+      )}
+    </>
+  );
+}

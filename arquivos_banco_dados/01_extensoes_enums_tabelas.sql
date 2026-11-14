@@ -572,6 +572,7 @@ CREATE TABLE campanha (
     valor_bruto_arrecadado DECIMAL(10,2) NOT NULL DEFAULT 0,
     taxa_plataforma      DECIMAL(5,2),
     descricao            TEXT,
+    id_imagem_capa       INT,
     data_inicio          TIMESTAMPTZ,
     data_fim             TIMESTAMPTZ,
     status               status_campanha NOT NULL DEFAULT 'rascunho',
@@ -591,6 +592,10 @@ CREATE TABLE campanha (
     CONSTRAINT "FK_CAMPANHA_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
     CONSTRAINT "FK_CAMPANHA_ADMIN" FOREIGN KEY (id_admin) REFERENCES usuario(id_usuario),
     CONSTRAINT "FK_CAMPANHA_AREA_CONHECIMENTO" FOREIGN KEY (id_area_conhecimento) REFERENCES area_conhecimento(id_area_conhecimento),
+    CONSTRAINT "FK_CAMPANHA_IMAGEM_CAPA" FOREIGN KEY (id_imagem_capa) REFERENCES arquivo(id_arquivo) ON DELETE SET NULL,
+    CONSTRAINT "CK_CAMPANHA_VIDEO_OU_IMAGEM_CAPA" CHECK (
+        video_apresentacao_url IS NULL OR id_imagem_capa IS NULL
+    ),
     CONSTRAINT "CK_CAMPANHA_PRAZO" CHECK (
         data_fim IS NULL OR data_inicio IS NULL OR
         (data_fim - data_inicio) BETWEEN INTERVAL '1 day' AND INTERVAL '365 days'

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MENSAGEM_NOME_CURTO, NOME_MINIMO_CARACTERES } from '../../services/constant/constants/minimos.constants';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
@@ -13,6 +13,7 @@ import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { confirmarSaida } from '../../components/crud/use-alteracao-nao-salva';
 import { pedirConfirmacao } from '../../components/crud/confirmacao';
 import { Campo } from '../../components/input/campo';
+import { ModalFicha } from '../../components/crud/modal-ficha';
 import { BotaoMostrarSenha } from '../../components/input/botao-mostrar-senha';
 import { MedidorSenha } from '../../components/input/medidor-senha';
 import { ConfirmacaoDigitada } from '../../components/input/confirmacao-digitada';
@@ -42,6 +43,8 @@ import { SecaoContestacaoScore } from '../19-denuncia/secao-contestacao-score';
 import { SecaoRecebimento } from '../24-conta-recebimento/secao-recebimento';
 import { SENHA_MINIMO_CARACTERES } from '../../services/3-auth/constants/senha.constants';
 import { AbaMinhasContribuicoes } from '../22-contribuicao/aba-minhas-contribuicoes';
+import { LinksAcademicosDoUsuario } from '../7-link-academico/links-academicos-do-usuario';
+import { CamposVinculoPerfil } from '../6-perfil-pesquisador/campos-vinculo-perfil';
 
 // Minha Conta: não é um formulário só, é uma área com seções independentes, cada uma salva por conta própria.
 //
@@ -52,14 +55,13 @@ import { AbaMinhasContribuicoes } from '../22-contribuicao/aba-minhas-contribuic
 //
 // Estrutura (referência ORCID/ResearchGate/Google Acadêmico: "portfólio profissional", abrem com uma FAIXA DE
 // IDENTIDADE larga no topo, não um cartãozinho de canto): FaixaIdentidade (larga, topo: avatar grande, nome,
-// e-mail, badges de papel, "membro desde") + abas de verdade (rota /admin/minha-conta/:aba, não useState: mesma
-// decisão das abas do painel admin). Cinco <Painel> com o MESMO peso visual empilhados parecem um formulário
+// e-mail, badges de papel, "membro desde") + abas de verdade (rota /minha-conta/:aba, não useState: mesma
+// decisão das abas do painel admin). Seções com o MESMO peso visual empilhadas parecem um formulário
 // longo, não um perfil, e um cartão lateral discreto não ancora a tela.
 const ABAS_MINHA_CONTA = [
   { chave: 'perfil', rotulo: 'Perfil', icone: 'fa-user' },
   { chave: 'seguranca', rotulo: 'Segurança', icone: 'fa-shield-halved' },
   { chave: 'papeis', rotulo: 'Papéis', icone: 'fa-user-tag' },
-  { chave: 'academico', rotulo: 'Acadêmico', icone: 'fa-graduation-cap' },
   { chave: 'contribuicoes', rotulo: 'Contribuições', icone: 'fa-hand-holding-heart' },
   // Privacidade por último de propósito - o botão de excluir conta mora
   // aqui dentro, atrás da confirmação por digitação: ação destrutiva
@@ -68,35 +70,15 @@ const ABAS_MINHA_CONTA = [
 ];
 const CHAVES_ABAS = ABAS_MINHA_CONTA.map((item) => item.chave);
 
-// Posição da entrada atual no histórico do navegador, gravada pelo próprio react-router (history.state.idx).
-function posicaoNoHistorico(): number | null {
-  const estado: unknown = window.history.state;
-  if (estado && typeof estado === 'object' && 'idx' in estado && typeof estado.idx === 'number') {
-    return estado.idx;
-  }
-  return null;
-}
-
 export function MinhaConta({ auth }: PropsPagina) {
   const { aba } = useParams();
-  const navigate = useNavigate();
 
-  // Cada aba é uma rota, então trocar de aba empilha histórico. "Voltar" volta para a tela de ANTES de Minha
-  // Conta, não para a aba anterior: guarda a posição de entrada e pula de volta até a entrada anterior a ela.
-  // Sem entrada anterior (aberta por link direto ou F5 na primeira tela), vai para a página inicial.
-  const posicaoEntrada = useRef(posicaoNoHistorico());
-  const voltar = useCallback(() => {
-    const entrada = posicaoEntrada.current;
-    const atual = posicaoNoHistorico();
-    if (entrada === null || atual === null || entrada === 0) {
-      void navigate('/');
-      return;
-    }
-    void navigate(entrada - 1 - atual);
-  }, [navigate]);
-
+  if (auth.carregando) return null;
+  if (!auth.usuario) {
+    return <Navigate to="/login" replace state={{ voltarPara: `/minha-conta/${aba ?? 'perfil'}` }} />;
+  }
   if (!aba || !CHAVES_ABAS.includes(aba)) {
-    return <Navigate to="/admin/minha-conta/perfil" replace />;
+    return <Navigate to="/minha-conta/perfil" replace />;
   }
 
   return (
@@ -107,7 +89,7 @@ export function MinhaConta({ auth }: PropsPagina) {
     // conteúdo" (passa a ter uma largura EXPLÍCITA, não automática); `min-width: 100%` devolve ele ao tamanho
     // normal (cheio do container, até o teto de --largura-ficha) na hora de desenhar de verdade. Troque só se remover
     // a barra de abas.
-    <div className="w-0 min-w-full max-w-(--largura-ficha) mx-auto p-4 sm:p-8">
+    <div className="w-0 min-w-full max-w-(--largura-ficha) mx-auto p-6 sm:p-10">
       {/* Um cartão só, do topo ao rodapé - SEM overflow-hidden (mesma
           lição já aprendida nas antigas páginas de formulário e de ficha:
           overflow-hidden cria um contexto de scroll que o `sticky` do
@@ -126,11 +108,10 @@ export function MinhaConta({ auth }: PropsPagina) {
             o formulário nasceria com o nome vazio. Trocar a key quando o usuário chega remonta a aba já com o
             nome certo. */}
         {aba === 'perfil' && (
-          <AbaPerfil key={auth.usuario?.idUsuario ?? 'carregando'} auth={auth} aoVoltar={voltar} />
+          <AbaPerfil key={auth.usuario?.idUsuario ?? 'carregando'} auth={auth} />
         )}
         {aba === 'seguranca' && <AbaSeguranca auth={auth} />}
         {aba === 'papeis' && <AbaPapeis auth={auth} />}
-        {aba === 'academico' && <AbaAcademico auth={auth} />}
         {aba === 'contribuicoes' && <AbaMinhasContribuicoes auth={auth} />}
         {aba === 'privacidade' && <AbaPrivacidade auth={auth} />}
       </div>
@@ -210,9 +191,6 @@ function FaixaIdentidade({ auth }: FaixaIdentidadeProps) {
           )}
         </div>
 
-        <Link to="/admin/minha-conta/perfil" className="btn btn-secondary shrink-0 sm:self-start">
-          <i className="fa-solid fa-pen" aria-hidden="true"></i> Editar perfil
-        </Link>
       </div>
     </div>
   );
@@ -233,7 +211,7 @@ function BarraAbas({ abaAtiva }: BarraAbasProps) {
       {ABAS_MINHA_CONTA.map((item) => (
         <Link
           key={item.chave}
-          to={`/admin/minha-conta/${item.chave}`}
+          to={`/minha-conta/${item.chave}`}
           className={
             'paragrafo enfase flex items-center gap-2 px-4 py-3.5 whitespace-nowrap border-b-2 transition-colors texto-herdado ' +
             (item.chave === abaAtiva
@@ -249,13 +227,9 @@ function BarraAbas({ abaAtiva }: BarraAbasProps) {
   );
 }
 
-// 1. PERFIL - a aba mais importante, é o "portfólio": foto, nome, e-mail e o vínculo acadêmico (só leitura,
-// vem do perfil de pesquisador; quem não é pesquisador vê o convite para a aba Acadêmico). 2 colunas dentro da
-// aba (pedido explícito: "campo de nome não precisa de 900px de largura") + rodapé sticky Salvar/Cancelar,
-// mesmo padrão de modal-alterar-usuario.tsx (ModalAlterarUsuario).
+// Perfil básico e dados acadêmicos do pesquisador aparecem na mesma aba. A edição abre em ModalFicha.
 interface AbaPerfilProps {
-  auth: Pick<UseAuthReturn, 'usuario' | 'authFetch' | 'atualizarUsuarioLocal'>;
-  aoVoltar: () => void;
+  auth: Pick<UseAuthReturn, 'usuario' | 'authFetch' | 'atualizarUsuarioLocal' | 'renovarSessaoAgora'>;
 }
 
 interface DadosAtualizarPerfil {
@@ -263,13 +237,14 @@ interface DadosAtualizarPerfil {
   idImagemPerfil?: number | null;
 }
 
-function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
-  const [nome, setNome] = useState(auth.usuario?.nome ?? '');
-  // undefined = carregando; null = não é pesquisador (404, mesma tolerância da aba Acadêmico).
-  const [perfilBuscado, setPerfil] = useState<PerfilPesquisadorResponse | null | undefined>(undefined);
-  // Quem não é pesquisador nem pede o perfil (seria um 404 certo). `undefined` (sessão antiga) ainda pede.
-  const perfil = auth.usuario?.ehPesquisador === false ? null : perfilBuscado;
-
+function AbaPerfil({ auth }: AbaPerfilProps) {
+  const [perfil, setPerfil] = useState<PerfilPesquisadorResponse | null>(null);
+  const [suspensao, setSuspensao] = useState<SuspensaoResponseDto | null>(null);
+  const [carregandoPerfil, setCarregandoPerfil] = useState(true);
+  const [erroCarregamentoPerfil, setErroCarregamentoPerfil] = useState<string | null>(null);
+  const [editando, setEditando] = useState(false);
+  const [fazendoUpgrade, setFazendoUpgrade] = useState(false);
+  const carregando = auth.usuario?.ehPesquisador !== false && carregandoPerfil;
   useEffect(() => {
     if (!auth.usuario) {
       return;
@@ -277,152 +252,246 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
     if (auth.usuario.ehPesquisador === false) {
       return;
     }
-    perfilPesquisadorApi
-      .buscar(auth.authFetch, auth.usuario.idUsuario)
-      .then(setPerfil)
-      .catch(() => setPerfil(null));
+    setErroCarregamentoPerfil(null);
+    void Promise.allSettled([
+      perfilPesquisadorApi.buscar(auth.authFetch, auth.usuario.idUsuario),
+      perfilPesquisadorApi.buscarSuspensao(auth.authFetch, auth.usuario.idUsuario),
+    ])
+      .then(([resultadoPerfil, resultadoSuspensao]) => {
+        if (resultadoPerfil.status === 'fulfilled') {
+          setPerfil(resultadoPerfil.value);
+        } else {
+          setErroCarregamentoPerfil('Não foi possível carregar os dados acadêmicos do perfil. Tente recarregar a página.');
+        }
+        if (resultadoSuspensao.status === 'fulfilled') {
+          setSuspensao(resultadoSuspensao.value);
+        } else {
+          setErroCarregamentoPerfil('Não foi possível carregar todos os dados do perfil. Tente recarregar a página.');
+        }
+      })
+      .finally(() => setCarregandoPerfil(false));
   }, [auth.authFetch, auth.usuario]);
-  const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
-  const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
-
-  // Mesmo padrão de 3 estados de modal-alterar-usuario.tsx (botão "Remover foto"): `undefined` = nenhuma escolha nova
-  // (mostra a foto que já existe), número = foto nova (upload já confirmado, só falta linkar no PATCH), `null`
-  // = removida de propósito.
-  const [idImagemPerfilNovo, setIdImagemPerfilNovo] = useState<number | null | undefined>(undefined);
-  const [avatarUrlNovo, setAvatarUrlNovo] = useState<string | null>(null);
-
-  const sujo = nome.trim() !== (auth.usuario?.nome ?? '') || idImagemPerfilNovo !== undefined;
-  // Nome apagado conta como alteração: "Salvar" fica clicável e o erro aparece embaixo do campo.
-  const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
-    nome: nome.trim().length < NOME_MINIMO_CARACTERES && MENSAGEM_NOME_CURTO,
-  }));
-
-  const aoSalvar = async (evento: FormEvent<HTMLFormElement>) => {
-    evento.preventDefault();
-    // `auth.usuario` só é null antes do 1º carregamento de sessão - o
-    // formulário nem aparece nesse estado, mas o TypeScript não sabe
-    // disso; guarda defensiva, nunca dispara na prática.
-    const usuario = auth.usuario;
-    if (!usuario || !tentarEnviar()) {
-      return;
-    }
-    await executarEnviando(async () => {
-      const dados: DadosAtualizarPerfil = { nome: nome.trim() };
-      if (idImagemPerfilNovo !== undefined) {
-        dados.idImagemPerfil = idImagemPerfilNovo;
-      }
-      const usuarioAtualizado = await usuarioApi.atualizar(auth.authFetch, usuario.idUsuario, dados);
-      auth.atualizarUsuarioLocal(usuarioAtualizado);
-      setIdImagemPerfilNovo(undefined);
-      setAvatarUrlNovo(null);
-      mostrar('Perfil atualizado com sucesso.');
-    });
-  };
-
-  // "Cancelar" volta para a tela de antes de Minha Conta (pergunta antes, se houver alteração não salva).
-  const aoCancelar = async () => {
-    if (!(await confirmarSaida(sujo))) {
-      return;
-    }
-    aoVoltar();
-  };
+  const suspensoAte = suspensao?.suspensoAte ?? null;
+  const suspensoAgora = suspensoAte !== null && new Date(suspensoAte) > new Date();
 
   return (
-    <form id="form-minha-conta-perfil" onSubmit={aoSalvar}>
-      <div className="px-6 sm:px-8 py-8">
-        <MensagemErro texto={erro} className="paragrafo texto-erro mb-6" />
-
-        <div className="grade-ficha">
-          <div className="lg:col-span-2 space-y-6">
-            <SecaoFicha titulo="Foto do perfil" nivel={2}>
-              <div className="sm:col-span-2 flex items-center gap-4">
-                <SeletorFotoPerfil
-                  authFetch={auth.authFetch}
-                  nome={auth.usuario?.nome}
-                  url={idImagemPerfilNovo === undefined ? auth.usuario?.avatarUrl : avatarUrlNovo}
-                  tamanho="xxl"
-                  aoAlterar={(idArquivo, novaUrl) => {
-                    setIdImagemPerfilNovo(idArquivo);
-                    setAvatarUrlNovo(novaUrl);
-                  }}
-                />
-                <p className="legenda texto-forte">
-                  Clique no ícone de câmera pra trocar, ou no de lixeira pra remover.
-                  Lembre de clicar em "Salvar" no fim da página pra confirmar.
-                </p>
-              </div>
-            </SecaoFicha>
-
-            <SecaoFicha titulo="Dados da conta" nivel={2}>
-              <Campo rotulo="Nome" erro={erroDe('nome')}>
-                {({ atributos, classeErro }) => (
-                  <input
-                    {...atributos}
-                    type="text"
-                    value={nome}
-                    onChange={(evento) => setNome(evento.target.value)}
-                    className={'input-padrao' + classeErro}
-                  />
-                )}
-              </Campo>
-              <Campo rotulo="E-mail">
-                {({ atributos }) => (
-                  <input {...atributos} type="email" value={auth.usuario?.email ?? ''} disabled className="input-padrao" />
-                )}
-              </Campo>
-              <div className="sm:col-span-2 flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
-                <i className="fa-solid fa-circle-info mt-0.5 shrink-0" aria-hidden="true"></i>
-                <p className="legenda texto-herdado">
-                  Trocar o e-mail ainda não é possível neste protótipo, exigiria
-                  reverificação, que depende do módulo de e-mail.
-                </p>
-              </div>
-            </SecaoFicha>
+    <div className="px-6 sm:px-8 py-8 space-y-6">
+      {carregando ? <Carregando /> : (
+        <>
+          <MensagemErro texto={erroCarregamentoPerfil} />
+          <div className="flex justify-end">
+            <button type="button" className="btn btn-secondary" onClick={() => setEditando(true)}>
+              <i className="fa-solid fa-pen" aria-hidden="true"></i> Editar perfil
+            </button>
           </div>
-
-          <SecaoFicha titulo="Vínculo acadêmico" colunas={1} nivel={2}>
-            {perfil === undefined && <Carregando />}
-            {perfil === null && (
-              <div className="flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
-                <i className="fa-solid fa-circle-info mt-0.5 shrink-0" aria-hidden="true"></i>
-                <p className="legenda texto-herdado">
-                  Você ainda não é pesquisador. O upgrade fica na aba{' '}
-                  <Link to="/admin/minha-conta/academico" className="link-texto link-texto--cor-herdada">
-                    Acadêmico
-                  </Link>
-                  .
-                </p>
-              </div>
-            )}
-            {perfil && (
-              <>
+          <SecaoFicha titulo="Dados básicos" nivel={2}>
+            <CampoFicha rotulo="Nome" valor={auth.usuario?.nome} />
+            <CampoFicha rotulo="E-mail" valor={auth.usuario?.email} />
+            <CampoFicha rotulo="E-mail verificado" valor={auth.usuario?.emailVerificado ? 'Sim' : 'Não'} />
+          </SecaoFicha>
+          {auth.usuario?.ehPesquisador && perfil && (
+            <>
+              {suspensoAgora && (
+                <div className="rounded-lg border borda-forte fundo-erro p-4">
+                  <p className="paragrafo enfase texto-erro">
+                    Seu poder de pesquisador está suspenso até {formatarDataHora(suspensoAte)}
+                  </p>
+                  <p className="legenda texto-erro mt-1">Motivo: {suspensao?.motivoSuspensao}</p>
+                </div>
+              )}
+              <SecaoFicha titulo="Dados acadêmicos" nivel={2}>
+                <CampoFicha rotulo="CPF" valor={perfil.cpf ? formatarCpfExibicao(perfil.cpf) : null} />
+                <CampoFicha rotulo="Situação" valor={<BadgeStatusPesquisador status={perfil.statusPesquisador} />} />
                 <CampoFicha rotulo="Título acadêmico" valor={ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico]} />
                 <CampoFicha rotulo="Tipo de vínculo" valor={ROTULO_TIPO_VINCULO[perfil.tipoVinculo]} />
                 <CampoFicha rotulo="Vínculo institucional" valor={perfil.vinculoInstitucional} />
-                <p className="legenda texto-fraco">
-                  O perfil completo de pesquisador fica na aba{' '}
-                  <Link to="/admin/minha-conta/academico" className="link-texto link-texto--cor-herdada">
-                    Acadêmico
-                  </Link>
-                  .
-                </p>
-              </>
-            )}
-          </SecaoFicha>
-        </div>
-      </div>
-
-      {/* Rodapé sticky, mesmo padrão do rodapé dos
-          modais - arredonda o PRÓPRIO canto de baixo
-          (rounded-b-2xl), não depende do wrapper. */}
-      <div className="px-6 sm:px-8 py-5 border-t borda-padrao fundo-cartao rounded-b-2xl sticky bottom-0">
-        <RodapeAcoes
-          aoCancelar={aoCancelar}
-          acao={{ rotulo: 'Salvar', rotuloOcupado: 'Salvando...', ocupado: enviando, desabilitado: !sujo, formulario: 'form-minha-conta-perfil' }}
+                <CampoFicha rotulo="Pontuação atual" valor={perfil.scoreAtual} />
+              </SecaoFicha>
+              {auth.usuario && (
+                <SecaoFicha titulo="Links acadêmicos" nivel={2}>
+                  <LinksAcademicosDoUsuario
+                    auth={auth}
+                    idUsuario={auth.usuario.idUsuario}
+                    nomeUsuario={auth.usuario.nome}
+                    contaPropria
+                  />
+                </SecaoFicha>
+              )}
+              <SecaoContestacaoScore authFetch={auth.authFetch} />
+              <SecaoRecebimento authFetch={auth.authFetch} />
+            </>
+          )}
+          {auth.usuario && !auth.usuario.ehPesquisador && (
+            <div className="rounded-lg fundo-info texto-info p-4 space-y-3">
+              <p className="paragrafo texto-herdado">
+                Seu perfil contém os dados básicos da conta. Ao se tornar pesquisador, os dados acadêmicos serão exibidos nesta mesma aba.
+              </p>
+              <button type="button" className="btn btn-primary" onClick={() => setFazendoUpgrade(true)}>
+                <i className="fa-solid fa-flask" aria-hidden="true"></i> Tornar-me pesquisador
+              </button>
+            </div>
+          )}
+        </>
+      )}
+      {editando && auth.usuario && (
+        <ModalEditarPerfil
+          auth={auth}
+          perfil={perfil ?? null}
+          aoFechar={() => setEditando(false)}
+          aoAtualizar={(usuarioAtualizado, perfilAtualizado) => {
+            auth.atualizarUsuarioLocal(usuarioAtualizado);
+            if (perfilAtualizado) setPerfil(perfilAtualizado);
+          }}
         />
-      </div>
-    </form>
+      )}
+      {fazendoUpgrade && auth.usuario && (
+        <ModalUpgradePesquisador
+          auth={auth}
+          idUsuarioAlvo={auth.usuario.idUsuario}
+          nomeAlvo={auth.usuario.nome}
+          aoFechar={() => setFazendoUpgrade(false)}
+          aoConcluido={(perfilCriado) => {
+            setPerfil(perfilCriado);
+            setCarregandoPerfil(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+interface ModalEditarPerfilProps {
+  auth: Pick<UseAuthReturn, 'usuario' | 'authFetch' | 'atualizarUsuarioLocal'>;
+  perfil: PerfilPesquisadorResponse | null;
+  aoFechar: () => void;
+  aoAtualizar: (
+    usuario: NonNullable<UseAuthReturn['usuario']>,
+    perfil: PerfilPesquisadorResponse | null,
+  ) => void;
+}
+
+function ModalEditarPerfil({ auth, perfil, aoFechar, aoAtualizar }: ModalEditarPerfilProps) {
+  const usuario = auth.usuario;
+  const [nome, setNome] = useState(usuario?.nome ?? '');
+  const [fotoNova, setFotoNova] = useState<{ id: number | null; url: string | null } | undefined>();
+  const [tipoVinculo, setTipoVinculo] = useState<TipoVinculo>(perfil?.tipoVinculo ?? 'institucional');
+  const [vinculoInstitucional, setVinculoInstitucional] = useState(perfil?.vinculoInstitucional ?? '');
+  const [tituloAcademico, setTituloAcademico] = useState<TituloAcademico>(perfil?.tituloAcademico ?? 'mestre');
+  const { mostrar } = useToast();
+  const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
+  const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
+  const conta = useErrosFormulario(() => ({
+    nome: nome.trim().length < NOME_MINIMO_CARACTERES && MENSAGEM_NOME_CURTO,
+  }));
+  const academico = useErrosFormulario(() => ({
+    vinculoInstitucional:
+      tipoVinculo === 'institucional' &&
+      vinculoInstitucional.trim() === '' &&
+      'Informe a instituição.',
+  }));
+  const contaAlterada = nome.trim() !== (usuario?.nome ?? '') || fotoNova !== undefined;
+  const academicoAlterado = perfil !== null && (
+    tipoVinculo !== perfil.tipoVinculo ||
+    (tipoVinculo === 'institucional' && vinculoInstitucional !== (perfil.vinculoInstitucional ?? '')) ||
+    tituloAcademico !== perfil.tituloAcademico
+  );
+  const sujo = contaAlterada || academicoAlterado;
+
+  const salvar = async (evento: FormEvent<HTMLFormElement>) => {
+    evento.preventDefault();
+    const contaValida = !contaAlterada || conta.tentarEnviar();
+    const academicoValido = !academicoAlterado || academico.tentarEnviar();
+    if (!usuario || !contaValida || !academicoValido) return;
+
+    await executarEnviando(async () => {
+      let usuarioAtualizado = usuario;
+      let perfilAtualizado: PerfilPesquisadorResponse | null = perfil;
+      if (contaAlterada) {
+        const dados: DadosAtualizarPerfil = { nome: nome.trim() };
+        if (fotoNova !== undefined) dados.idImagemPerfil = fotoNova.id;
+        usuarioAtualizado = await usuarioApi.atualizar(auth.authFetch, usuario.idUsuario, dados);
+      }
+      if (academicoAlterado) {
+        perfilAtualizado = await perfilPesquisadorApi.atualizarProprio(auth.authFetch, {
+          tipoVinculo,
+          ...(tipoVinculo === 'institucional' ? { vinculoInstitucional: vinculoInstitucional.trim() } : {}),
+          tituloAcademico,
+        });
+      }
+      aoAtualizar(usuarioAtualizado, perfilAtualizado);
+      mostrar('Perfil atualizado com sucesso.');
+      aoFechar();
+    });
+  };
+
+  const fechar = async () => {
+    if (await confirmarSaida(sujo)) aoFechar();
+  };
+
+  return (
+    <ModalFicha
+      titulo="Editar perfil"
+      subtitulo="Atualize seus dados básicos e acadêmicos."
+      erro={erro}
+      aoFechar={() => void fechar()}
+      rodape={(
+        <RodapeAcoes
+          aoCancelar={() => void fechar()}
+          acao={{
+            rotulo: 'Salvar',
+            rotuloOcupado: 'Salvando...',
+            ocupado: enviando,
+            desabilitado: !sujo,
+            formulario: 'form-editar-meu-perfil',
+          }}
+        />
+      )}
+    >
+      <form id="form-editar-meu-perfil" onSubmit={salvar} className="space-y-6">
+        <SecaoFicha titulo="Dados básicos" nivel={2}>
+          <div className="sm:col-span-2 flex items-center gap-4">
+            <SeletorFotoPerfil
+              authFetch={auth.authFetch}
+              nome={nome}
+              url={fotoNova === undefined ? usuario?.avatarUrl : fotoNova.url}
+              tamanho="xxl"
+              aoAlterar={(id, url) => setFotoNova({ id, url })}
+            />
+            <p className="legenda texto-forte">Escolha ou remova sua foto do perfil.</p>
+          </div>
+          <Campo rotulo="Nome" erro={conta.erroDe('nome')}>
+            {({ atributos, classeErro }) => (
+              <input
+                {...atributos}
+                type="text"
+                value={nome}
+                onChange={(evento) => setNome(evento.target.value)}
+                className={'input-padrao' + classeErro}
+              />
+            )}
+          </Campo>
+          <Campo rotulo="E-mail">
+            {({ atributos }) => (
+              <input {...atributos} type="email" value={usuario?.email ?? ''} disabled className="input-padrao" />
+            )}
+          </Campo>
+        </SecaoFicha>
+        {perfil && (
+          <SecaoFicha titulo="Dados acadêmicos" nivel={2}>
+            <CamposVinculoPerfil
+              tipoVinculo={tipoVinculo}
+              vinculoInstitucional={vinculoInstitucional}
+              tituloAcademico={tituloAcademico}
+              rotuloVinculoInstitucional="Vínculo institucional"
+              aoAlterarTipoVinculo={setTipoVinculo}
+              aoAlterarVinculoInstitucional={setVinculoInstitucional}
+              aoAlterarTituloAcademico={setTituloAcademico}
+              erroVinculoInstitucional={academico.erroDe('vinculoInstitucional')}
+            />
+          </SecaoFicha>
+        )}
+      </form>
+    </ModalFicha>
   );
 }
 
@@ -731,111 +800,6 @@ function AbaPapeis({ auth }: AbaPapeisProps) {
           })}
         </div>
       )}
-    </div>
-  );
-}
-
-// 4. ACADÊMICO: quem é suspenso PRECISA ver o motivo em algum lugar próprio, não só descobrir tentando fazer
-// algo e sendo barrado sem explicação (a suspensão de pesquisador NUNCA bloqueia login: a pessoa continua tendo
-// acesso normal a Minha Conta). Quem não é pesquisador faz o upgrade aqui (ver abaixo).
-interface AbaAcademicoProps {
-  auth: Pick<UseAuthReturn, 'usuario' | 'authFetch' | 'atualizarUsuarioLocal' | 'renovarSessaoAgora'>;
-}
-
-function AbaAcademico({ auth }: AbaAcademicoProps) {
-  const [perfil, setPerfil] = useState<PerfilPesquisadorResponse | null>(null);
-  const [fazendoUpgrade, setFazendoUpgrade] = useState(false);
-  const [suspensao, setSuspensao] = useState<SuspensaoResponseDto | null>(null);
-  const [carregandoPerfil, setCarregando] = useState(true);
-  // Quem não é pesquisador nem pede o perfil (seria um 404 certo). `undefined` (sessão antiga) ainda pede.
-  const carregando = carregandoPerfil && auth.usuario?.ehPesquisador !== false;
-
-  useEffect(() => {
-    if (!auth.usuario) {
-      return;
-    }
-    const idUsuario = auth.usuario.idUsuario;
-    if (auth.usuario.ehPesquisador === false) {
-      return;
-    }
-    void Promise.all([
-      perfilPesquisadorApi.buscar(auth.authFetch, idUsuario).catch(() => null),
-      perfilPesquisadorApi.buscarSuspensao(auth.authFetch, idUsuario).catch(() => null),
-    ])
-      .then(([dadosPerfil, dadosSuspensao]) => {
-        setPerfil(dadosPerfil);
-        setSuspensao(dadosSuspensao);
-      })
-      .finally(() => setCarregando(false));
-  }, [auth.authFetch, auth.usuario]);
-
-  const suspensoAte = suspensao?.suspensoAte ?? null;
-  const suspensoAgora = suspensoAte !== null && new Date(suspensoAte) > new Date();
-
-  if (carregando) {
-    return <Carregando className="px-6 sm:px-8 py-8" />;
-  }
-
-  // Quem ainda não é pesquisador faz o upgrade da PRÓPRIA conta aqui (termos, CPF, vínculo, título): o mesmo
-  // modal da Bancada do Pesquisador, que usa o endpoint self-service quando o alvo é a própria conta. A bancada lista
-  // todos os usuários e por isso só funciona para quem administra; esta é a porta do usuário comum.
-  if (!perfil) {
-    return (
-      <div className="px-6 sm:px-8 py-8 space-y-4">
-        <div className="legenda flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
-          <i className="fa-solid fa-circle-info mt-0.5 shrink-0" aria-hidden="true"></i>
-          <p>Você ainda não é pesquisador nesta plataforma. Como pesquisador, você pode criar campanhas para financiar suas pesquisas.</p>
-        </div>
-        {auth.usuario && (
-          <button type="button" className="btn btn-primary" onClick={() => setFazendoUpgrade(true)}>
-            <i className="fa-solid fa-flask" aria-hidden="true"></i> Tornar-me pesquisador
-          </button>
-        )}
-        {fazendoUpgrade && auth.usuario && (
-          <ModalUpgradePesquisador
-            auth={auth}
-            idUsuarioAlvo={auth.usuario.idUsuario}
-            nomeAlvo={auth.usuario.nome}
-            aoFechar={() => setFazendoUpgrade(false)}
-            aoConcluido={setPerfil}
-          />
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="px-6 sm:px-8 py-8 space-y-6">
-      {suspensoAgora && (
-        <div className="rounded-lg border borda-forte fundo-erro p-4">
-          <p className="paragrafo enfase texto-erro">
-            Seu poder de pesquisador está suspenso até {formatarDataHora(suspensoAte)}
-          </p>
-          <p className="legenda texto-erro mt-1">Motivo: {suspensao?.motivoSuspensao}</p>
-          <p className="legenda texto-erro mt-2">
-            Sua conta continua funcionando normalmente - só a autoridade de pesquisador (criar
-            campanha, endossar, etc.) fica suspensa até o prazo acima.
-          </p>
-        </div>
-      )}
-
-      <SecaoFicha titulo="Perfil de Pesquisador" nivel={2}>
-        <CampoFicha rotulo="CPF" valor={perfil.cpf ? formatarCpfExibicao(perfil.cpf) : null} />
-        <CampoFicha
-          rotulo="Situação"
-          valor={
-            <BadgeStatusPesquisador status={perfil.statusPesquisador} />
-          }
-        />
-        <CampoFicha rotulo="Título acadêmico" valor={ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico]} />
-        <CampoFicha rotulo="Tipo de vínculo" valor={ROTULO_TIPO_VINCULO[perfil.tipoVinculo]} />
-        <CampoFicha rotulo="Vínculo institucional" valor={perfil.vinculoInstitucional} />
-        <CampoFicha rotulo="Pontuação atual" valor={perfil.scoreAtual} />
-      </SecaoFicha>
-
-      <SecaoContestacaoScore authFetch={auth.authFetch} />
-
-      <SecaoRecebimento authFetch={auth.authFetch} />
     </div>
   );
 }

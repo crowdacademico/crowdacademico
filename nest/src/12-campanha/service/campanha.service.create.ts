@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { CAMPANHA_COLUNAS_SELECT } from '../constants/campanha.constants';
 import { CampanhaConverter } from '../dto/converter/campanha.converter';
@@ -26,6 +26,12 @@ export class CampanhaServiceCreate {
     dto: CampanhaRequestCreate,
     idUsuario: number,
   ): Promise<CampanhaResponse> {
+    if (dto.videoApresentacaoUrl?.trim() && dto.idImagemCapa != null) {
+      throw new BadRequestException(
+        'Escolha o vídeo de apresentação ou a imagem de capa, não os dois.',
+      );
+    }
+
     const linha = await this.database
       .getDb()
       .insertInto('campanha')
@@ -39,6 +45,7 @@ export class CampanhaServiceCreate {
         data_inicio: dto.dataInicio ? new Date(dto.dataInicio) : null,
         data_fim: dto.dataFim ? new Date(dto.dataFim) : null,
         video_apresentacao_url: dto.videoApresentacaoUrl ?? null,
+        id_imagem_capa: dto.idImagemCapa ?? null,
       })
       .returning(CAMPANHA_COLUNAS_SELECT)
       .executeTakeFirstOrThrow();

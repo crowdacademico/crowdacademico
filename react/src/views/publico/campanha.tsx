@@ -6,7 +6,7 @@ import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import {
   classeBadgeCampanha,
   emBreve,
-  EXPLICACAO_MODELO_CAMPANHA,
+  EXPLICACAO_PUBLICA_MODELO_CAMPANHA,
   ROTULO_MODELO_CAMPANHA,
   rotuloStatusCampanha,
   STATUS_PUBLICADA,
@@ -20,7 +20,16 @@ import { atualizacaoCampanhaApi } from '../../services/15-atualizacao-campanha/a
 import type { AtualizacaoCampanhaResponse } from '../../services/15-atualizacao-campanha/type/atualizacao-campanha.type';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import { formatarData, formatarMoeda, percentualArrecadado } from './util-campanhas';
+import { comentarioApi } from '../../services/17-comentario/api/comentario.api';
+import type { ComentarioResponse } from '../../services/17-comentario/type/comentario.type';
+import { contribuicaoApi } from '../../services/22-contribuicao/api/contribuicao.api';
+import {
+  campanhaAceitaApoios,
+  diasRestantes,
+  formatarData,
+  formatarMoeda,
+  percentualArrecadado,
+} from './util-campanhas';
 
 type AbaCampanha = 'sobre' | 'orcamento' | 'cronograma' | 'atualizacoes';
 
@@ -35,11 +44,6 @@ function executarSeAtivo(ativo: boolean, acao: () => void) {
   if (ativo) acao();
 }
 
-function diasRestantes(dataFim: string | null) {
-  if (!dataFim) return null;
-  return Math.max(0, Math.ceil((Date.parse(dataFim) - Date.now()) / 86_400_000));
-}
-
 export function Campanha({ auth }: PropsPagina) {
   const { id } = useParams();
   const idCampanha = Number(id);
@@ -48,6 +52,11 @@ export function Campanha({ auth }: PropsPagina) {
   const [orcamentos, setOrcamentos] = useState<EstadoSecundario<OrcamentoCampanhaResponse>>(VAZIO);
   const [marcos, setMarcos] = useState<EstadoSecundario<MarcoCronogramaResponse>>(VAZIO);
   const [atualizacoes, setAtualizacoes] = useState<EstadoSecundario<AtualizacaoCampanhaResponse>>(VAZIO);
+  const [comentarios, setComentarios] = useState<EstadoSecundario<ComentarioResponse>>(VAZIO);
+  const [comentariosCarregando, setComentariosCarregando] = useState(false);
+  const [apoiosPagos, setApoiosPagos] = useState<number | null>(null);
+  const [apoiosCarregando, setApoiosCarregando] = useState(false);
+  const [erroApoios, setErroApoios] = useState(false);
   const [carregando, setCarregando] = useState(idValido);
   const [aba, setAba] = useState<AbaCampanha>('sobre');
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
@@ -61,6 +70,11 @@ export function Campanha({ auth }: PropsPagina) {
     setOrcamentos(VAZIO);
     setMarcos(VAZIO);
     setAtualizacoes(VAZIO);
+    setComentarios(VAZIO);
+    setComentariosCarregando(false);
+    setApoiosPagos(null);
+    setApoiosCarregando(false);
+    setErroApoios(false);
     setAba('sobre');
     limparErro();
 
@@ -74,10 +88,14 @@ export function Campanha({ auth }: PropsPagina) {
           resultado.status === 'rejeitado'
         ) return;
 
-        const [orcamento, cronograma, novidades] = await Promise.allSettled([
+        setComentariosCarregando(true);
+        setApoiosCarregando(true);
+        const [orcamento, cronograma, novidades, endossos, resumoApoios] = await Promise.allSettled([
           orcamentoCampanhaApi.listar(auth.authFetch, idCampanha),
           marcoCronogramaApi.listar(auth.authFetch, idCampanha),
           atualizacaoCampanhaApi.listar(auth.authFetch, idCampanha),
+          comentarioApi.listarPagina(auth.authFetch, idCampanha, 1, 100, true),
+          contribuicaoApi.apoiosPublicosCampanha(auth.authFetch, idCampanha),
         ]);
         executarSeAtivo(ativo, () => {
           setOrcamentos({
@@ -92,6 +110,14 @@ export function Campanha({ auth }: PropsPagina) {
             dados: novidades.status === 'fulfilled' ? novidades.value.filter((atualizacao) => atualizacao.ativo) : [],
             erro: novidades.status === 'rejected',
           });
+          setComentarios({
+            dados: endossos.status === 'fulfilled' ? endossos.value.dados : [],
+            erro: endossos.status === 'rejected',
+          });
+          setComentariosCarregando(false);
+          setApoiosPagos(resumoApoios.status === 'fulfilled' ? resumoApoios.value.pagas : null);
+          setErroApoios(resumoApoios.status === 'rejected');
+          setApoiosCarregando(false);
         });
       })
       .catch((erroRequisicao: unknown) => {
@@ -111,10 +137,7 @@ export function Campanha({ auth }: PropsPagina) {
   const percentual = campanha ? percentualArrecadado(campanha) : null;
   const publicada = campanha ? STATUS_PUBLICADA.has(campanha.status) : false;
   const dias = campanha ? diasRestantes(campanha.dataFim) : null;
-  const aceitaApoios = campanha !== null &&
-    campanha.status === 'ativo' &&
-    !emBreve(campanha) &&
-    (campanha.dataFim === null || Date.parse(campanha.dataFim) > Date.now());
+  const aceitaApoios = campanha !== null && campanhaAceitaApoios(campanha);
   const abas: { chave: AbaCampanha; rotulo: string }[] = [
     { chave: 'sobre', rotulo: 'Sobre o projeto' },
     { chave: 'orcamento', rotulo: 'Orçamento' },
@@ -123,16 +146,27 @@ export function Campanha({ auth }: PropsPagina) {
   ];
 
   return (
-    <main id="view-campanha" className="view-section flex-grow pagina-publica">
+    <main id="view-campanha" className="view-section flex-grow pagina-publica campanha-detalhe">
       {!idValido && <div className="max-w-7xl mx-auto px-4 py-10"><MensagemErro texto="O endereço da campanha é inválido." /></div>}
       {carregando && <div className="max-w-7xl mx-auto px-4 py-10"><Carregando /></div>}
       {!carregando && erro && <div className="max-w-7xl mx-auto px-4 py-10"><MensagemErro texto={erro} /></div>}
       {!carregando && !erro && campanha && (
         <>
           <section
-            className="pt-14 pb-24 relative overflow-hidden texto-sobre-escuro superficie-escura"
+            className="campanha-detalhe__hero pt-14 pb-24 relative overflow-hidden texto-sobre-escuro superficie-escura"
             style={{ background: 'var(--cor-cianotipo-800)' }}
           >
+            {campanha.imagemCapaUrl && (
+              <>
+                <img
+                  src={campanha.imagemCapaUrl}
+                  alt=""
+                  aria-hidden="true"
+                  className="campanha-detalhe__imagem-capa"
+                />
+                <div className="campanha-detalhe__capa-sobreposicao" aria-hidden="true" />
+              </>
+            )}
             <div className="absolute inset-0 grade-medicao" aria-hidden="true" />
             <div className="max-w-7xl mx-auto px-4 relative z-10">
               <p className="text-sm font-medium texto-sobre-escuro mb-6 flex items-center gap-2">
@@ -168,7 +202,7 @@ export function Campanha({ auth }: PropsPagina) {
 
           <div className="max-w-7xl mx-auto px-4 -mt-16 pb-16 flex flex-col lg:flex-row gap-10 relative z-10">
             <div className="flex-1 min-w-0">
-              <div className="w-full aspect-video bg-[var(--cor-cianotipo-900)] rounded-xl overflow-hidden relative flex items-center justify-center mb-10 shadow-2xl border-4 border-white">
+              <div className="campanha-detalhe__video w-full aspect-video rounded-xl overflow-hidden relative flex items-center justify-center mb-10 shadow-2xl">
                 {campanha.videoApresentacaoUrl ? (
                   <a
                     className="absolute inset-0 flex flex-col items-center justify-center gap-4 texto-sobre-escuro-forte bg-black/50 hover:bg-black/60 transition-colors group"
@@ -194,7 +228,7 @@ export function Campanha({ auth }: PropsPagina) {
                 )}
               </div>
 
-              <div id="project-tab-buttons" role="tablist" aria-label="Detalhes da campanha" className="sticky top-sticky z-10 fundo-cartao rounded-xl shadow-sm border borda-padrao mb-8 p-2 flex items-center gap-2 overflow-x-auto hide-scrollbar">
+              <div id="project-tab-buttons" role="tablist" aria-label="Detalhes da campanha" className="campanha-detalhe__abas sticky top-sticky z-10 fundo-cartao rounded-xl shadow-sm border borda-padrao mb-8 p-2 flex items-center gap-2 overflow-x-auto hide-scrollbar">
                 {abas.map((item) => (
                   <button
                     aria-controls={`tab-${item.chave}`}
@@ -211,7 +245,7 @@ export function Campanha({ auth }: PropsPagina) {
                 ))}
               </div>
 
-              <div className="fundo-cartao rounded-xl shadow-sm border borda-padrao p-8 md:p-10">
+              <div className="campanha-detalhe__painel-conteudo fundo-cartao rounded-xl shadow-sm border borda-padrao">
                 {aba === 'sobre' && (
                   <section id="tab-sobre" aria-labelledby="tab-btn-sobre" role="tabpanel">
                     <h2 className="titulo-secao texto-forte mb-5">Sobre o projeto</h2>
@@ -228,6 +262,39 @@ export function Campanha({ auth }: PropsPagina) {
                         <dd className="paragrafo texto-padrao mt-1">{formatarData(campanha.dataFim)}</dd>
                       </div>
                     </dl>
+                    {publicada && (
+                      <section className="mt-8 border-t borda-padrao pt-6" aria-labelledby="comentarios-endossados-titulo">
+                        <h3 id="comentarios-endossados-titulo" className="subtitulo texto-forte mb-4">
+                          Comentários endossados
+                        </h3>
+                        {comentariosCarregando && <Carregando />}
+                        {!comentariosCarregando && comentarios.erro && (
+                          <p className="paragrafo texto-fraco" role="status">
+                            Não foi possível carregar os comentários endossados.
+                          </p>
+                        )}
+                        {!comentariosCarregando && !comentarios.erro && comentarios.dados.length === 0 && (
+                          <p className="paragrafo texto-fraco">Ainda não há comentários endossados nesta campanha.</p>
+                        )}
+                        {!comentariosCarregando && !comentarios.erro && comentarios.dados.length > 0 && (
+                          <ul className="space-y-4">
+                            {comentarios.dados.map((comentario) => (
+                              <li key={comentario.idComentario} className="rounded-lg fundo-sutil border borda-padrao p-4">
+                                <div className="flex items-center justify-between gap-3 mb-2">
+                                  <span className="paragrafo enfase texto-forte">
+                                    {comentario.nomePesquisador ?? 'Pesquisador'}
+                                  </span>
+                                  {comentario.ordemEndosso !== null && (
+                                    <span className="badge badge-sucesso">Endosso #{comentario.ordemEndosso}</span>
+                                  )}
+                                </div>
+                                <p className="paragrafo texto-padrao whitespace-pre-wrap">{comentario.conteudo}</p>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </section>
+                    )}
                   </section>
                 )}
                 {aba === 'orcamento' && (
@@ -344,13 +411,20 @@ export function Campanha({ auth }: PropsPagina) {
                     </div>
                     <div className="fundo-aviso rounded-xl p-3 border borda-aviso text-center">
                       <div className="numero text-xl font-bold texto-aviso">{dias === null ? '—' : dias}</div>
-                      <div className="microrrotulo texto-aviso">Dias restantes</div>
+                      <div className="microrrotulo texto-aviso">Dias rest.</div>
                     </div>
                     <div className="fundo-marca-sutil rounded-xl p-3 border borda-marca text-center">
-                      <div className="numero text-xl font-bold texto-marca">—</div>
+                      <div className="numero text-xl font-bold texto-marca">
+                        {apoiosPagos ?? (apoiosCarregando ? '…' : '—')}
+                      </div>
                       <div className="microrrotulo texto-marca">Apoios</div>
                     </div>
                   </div>
+                  {erroApoios && (
+                    <p className="paragrafo texto-erro mb-4" role="status">
+                      Não foi possível carregar a quantidade de apoios pagos.
+                    </p>
+                  )}
                   {aceitaApoios ? (
                     <Link
                       className="btn btn-primary w-full justify-center text-lg py-4 mb-6"
@@ -370,7 +444,7 @@ export function Campanha({ auth }: PropsPagina) {
                     <summary className="font-semibold texto-forte cursor-pointer select-none">
                       Como funciona o modelo {ROTULO_MODELO_CAMPANHA[campanha.modelo]}
                     </summary>
-                    <p className="mt-4 leading-relaxed">{EXPLICACAO_MODELO_CAMPANHA}</p>
+                    <p className="mt-4 leading-relaxed">{EXPLICACAO_PUBLICA_MODELO_CAMPANHA[campanha.modelo]}</p>
                   </details>
                 </section>
 

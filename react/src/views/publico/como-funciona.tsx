@@ -132,7 +132,7 @@ const DUVIDAS = [
   {
     pergunta: 'Quais são as taxas e tarifas?',
     resposta:
-      'A página de Transparência apresenta os parâmetros financeiros disponíveis e uma estimativa do apoio.',
+      'As taxas e os valores aplicáveis são informados na página da campanha e no checkout antes da confirmação do apoio.',
   },
 ] as const;
 
@@ -182,9 +182,6 @@ function ConteudoAba({ ativa }: { ativa: (typeof ABAS)[number]['chave'] }) {
         <p className="paragrafo texto-padrao mt-4">
           As condições específicas e os valores aplicáveis são apresentados na própria campanha e no checkout.
         </p>
-        <Link to="/transparencia" className="paragrafo texto-marca mt-4 inline-flex items-center gap-2 hover:underline">
-          Consultar taxas, tarifas e simulador <i className="fa-solid fa-arrow-right" aria-hidden="true" />
-        </Link>
       </>
     );
   }

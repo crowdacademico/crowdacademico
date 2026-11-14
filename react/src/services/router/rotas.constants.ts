@@ -5,7 +5,6 @@ import { CadastroPage } from '../../views/3-auth/cadastro-page';
 import { VerificarEmailPage } from '../../views/3-auth/verificar-email-page';
 import { EsqueciSenhaPage } from '../../views/3-auth/esqueci-senha-page';
 import { RedefinirSenhaPage } from '../../views/3-auth/redefinir-senha-page';
-import { MinhaConta } from '../../views/3-auth/minha-conta-page';
 import { Dashboard } from '../../views/29-dashboard/dashboard';
 import { ListarUsuarios } from '../../views/1-usuario/listar-usuarios';
 import { ListarPapeis } from '../../views/2-papel-permissao/listar-papeis';
@@ -35,22 +34,24 @@ import { Sobre } from '../../views/publico/sobre';
 import { TermosUso } from '../../views/publico/termos-uso';
 import { AtualizacoesCampanha } from '../../views/publico/atualizacoes-campanha';
 import { RedirecionarAreaConta } from '../../views/publico/redirecionar-area-conta';
-import { MinhasCampanhas } from '../../views/12-campanha/minhas-campanhas';
 import { PerfilPesquisador } from '../../views/publico/perfil-pesquisador';
-import { Transparencia } from '../../views/publico/transparencia';
 import { Home } from '../../views/publico/home';
 import { Explorar } from '../../views/publico/explorar';
 import { Campanha } from '../../views/publico/campanha';
 import { Checkout } from '../../views/publico/checkout';
 import { ApoioConfirmado } from '../../views/publico/apoio-confirmado';
 import { Notificacoes } from '../../views/publico/notificacoes';
+import { CriarCampanhaPage } from '../../views/publico/criar-campanha-page';
+import { EstudioPesquisador } from '../../views/publico/estudio-pesquisador';
+import { MinhaConta } from '../../views/3-auth/minha-conta-page';
 
 // Fonte única de verdade para "quais páginas existem": App.tsx monta as <Route> daqui e breadcrumb.tsx monta
 // o rótulo daqui. rotuloBreadcrumb: null = não aparece no breadcrumb.
 //
-// Duas listas porque descrevem coisas diferentes: ROTAS são páginas públicas (Header/Breadcrumb/Footer, sem
-// sidebar), incluindo conteúdo institucional e autenticação. ROTAS_ADMIN é TUDO que precisa do menu lateral,
-// renderizado dentro do <Outlet/> de components/layout/painel-admin/admin-layout.tsx (sidebar + área de conteúdo compartilhadas).
+// ROTAS são páginas públicas (Header/Breadcrumb/Footer, sem sidebar), incluindo conteúdo institucional e
+// autenticação. ROTAS_CONTA são páginas autenticadas fora do painel administrativo. ROTAS_ADMIN é TUDO que
+// precisa do menu lateral, renderizado dentro do <Outlet/> de components/layout/painel-admin/admin-layout.tsx
+// (sidebar + área de conteúdo compartilhadas).
 //
 // rotuloMenu é o que aparece no menu lateral (admin-sidebar.tsx via admin-menu.constants): é a MESMA lista, não
 // uma 3ª cópia. Rotas sem rotuloMenu/grupoMenu (ex.: Minha Conta) nunca viram botão do menu, só ganham a
@@ -86,12 +87,12 @@ export const ROTAS: Rota[] = [
   { caminho: '/como-funciona', elemento: ComoFunciona, rotuloBreadcrumb: 'Como funciona' },
   { caminho: '/sobre', elemento: Sobre, rotuloBreadcrumb: 'Sobre' },
   { caminho: '/termos', elemento: TermosUso, rotuloBreadcrumb: 'Termo de Uso' },
-  { caminho: '/transparencia', elemento: Transparencia, rotuloBreadcrumb: 'Transparência' },
   { caminho: '/pesquisador/:idUsuario', elemento: PerfilPesquisador, rotuloBreadcrumb: 'Pesquisador' },
   { caminho: '/campanha/:id/atualizacoes', elemento: AtualizacoesCampanha, rotuloBreadcrumb: 'Atualizações' },
   { caminho: '/minha-conta', elemento: RedirecionarAreaConta, rotuloBreadcrumb: null },
-  { caminho: '/minhas-campanhas', elemento: RedirecionarAreaConta, rotuloBreadcrumb: null },
-  { caminho: '/criar-campanha', elemento: RedirecionarAreaConta, rotuloBreadcrumb: null },
+  { caminho: '/criar-campanha', elemento: CriarCampanhaPage, rotuloBreadcrumb: null },
+  { caminho: '/minhas-campanhas', elemento: EstudioPesquisador, rotuloBreadcrumb: 'Estúdio do pesquisador' },
+  { caminho: '/estudio-pesquisador', elemento: EstudioPesquisador, rotuloBreadcrumb: 'Estúdio do pesquisador' },
   { caminho: '/minhas-contribuicoes', elemento: RedirecionarAreaConta, rotuloBreadcrumb: null },
   { caminho: '/painel-doador', elemento: RedirecionarAreaConta, rotuloBreadcrumb: null },
   { caminho: '/painel-pesquisador', elemento: RedirecionarAreaConta, rotuloBreadcrumb: null },
@@ -107,13 +108,11 @@ export const ROTAS: Rota[] = [
   { caminho: '/redefinir-senha', elemento: RedefinirSenhaPage, rotuloBreadcrumb: 'Criar nova senha' },
 ];
 
+export const ROTAS_CONTA: Rota[] = [
+  { caminho: '/minha-conta/:aba', elemento: MinhaConta, rotuloBreadcrumb: 'Minha Conta' },
+];
+
 export const ROTAS_ADMIN: Rota[] = [
-  {
-    caminho: '/admin/minhas-campanhas',
-    caminhoRelativo: 'minhas-campanhas',
-    elemento: MinhasCampanhas,
-    rotuloBreadcrumb: 'Minhas Campanhas',
-  },
   {
     caminho: '/admin/dashboard',
     caminhoRelativo: 'dashboard',
@@ -359,22 +358,6 @@ export const ROTAS_ADMIN: Rota[] = [
     rotuloBreadcrumb: 'Auditoria Financeira',
     grupoMenu: 'PAGAMENTOS',
     icone: 'fa-scale-balanced',
-  },
-
-  // Minha Conta: dentro do painel (sidebar visível), mas sem rotuloMenu/grupoMenu: não é uma aba clicável
-  // do menu (o acesso é pelo dropdown do cabeçalho), só ganha a moldura. Sem paiCaminho: não é filha de
-  // nenhuma listagem, o breadcrumb já fica "Início > Minha Conta".
-  //
-  // `:aba` (Perfil/Segurança/Papéis/Acadêmico/Privacidade): UMA rota parametrizada, não 5 entradas: MinhaConta
-  // lê `aba` via useParams() e decide o que renderizar por baixo da faixa de identidade (que não muda entre
-  // abas). É o ÚNICO parâmetro de rota do painel admin (as telas com `:id` são modais). O caminho SEM
-  // `/:aba` (ex.: link direto para "/admin/minha-conta") ganha um redirect para ".../perfil" em App.tsx, não
-  // precisa de uma 2ª entrada aqui.
-  {
-    caminho: '/admin/minha-conta/:aba',
-    caminhoRelativo: 'minha-conta/:aba',
-    elemento: MinhaConta,
-    rotuloBreadcrumb: 'Minha Conta',
   },
 
   // Sem rota própria (são modais abertos direto pela listagem): Criar/Alterar/Consultar/Excluir de Usuário,

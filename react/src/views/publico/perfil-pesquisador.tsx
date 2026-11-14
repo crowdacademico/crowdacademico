@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
-import { rotuloStatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import { ROTULO_TIPO_VINCULO, ROTULO_TITULO_ACADEMICO } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
@@ -11,6 +10,7 @@ import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
 import type { PropsPagina } from '../../services/router/pagina.type';
+import { CartaoCampanha } from './componentes-campanhas';
 
 interface EstadoSeguimento {
   idPesquisador: number;
@@ -199,15 +199,7 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
               ) : (
                 <div className="grade-campanhas grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {campanhas.map((campanha) => (
-                    <article key={campanha.idCampanha} className="pagina-publica__cartao">
-                      <p className="rotulo-leitura texto-marca mb-2">
-                        {rotuloStatusCampanha(campanha)}
-                      </p>
-                      <h3 className="subtitulo mb-2">{campanha.titulo}</h3>
-                      {campanha.descricao && (
-                        <p className="paragrafo texto-padrao">{campanha.descricao}</p>
-                      )}
-                    </article>
+                    <CartaoCampanha campanha={campanha} key={campanha.idCampanha} />
                   ))}
                 </div>
               )}
