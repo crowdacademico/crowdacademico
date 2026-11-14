@@ -6,7 +6,8 @@ import {
   rotuloStatusCampanha,
 } from '../../services/12-campanha/constants/status-campanha.constants';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
-import { diasRestantes, formatarData, formatarMoeda, percentualArrecadado } from './util-campanhas';
+import { formatarMoeda } from '../../services/constant/util/formatacao.util';
+import { diasRestantes, formatarData, percentualArrecadado } from './util-campanhas';
 
 function iniciaisPesquisador(nome: string | null): string {
   if (!nome) {

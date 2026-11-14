@@ -6,6 +6,7 @@ const COLUNAS = [
     links: [
       { rotulo: 'Explorar campanhas', to: '/explorar' },
       { rotulo: 'Sobre e curadoria', to: '/sobre' },
+      { rotulo: 'Transparência e taxas', to: '/transparencia' },
       { rotulo: 'Termos da plataforma', to: '/termos' },
     ],
   },

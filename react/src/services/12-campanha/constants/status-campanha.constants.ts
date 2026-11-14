@@ -54,7 +54,8 @@ export const EXPLICACAO_PUBLICA_MODELO_CAMPANHA: Record<ModeloCampanha, string> 
   'all-or-nothing':
     'O pesquisador recebe o valor arrecadado somente se a meta for atingida até o fim do prazo. Se a meta não for alcançada, as contribuições são devolvidas.',
   flexivel:
-    'O pesquisador pode receber o valor arrecadado mesmo que a meta não seja atingida. O cartão de crédito está disponível apenas neste modelo.',
+    // RF-041: o aviso ao doador precisa dizer as três coisas (cobrado na hora, repassado mesmo sem meta, devolvido só por moderação).
+    'O valor é cobrado assim que o pagamento é confirmado e repassado ao pesquisador no encerramento da campanha, mesmo que a meta não seja atingida. Só é devolvido se a campanha for encerrada pela moderação da plataforma. O cartão de crédito está disponível apenas neste modelo.',
 };
 
 // A dica (ⓘ) do campo Modelo, igual no Criar e no Alterar.

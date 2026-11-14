@@ -36,6 +36,9 @@ export function calcularExpiracaoPix(
 }
 
 export const MENSAGEM_CAMPANHA_NAO_ENCONTRADA = 'Campanha não encontrada.';
+// RF-041: campanha flexível só aceita apoio de quem confirmou ciência do modelo.
+export const MENSAGEM_CIENCIA_MODELO_FLEXIVEL =
+  'Confirme que entendeu como funciona a campanha flexível antes de apoiar.';
 export const MENSAGEM_PAGAMENTO_INDISPONIVEL =
   'O pagamento está temporariamente indisponível. Tente novamente mais tarde.';
 export const MENSAGEM_COBRANCA_FALHOU =

@@ -23,6 +23,7 @@ import {
 } from '../../23-pagamento/ports/cobranca-gateway.port';
 import {
   MENSAGEM_CAMPANHA_NAO_ENCONTRADA,
+  MENSAGEM_CIENCIA_MODELO_FLEXIVEL,
   MENSAGEM_COBRANCA_FALHOU,
   MENSAGEM_COBRANCA_RECUSADA,
   MENSAGEM_PAGAMENTO_INDISPONIVEL,
@@ -38,6 +39,7 @@ import { ContribuicaoResponseCreate } from '../dto/response/contribuicao.respons
 
 interface LinhaCampanha {
   titulo: string;
+  modelo: 'all-or-nothing' | 'flexivel';
   data_fim: Date | null;
   // numeric volta do pg como string; ausente/ilegível cai no padrão (ver calcularExpiracaoPix).
   pix_validade_horas?: string | number | null;
@@ -96,7 +98,7 @@ export class ContribuicaoServiceCreate {
       { idUsuario, tokenSessao },
       async (client) => {
         const resCampanha = await client.query<LinhaCampanha>(
-          "SELECT titulo, data_fim, public.config_numero('pix_validade_horas', 24) AS pix_validade_horas, public.config_numero('boleto_vencimento_dias', 3) AS boleto_vencimento_dias FROM campanha WHERE id_campanha = $1",
+          "SELECT titulo, modelo, data_fim, public.config_numero('pix_validade_horas', 24) AS pix_validade_horas, public.config_numero('boleto_vencimento_dias', 3) AS boleto_vencimento_dias FROM campanha WHERE id_campanha = $1",
           [dto.idCampanha],
         );
         // Campanha que a RLS esconde é indistinguível de campanha inexistente (de propósito).
@@ -104,12 +106,19 @@ export class ContribuicaoServiceCreate {
         if (!campanhaLida) {
           throw new NotFoundException(MENSAGEM_CAMPANHA_NAO_ENCONTRADA);
         }
+        // RF-041: sem a ciência do modelo flexível, nada é gravado nem cobrado. A data vai para ciencia_modelo_em.
+        const flexivel = campanhaLida.modelo === 'flexivel';
+        if (flexivel && dto.cienteModeloFlexivel !== true) {
+          throw new UnprocessableEntityException(
+            MENSAGEM_CIENCIA_MODELO_FLEXIVEL,
+          );
+        }
         // `provedor` é obrigatório aqui: o DEFAULT da coluna é 'asaas', e uma contribuição criada pelo Fake
         // ficaria rotulada com o provedor errado.
         const resContribuicao = await client.query<LinhaContribuicao>(
           `INSERT INTO contribuicao
-             (id_campanha, id_usuario, valor, meio_pagamento, anonima, token_sessao, provedor)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
+             (id_campanha, id_usuario, valor, meio_pagamento, anonima, token_sessao, provedor, ciencia_modelo_em)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, CASE WHEN $8::boolean THEN NOW() END)
            RETURNING id_contribuicao, id_campanha, valor, taxa_pagamento, meio_pagamento, status, token_sessao, criado_em`,
           [
             dto.idCampanha,
@@ -119,6 +128,7 @@ export class ContribuicaoServiceCreate {
             idUsuario === null ? true : (dto.anonima ?? false),
             tokenSessao,
             this.gateway.provedor,
+            flexivel,
           ],
         );
         // A versão do Termo da conta vigente agora, com o IP: prova, numa contestação de pagamento, quais regras

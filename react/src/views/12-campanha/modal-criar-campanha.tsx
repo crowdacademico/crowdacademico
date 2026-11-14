@@ -185,12 +185,12 @@ export function ModalCriarCampanha({
   // Mudança na etapa Dados que ainda não foi gravada (antes de o rascunho existir, qualquer coisa digitada).
   const sujo = JSON.stringify(form) !== JSON.stringify(formSalvo);
 
-  // Sair da etapa Dados (pelo Próximo ou clicando noutra etapa) grava o formulário antes: cria o rascunho na
+  // Sair da etapa Dados grava o formulário antes: cria o rascunho na
   // primeira vez, altera nas outras. Rascunho sem mudança nos Dados só troca de etapa: um rascunho antigo (com o
   // início já no passado, por exemplo) ainda deixa ver orçamento e cronograma, e a Revisão aponta o que corrigir.
-  const avancarDosDados = async (destino: Etapa = 'orcamento') => {
+  const gravarDados = async (aposGravar: () => void) => {
     if (idCampanha !== null && !sujo) {
-      setEtapa(destino);
+      aposGravar();
       return;
     }
     if (!tentarEnviar()) {
@@ -206,9 +206,17 @@ export function ModalCriarCampanha({
       }
       setFormSalvo(form);
       aoMudar();
-      setEtapa(destino);
+      aposGravar();
     });
   };
+
+  const avancarDosDados = (destino: Etapa = 'orcamento') =>
+    gravarDados(() => setEtapa(destino));
+
+  const salvarDadosESair = () => gravarDados(() => {
+    mostrar('Rascunho salvo.');
+    aoFechar();
+  });
 
   const irPara = (destino: Etapa) => {
     if (etapa === 'dados') {
@@ -265,19 +273,28 @@ export function ModalCriarCampanha({
     etapa === 'dados' ? (
       <RodapeAcoes
         aoCancelar={fechar}
-        acao={{ rotulo: 'Salvar rascunho', rotuloOcupado: 'Salvando...', ocupado: trabalhando, aoClicar: () => void avancarDosDados() }}
+        acao={[
+          { rotulo: 'Salvar rascunho', rotuloOcupado: 'Salvando...', ocupado: trabalhando, aoClicar: () => void salvarDadosESair() },
+          { rotulo: 'Próximo', rotuloOcupado: 'Salvando...', ocupado: trabalhando, aoClicar: () => void avancarDosDados() },
+        ]}
       />
     ) : etapa === 'orcamento' ? (
       <RodapeAcoes
         aoCancelar={() => setEtapa('dados')}
         rotuloCancelar="Voltar"
-        acao={{ rotulo: 'Próximo', aoClicar: () => setEtapa('cronograma') }}
+        acao={[
+          { rotulo: 'Salvar rascunho', desabilitado: trabalhando, aoClicar: salvarRascunhoESair },
+          { rotulo: 'Próximo', aoClicar: () => setEtapa('cronograma') },
+        ]}
       />
     ) : etapa === 'cronograma' ? (
       <RodapeAcoes
         aoCancelar={() => setEtapa('orcamento')}
         rotuloCancelar="Voltar"
-        acao={{ rotulo: 'Próximo', aoClicar: () => setEtapa('revisao') }}
+        acao={[
+          { rotulo: 'Salvar rascunho', desabilitado: trabalhando, aoClicar: salvarRascunhoESair },
+          { rotulo: 'Próximo', aoClicar: () => setEtapa('revisao') },
+        ]}
       />
     ) : (
       <RodapeAcoes

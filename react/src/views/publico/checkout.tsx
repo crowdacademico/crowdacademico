@@ -5,14 +5,14 @@ import { Carregando } from '../../components/layout/carregando';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import { contribuicaoPublicaApi } from './contribuicao-publica.api';
+import { formatarMoeda } from '../../services/constant/util/formatacao.util';
+import { contribuicaoPublicaApi } from '../../services/22-contribuicao/api/contribuicao-publica.api';
+import { recompensaApi } from '../../services/18-recompensa/api/recompensa.api';
+import { ROTULO_TIPO_RECOMPENSA } from '../../services/18-recompensa/constants/recompensa.constants';
+import type { RecompensaResponse } from '../../services/18-recompensa/type/recompensa.type';
 
 const VALORES_SUGERIDOS = [25, 50, 100, 150, 200];
 const VALOR_MAXIMO = 99_999_999.99;
-
-function formatarMoeda(valor: number): string {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
-}
 
 function idCampanhaDaUrl(valor: string | null): number | null {
   if (!valor || !/^[1-9]\d*$/.test(valor)) return null;
@@ -40,9 +40,15 @@ export function Checkout({ auth }: PropsPagina) {
   const [falhaCampanha, setFalhaCampanha] = useState<{ id: number; mensagem: string } | null>(null);
   const [valor, setValor] = useState('150');
   const [aceitouTermos, setAceitouTermos] = useState(false);
+  const [cienteFlexivel, setCienteFlexivel] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [envioBloqueado, setEnvioBloqueado] = useState(false);
   const [erroEnvio, setErroEnvio] = useState<string | null>(null);
+  // lista null = falhou ao carregar; undefined (fora do estado) = ainda carregando.
+  const [resultadoRecompensas, setResultadoRecompensas] = useState<{
+    id: number;
+    lista: RecompensaResponse[] | null;
+  } | null>(null);
 
   useEffect(() => {
     if (idCampanha === null) return;
@@ -67,7 +73,28 @@ export function Checkout({ auth }: PropsPagina) {
     };
   }, [auth.authFetch, idCampanha]);
 
+  // RF-105: a pessoa não escolhe recompensa; ganha todas as ativas cujo valor mínimo a contribuição alcança
+  // (gatilho trg_contribuicao_concede_recompensas). Aqui só mostramos quais o valor digitado alcança.
+  useEffect(() => {
+    if (idCampanha === null) return;
+    let ativo = true;
+    recompensaApi
+      .listar(auth.authFetch, idCampanha)
+      .then((lista) => {
+        if (!ativo) return;
+        const ativas = lista.filter((item) => item.ativo).sort((a, b) => a.valorMinimo - b.valorMinimo);
+        setResultadoRecompensas({ id: idCampanha, lista: ativas });
+      })
+      .catch(() => {
+        if (ativo) setResultadoRecompensas({ id: idCampanha, lista: null });
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [auth.authFetch, idCampanha]);
+
   const campanha = resultadoCampanha?.id === idCampanha ? resultadoCampanha.campanha : null;
+  const recompensas = resultadoRecompensas?.id === idCampanha ? resultadoRecompensas.lista : undefined;
   const erroCampanha = falhaCampanha?.id === idCampanha ? falhaCampanha.mensagem : null;
   const carregandoCampanha = idCampanha !== null && campanha === null && erroCampanha === null;
   const valorNumerico = Number(valor);
@@ -77,6 +104,8 @@ export function Checkout({ auth }: PropsPagina) {
     valorNumerico <= VALOR_MAXIMO &&
     Math.abs(valorNumerico - Math.round(valorNumerico * 100) / 100) < 0.00000001;
   const campanhaAtiva = campanha !== null && campanhaAceitaContribuicao(campanha);
+  const flexivel = campanha?.modelo === 'flexivel';
+  const cienciaOk = !flexivel || cienteFlexivel;
 
   async function enviarContribuicao(): Promise<void> {
     if (
@@ -85,6 +114,7 @@ export function Checkout({ auth }: PropsPagina) {
       !campanhaAtiva ||
       !valorValido ||
       !aceitouTermos ||
+      !cienciaOk ||
       enviando ||
       envioBloqueado
     ) {
@@ -98,6 +128,7 @@ export function Checkout({ auth }: PropsPagina) {
         idCampanha,
         valor: valorNumerico,
         meioPagamento: 'pix',
+        ...(flexivel ? { cienteModeloFlexivel: true } : {}),
       });
       const pix = contribuicao.pix;
       if (
@@ -219,6 +250,66 @@ export function Checkout({ auth }: PropsPagina) {
                 )}
               </div>
 
+              {recompensas === null && (
+                <p className="w-full max-w-md mb-8 text-xs texto-fraco text-left">
+                  Não foi possível carregar as recompensas desta campanha. Isso não impede o apoio.
+                </p>
+              )}
+              {recompensas && recompensas.length > 0 && (
+                <section className="w-full max-w-md mb-8 text-left" aria-labelledby="checkout-recompensas-titulo">
+                  <h3 id="checkout-recompensas-titulo" className="rotulo-campo">
+                    Recompensas
+                  </h3>
+                  <p className="text-xs texto-fraco mb-3" aria-live="polite">
+                    {!valorValido
+                      ? 'Informe um valor válido para ver as recompensas que ele alcança.'
+                      : `Com ${formatarMoeda(valorNumerico)}, você ganha ${recompensas.filter((item) => item.valorMinimo <= valorNumerico).length} de ${recompensas.length}.`}{' '}
+                    Você ganha todas as que o valor alcançar, sem precisar escolher.
+                  </p>
+                  <ul className="space-y-2">
+                    {recompensas.map((item) => {
+                      const alcancada = valorValido && item.valorMinimo <= valorNumerico;
+                      return (
+                        <li
+                          key={item.idRecompensa}
+                          className={`flex items-start gap-3 rounded-lg border p-3 ${alcancada ? 'borda-marca fundo-sucesso' : 'borda-padrao fundo-sutil'}`}
+                        >
+                          <i
+                            className={`fa-solid ${alcancada ? 'fa-circle-check texto-sucesso' : 'fa-lock texto-fraco'} mt-0.5`}
+                            aria-hidden="true"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold texto-forte">
+                              {item.titulo}
+                              <span className="sr-only">{alcancada ? ' (alcançada)' : ' (não alcançada)'}</span>
+                            </p>
+                            <p className="text-xs texto-fraco">
+                              A partir de <span className="numero">{formatarMoeda(item.valorMinimo)}</span> ·{' '}
+                              {ROTULO_TIPO_RECOMPENSA[item.tipo]}
+                            </p>
+                            {item.descricao && <p className="text-xs texto-padrao mt-1">{item.descricao}</p>}
+                          </div>
+                          {!alcancada && valorValido && (
+                            <button
+                              type="button"
+                              onClick={() => setValor(String(item.valorMinimo))}
+                              className="text-xs font-bold text-primary underline whitespace-nowrap"
+                            >
+                              Apoiar com {formatarMoeda(item.valorMinimo)}
+                            </button>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {!auth.usuario && (
+                    <p className="text-xs texto-aviso mt-3">
+                      As recompensas são concedidas só a quem apoia com a conta logada.
+                    </p>
+                  )}
+                </section>
+              )}
+
               <h3 className="subtitulo texto-forte mb-2">Escaneie o QR Code</h3>
               <p className="text-sm texto-fraco mb-8 max-w-sm">
                 O QR Code será exibido após a cobrança ser criada pelo servidor. Ainda não há um código para pagar.
@@ -288,14 +379,42 @@ export function Checkout({ auth }: PropsPagina) {
                   da campanha serão confirmadas pelo servidor.
                 </p>
               </div>
-              <div className="fundo-destaque border borda-padrao rounded-xl p-4 mb-6 text-sm texto-padrao">
-                <p className="font-semibold texto-forte mb-2">Modelo da campanha</p>
-                <p className="leading-relaxed">
-                  {campanha.modelo === 'all-or-nothing'
-                    ? 'Tudo ou Nada: se a meta não for atingida até o fim do prazo, aplicam-se as regras de devolução da plataforma.'
-                    : 'Flexível: os recursos seguem as regras do modelo flexível, mesmo que a meta não seja atingida.'}
-                </p>
-              </div>
+              {!flexivel && (
+                <div className="fundo-destaque border borda-padrao rounded-xl p-4 mb-6 text-sm texto-padrao">
+                  <p className="font-semibold texto-forte mb-2">Modelo da campanha: Tudo ou Nada</p>
+                  <p className="leading-relaxed">
+                    Se a meta não for atingida até o fim do prazo, aplicam-se as regras de devolução da plataforma.
+                  </p>
+                </div>
+              )}
+              {flexivel && (
+                <div className="fundo-aviso border-2 borda-padrao rounded-xl p-4 mb-6 text-sm texto-padrao" role="note">
+                  <p className="font-bold texto-forte mb-2 flex items-center gap-2">
+                    <i className="fa-solid fa-triangle-exclamation texto-aviso" aria-hidden="true" />
+                    Campanha flexível: leia antes de apoiar
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1 leading-relaxed mb-3">
+                    <li>O valor é cobrado assim que o pagamento for confirmado.</li>
+                    <li>
+                      Ele é repassado ao pesquisador no encerramento da campanha,{' '}
+                      <strong>mesmo que a meta não seja atingida</strong>.
+                    </li>
+                    <li>Você só recebe o valor de volta se a campanha for encerrada pela moderação da plataforma.</li>
+                  </ul>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      id="checkout-ciencia-flexivel"
+                      type="checkbox"
+                      checked={cienteFlexivel}
+                      onChange={(evento) => setCienteFlexivel(evento.target.checked)}
+                      className="mt-1 w-4 h-4 accent-primary rounded borda-forte"
+                    />
+                    <span className="text-xs font-semibold texto-forte leading-relaxed">
+                      Entendi que, nesta campanha, o valor vai para o pesquisador mesmo que a meta não seja atingida.
+                    </span>
+                  </label>
+                </div>
+              )}
 
               {auth.aceitePendente && (
                 <p className="fundo-erro border borda-padrao rounded-xl p-4 mb-6 text-sm texto-erro" role="alert">
@@ -316,7 +435,7 @@ export function Checkout({ auth }: PropsPagina) {
                 </span>
               </label>
               <p id="checkout-aceite-ajuda" className="text-xs texto-fraco -mt-6 mb-6">
-                Aceite os termos acima para continuar.
+                {flexivel ? 'Confirme a ciência do modelo e aceite os termos para continuar.' : 'Aceite os termos acima para continuar.'}
               </p>
 
               <MensagemErro texto={erroEnvio} className="fundo-erro border borda-padrao rounded-xl p-4 mb-5 text-sm texto-erro" />
@@ -328,6 +447,7 @@ export function Checkout({ auth }: PropsPagina) {
                   enviando ||
                   envioBloqueado ||
                   !aceitouTermos ||
+                  !cienciaOk ||
                   !valorValido ||
                   auth.aceitePendente ||
                   !campanhaAtiva

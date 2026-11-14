@@ -23,13 +23,14 @@ import type { PropsPagina } from '../../services/router/pagina.type';
 import { comentarioApi } from '../../services/17-comentario/api/comentario.api';
 import type { ComentarioResponse } from '../../services/17-comentario/type/comentario.type';
 import { contribuicaoApi } from '../../services/22-contribuicao/api/contribuicao.api';
+import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import {
   campanhaAceitaApoios,
   diasRestantes,
   formatarData,
-  formatarMoeda,
   percentualArrecadado,
 } from './util-campanhas';
+import { CartaoAcoesCampanha, FormComentarCampanha } from './acoes-campanha';
 
 type AbaCampanha = 'sobre' | 'orcamento' | 'cronograma' | 'atualizacoes';
 
@@ -295,6 +296,7 @@ export function Campanha({ auth }: PropsPagina) {
                         )}
                       </section>
                     )}
+                    {publicada && <FormComentarCampanha auth={auth} campanha={campanha} />}
                   </section>
                 )}
                 {aba === 'orcamento' && (
@@ -447,6 +449,8 @@ export function Campanha({ auth }: PropsPagina) {
                     <p className="mt-4 leading-relaxed">{EXPLICACAO_PUBLICA_MODELO_CAMPANHA[campanha.modelo]}</p>
                   </details>
                 </section>
+
+                {publicada && <CartaoAcoesCampanha auth={auth} campanha={campanha} />}
 
                 <section className="cartao fundo-cartao border borda-padrao rounded-xl p-6">
                   <h2 className="rotulo mb-5 border-b borda-padrao pb-3">Pesquisador Responsável</h2>

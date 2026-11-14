@@ -8,3 +8,7 @@
 # Memória do provedor de pagamento de teste (PAYMENT_PROVIDER=fake), quando o Nest roda a partir desta pasta.
 .fake-gateway.json
 .fake-gateway.json.tmp
+
+# Cache do Windows PowerShell 5.1 (lista de módulos). Aparece aqui quando alguma ferramenta abre o PowerShell sem a
+# variável LOCALAPPDATA: em vez de ir para AppData, ele grava na pasta atual. Não é do projeto.
+/Microsoft/

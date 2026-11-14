@@ -4,11 +4,12 @@ import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import { contribuicaoPublicaApi } from './contribuicao-publica.api';
+import { formatarMoeda } from '../../services/constant/util/formatacao.util';
+import { contribuicaoPublicaApi } from '../../services/22-contribuicao/api/contribuicao-publica.api';
 import type {
   ContribuicaoCriadaPublica,
   StatusContribuicaoPublica,
-} from './contribuicao-publica.api';
+} from '../../services/22-contribuicao/type/contribuicao-publica.type';
 
 interface EstadoApoio {
   contribuicao: ContribuicaoCriadaPublica;
@@ -95,12 +96,33 @@ function lerEstadoApoio(valor: unknown): EstadoApoio | null {
   };
 }
 
-function formatarMoeda(valor: number): string {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
-}
-
 function imagemQrCode(base64: string | undefined): string | null {
   return base64 && /^[A-Za-z0-9+/]+={0,2}$/.test(base64) ? `data:image/png;base64,${base64}` : null;
+}
+
+// RF-085: quanto falta para a cobrança PIX expirar, atualizado a cada segundo. Devolve null sem prazo válido.
+function useSegundosRestantes(expiraEm: string | undefined): number | null {
+  const alvo = expiraEm ? Date.parse(expiraEm) : NaN;
+  const [agora, setAgora] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!Number.isFinite(alvo)) return;
+    const intervalo = window.setInterval(() => {
+      const instante = Date.now();
+      setAgora(instante);
+      if (instante >= alvo) window.clearInterval(intervalo);
+    }, 1000);
+    return () => window.clearInterval(intervalo);
+  }, [alvo]);
+
+  return Number.isFinite(alvo) ? Math.max(0, Math.ceil((alvo - agora) / 1000)) : null;
+}
+
+function formatarTempoRestante(segundos: number): string {
+  const horas = Math.floor(segundos / 3600);
+  const minutos = Math.floor((segundos % 3600) / 60);
+  const resto = String(segundos % 60).padStart(2, '0');
+  return horas > 0 ? `${horas}h ${String(minutos).padStart(2, '0')}min ${resto}s` : `${minutos}:${resto}`;
 }
 
 export function ApoioConfirmado({ auth }: PropsPagina) {
@@ -110,6 +132,8 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
   const [financeiroAtual, setFinanceiroAtual] = useState<CampanhaResponse | null>(null);
   const [erroConsulta, setErroConsulta] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
+  const segundosRestantes = useSegundosRestantes(estado?.contribuicao.pix?.expiraEm);
+  const pixExpirado = segundosRestantes === 0;
 
   useEffect(() => {
     if (!estado) return;
@@ -241,7 +265,20 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
           </p>
           <MensagemErro texto={erroConsulta} />
 
-          {!pagamentoConfirmado && status === 'pendente' && (
+          {!pagamentoConfirmado && status === 'pendente' && pixExpirado && (
+            <div className="text-left rounded-xl border borda-padrao fundo-aviso p-5 mb-6" role="alert">
+              <p className="rotulo mb-2">Cobrança PIX expirada</p>
+              <p className="paragrafo texto-padrao mb-4">
+                O prazo deste código terminou em {new Date(contribuicao.pix?.expiraEm ?? '').toLocaleString('pt-BR')}.
+                Não pague com ele. Se você já pagou, aguarde: a confirmação ainda pode chegar do servidor.
+              </p>
+              <Link to={`/checkout?idCampanha=${contribuicao.idCampanha}`} className="btn btn-primary w-full justify-center">
+                Gerar nova cobrança
+              </Link>
+            </div>
+          )}
+
+          {!pagamentoConfirmado && status === 'pendente' && !pixExpirado && (
             <div className="text-left rounded-xl border borda-padrao p-5 mb-6">
               <p className="rotulo mb-3">Pagamento via PIX</p>
               {qrCode && (
@@ -270,8 +307,16 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
               <button type="button" onClick={() => void copiarPix()} className="btn btn-secondary w-full mt-3">
                 {copiado ? 'Copiado ✓' : 'Copiar código PIX'}
               </button>
-              <p className="legenda mt-4">
-                Expira em{' '}
+              {segundosRestantes !== null && (
+                <p className="mt-4 inline-flex items-center gap-2 font-dado fundo-info texto-info border borda-padrao px-4 py-2 rounded-lg text-sm font-bold">
+                  <i className="fa-regular fa-clock" aria-hidden="true" />
+                  <span>
+                    Expira em <span className="numero">{formatarTempoRestante(segundosRestantes)}</span>
+                  </span>
+                </p>
+              )}
+              <p className="legenda mt-3">
+                Válido até{' '}
                 {contribuicao.pix
                   ? new Date(contribuicao.pix.expiraEm).toLocaleString('pt-BR')
                   : 'data não informada'}

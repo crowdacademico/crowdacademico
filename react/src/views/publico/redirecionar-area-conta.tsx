@@ -2,8 +2,8 @@ import { Navigate, useLocation } from 'react-router';
 
 const DESTINOS_PAINEL: Record<string, string> = {
   '/minha-conta': '/minha-conta/perfil',
-  '/minhas-contribuicoes': '/minha-conta/contribuicoes',
-  '/painel-doador': '/minha-conta/contribuicoes',
+  '/minhas-contribuicoes': '/minha-conta/financeiro',
+  '/painel-doador': '/minha-conta/financeiro',
   '/painel-pesquisador': '/estudio-pesquisador',
 };
 

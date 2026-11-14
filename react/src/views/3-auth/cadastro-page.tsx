@@ -244,27 +244,52 @@ export function CadastroPage({ auth }: PropsPagina) {
           {passo === 1 ? (
             <div>
               <h2 className="subtitulo texto-forte mb-4">Como você quer usar a plataforma?</h2>
-              <div className="grid gap-4">
-                {TIPOS_CONTA.map((tipo) => (
-                  <button
-                    type="button"
-                    key={tipo.chave}
-                    aria-pressed={tipoConta === tipo.chave}
-                    onClick={() => {
-                      setTipoConta(tipo.chave);
-                      setErroTipoConta('');
-                    }}
-                    className={`cartao text-left transition-all ${tipoConta === tipo.chave ? 'borda-marca' : ''}`}
-                  >
-                    <span className="flex items-center gap-3 mb-2">
-                      <span className="w-10 h-10 rounded-lg fundo-marca-sutil texto-marca flex items-center justify-center">
-                        <i className={`fa-solid ${tipo.icone}`} aria-hidden="true" />
-                      </span>
-                      <span className="subtitulo texto-forte">{tipo.titulo}</span>
-                    </span>
-                    <span className="block text-sm texto-padrao leading-relaxed">{tipo.descricao}</span>
-                  </button>
-                ))}
+              <div className="grid sm:grid-cols-2 gap-4">
+                {TIPOS_CONTA.map((tipo) => {
+                  const selecionado = tipoConta === tipo.chave;
+                  return (
+                    <button
+                      type="button"
+                      key={tipo.chave}
+                      aria-pressed={selecionado}
+                      onClick={() => {
+                        setTipoConta(tipo.chave);
+                        setErroTipoConta('');
+                      }}
+                      className={`relative p-5 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between ${
+                        selecionado
+                          ? 'borda-marca fundo-sutil shadow-md ring-2 ring-(--cor-marca)/20'
+                          : 'borda-padrao fundo-cartao hover-fundo-sutil hover-borda-forte'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <span
+                          className={`w-11 h-11 rounded-lg flex items-center justify-center transition-colors ${
+                            selecionado
+                              ? 'fundo-marca-forte texto-sobre-cor'
+                              : 'fundo-sutil texto-marca'
+                          }`}
+                        >
+                          <i className={`fa-solid ${tipo.icone} icone-grande`} aria-hidden="true" />
+                        </span>
+                        <span
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                            selecionado
+                              ? 'borda-marca fundo-marca-forte texto-sobre-cor'
+                              : 'borda-padrao'
+                          }`}
+                          aria-hidden="true"
+                        >
+                          {selecionado && <i className="fa-solid fa-check icone-pequeno" />}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="subtitulo texto-forte block mb-1">{tipo.titulo}</span>
+                        <span className="block paragrafo texto-fraco">{tipo.descricao}</span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
               {erroTipoConta && <p className="legenda enfase erro-campo mt-3" role="alert">{erroTipoConta}</p>}
             </div>
@@ -436,13 +461,13 @@ export function CadastroPage({ auth }: PropsPagina) {
                     className="mt-0.5"
                   />
                   <span>
-                    Li e aceito o{' '}
+                    Li e aceito os{' '}
                     <button
                       type="button"
                       onClick={() => abrirTermos('upgrade_pesquisador')}
                       className="link-texto"
                     >
-                      Termo de Uso do pesquisador
+                      Termos de Uso do Pesquisador
                     </button>
                     .
                   </span>

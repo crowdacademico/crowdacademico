@@ -30,6 +30,7 @@ import { ListarModelosMensagem } from '../../views/27-notificacao/listar-modelos
 import { ListarNotificacoes } from '../../views/27-notificacao/listar-notificacoes';
 import { campoTestes } from './campo-testes-opcional';
 import { ComoFunciona } from '../../views/publico/como-funciona';
+import { Transparencia } from '../../views/publico/transparencia';
 import { Sobre } from '../../views/publico/sobre';
 import { TermosUso } from '../../views/publico/termos-uso';
 import { AtualizacoesCampanha } from '../../views/publico/atualizacoes-campanha';
@@ -82,17 +83,17 @@ export const ROTAS: Rota[] = [
   { caminho: '/explorar', elemento: Explorar, rotuloBreadcrumb: 'Explorar projetos' },
   { caminho: '/campanha/:id', elemento: Campanha, rotuloBreadcrumb: 'Campanha' },
   { caminho: '/checkout', elemento: Checkout, rotuloBreadcrumb: 'Apoiar campanha' },
-  { caminho: '/apoiar', elemento: Checkout, rotuloBreadcrumb: 'Apoiar campanha' },
   { caminho: '/apoio-confirmado', elemento: ApoioConfirmado, rotuloBreadcrumb: 'Confirmação do apoio' },
   { caminho: '/como-funciona', elemento: ComoFunciona, rotuloBreadcrumb: 'Como funciona' },
+  { caminho: '/transparencia', elemento: Transparencia, rotuloBreadcrumb: 'Transparência' },
   { caminho: '/sobre', elemento: Sobre, rotuloBreadcrumb: 'Sobre' },
   { caminho: '/termos', elemento: TermosUso, rotuloBreadcrumb: 'Termo de Uso' },
   { caminho: '/pesquisador/:idUsuario', elemento: PerfilPesquisador, rotuloBreadcrumb: 'Pesquisador' },
   { caminho: '/campanha/:id/atualizacoes', elemento: AtualizacoesCampanha, rotuloBreadcrumb: 'Atualizações' },
   { caminho: '/minha-conta', elemento: RedirecionarAreaConta, rotuloBreadcrumb: null },
   { caminho: '/criar-campanha', elemento: CriarCampanhaPage, rotuloBreadcrumb: null },
-  { caminho: '/minhas-campanhas', elemento: EstudioPesquisador, rotuloBreadcrumb: 'Estúdio do pesquisador' },
   { caminho: '/estudio-pesquisador', elemento: EstudioPesquisador, rotuloBreadcrumb: 'Estúdio do pesquisador' },
+  { caminho: '/estudio-pesquisador/:secao', elemento: EstudioPesquisador, rotuloBreadcrumb: 'Estúdio do pesquisador' },
   { caminho: '/minhas-contribuicoes', elemento: RedirecionarAreaConta, rotuloBreadcrumb: null },
   { caminho: '/painel-doador', elemento: RedirecionarAreaConta, rotuloBreadcrumb: null },
   { caminho: '/painel-pesquisador', elemento: RedirecionarAreaConta, rotuloBreadcrumb: null },

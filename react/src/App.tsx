@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router';
+import { Navigate, Route, Routes, useLocation } from 'react-router';
 import { Layout } from './components/layout/layout';
 import { useAuth } from './services/3-auth/hook/use-auth';
 import { ROTAS, ROTAS_ADMIN, ROTAS_CONTA } from './services/router/rotas.constants';
@@ -36,7 +36,9 @@ function App() {
             )}
           />
         ))}
-        <Route path="/admin/minhas-campanhas" element={<Navigate to="/minhas-campanhas" replace />} />
+        <Route path="/admin/minhas-campanhas" element={<Navigate to="/estudio-pesquisador" replace />} />
+        <Route path="/minhas-campanhas" element={<Navigate to="/estudio-pesquisador" replace />} />
+        <Route path="/apoiar" element={<RedirecionarMantendoBusca para="/checkout" />} />
         <Route path="/admin/minha-conta" element={<Navigate to="/minha-conta/perfil" replace />} />
         <Route path="/admin/minha-conta/:aba" element={<Navigate to="/minha-conta/perfil" replace />} />
         <Route path="/admin" element={<AdminLayout auth={auth} />}>
@@ -59,6 +61,13 @@ function App() {
   // Provider do Campo de Testes: só em desenvolvimento e só se a pasta existir (campo-testes-opcional.ts).
   const ProviderCampoTestes = campoTestes?.CampoTestesProvider;
   return ProviderCampoTestes ? <ProviderCampoTestes>{rotas}</ProviderCampoTestes> : rotas;
+}
+
+// Endereço antigo que leva parâmetro (`/apoiar?idCampanha=3`): sem repassar o `search`, o checkout abriria sem
+// saber qual campanha apoiar.
+function RedirecionarMantendoBusca({ para }: { para: string }) {
+  const { search } = useLocation();
+  return <Navigate to={{ pathname: para, search }} replace />;
 }
 
 function ExigirLogin({

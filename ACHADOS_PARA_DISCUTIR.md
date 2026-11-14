@@ -1,5 +1,7 @@
 # Achados para discutir: o que ainda falta (lista de 26-09-2026)
 
+> **Acessibilidade:** a WCAG 2.2, critério 1.4.8 (nível AAA), inclui texto não justificado entre as condições de apresentação visual que devem estar disponíveis. A técnica F88 descreve texto plenamente justificado como uma falha desse critério. [Critério 1.4.8](https://www.w3.org/WAI/WCAG22/Understanding/visual-presentation) · [Técnica F88](https://www.w3.org/WAI/WCAG21/Techniques/failures/F88)
+
 Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta da revisão de 24-09 dentro de `informacoes/`), conferida item por item contra o código. Os achados antigos (itens 1 a 20, quase todos resolvidos) estão em `informacoes/HISTORICO/HISTORICO_ACHADOS_PARA_DISCUTIR.md`; qualquer citação "`ACHADOS_PARA_DISCUTIR.md`, item N" em documento ou comentário antigo aponta para lá. Na limpeza de 25-10-2026, o que já estava feito ou repetido no `PENDENCIAS e correcoes.md` também foi para lá, com o texto original.
 
 ---

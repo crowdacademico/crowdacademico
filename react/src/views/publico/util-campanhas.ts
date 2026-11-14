@@ -1,7 +1,7 @@
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import { STATUS_VISIVEL_PUBLICAMENTE } from '../../services/12-campanha/constants/status-campanha.constants';
+import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 
-const MOEDA = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const DATA = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' });
 const NUMERO = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 });
 const SUFIXOS_COMPACTOS = [
@@ -11,10 +11,6 @@ const SUFIXOS_COMPACTOS = [
   { limite: 1_000_000, sufixo: 'M' },
   { limite: 1_000, sufixo: 'K' },
 ] as const;
-
-export function formatarMoeda(valor: number) {
-  return MOEDA.format(valor);
-}
 
 export function formatarNumeroCompacto(valor: number, moeda = false): string {
   const indiceSufixo = SUFIXOS_COMPACTOS.findIndex(({ limite }) => Math.abs(valor) >= limite);

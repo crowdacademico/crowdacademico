@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Navigate } from 'react-router';
+import { Navigate, NavLink, useParams } from 'react-router';
 import { AvisoSoPesquisador } from '../../components/crud/aviso-so-pesquisador';
 import { BotaoCriar } from '../../components/crud/botao-criar';
 import { GenericTable } from '../../components/crud/generic-table';
@@ -38,10 +38,14 @@ import { classeBadgeStatusContribuicao, ROTULO_STATUS_CONTRIBUICAO } from '../..
 import type { ContribuicaoRecebida } from '../../services/22-contribuicao/type/contribuicao.type';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
+import { contaRecebimentoApi } from '../../services/24-conta-recebimento/api/conta-recebimento.api';
+import type { RepasseResponse } from '../../services/24-conta-recebimento/type/conta-recebimento.type';
+import { formatarMoeda } from '../../services/constant/util/formatacao.util';
+import { diasRestantes, percentualArrecadado } from './util-campanhas';
 import { renderizarArrecadado, renderizarStatus, textoStatus } from '../12-campanha/colunas-campanha';
 import { ModalAlterarCampanha } from '../12-campanha/modal-alterar-campanha';
 import { ModalConsultarCampanha } from '../12-campanha/modal-consultar-campanha';
-import { ModalCriarCampanha } from './modal-criar-campanha-publico';
+import { ModalCriarCampanha } from '../12-campanha/modal-criar-campanha';
 import { ModalExcluirCampanha } from '../12-campanha/modal-excluir-campanha';
 import { ModalRecompensa } from '../18-recompensa/modal-recompensa';
 import { ModalAtualizacao } from '../15-atualizacao-campanha/modal-atualizacao';
@@ -57,7 +61,12 @@ const SECOES: { chave: SecaoEstudio; rotulo: string; icone: string }[] = [
   { chave: 'contribuicoes', rotulo: 'Contribuições', icone: 'fa-hand-holding-heart' },
 ];
 
+function ehSecaoEstudio(valor: string | undefined): valor is SecaoEstudio {
+  return SECOES.some(({ chave }) => chave === valor);
+}
+
 export function EstudioPesquisador({ auth }: PropsPagina) {
+  const { secao } = useParams();
   if (auth.carregando) return null;
   if (!auth.usuario) return <Navigate to="/login" replace />;
   if (!auth.usuario.ehPesquisador) {
@@ -72,11 +81,13 @@ export function EstudioPesquisador({ auth }: PropsPagina) {
       </main>
     );
   }
-  return <ConteudoEstudio auth={auth} />;
+  if (secao === undefined || !ehSecaoEstudio(secao)) {
+    return <Navigate to="/estudio-pesquisador/campanhas" replace />;
+  }
+  return <ConteudoEstudio auth={auth} secao={secao} />;
 }
 
-function ConteudoEstudio({ auth }: PropsPagina) {
-  const [secao, setSecao] = useState<SecaoEstudio>('campanhas');
+function ConteudoEstudio({ auth, secao }: PropsPagina & { secao: SecaoEstudio }) {
   const idUsuario = auth.usuario?.idUsuario ?? null;
   const buscarCampanhas = useCallback(
     () => idUsuario === null
@@ -104,21 +115,20 @@ function ConteudoEstudio({ auth }: PropsPagina) {
         <aside aria-label="Menu do estúdio">
           <nav aria-label="Seções do estúdio" className="flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible">
             {SECOES.map((item) => (
-              <button
+              <NavLink
                 key={item.chave}
-                type="button"
-                aria-current={secao === item.chave ? 'page' : undefined}
-                onClick={() => setSecao(item.chave)}
-                className={
+                to={`/estudio-pesquisador/${item.chave}`}
+                end
+                className={({ isActive }) =>
                   'paragrafo enfase flex shrink-0 items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors lg:w-full ' +
-                  (secao === item.chave
+                  (isActive
                     ? 'fundo-cartao borda-marca texto-marca shadow-sm'
                     : 'fundo-cartao borda-padrao texto-herdado hover-fundo-sutil')
                 }
               >
                 <i className={`fa-solid ${item.icone} w-4`} aria-hidden="true"></i>
                 {item.rotulo}
-              </button>
+              </NavLink>
             ))}
           </nav>
         </aside>
@@ -172,6 +182,79 @@ interface CampanhaLinha extends Omit<CampanhaResponse, 'status'> {
   status: string;
   statusOriginal: CampanhaResponse['status'];
   temVideo: boolean;
+  // RF-090/091: métricas da lista "Projetos Criados".
+  percentualMeta: number | null;
+  doadoresConfirmados: number | null;
+  diasRestantesCaptacao: number | null;
+  // O líquido que vale: o real do repasse concluído ou, antes dele, o estimado (valorLiquidoEstimado).
+  liquido: number | null;
+  repasse: RepasseResponse | null;
+}
+
+// RF-090/091: "R$ X" e, embaixo, de onde vem o número: o repasse concluído (taxa retida e data) ou a estimativa.
+function renderizarLiquido(linha: CampanhaLinha) {
+  if (linha.liquido === null) return '—';
+  const repasse = linha.repasse;
+  const taxa = repasse ? repasse.taxaPlataforma : linha.taxaPlataforma;
+  return (
+    <span className="inline-flex flex-col leading-tight">
+      <span className="numero">{formatarMoeda(linha.liquido)}</span>
+      <span className="legenda">
+        {repasse
+          ? `repassado em ${repasse.repassadoEm ? formatarDataHora(repasse.repassadoEm) : '—'}; taxa retida ${formatarMoeda(repasse.valorBruto - repasse.valorLiquido)}${taxa === null ? '' : ` (${taxa}%)`}`
+          : `estimado${taxa === null ? ' (taxa padrão)' : `, taxa de ${taxa}%`}`}
+      </span>
+    </span>
+  );
+}
+
+function textoLiquido(linha: CampanhaLinha): string {
+  if (linha.liquido === null) return '—';
+  return `${formatarMoeda(linha.liquido)} ${linha.repasse ? 'repassado' : 'estimado'}`;
+}
+
+const STATUS_COM_CONTRIBUICOES: ReadonlySet<CampanhaResponse['status']> = new Set([
+  'ativo', 'sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao',
+]);
+
+async function montarLinhasCampanhas(
+  authFetch: PropsPagina['auth']['authFetch'],
+  campanhas: CampanhaResponse[],
+): Promise<CampanhaLinha[]> {
+  const comContribuicoes = campanhas.filter((campanha) => STATUS_COM_CONTRIBUICOES.has(campanha.status));
+  // Falhar uma métrica não derruba a lista: a célula fica "—".
+  const [repasses, ...resumos] = await Promise.allSettled([
+    comContribuicoes.length > 0 ? contaRecebimentoApi.listarRepasses(authFetch) : Promise.resolve([]),
+    ...comContribuicoes.map((campanha) => contribuicaoApi.resumoDaCampanha(authFetch, campanha.idCampanha)),
+  ]);
+  const repassePorCampanha = new Map<number, RepasseResponse>();
+  if (repasses.status === 'fulfilled') {
+    for (const repasse of repasses.value as RepasseResponse[]) {
+      if (repasse.status === 'concluido') repassePorCampanha.set(repasse.idCampanha, repasse);
+    }
+  }
+  const pagasPorCampanha = new Map<number, number>();
+  comContribuicoes.forEach((campanha, indice) => {
+    const resumo = resumos[indice];
+    if (resumo.status === 'fulfilled') pagasPorCampanha.set(campanha.idCampanha, (resumo.value as { pagas: number }).pagas);
+  });
+
+  return campanhas.map((campanha) => {
+    const repasse = repassePorCampanha.get(campanha.idCampanha) ?? null;
+    return {
+      ...campanha,
+      status: rotuloStatusCampanha(campanha),
+      statusOriginal: campanha.status,
+      temVideo: Boolean(campanha.videoApresentacaoUrl),
+      percentualMeta: percentualArrecadado(campanha),
+      doadoresConfirmados: STATUS_COM_CONTRIBUICOES.has(campanha.status)
+        ? (pagasPorCampanha.get(campanha.idCampanha) ?? null)
+        : 0,
+      diasRestantesCaptacao: campanha.status === 'ativo' ? diasRestantes(campanha.dataFim) : null,
+      liquido: repasse ? repasse.valorLiquido : campanha.valorLiquidoEstimado,
+      repasse,
+    };
+  });
 }
 
 function PainelCampanhas({
@@ -189,12 +272,10 @@ function PainelCampanhas({
     criando, abrirCriando, fecharCriando, alterando, consultando, excluindo,
     fecharAlterando, fecharConsultando, fecharExcluindo, chaveRecarga, recarregar, acoesCompletas,
   } = useCrudModais<CampanhaLinha>();
-  const listar = useCallback(async (): Promise<CampanhaLinha[]> => campanhas.map((campanha) => ({
-    ...campanha,
-    status: rotuloStatusCampanha(campanha),
-    statusOriginal: campanha.status,
-    temVideo: Boolean(campanha.videoApresentacaoUrl),
-  })), [campanhas]);
+  const listar = useCallback(
+    (): Promise<CampanhaLinha[]> => montarLinhasCampanhas(auth.authFetch, campanhas),
+    [auth.authFetch, campanhas],
+  );
   const podeCriar = statusPesquisador === 'ativo';
   const mudou = () => {
     recarregar();
@@ -206,7 +287,7 @@ function PainelCampanhas({
       <GenericTable<CampanhaLinha>
         titulo="Campanhas"
         nivelTitulo={2}
-        ajuda="Consulte e gerencie os projetos que você cadastrou."
+        ajuda="Consulte e gerencie os projetos que você cadastrou. Doadores: contribuições com pagamento confirmado. Líquido: o que você recebe depois da taxa da plataforma; antes do repasse, é uma estimativa com base no arrecadado até agora."
         acaoTopo={podeCriar && <BotaoCriar rotulo="Nova campanha" aoClicar={abrirCriando} />}
         colunas={[
           { chave: 'idCampanha', rotulo: 'id', tipo: 'id' },
@@ -218,6 +299,16 @@ function PainelCampanhas({
           { chave: 'temVideo', rotulo: 'vídeo', tipo: 'simNao' },
           { chave: 'metaFinanceira', rotulo: 'meta', tipo: 'dinheiro' },
           { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro', renderizar: renderizarArrecadado },
+          { chave: 'percentualMeta', rotulo: '% da meta', tipo: 'numero', renderizar: (linha) => (linha.percentualMeta === null ? '—' : `${linha.percentualMeta}%`) },
+          { chave: 'doadoresConfirmados', rotulo: 'doadores', tipo: 'numero' },
+          { chave: 'diasRestantesCaptacao', rotulo: 'dias rest.', tipo: 'numero' },
+          {
+            chave: 'liquido',
+            rotulo: 'líquido',
+            tipo: 'dinheiro',
+            renderizar: renderizarLiquido,
+            textoExibido: textoLiquido,
+          },
         ]}
         chavePrimaria="idCampanha"
         listar={listar}

@@ -952,6 +952,12 @@ CREATE TABLE contribuicao (
     -- Preenchida quando o provedor cancelou (ou já não tem mais como cancelar) a cobrança de uma contribuição que morreu aqui
     -- (expirado/erro). Ver reservar_cobrancas_para_cancelar (05).
     cobranca_cancelada_em        TIMESTAMPTZ,
+    -- RF-041: quando quem apoiou confirmou ciência do modelo flexível (cobrado na hora, repassado no fim mesmo sem
+    -- bater a meta, devolvido só se a moderação encerrar). O POST /contribuicao recusa campanha flexível sem a
+    -- ciência e grava NOW() aqui; fica como prova numa reclamação. NULL em all-or-nothing e nas contribuições
+    -- anteriores a 14-11-2026 (seed incluso). A regra mora no Nest, não numa trigger, de propósito: os scripts de
+    -- informacoes/testes-banco inserem contribuições flexíveis direto no banco.
+    ciencia_modelo_em            TIMESTAMPTZ,
 
     CONSTRAINT "PK_CONTRIBUICAO" PRIMARY KEY (id_contribuicao),
     CONSTRAINT "FK_CONTRIBUICAO_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha),

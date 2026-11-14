@@ -1,4 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
+import { PaginacaoQueryDto } from '../../commons/database/dto/paginacao.query.dto';
 import { ComentarioRequestList } from '../dto/request/comentario.request-list';
 import { ComentarioServiceFindAll } from '../service/comentario.service.findall';
 import { Publico } from '../../commons/auth/publico.decorator';
@@ -12,5 +13,10 @@ export class ComentarioControllerFindAll {
   @Publico()
   listar(@Query() filtro: ComentarioRequestList) {
     return this.service.executar(filtro);
+  }
+
+  @Get('minhas')
+  listarMinhas(@Query() paginacao: PaginacaoQueryDto) {
+    return this.service.listarMinhas(paginacao);
   }
 }

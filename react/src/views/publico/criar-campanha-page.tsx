@@ -3,7 +3,7 @@ import { AvisoSoPesquisador } from '../../components/crud/aviso-so-pesquisador';
 import { Carregando } from '../../components/layout/carregando';
 import { useSituacaoPesquisador } from '../../services/6-perfil-pesquisador/hook/use-situacao-pesquisador';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import { ModalCriarCampanha } from './modal-criar-campanha-publico';
+import { ModalCriarCampanha } from '../12-campanha/modal-criar-campanha';
 
 function obterCaminhoRetorno(state: unknown): string | null {
   if (typeof state !== 'object' || state === null || !('voltarPara' in state)) return null;

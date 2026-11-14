@@ -1725,3 +1725,16 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.contribuicoes_recebidas_pesquisador() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.contribuicoes_recebidas_pesquisador() TO app_nestjs;
+
+-- ============================================================================
+-- GRUPO CM (14-11-2026) - Ciência do modelo flexível no apoio (RF-041). IDEMPOTENTE.
+-- PARE O NEST antes de colar: o grupo altera a tabela contribuicao, e isso pede uma trava que pode esperar para
+-- sempre (ou dar deadlock) com o Nest usando a tabela, a mesma regra do Grupo BS. A coluna é nullable: as
+-- contribuições antigas continuam valendo.
+-- Cole depois do CL. Suba o Nest novo junto: o Nest antigo não manda a ciência, e o novo grava nesta coluna.
+--
+-- O que muda:
+--   1. contribuicao ganha ciencia_modelo_em: quando quem apoiou confirmou ciência do modelo flexível. O
+--      POST /contribuicao recusa campanha flexível sem a ciência e grava NOW() aqui.
+-- ============================================================================
+ALTER TABLE contribuicao ADD COLUMN IF NOT EXISTS ciencia_modelo_em TIMESTAMPTZ;

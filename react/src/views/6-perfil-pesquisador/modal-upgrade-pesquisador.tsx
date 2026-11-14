@@ -1,14 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
+import { CaixaAviso } from '../../components/crud/caixa-aviso';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { BotaoTelaCheia, TextoTermo } from '../../components/crud/modal-termo';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
+import { TabelaLinksAcademicos } from '../../components/crud/tabelas/1-tabela-links-academicos';
 import { CampoCpf } from '../../components/input/campo-cpf';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
+import { linkAcademicoApi } from '../../services/7-link-academico/api/link-academico.api';
+import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
+import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
+import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { CamposVinculoPerfil } from './campos-vinculo-perfil';
 import { LinksAcademicosDoUsuario } from '../7-link-academico/links-academicos-do-usuario';
 import { useEnvio } from '../../services/constant/hook/use-envio';
@@ -21,6 +27,7 @@ import type {
   TituloAcademico,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import type { TermoUsoResponseActive } from '../../services/5-termo-uso/type/termo-uso.type';
+import type { LinkAcademicoRequestCreate, LinkAcademicoResponse } from '../../services/7-link-academico/type/link-academico.type';
 
 interface ModalUpgradePesquisadorProps {
   auth: Pick<UseAuthReturn, 'authFetch' | 'usuario' | 'renovarSessaoAgora' | 'atualizarUsuarioLocal'>;
@@ -85,9 +92,12 @@ export function ModalUpgradePesquisador({
   const [termoIndisponivel, setTermoIndisponivel] = useState(false);
   const [aceitou, setAceitou] = useState(false);
   const [form, setForm] = useState<FormUpgrade>(FORM_VAZIO);
-  // Depois de salvar, o modal fica aberto para os links acadêmicos (só pesquisador tem link, então eles só destravam
-  // agora); os dados do perfil ficam travados.
+  // Depois de criar o perfil, mantém os dados travados e permite revisar os links que não foram salvos.
   const [perfilCriado, setPerfilCriado] = useState(false);
+  const [linksPendentes, setLinksPendentes] = useState<LinkAcademicoResponse[]>([]);
+  const proximoIdRascunho = useRef(-1);
+  const limiteLinks = useConfiguracoes().obterNumero('limite_links_academicos_perfil', 5);
+  const { dado: tiposLink } = useBuscar(() => tipoLinkApi.listar(auth.authFetch, { escopo: 'perfil' }), []);
   // Botões sempre clicáveis: clicando com algo faltando, o erro aparece no lugar certo (a caixa do aceite, o CPF, a
   // instituição). Só "Aceitar" sem Termo publicado continua travado, com a explicação no corpo.
   const aceite = useErrosFormulario(() => ({ aceite: !aceitou && 'Marque a caixa para aceitar o Termo e continuar.' }));
@@ -110,8 +120,28 @@ export function ModalUpgradePesquisador({
 
   const ehContaPropria = idUsuarioAlvo === auth.usuario?.idUsuario;
 
+  const salvarLinksPendentes = async () => {
+    for (const link of linksPendentes) {
+      const dados: LinkAcademicoRequestCreate = {
+        idTipoLink: link.idTipoLink,
+        url: link.url,
+        ...(link.rotulo ? { rotulo: link.rotulo } : {}),
+      };
+      if (ehContaPropria) {
+        await linkAcademicoApi.criar(auth.authFetch, dados);
+      } else {
+        await linkAcademicoApi.criarParaOutro(auth.authFetch, idUsuarioAlvo, dados);
+      }
+      setLinksPendentes((atuais) => atuais.filter((pendente) => pendente.idLinkAcademico !== link.idLinkAcademico));
+    }
+  };
+
   const aoEnviar = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
+    if (perfilCriado) {
+      await executarEnviando(salvarLinksPendentes);
+      return;
+    }
     if (!tentarEnviar()) return;
     await executarEnviando(async () => {
       const dadosPerfil = {
@@ -138,9 +168,18 @@ export function ModalUpgradePesquisador({
           auth.atualizarUsuarioLocal((atual) => (atual ? { ...atual, ehPesquisador: true } : atual));
         });
       }
-      mostrar('Perfil de pesquisador criado com sucesso.', 'Agora já dá para adicionar os links acadêmicos.');
       aoConcluido(perfilCriado);
-      setPerfilCriado(true);
+      if (linksPendentes.length > 0) {
+        mostrar('Perfil de pesquisador criado.', 'Salvando os links acadêmicos informados.');
+        try {
+          await salvarLinksPendentes();
+        } finally {
+          setPerfilCriado(true);
+        }
+      } else {
+        setPerfilCriado(true);
+        mostrar('Perfil de pesquisador criado com sucesso.', 'Agora já dá para adicionar os links acadêmicos.');
+      }
     });
   };
 
@@ -168,7 +207,20 @@ export function ModalUpgradePesquisador({
             }}
           />
         ) : perfilCriado ? (
-          <RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Concluir" />
+          linksPendentes.length > 0 ? (
+            <RodapeAcoes
+              aoCancelar={aoFechar}
+              rotuloCancelar="Fechar"
+              acao={{
+                rotulo: 'Tentar salvar links',
+                rotuloOcupado: 'Salvando...',
+                ocupado: enviando,
+                formulario: 'form-upgrade-pesquisador',
+              }}
+            />
+          ) : (
+            <RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Concluir" />
+          )
         ) : (
           <RodapeAcoes
             aoCancelar={aoFechar}
@@ -216,39 +268,117 @@ export function ModalUpgradePesquisador({
       ) : (
         <div className="space-y-6">
           <form id="form-upgrade-pesquisador" onSubmit={(evento) => void aoEnviar(evento)} noValidate>
-            <fieldset disabled={perfilCriado}>
-              <SecaoFicha titulo="Criar Perfil Pesquisador">
-                <CampoCpf
-                  valor={form.cpf}
-                  erro={erroDe('cpf') ?? errosCampo.cpf}
-                  onChange={(cpf) => {
-                    setForm({ ...form, cpf });
-                    limparErroCampo('cpf');
-                  }}
-                  gerarCpfDeTeste={gerarCpfDeTeste}
-                />
+            {!perfilCriado && (
+              <fieldset>
+                <SecaoFicha titulo="Criar Perfil Pesquisador">
+                  <CampoCpf
+                    valor={form.cpf}
+                    erro={erroDe('cpf') ?? errosCampo.cpf}
+                    onChange={(cpf) => {
+                      setForm({ ...form, cpf });
+                      limparErroCampo('cpf');
+                    }}
+                    gerarCpfDeTeste={gerarCpfDeTeste}
+                  />
 
-                <CamposVinculoPerfil
-                  tipoVinculo={form.tipoVinculo}
-                  vinculoInstitucional={form.vinculoInstitucional}
-                  tituloAcademico={form.tituloAcademico}
-                  rotuloVinculoInstitucional="Instituição"
-                  aoAlterarTipoVinculo={(tipo) => setForm({ ...form, tipoVinculo: tipo })}
-                  aoAlterarVinculoInstitucional={(valor) => setForm({ ...form, vinculoInstitucional: valor })}
-                  aoAlterarTituloAcademico={(titulo) => setForm({ ...form, tituloAcademico: titulo })}
-                  erroVinculoInstitucional={erroDe('vinculoInstitucional') ?? errosCampo.vinculoInstitucional}
-                />
-              </SecaoFicha>
-            </fieldset>
+                  <CamposVinculoPerfil
+                    tipoVinculo={form.tipoVinculo}
+                    vinculoInstitucional={form.vinculoInstitucional}
+                    tituloAcademico={form.tituloAcademico}
+                    rotuloVinculoInstitucional="Instituição"
+                    aoAlterarTipoVinculo={(tipo) => setForm({ ...form, tipoVinculo: tipo })}
+                    aoAlterarVinculoInstitucional={(valor) => setForm({ ...form, vinculoInstitucional: valor })}
+                    aoAlterarTituloAcademico={(titulo) => setForm({ ...form, tituloAcademico: titulo })}
+                    erroVinculoInstitucional={erroDe('vinculoInstitucional') ?? errosCampo.vinculoInstitucional}
+                  />
+                </SecaoFicha>
+              </fieldset>
+            )}
           </form>
           {/* Fora do <form>: Enter numa caixa da tabela não pode enviar o perfil de novo. */}
-          <LinksAcademicosDoUsuario
-            auth={auth}
-            idUsuario={idUsuarioAlvo}
-            nomeUsuario={nomeAlvo}
-            contaPropria={ehContaPropria}
-            bloqueadoAte={perfilCriado ? undefined : 'Salve o perfil primeiro para adicionar links acadêmicos.'}
-          />
+          {!perfilCriado && (
+            <div className="space-y-3">
+              <h3 className="titulo-bloco titulo-bloco--linha">
+                Links acadêmicos ({linksPendentes.length} de {limiteLinks})
+              </h3>
+              <p className="paragrafo">
+                Opcional. Você pode informar até {limiteLinks} links; os domínios são validados ao salvar.
+              </p>
+              <TabelaLinksAcademicos
+                links={linksPendentes}
+                tiposLink={tiposLink ?? []}
+                edicao={{
+                  podeAdicionar: linksPendentes.length < limiteLinks && !enviando,
+                  aoAdicionar: async (dados) => {
+                    if (enviando) return false;
+                    setLinksPendentes((atuais) => [
+                      ...atuais,
+                      {
+                        idLinkAcademico: proximoIdRascunho.current--,
+                        idTipoLink: dados.idTipoLink,
+                        url: dados.url,
+                        rotulo: dados.rotulo || null,
+                      },
+                    ]);
+                    return true;
+                  },
+                  aoSalvar: async (link, dados) => {
+                    if (enviando) return false;
+                    setLinksPendentes((atuais) =>
+                      atuais.map((pendente) =>
+                        pendente.idLinkAcademico === link.idLinkAcademico
+                          ? { ...pendente, url: dados.url, rotulo: dados.rotulo || null }
+                          : pendente,
+                      ),
+                    );
+                    return true;
+                  },
+                  aoExcluir: (link) => {
+                    if (!enviando) {
+                      setLinksPendentes((atuais) => atuais.filter((pendente) => pendente.idLinkAcademico !== link.idLinkAcademico));
+                    }
+                  },
+                }}
+              />
+            </div>
+          )}
+          {perfilCriado && (
+            <LinksAcademicosDoUsuario
+              auth={auth}
+              idUsuario={idUsuarioAlvo}
+              nomeUsuario={nomeAlvo}
+              contaPropria={ehContaPropria}
+            />
+          )}
+          {perfilCriado && linksPendentes.length > 0 && (
+            <div className="space-y-3">
+              <CaixaAviso titulo="Alguns links ainda não foram salvos. Corrija a URL ou tente novamente antes de concluir." />
+              <TabelaLinksAcademicos
+                links={linksPendentes}
+                tiposLink={tiposLink ?? []}
+                edicao={{
+                  podeAdicionar: false,
+                  aoAdicionar: async () => false,
+                  aoSalvar: async (link, dados) => {
+                    if (enviando) return false;
+                    setLinksPendentes((atuais) =>
+                      atuais.map((pendente) =>
+                        pendente.idLinkAcademico === link.idLinkAcademico
+                          ? { ...pendente, url: dados.url, rotulo: dados.rotulo || null }
+                          : pendente,
+                      ),
+                    );
+                    return true;
+                  },
+                  aoExcluir: (link) => {
+                    if (!enviando) {
+                      setLinksPendentes((atuais) => atuais.filter((pendente) => pendente.idLinkAcademico !== link.idLinkAcademico));
+                    }
+                  },
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
     </ModalFicha>

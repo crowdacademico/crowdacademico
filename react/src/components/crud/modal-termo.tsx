@@ -26,7 +26,7 @@ interface TextoTermoProps {
 export function TextoTermo({ titulo, conteudo, telaCheia, aoSairTelaCheia }: TextoTermoProps) {
   return (
     <TelaCheia ativa={telaCheia} titulo={titulo} aoSair={aoSairTelaCheia}>
-      <div className="flex-1 overflow-y-auto paragrafo texto-padrao whitespace-pre-line" tabIndex={0} aria-label={titulo}>
+      <div className="flex-1 overflow-y-auto paragrafo paragrafo-termo texto-padrao whitespace-pre-line" tabIndex={0} aria-label={titulo}>
         {conteudo}
       </div>
     </TelaCheia>
