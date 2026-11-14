@@ -169,7 +169,7 @@ export function Campanha({ auth }: PropsPagina) {
         <>
           <section
             className="campanha-detalhe__hero pt-14 pb-24 relative overflow-hidden texto-sobre-escuro superficie-escura"
-            style={{ background: 'var(--cor-escura)' }}
+            style={{ background: 'var(--cor-cianotipo-800)' }}
           >
             <div className="absolute inset-0 grade-medicao" aria-hidden="true" />
             <div className="max-w-7xl mx-auto px-4 relative z-10">

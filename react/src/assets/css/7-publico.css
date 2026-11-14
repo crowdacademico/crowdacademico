@@ -10,7 +10,7 @@
   }
 
   .auth-login__painel {
-    background: var(--cor-escura);
+    background: var(--gradiente-hero);
   }
 
   .auth-login__formulario {
@@ -51,7 +51,7 @@
     flex-direction: column;
     overflow: hidden;
     border-radius: var(--radius-2xl);
-    background: var(--cor-escura);
+    background: var(--gradiente-hero);
     padding: 1.5rem;
     box-shadow: var(--shadow-xl);
   }
@@ -1027,7 +1027,7 @@
     .home-pesquisadores {
       position: relative;
       overflow: hidden;
-      background-color: var(--cor-escura);
+      background-color: var(--cor-cianotipo-900);
     }
 
     .home-pesquisadores__foto {
@@ -1044,9 +1044,9 @@
       inset: 0;
       background: linear-gradient(
         90deg,
-        var(--cor-escura) 0%,
-        color-mix(in srgb, var(--cor-escura) 88%, transparent) 40%,
-        color-mix(in srgb, var(--cor-escura) 35%, transparent) 100%
+        var(--cor-cianotipo-900) 0%,
+        color-mix(in srgb, var(--cor-cianotipo-900) 88%, transparent) 40%,
+        color-mix(in srgb, var(--cor-cianotipo-900) 35%, transparent) 100%
       );
       pointer-events: none;
     }
@@ -1232,8 +1232,8 @@
       .home-pesquisadores__veu {
         background: linear-gradient(
           90deg,
-          var(--cor-escura) 40%,
-          color-mix(in srgb, var(--cor-escura) 70%, transparent) 55%,
+          var(--cor-cianotipo-900) 40%,
+          color-mix(in srgb, var(--cor-cianotipo-900) 70%, transparent) 55%,
           transparent 100%
         );
       }
@@ -1245,6 +1245,22 @@
        (hero escuro, véus, pílulas) usam os tokens da restrita: nenhuma paleta própria. */
     .layout-publico {
       min-height: 100vh;
+    }
+
+    /* Exceção à "restrita manda", pedida pelo Lucas (14-11-2026): o degradê azul-escuro do protótipo (cianotipo,
+       terminando num verde-petróleo) é a identidade das superfícies escuras da área pública (topos, painel do login,
+       cards de perfil, vitrine de pesquisadores). Definido UMA vez, em :root, para valer também fora de .layout-publico. */
+    :root {
+      --cor-cianotipo-900: #041722;
+      --cor-cianotipo-800: #062334;
+      --cor-cianotipo-700: #082e48;
+      --gradiente-hero: linear-gradient(
+        155deg,
+        var(--cor-cianotipo-900) 0%,
+        var(--cor-cianotipo-700) 45%,
+        var(--cor-cianotipo-800) 72%,
+        #0a4a3c 100%
+      );
     }
 
     .layout-publico .microrrotulo {
@@ -1312,7 +1328,7 @@
     }
 
     .layout-publico .superficie-escura {
-      background: var(--cor-escura);
+      background: var(--gradiente-hero);
       color: var(--cor-rodape-texto);
     }
 
@@ -1330,7 +1346,7 @@
 
     .campanha-detalhe__video {
       border: 4px solid var(--cor-fundo-cartao);
-      background-color: var(--cor-escura);
+      background-color: var(--cor-cianotipo-900);
     }
 
     .campanha-detalhe__painel-conteudo {
