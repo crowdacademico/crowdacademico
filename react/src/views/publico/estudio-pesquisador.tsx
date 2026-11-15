@@ -382,9 +382,9 @@ function PainelRecompensas({ auth, campanhas }: { auth: PropsPagina['auth']; cam
         nivelTitulo={2}
         ajuda="Ofereça reconhecimento, acesso antecipado ou conteúdo digital às pessoas que apoiarem."
         acaoTopo={campanhas.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <label className="sr-only" htmlFor="estudio-campanha-recompensa">Campanha da nova recompensa</label>
-            <select id="estudio-campanha-recompensa" className="input-padrao" value={selecionada} onChange={(evento) => setCampanhaNova(evento.target.value)}>
+            <select id="estudio-campanha-recompensa" className="input-padrao min-w-0 max-w-xs truncate" value={selecionada} onChange={(evento) => setCampanhaNova(evento.target.value)}>
               {campanhas.map((campanha) => <option key={campanha.idCampanha} value={campanha.idCampanha}>{campanha.titulo}</option>)}
             </select>
             <BotaoCriar rotulo="Nova recompensa" aoClicar={() => setEditando({ campanha: Number(selecionada) })} />

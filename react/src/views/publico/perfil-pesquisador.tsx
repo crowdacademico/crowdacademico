@@ -203,13 +203,19 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
       <button
         type="button"
         // No topo escuro: Seguir em destaque (verde); Seguindo em véu translúcido, como as pílulas do topo.
-        className={`btn ${dadosSeguimento?.seguindo ? 'veu-claro texto-sobre-escuro-forte hover:bg-white/15' : 'btn-primary'}`}
+        // Largura fixa (a de "Seguindo") e texto centralizado: trocar Seguir/Seguindo não empurra o botão do menu.
+        className={`btn justify-center min-w-[9.5rem] ${dadosSeguimento?.seguindo ? 'veu-claro texto-sobre-escuro-forte hover:bg-white/15' : 'btn-primary'}`}
+        aria-busy={dadosSeguimento?.enviando ?? false}
         disabled={auth.autenticado && (!dadosSeguimento || dadosSeguimento.seguindo === null || dadosSeguimento.enviando)}
         aria-pressed={dadosSeguimento?.seguindo ?? false}
         onClick={() => void alternarSeguir()}
       >
-        <i className={`fa-${dadosSeguimento?.seguindo ? 'solid' : 'regular'} fa-bell`} aria-hidden="true" />
-        {dadosSeguimento?.enviando ? 'Atualizando…' : dadosSeguimento?.seguindo ? 'Seguindo' : 'Seguir'}
+        {/* Enviando: o ícone vira um indicador girando, o texto não muda ("Atualizando…" era mais largo e fazia pular). */}
+        <i
+          className={dadosSeguimento?.enviando ? 'fa-solid fa-spinner fa-spin' : `fa-${dadosSeguimento?.seguindo ? 'solid' : 'regular'} fa-bell`}
+          aria-hidden="true"
+        />
+        {dadosSeguimento?.seguindo ? 'Seguindo' : 'Seguir'}
       </button>
       <div className="relative">
         <button
