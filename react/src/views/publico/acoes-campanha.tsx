@@ -29,6 +29,7 @@ export function CartaoAcoesCampanha({ auth, campanha }: AcoesCampanhaProps) {
   const [versaoContagem, setVersaoContagem] = useState(0);
   const [denunciando, setDenunciando] = useState(false);
   const [denunciada, setDenunciada] = useState(false);
+  const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -64,6 +65,8 @@ export function CartaoAcoesCampanha({ auth, campanha }: AcoesCampanhaProps) {
     try {
       await navigator.clipboard.writeText(endereco);
       mostrar('Link copiado.');
+      setCopiado(true);
+      window.setTimeout(() => setCopiado(false), 2000);
     } catch {
       mostrar('Não foi possível copiar. Copie o endereço pela barra do navegador.', undefined, 'erro');
     }
@@ -80,6 +83,11 @@ export function CartaoAcoesCampanha({ auth, campanha }: AcoesCampanhaProps) {
   const textoUrl = encodeURIComponent(`${textoCompartilhar}: ${endereco}`);
   const redes = [
     { rotulo: 'WhatsApp', icone: 'fa-brands fa-whatsapp', href: `https://wa.me/?text=${textoUrl}` },
+    {
+      rotulo: 'Facebook',
+      icone: 'fa-brands fa-facebook-f',
+      href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(endereco)}`,
+    },
     {
       rotulo: 'LinkedIn',
       icone: 'fa-brands fa-linkedin',
@@ -119,12 +127,21 @@ export function CartaoAcoesCampanha({ auth, campanha }: AcoesCampanhaProps) {
         <p className="legenda -mt-3 texto-fraco">Entre na sua conta para seguir e receber as novidades desta campanha.</p>
       )}
 
+      {/* Compartilhar (16-11-2026): a fileira de ícones redondos de quase todo site de financiamento coletivo e de notícia.
+          Os logos das redes se reconhecem sem texto; o nome vai na dica do mouse e para o leitor de tela. No celular, o
+          primeiro botão abre o compartilhar do próprio aparelho (todas as redes e apps dele). */}
       <div className="border-t borda-padrao pt-5">
         <h2 className="rotulo mb-3">Compartilhar</h2>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {podeCompartilharNativo && (
-            <button type="button" onClick={() => void compartilharNativo()} className="btn btn-secondary text-sm">
-              <i className="fa-solid fa-share-nodes" aria-hidden="true" /> Compartilhar
+            <button
+              type="button"
+              onClick={() => void compartilharNativo()}
+              className="botao-compartilhar"
+              aria-label="Compartilhar pelo celular"
+              title="Compartilhar pelo celular"
+            >
+              <i className="fa-solid fa-share-nodes" aria-hidden="true" />
             </button>
           )}
           {redes.map((rede) => (
@@ -133,14 +150,21 @@ export function CartaoAcoesCampanha({ auth, campanha }: AcoesCampanhaProps) {
               href={rede.href}
               target="_blank"
               rel="noreferrer noopener"
-              className="btn btn-secondary text-sm"
+              className={`botao-compartilhar botao-compartilhar--${rede.rotulo.toLowerCase()}`}
               aria-label={`Compartilhar no ${rede.rotulo} (abre em nova aba)`}
+              title={`Compartilhar no ${rede.rotulo}`}
             >
-              <i className={rede.icone} aria-hidden="true" /> {rede.rotulo}
+              <i className={rede.icone} aria-hidden="true" />
             </a>
           ))}
-          <button type="button" onClick={() => void copiarLink()} className="btn btn-secondary text-sm">
-            <i className="fa-solid fa-link" aria-hidden="true" /> Copiar link
+          <button
+            type="button"
+            onClick={() => void copiarLink()}
+            className="botao-compartilhar"
+            aria-label={copiado ? 'Link copiado' : 'Copiar o link da campanha'}
+            title={copiado ? 'Link copiado' : 'Copiar link'}
+          >
+            <i className={`fa-solid ${copiado ? 'fa-check texto-sucesso' : 'fa-link'}`} aria-hidden="true" />
           </button>
         </div>
       </div>

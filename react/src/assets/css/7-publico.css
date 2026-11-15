@@ -573,6 +573,40 @@
       opacity: 0.6;
     }
 
+    /* Compartilhar: botões redondos só com o ícone (16-11-2026). No hover, a cor de cada rede. */
+    .botao-compartilhar {
+      display: inline-flex;
+      width: 2.5rem;
+      height: 2.5rem;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--cor-borda);
+      border-radius: var(--radius-full);
+      background-color: var(--cor-fundo-cartao);
+      color: var(--cor-texto);
+      font-size: 1.05rem;
+      transition: color 150ms, border-color 150ms, background-color 150ms, transform 150ms;
+    }
+
+    .botao-compartilhar:hover {
+      border-color: var(--cor-borda-forte);
+      background-color: var(--cor-fundo-sutil);
+      transform: translateY(-1px);
+    }
+
+    .botao-compartilhar:focus-visible {
+      outline: 2px solid var(--cor-anel-foco);
+      outline-offset: 2px;
+    }
+
+    .botao-compartilhar--whatsapp:hover { color: #1fa855; }
+    .botao-compartilhar--facebook:hover { color: #1877f2; }
+    .botao-compartilhar--linkedin:hover { color: #0a66c2; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .botao-compartilhar:hover { transform: none; }
+    }
+
     /* "Seguir" é sempre o sino (16-11-2026: antes era coração nos cartões e sino na campanha). Animação leve, só CSS: o
        sino balança ao passar o mouse ou focar, e uma vez quando a pessoa passa a seguir (aria-pressed vira true). Quem
        pediu "menos movimento" no sistema não vê animação nenhuma. */

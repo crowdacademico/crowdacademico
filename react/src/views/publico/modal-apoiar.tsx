@@ -3,6 +3,9 @@ import { Link, useNavigate } from 'react-router';
 import { CaixaAviso } from '../../components/crud/caixa-aviso';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { ModalTermo } from '../../components/crud/modal-termo';
+import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
+import type { TermoUsoResponseActive } from '../../services/5-termo-uso/type/termo-uso.type';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { Campo } from '../../components/input/campo';
 import { InputDinheiro } from '../../components/input/input-dinheiro';
@@ -108,6 +111,19 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
   const [meio, setMeio] = useState<MeioApoioPublico>('pix');
   const [cienteFlexivel, setCienteFlexivel] = useState(false);
   const [aceitouTermos, setAceitouTermos] = useState(false);
+  // O Termo de Uso abre num modal por cima (o mesmo do Cadastro), não numa aba nova (16-11-2026, Lucas): "Li e concordo"
+  // marca a caixa. undefined = ainda não buscado; null = não deu para carregar.
+  const [termoAberto, setTermoAberto] = useState(false);
+  const [termo, setTermo] = useState<TermoUsoResponseActive | null | undefined>(undefined);
+  const abrirTermo = () => {
+    setTermoAberto(true);
+    if (termo === undefined) {
+      termoUsoApi
+        .buscarAtivo('cadastro')
+        .then(setTermo)
+        .catch(() => setTermo(null));
+    }
+  };
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | undefined>(undefined);
   // Falha sem resposta clara (rede, servidor): pode ter criado a cobrança; não deixa tentar de novo daqui.
@@ -473,9 +489,9 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
           />
           <span>
             Li e aceito os{' '}
-            <Link to="/termos" target="_blank" className="link-texto">
-              Termos de Uso<span className="sr-only"> (abre em outra aba)</span>
-            </Link>{' '}
+            <button type="button" onClick={abrirTermo} className="link-texto" aria-haspopup="dialog">
+              Termos de Uso
+            </button>{' '}
             e as condições deste apoio.
           </span>
         </label>
@@ -485,6 +501,29 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
           </p>
         )}
       </SecaoFicha>
+      {termoAberto && (
+        <ModalTermo
+          titulo="Termo de Uso"
+          versao={termo?.versao}
+          conteudo={termo === undefined ? null : (termo?.conteudo ?? null)}
+          carregando={termo === undefined}
+          aoFechar={() => setTermoAberto(false)}
+          rodape={
+            termo && (
+              <RodapeAcoes
+                aoCancelar={() => setTermoAberto(false)}
+                acao={{
+                  rotulo: 'Li e concordo',
+                  aoClicar: () => {
+                    setAceitouTermos(true);
+                    setTermoAberto(false);
+                  },
+                }}
+              />
+            )
+          }
+        />
+      )}
     </ModalFicha>
   );
 }

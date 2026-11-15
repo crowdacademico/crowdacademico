@@ -1,13 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router';
 import { useToast } from '../../components/layout/toast/use-toast';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import { seguirCampanhaApi } from '../../services/16-seguir/api/seguir-campanha.api';
 import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 export function useSeguirCampanhas(auth: UseAuthReturn) {
-  const navegar = useNavigate();
-  const localizacao = useLocation();
   const { mostrar } = useToast();
   const mostrarRef = useRef(mostrar);
   const [resultadoSeguidas, setResultadoSeguidas] = useState<{
@@ -53,9 +50,9 @@ export function useSeguirCampanhas(auth: UseAuthReturn) {
 
   async function alternarSeguir(idCampanha: number, titulo: string) {
     if (!auth.autenticado) {
-      // Diz por que foi para o login e volta para cá depois de entrar (antes: ia ao login calado e voltava à Home).
+      // Só avisa, sem levar ao login (16-11-2026, Lucas: ir ao login no clique irritava). O "Entrar" do cabeçalho já
+      // volta para esta página depois do login.
       mostrar('Entre na sua conta para seguir campanhas.', 'Depois de entrar, você volta para esta página.', 'aviso');
-      void navegar('/login', { state: { voltarPara: localizacao.pathname + localizacao.search } });
       return;
     }
     if (carregando || emAtualizacao.has(idCampanha)) return;

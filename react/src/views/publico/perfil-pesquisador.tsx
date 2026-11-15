@@ -147,7 +147,8 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
 
   async function alternarSeguir(): Promise<void> {
     if (!auth.autenticado) {
-      void navegar('/login', { state: { voltarPara: `/pesquisador/${id}` } });
+      // Só avisa, sem levar ao login (16-11-2026), como o Seguir das campanhas.
+      mostrar('Entre na sua conta para seguir pesquisadores.', 'Depois de entrar, você volta para esta página.', 'aviso');
       return;
     }
     if (!dadosSeguimento || dadosSeguimento.seguindo === null || dadosSeguimento.enviando) return;
