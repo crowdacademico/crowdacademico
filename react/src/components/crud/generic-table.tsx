@@ -9,6 +9,7 @@ import { useSearchParams } from 'react-router';
 import { TIPOS_COLUNA, type NomeTipoColuna } from './colunas/tipos-coluna';
 import { DISTRIBUICAO_COLUNAS } from './colunas/distribuicao';
 import { criarAjusteTextoAcoes } from './colunas/texto-acoes';
+import { alguemEmIcone, avisarOutros, entrarNoGrupo, maiorCurta, menorRespiro, type MembroGrupo } from './grupo-alinhamento';
 import { CabecalhoAcoes, CelulaAcoes, type AcaoIndisponivel, type AcoesLinha, type ColunaAcao } from './colunas/5-coluna-acoes';
 import { BarraFiltros } from '../search/barra-filtros';
 import { Tooltip } from '../layout/tooltip';
@@ -39,6 +40,8 @@ interface Coluna<T extends Linha> {
   textoExibido?: (linha: T) => string;
   // Texto que pode ser longo (alvo, título de campanha): uma linha só, com "ler tudo" que expande a linha.
   umaLinha?: boolean;
+  // Só o TÍTULO da coluna centralizado; os valores seguem o alinhamento do tipo (ex.: "meta", dinheiro à esquerda).
+  rotuloCentralizado?: boolean;
 }
 
 interface FiltroFacetado<T extends Linha> {
@@ -79,6 +82,9 @@ export interface GenericTableProps<T extends Linha> {
   // Linha "apagada" (opacidade menor, continua clicável): ex.: no Estúdio, a campanha que ainda não está no ar
   // (rascunho, em análise, rejeitada) no meio das ativas.
   linhaApagada?: (linha: T) => boolean;
+  // Tabelas com as mesmas colunas, uma embaixo da outra, alinhadas entre si (mesmo nome = mesmo grupo). Ver
+  // grupo-alinhamento.ts. Sem ela, a tabela mede só o próprio conteúdo, como sempre.
+  grupoAlinhamento?: string;
   // Lista vazia (sem filtro): o que apareceria aqui e o próximo passo. Sem isto, uma mensagem genérica.
   vazio?: ConteudoEstadoVazio;
 }
@@ -148,6 +154,7 @@ export function GenericTable<T extends Linha>({
   acaoIndisponivel,
   acoesEmColuna,
   linhaApagada,
+  grupoAlinhamento,
   // Filtros por faceta: array de `{ chave, rotulo, ordem? }`. Genérico: funciona para QUALQUER coluna com
   // valores discretos (ex.: papel, impacto), e as opções de cada dropdown são derivadas sozinhas a partir dos
   // valores que já aparecem em `linha[chave]` (célula com vários valores separada por ", ", mesma convenção da
@@ -333,7 +340,9 @@ export function GenericTable<T extends Linha>({
   // metades ficariam coladas ("e-mailverificado") e o navegador quebraria no hífen. `.crud-tabela__rotulo-
   // controlado` (nowrap) impede a quebra espontânea antes do breakpoint; o <br> explícito continua valendo.
   const classesCabecalho = (coluna: Coluna<T>) =>
-    TIPOS_COLUNA[coluna.tipo].classe + (coluna.quebrarRotulo ? ' crud-tabela__rotulo-controlado' : '');
+    TIPOS_COLUNA[coluna.tipo].classe +
+    (coluna.quebrarRotulo ? ' crud-tabela__rotulo-controlado' : '') +
+    (coluna.rotuloCentralizado ? ' crud-tabela__celula--centralizada' : '');
 
   const rotuloColuna = (coluna: Coluna<T>): ReactNode => {
     const ultimoEspaco = coluna.rotulo.lastIndexOf(' ');
@@ -393,6 +402,10 @@ export function GenericTable<T extends Linha>({
     if (!wrapper) {
       return;
     }
+    // Só com `grupoAlinhamento`; sem ela, `membro` é null e nada abaixo muda.
+    const membro: MembroGrupo | null = grupoAlinhamento
+      ? { curtas: new Map(), respiro: null, icone: false, atualizar: () => atualizar() }
+      : null;
     // Largura das colunas curtas medida em pixels de verdade (uma estimativa por número de letras sobrava ~20% e
     // empurrava a tabela para a rolagem): o maior entre o cabeçalho, as células visíveis (inclui o badge
     // Sim/Não) e o texto de todas as linhas da lista, na fonte da célula. As do mesmo tipo na mesma tabela ficam
@@ -437,6 +450,10 @@ export function GenericTable<T extends Linha>({
         }
         const estilo = getComputedStyle(th);
         maior += parseFloat(estilo.paddingLeft) + parseFloat(estilo.paddingRight);
+        if (membro && grupoAlinhamento) {
+          membro.curtas.set(th.dataset.chave ?? '', maior);
+          maior = maiorCurta(grupoAlinhamento, th.dataset.chave ?? '', maior);
+        }
         // Curtas do mesmo tipo ficam com a mesma largura (as Sim/Não lado a lado, meta e arrecadado). Na tabela apertada
         // (ajustarApertada) cada uma fica com a própria: o espaço que uma pegaria emprestado da vizinha faz falta.
         const chaveGrupo = wrapper.hasAttribute('data-apertada') ? (th.dataset.chave ?? '') : (th.dataset.tipoCurta ?? '');
@@ -548,17 +565,41 @@ export function GenericTable<T extends Linha>({
     };
     // Tudo medido com respiro zero, para o respiro não entrar na própria conta; as curtas somam o respiro no CSS
     // (min-width acima), e as do mesmo tipo continuam iguais.
+    // O que esta tabela publicou no grupo, para só avisar as outras quando mudar (senão uma acordaria a outra sem fim).
+    let publicado = '';
     const atualizar = () => {
       wrapper.style.setProperty('--respiro-dados', '0px');
       medirCurtas();
       ajustarTextoAcoes();
+      if (membro && grupoAlinhamento) {
+        membro.icone = wrapper.hasAttribute('data-acoes-icone');
+        if (alguemEmIcone(grupoAlinhamento)) wrapper.setAttribute('data-acoes-icone', '');
+      }
       ajustarApertada();
       ajustarRespiro();
+      if (membro && grupoAlinhamento) {
+        const proprio = parseFloat(wrapper.style.getPropertyValue('--respiro-dados')) || 0;
+        membro.respiro = wrapper.querySelector('tbody .crud-tabela__nome') ? proprio : null;
+        const menor = menorRespiro(grupoAlinhamento, membro.respiro);
+        if (menor !== null && menor < proprio) {
+          wrapper.style.setProperty('--respiro-dados', `${menor}px`);
+        }
+        const agora = JSON.stringify([
+          [...membro.curtas].map(([chave, largura]) => [chave, Math.ceil(largura)]),
+          membro.respiro === null ? null : Math.round(membro.respiro * 2) / 2,
+          membro.icone,
+        ]);
+        if (agora !== publicado) {
+          publicado = agora;
+          avisarOutros(grupoAlinhamento, membro);
+        }
+      }
       const colunaId = wrapper.querySelector('th.crud-tabela__col--id');
       const deslocamento = colunaId ? colunaId.getBoundingClientRect().width : 0;
       wrapper.style.setProperty('--deslocamento-nome', `${deslocamento}px`);
       atualizarRolagem();
     };
+    const sairDoGrupo = membro && grupoAlinhamento ? entrarNoGrupo(grupoAlinhamento, membro) : undefined;
     atualizar();
     const observador = new ResizeObserver(atualizar);
     observador.observe(wrapper);
@@ -576,8 +617,9 @@ export function GenericTable<T extends Linha>({
     return () => {
       observador.disconnect();
       wrapper.removeEventListener('scroll', atualizarRolagem);
+      sairDoGrupo?.();
     };
-  }, [carregando, textosMedidos]);
+  }, [carregando, textosMedidos, grupoAlinhamento]);
 
   const { totalPaginas, paginaAtual, itensPagina: linhasPagina } = paginarClientSide(linhasOrdenadas, pagina, tamanhoPagina);
 

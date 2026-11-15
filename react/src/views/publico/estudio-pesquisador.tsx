@@ -44,7 +44,6 @@ import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.
 import { contaRecebimentoApi } from '../../services/24-conta-recebimento/api/conta-recebimento.api';
 import type { RepasseResponse } from '../../services/24-conta-recebimento/type/conta-recebimento.type';
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
-import { diasRestantes, percentualArrecadado } from './util-campanhas';
 import { renderizarArrecadado, renderizarStatus, textoStatus } from '../12-campanha/colunas-campanha';
 import { ModalAlterarCampanha } from '../12-campanha/modal-alterar-campanha';
 import { ModalConsultarCampanha } from '../12-campanha/modal-consultar-campanha';
@@ -154,22 +153,9 @@ function ConteudoEstudio({ auth, secao }: PropsPagina & { secao: SecaoEstudio })
 interface CampanhaLinha extends Omit<CampanhaResponse, 'status'> {
   status: string;
   statusOriginal: CampanhaResponse['status'];
-  // RF-090/091: métricas da lista "Projetos Criados". Doadores e o detalhe do repasse ficam no Consultar.
-  percentualMeta: number | null;
-  diasRestantesCaptacao: number | null;
-  // O líquido que vale: o real do repasse concluído ou, antes dele, o estimado (valorLiquidoEstimado).
-  liquido: number | null;
+  // RF-090/091: métricas da lista "Projetos Criados". Doadores, líquido (estimado ou repassado) e taxa retida ficam no Consultar.
+  // O repasse concluído da campanha: vai para o Consultar (Repassado, Taxa retida).
   repasse: RepasseResponse | null;
-}
-
-// Só o valor: a data do repasse e a taxa retida estão no Consultar (o texto longo alargava a coluna).
-function renderizarLiquido(linha: CampanhaLinha) {
-  return linha.liquido === null ? '—' : <span className="numero">{formatarMoeda(linha.liquido)}</span>;
-}
-
-function textoLiquido(linha: CampanhaLinha): string {
-  if (linha.liquido === null) return '—';
-  return `${formatarMoeda(linha.liquido)} ${linha.repasse ? 'repassado' : 'estimado'}`;
 }
 
 // Campanha que já terminou (bloco "Campanhas encerradas" do Estúdio).
@@ -194,9 +180,6 @@ async function montarLinhasCampanhas(
       ...campanha,
       status: rotuloStatusCampanha(campanha),
       statusOriginal: campanha.status,
-      percentualMeta: percentualArrecadado(campanha),
-      diasRestantesCaptacao: campanha.status === 'ativo' ? diasRestantes(campanha.dataFim) : null,
-      liquido: repasse ? repasse.valorLiquido : campanha.valorLiquidoEstimado,
       repasse,
     };
   });
@@ -240,27 +223,24 @@ function PainelCampanhas({
   const colunaSituacao = { chave: 'status', rotulo: 'situação', tipo: 'status', renderizar: renderizarStatus, textoExibido: textoStatus } as const;
   const colunasDinheiro = [
     { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro', renderizar: renderizarArrecadado },
-    { chave: 'percentualMeta', rotulo: '% da meta', tipo: 'numero', renderizar: (linha: CampanhaLinha) => (linha.percentualMeta === null ? '—' : `${linha.percentualMeta}%`) },
+    { chave: 'metaFinanceira', rotulo: 'meta', tipo: 'dinheiro', rotuloCentralizado: true },
   ] as const;
-  const colunaLiquido = { chave: 'liquido', rotulo: 'líquido', tipo: 'dinheiro', renderizar: renderizarLiquido, textoExibido: textoLiquido } as const;
-  const ajuda = 'Líquido: o que você recebe depois da taxa da plataforma; antes do repasse, é uma estimativa com base no arrecadado até agora.';
 
   return (
     <>
       <GenericTable<CampanhaLinha>
         titulo="Campanhas ativas"
         nivelTitulo={2}
-        ajuda={`No ar e em captação. Rascunhos, campanhas em análise e rejeitadas aparecem aqui mais apagadas, porque ainda não estão no ar. Doadores, repasse e taxa retida: em Consultar. ${ajuda}`}
+        ajuda={`No ar e em captação. Rascunhos, campanhas em análise e rejeitadas aparecem aqui mais apagadas, porque ainda não estão no ar. Doadores, valor líquido, repasse e taxa retida: em Consultar.`}
         acaoTopo={podeCriar && <BotaoCriar rotulo="Nova campanha" aoClicar={abrirCriando} />}
         colunas={[
           colunaCampanha,
           colunaSituacao,
           ...colunasDinheiro,
-          { chave: 'diasRestantesCaptacao', rotulo: 'dias rest.', tipo: 'numero' },
-          colunaLiquido,
         ]}
         chavePrimaria="idCampanha"
         listar={listarAtivas}
+        grupoAlinhamento="estudio-campanhas"
         chaveRecarga={chaveRecarga}
         acoes={acoesCompletas}
         linhaApagada={(linha) => linha.statusOriginal !== 'ativo'}
@@ -277,16 +257,15 @@ function PainelCampanhas({
         <GenericTable<CampanhaLinha>
           titulo="Campanhas encerradas"
           nivelTitulo={2}
-          ajuda={`Campanhas que já terminaram: com sucesso, sem atingir a meta, encerradas antes do prazo ou pela moderação. ${ajuda}`}
+          ajuda={`Campanhas que já terminaram: com sucesso, sem atingir a meta, encerradas antes do prazo ou pela moderação. Doadores, valor líquido, repasse e taxa retida: em Consultar.`}
           colunas={[
             colunaCampanha,
             colunaSituacao,
-            { chave: 'dataFim', rotulo: 'encerramento', tipo: 'data' },
             ...colunasDinheiro,
-            colunaLiquido,
           ]}
           chavePrimaria="idCampanha"
           listar={listarEncerradas}
+          grupoAlinhamento="estudio-campanhas"
           chaveRecarga={chaveRecarga}
           acoes={acoesCompletas}
           filtrosFacetados={[{ chave: 'status', rotulo: 'Situação', ordem: ORDEM_ROTULOS_STATUS_CAMPANHA }]}
@@ -377,7 +356,6 @@ function PainelRecompensas({ auth, campanhas }: { auth: PropsPagina['auth']; cam
             : undefined
         }
         filtrosFacetados={[
-          { chave: 'tituloCampanha', rotulo: 'Campanha' },
           { chave: 'tipoRotulo', rotulo: 'Tipo' },
           { chave: 'situacao', rotulo: 'Situação' },
         ]}
@@ -523,7 +501,6 @@ function PainelAtualizacoes({ auth, campanhas }: { auth: PropsPagina['auth']; ca
             : undefined
         )}
         filtrosFacetados={[
-          { chave: 'tituloCampanha', rotulo: 'Campanha' },
           { chave: 'faseRotulo', rotulo: 'Fase' },
           { chave: 'situacao', rotulo: 'Situação' },
         ]}
@@ -644,7 +621,6 @@ function PainelComentarios({ auth, campanhas }: { auth: PropsPagina['auth']; cam
           // Endossar e tirar o endosso ficam no Alterar (como na maioria dos sistemas), com a prévia do cartão.
           acoes={{ consultar: setConsultando, alterar: setAlterando, excluir: setExcluindo }}
           filtrosFacetados={[
-            { chave: 'tituloCampanha', rotulo: 'Campanha' },
             { chave: 'endosso', rotulo: 'Endosso' },
           ]}
           vazio={{

@@ -6,6 +6,21 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta da
 
 ---
 
+## Estúdio > Campanhas: a quarta coluna (prazo) das tabelas Ativas e Encerradas (anotado em 15-11-2026)
+
+**Hoje:** as duas tabelas têm as mesmas colunas, na mesma ordem e do mesmo tipo: campanha (`nome`) · situação (`status`) · arrecadado (`dinheiro`) · meta (`dinheiro`). A coluna **dias rest.** (tipo `numero`) saiu por enquanto, para as duas ficarem alinhadas.
+
+**Por que não é trivial:** a tabela do sistema mede cada coluna curta pelo maior conteúdo **daquela tabela** (DS-104). Duas tabelas separadas só ficam parecidas quando têm as mesmas colunas e os mesmos tipos; larguras escritas à mão quebram a regra do design system (tentado em 14-11-2026: colunas invadindo umas às outras, desfeito).
+
+**Opções para trazer o prazo de volta:**
+1. **Ideia do Lucas:** as duas com a quarta coluna; nas ativas "dias rest." (o número de dias), nas encerradas "encerrado" (a data). Os rótulos têm quase o mesmo tamanho. Cuidado: são tipos diferentes (`numero` e `data`), e uma data ("10/03/2026") é mais larga que um número ("12"), então a coluna das encerradas sai mais larga e as duas desalinham um pouco a partir dela.
+2. **"duração (dias)" nas encerradas:** quantos dias a campanha ficou no ar. Mesmo tipo da "dias rest." (`numero`), então o alinhamento se mantém; é o par natural ("quanto falta" e "quanto durou").
+3. **Uma tabela só, com abas "Ativas | Encerradas"** (`BarraAbasBotoes`): só uma lista aparece por vez, não há o que alinhar, e cada aba mostra as colunas que fazem sentido para ela (dias rest. ou data de encerramento).
+
+**Sugestão do Claude:** a 3 resolve de vez sem regra nova; entre as que mantêm as duas tabelas, a 2 é a que alinha.
+
+---
+
 ## IMPORTANTE: A tela de troca da marca
 
 **Como seria:** a aba **Identidade Visual** do Dashboard, que hoje é só um espaço reservado, ganha dois cartões.

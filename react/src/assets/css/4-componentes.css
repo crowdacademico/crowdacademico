@@ -206,6 +206,49 @@
     min-height: calc(1em * var(--campo-altura-linha) + 2 * var(--campo-espaco-vertical) + 2 * var(--campo-borda));
   }
 
+  /* Lista ABERTA do select com a cara da plataforma (14-11-2026, decisão do Lucas). Antes, quem desenhava a lista era o
+     sistema operacional (destaque cinza do Windows, cantos retos, sem marcar a escolhida). `appearance: base-select` é o
+     select personalizável do navegador: continua sendo um <select> de verdade (teclado, leitor de tela, celular), e o
+     CSS passa a alcançar a lista (::picker) e as opções. Só nos navegadores que suportam (Chrome/Edge recentes); nos
+     outros, @supports deixa a lista padrão do navegador, sem quebrar nada. Vale para todos os select.input-padrao. */
+  @supports (appearance: base-select) {
+    select.input-padrao,
+    select.input-padrao::picker(select) {
+      appearance: base-select;
+    }
+
+    select.input-padrao::picker(select) {
+      margin-top: 0.25rem;
+      padding: 0.25rem;
+      border: 1px solid var(--cor-borda);
+      border-radius: 0.75rem;
+      background-color: var(--cor-fundo-cartao);
+      box-shadow: var(--shadow-lg);
+    }
+
+    select.input-padrao option {
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
+      color: var(--cor-texto);
+    }
+
+    select.input-padrao option:hover,
+    select.input-padrao option:focus-visible {
+      background-color: var(--cor-fundo-sutil);
+      color: var(--cor-texto-forte);
+    }
+
+    select.input-padrao option:checked {
+      background-color: var(--cor-fundo-sucesso);
+      color: var(--cor-texto-sucesso);
+      font-weight: 600;
+    }
+
+    select.input-padrao option::checkmark {
+      color: var(--cor-texto-sucesso);
+    }
+  }
+
   /* Botão com a altura de um campo, para ficar ao lado dele sem degrau. */
   .altura-de-campo {
     min-height: calc(var(--font-size-sm) * var(--campo-altura-linha) + 2 * var(--campo-espaco-vertical) + 2 * var(--campo-borda));
