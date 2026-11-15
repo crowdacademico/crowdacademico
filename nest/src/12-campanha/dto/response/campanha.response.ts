@@ -24,6 +24,8 @@ export class CampanhaResponse {
   videoApresentacaoUrl: string | null;
   idImagemCapa: number | null;
   imagemCapaUrl: string | null;
+  // A capa também de fundo no banner do topo da página da campanha.
+  capaNoBanner: boolean;
   criadoEm: Date;
   // Só preenchidos por GET /campanha/:id, e só para campanha 'rejeitado'
   // (ciclo de rejeição e reenvio, ver REQUISITOS_V7). A tela e o e-mail de

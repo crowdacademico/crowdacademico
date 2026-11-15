@@ -61,6 +61,7 @@ interface FormDadosCampanha {
   videoApresentacaoUrl: string;
   idImagemCapa: number | null;
   imagemCapaUrl: string | null;
+  capaNoBanner: boolean;
 }
 
 const FORM_VAZIO: FormDadosCampanha = {
@@ -74,6 +75,7 @@ const FORM_VAZIO: FormDadosCampanha = {
   videoApresentacaoUrl: '',
   idImagemCapa: null,
   imagemCapaUrl: null,
+  capaNoBanner: true,
 };
 
 type Etapa = 'dados' | 'orcamento' | 'cronograma' | 'revisao';
@@ -143,6 +145,7 @@ export function ModalCriarCampanha({
           videoApresentacaoUrl: campanha.videoApresentacaoUrl ?? '',
           idImagemCapa: campanha.idImagemCapa,
           imagemCapaUrl: campanha.imagemCapaUrl,
+          capaNoBanner: campanha.capaNoBanner,
         };
         setForm(salvo);
         setFormSalvo(salvo);
@@ -180,6 +183,7 @@ export function ModalCriarCampanha({
     ...(form.descricao.trim() ? { descricao: form.descricao.trim() } : {}),
     videoApresentacaoUrl: form.videoApresentacaoUrl.trim() || null,
     idImagemCapa: form.idImagemCapa,
+    capaNoBanner: form.capaNoBanner,
   });
 
   // Mudança na etapa Dados que ainda não foi gravada (antes de o rascunho existir, qualquer coisa digitada).
@@ -530,6 +534,18 @@ export function ModalCriarCampanha({
                 }
                 desabilitado={trabalhando}
               />
+              {form.idImagemCapa !== null && (
+                <label className="sm:col-span-2 flex items-center gap-2 paragrafo texto-padrao cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.capaNoBanner}
+                    onChange={(evento) => setForm({ ...form, capaNoBanner: evento.target.checked })}
+                    disabled={trabalhando}
+                    className="w-4 h-4 accent-primary"
+                  />
+                  Usar a imagem de capa também no banner do topo da página
+                </label>
+              )}
             </SecaoFicha>
           </>
         )}

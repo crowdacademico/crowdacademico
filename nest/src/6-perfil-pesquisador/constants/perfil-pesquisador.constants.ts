@@ -15,3 +15,9 @@ export const PERFIL_PESQUISADOR_COLUNAS_SELECT = [
   'score_atual',
   'score_atualizado_em',
 ] as const;
+
+// As mesmas colunas com o nome da tabela na frente: nas consultas com JOIN em usuario, id_usuario ficaria ambíguo.
+export const PERFIL_PESQUISADOR_COLUNAS_SELECT_QUALIFICADAS =
+  PERFIL_PESQUISADOR_COLUNAS_SELECT.map(
+    (coluna) => `perfil_pesquisador.${coluna}` as const,
+  );

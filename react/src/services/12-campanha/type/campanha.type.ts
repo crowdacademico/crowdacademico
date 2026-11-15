@@ -26,6 +26,8 @@ export interface CampanhaResponse {
   videoApresentacaoUrl: string | null;
   idImagemCapa: number | null;
   imagemCapaUrl: string | null;
+  // A capa também de fundo no banner do topo da página da campanha.
+  capaNoBanner: boolean;
   criadoEm: string;
   // Dados públicos resolvidos pelo backend em listar e consultar; nulos nas outras respostas ou se a RLS escondeu
   // o usuário/perfil. precisaRevisaoScore: sinal para quem aprova, só na fila de aprovação, senão null.
@@ -74,6 +76,7 @@ export interface CampanhaRequestCreate {
   dataFim?: string;
   videoApresentacaoUrl?: string | null;
   idImagemCapa?: number | null;
+  capaNoBanner?: boolean;
 }
 
 // Espelha campanha.request-update.ts: os mesmos campos, todos opcionais. Status nunca muda por aqui (só por

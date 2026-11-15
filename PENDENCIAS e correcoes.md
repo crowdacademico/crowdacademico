@@ -133,6 +133,9 @@ A Alexia trouxe a área pública para dentro do sistema (branch `tentativadeinte
 - **Quarta rodada (14-11-2026), ainda sem documentar:**
   - Moderação de comentário (Grupo CO): `denuncia.id_comentario` + cópia do comentário; o banco preenche o autor como alvo; denúncia feita pelo dono da campanha tira o comentário do ar na hora; procedente tira o comentário e o endosso. UK_DENUNCIA_USUARIO_PESQUISADOR_ALVO virou índice parcial (+ UK_DENUNCIA_USUARIO_COMENTARIO). Códigos 90040 e 90041 já no ERRCODE. BD, BACKEND, FRONTEND.
   - `criar_campanha_para_outro` com `p_id_imagem_capa` (Grupo CP).
+  - Imagem de capa editável depois da aprovação (Grupo CQ, `fn_campanha_campos_bloqueados`): o 91058 deixa de ocorrer; o vídeo continua congelado. Atualizar BD e ERRCODE (91058).
+  - Exceção à "restrita manda": degradê cianotipo (`--gradiente-hero`) e cores sobre fundo escuro voltaram, em :root no `7-publico.css`.
+  - `campanha.capa_no_banner` (Grupo CR, padrão TRUE): a capa também de fundo no banner da página da campanha; caixinha nos modais de criar/alterar. Perfil de pesquisador (GET /perfil-pesquisador e /:id) passou a devolver `nome` e `avatarUrl` (GET /usuario/:id exige login: visitante via sem nome e sem foto no Explorar e na página do pesquisador). BD, BACKEND, FRONTEND.
   - Comentários listados com `fotoPesquisador` (GET /comentario).
   - Telas: página da campanha (capa no lugar do vídeo, Endosso com foto, aba Comentar, Atualizações em modal), perfil do pesquisador refeito, Home sem "Últimos Dias" (prazo em vermelho nos 3 últimos dias), `/perguntas-frequentes` (saiu de Como funciona), notificação abre modal, rodapé único (`footer-publico.tsx` apagado), denúncias recebidas em Minhas atividades, Termo de Uso v2 reescrito no seed.
 

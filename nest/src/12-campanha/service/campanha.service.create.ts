@@ -46,6 +46,9 @@ export class CampanhaServiceCreate {
         data_fim: dto.dataFim ? new Date(dto.dataFim) : null,
         video_apresentacao_url: dto.videoApresentacaoUrl ?? null,
         id_imagem_capa: dto.idImagemCapa ?? null,
+        ...(dto.capaNoBanner !== undefined
+          ? { capa_no_banner: dto.capaNoBanner }
+          : {}),
       })
       .returning(CAMPANHA_COLUNAS_SELECT)
       .executeTakeFirstOrThrow();

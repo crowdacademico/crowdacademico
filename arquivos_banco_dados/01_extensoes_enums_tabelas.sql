@@ -573,6 +573,9 @@ CREATE TABLE campanha (
     taxa_plataforma      DECIMAL(5,2),
     descricao            TEXT,
     id_imagem_capa       INT,
+    -- A capa também aparece de fundo no banner do topo da página da campanha (14-11-2026). Marcada por padrão (como
+    -- era na área pública da Alexia); desmarcada, a capa fica só no lugar do vídeo. Não congela na aprovação.
+    capa_no_banner       BOOLEAN NOT NULL DEFAULT TRUE,
     data_inicio          TIMESTAMPTZ,
     data_fim             TIMESTAMPTZ,
     status               status_campanha NOT NULL DEFAULT 'rascunho',

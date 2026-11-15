@@ -1,14 +1,20 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ARMAZENAMENTO_SERVICE } from '../../commons/storage/storage.constants';
+import type { ArmazenamentoService } from '../../commons/storage/storage.service.interface';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { sql } from 'kysely';
 import { decifrarCpf } from '../../commons/seguranca/cpf-cifra.util';
 import { DatabaseService } from '../../commons/database/database.service';
-import { PERFIL_PESQUISADOR_COLUNAS_SELECT } from '../constants/perfil-pesquisador.constants';
+import { PERFIL_PESQUISADOR_COLUNAS_SELECT_QUALIFICADAS } from '../constants/perfil-pesquisador.constants';
 import { PerfilPesquisadorConverter } from '../dto/converter/perfil-pesquisador.converter';
 import { PerfilPesquisadorResponse } from '../dto/response/perfil-pesquisador.response';
 
 @Injectable()
 export class PerfilPesquisadorServiceFindOne {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    @Inject(ARMAZENAMENTO_SERVICE)
+    private readonly armazenamento: ArmazenamentoService,
+  ) {}
 
   // `idUsuarioAutenticado` vem de request.user.idUsuario - usado só pra
   // decidir se quem pediu é o próprio dono (dono sempre vê o próprio CPF,
@@ -26,8 +32,19 @@ export class PerfilPesquisadorServiceFindOne {
 
     const linha = await db
       .selectFrom('perfil_pesquisador')
-      .select(PERFIL_PESQUISADOR_COLUNAS_SELECT)
-      .where('id_usuario', '=', idUsuarioAlvo)
+      .leftJoin(
+        'usuario',
+        'usuario.id_usuario',
+        'perfil_pesquisador.id_usuario',
+      )
+      .leftJoin('arquivo as foto', (join) =>
+        join
+          .onRef('foto.id_arquivo', '=', 'usuario.id_imagem_perfil')
+          .on('foto.ativo', '=', true),
+      )
+      .select(PERFIL_PESQUISADOR_COLUNAS_SELECT_QUALIFICADAS)
+      .select(['usuario.nome as nome', 'foto.chave as foto_chave'])
+      .where('perfil_pesquisador.id_usuario', '=', idUsuarioAlvo)
       .executeTakeFirst();
 
     if (!linha) {
@@ -42,7 +59,14 @@ export class PerfilPesquisadorServiceFindOne {
       ? decifrarCpf(linha.cpf_criptografado)
       : null;
 
-    return PerfilPesquisadorConverter.paraResponseDto(linha, cpfDecifrado);
+    return PerfilPesquisadorConverter.paraResponseDto(
+      linha,
+      cpfDecifrado,
+      linha.nome,
+      linha.foto_chave
+        ? this.armazenamento.montarUrlPublica(linha.foto_chave)
+        : null,
+    );
   }
 
   private async podeVerCpfSensivel(

@@ -45,6 +45,7 @@ export class CampanhaConverter {
         entity.imagem_capa_chave && armazenamento
           ? armazenamento.montarUrlPublica(entity.imagem_capa_chave)
           : null,
+      capaNoBanner: entity.capa_no_banner,
       criadoEm: entity.criado_em,
       nomePesquisador: entity.nome_pesquisador ?? null,
       instituicaoPesquisador: entity.instituicao_pesquisador ?? null,

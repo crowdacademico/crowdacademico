@@ -19,4 +19,8 @@ export class PerfilPesquisadorResponse {
   ativadoEm: Date | null;
   scoreAtual: number;
   scoreAtualizadoEm: Date | null;
+  // Dados públicos de quem é pesquisador (página pública, Explorar): GET /usuario/:id exige login e permissão, então o
+  // nome e a foto vêm daqui. Só a listagem e o detalhe preenchem; nas outras respostas ficam null.
+  nome: string | null;
+  avatarUrl: string | null;
 }

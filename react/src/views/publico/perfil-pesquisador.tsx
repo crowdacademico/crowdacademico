@@ -14,8 +14,6 @@ import type {
 } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 import { seguirPesquisadorApi } from '../../services/16-seguir/api/seguir-pesquisador.api';
 import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
-import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
-import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import { ModalDenunciar } from '../19-denuncia/modal-denunciar';
 import { CartaoCampanha } from './componentes-campanhas';
@@ -25,7 +23,6 @@ import { ordenarAtualizacoes } from './util-campanhas';
 interface DadosPagina {
   idUsuario: string;
   perfil: PerfilPesquisadorResponse | null;
-  pesquisador: UsuarioResponse | null;
   campanhas: CampanhaResponse[] | null;
   score: PerfilPesquisadorResponseScore | null;
 }
@@ -57,7 +54,8 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
   const dados = pagina?.idUsuario === idUsuario ? pagina : null;
   const carregando = idValido && dados === null;
   const perfil = dados?.perfil ?? null;
-  const pesquisador = dados?.pesquisador ?? null;
+  // Nome e foto vêm do próprio perfil (GET /usuario/:id exige login e permissão: visitante ficava sem nome).
+  const pesquisador = perfil ? { nome: perfil.nome, avatarUrl: perfil.avatarUrl } : null;
   const campanhas = dados?.campanhas ?? null;
   const score = dados?.score ?? null;
   const naoEncontrado = !idValido || (!carregando && perfil === null);
@@ -71,15 +69,13 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
     let ativo = true;
     void Promise.allSettled([
       perfilPesquisadorApi.buscar(auth.authFetch, id),
-      usuarioApi.buscar(auth.authFetch, id),
       campanhaApi.listar(auth.authFetch, { idUsuario: id }),
       perfilPesquisadorApi.buscarScore(auth.authFetch, id),
-    ]).then(([rPerfil, rUsuario, rCampanhas, rScore]) => {
+    ]).then(([rPerfil, rCampanhas, rScore]) => {
       if (!ativo) return;
       setPagina({
         idUsuario,
         perfil: rPerfil.status === 'fulfilled' ? rPerfil.value : null,
-        pesquisador: rUsuario.status === 'fulfilled' ? rUsuario.value : null,
         campanhas: rCampanhas.status === 'fulfilled' ? rCampanhas.value : null,
         score: rScore.status === 'fulfilled' ? rScore.value : null,
       });
@@ -316,17 +312,17 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
                     {score?.rotulo && <p className="legenda mt-2">{score.rotulo}</p>}
                   </div>
                 )}
-                <dl className="grid grid-cols-3 gap-3 text-center">
-                  <div className="fundo-destaque rounded-xl p-3 border borda-padrao">
-                    <dt className="microrrotulo texto-fraco">Seguidores</dt>
+                <dl className="grid grid-cols-3 gap-2 text-center">
+                  <div className="fundo-destaque rounded-xl px-1 py-3 border borda-padrao min-w-0 flex flex-col-reverse">
+                    <dt className="legenda texto-fraco break-words leading-tight">Seguidores</dt>
                     <dd className="numero text-xl font-bold texto-forte">{dadosSeguimento?.seguidores ?? '—'}</dd>
                   </div>
-                  <div className="fundo-destaque rounded-xl p-3 border borda-padrao">
-                    <dt className="microrrotulo texto-fraco">Ativas</dt>
+                  <div className="fundo-destaque rounded-xl px-1 py-3 border borda-padrao min-w-0 flex flex-col-reverse">
+                    <dt className="legenda texto-fraco break-words leading-tight">Ativas</dt>
                     <dd className="numero text-xl font-bold texto-forte">{campanhas ? ativas.length : '—'}</dd>
                   </div>
-                  <div className="fundo-destaque rounded-xl p-3 border borda-padrao">
-                    <dt className="microrrotulo texto-fraco">Encerradas</dt>
+                  <div className="fundo-destaque rounded-xl px-1 py-3 border borda-padrao min-w-0 flex flex-col-reverse">
+                    <dt className="legenda texto-fraco break-words leading-tight">Encerradas</dt>
                     <dd className="numero text-xl font-bold texto-forte">{campanhas ? encerradas.length : '—'}</dd>
                   </div>
                 </dl>

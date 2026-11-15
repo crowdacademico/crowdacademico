@@ -1,15 +1,13 @@
 import { Link } from 'react-router';
 import { ROTULO_TIPO_VINCULO, ROTULO_TITULO_ACADEMICO } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
-import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
 
 interface PropsCartaoPesquisador {
   perfil: PerfilPesquisadorResponse;
-  usuario: UsuarioResponse | null;
 }
 
-export function CartaoPesquisador({ perfil, usuario }: PropsCartaoPesquisador) {
-  const nome = usuario?.nome ?? 'Pesquisador da comunidade';
+export function CartaoPesquisador({ perfil }: PropsCartaoPesquisador) {
+  const nome = perfil.nome ?? 'Pesquisador da comunidade';
   const iniciais = nome
     .split(/\s+/)
     .filter(Boolean)
@@ -21,8 +19,8 @@ export function CartaoPesquisador({ perfil, usuario }: PropsCartaoPesquisador) {
   return (
     <article className="cartao-pesquisador">
       <Link className="cartao-pesquisador__perfil" to={`/pesquisador/${perfil.idUsuario}`} aria-label={`Conheça o perfil de ${nome}`}>
-        {usuario?.avatarUrl ? (
-          <img className="cartao-pesquisador__avatar" src={usuario.avatarUrl} alt="" loading="lazy" />
+        {perfil.avatarUrl ? (
+          <img className="cartao-pesquisador__avatar" src={perfil.avatarUrl} alt="" loading="lazy" />
         ) : (
           <span className="cartao-pesquisador__avatar cartao-pesquisador__avatar--iniciais" aria-hidden="true">
             {iniciais || 'P'}

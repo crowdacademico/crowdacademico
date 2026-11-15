@@ -345,7 +345,7 @@ export function Home({ auth }: PropsPagina) {
           campanhas={futuras.slice(0, 8)}
           carregando={carregando}
           erro={erro}
-          vazio="Nenhuma campanha aprovada tem início futuro informado no momento."
+          vazio="Sem campanhas em breve no momento."
           trilhoRef={carrosselEmBreve}
           seguidas={seguimento.seguidas}
           carregandoSeguimento={seguimento.carregando}

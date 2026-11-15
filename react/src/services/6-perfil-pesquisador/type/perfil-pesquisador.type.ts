@@ -21,6 +21,9 @@ export interface PerfilPesquisadorResponse {
   ativadoEm: string | null;
   scoreAtual: number;
   scoreAtualizadoEm: string | null;
+  // Dados públicos de quem é pesquisador (listagem e detalhe); GET /usuario/:id exige login e permissão.
+  nome: string | null;
+  avatarUrl: string | null;
 }
 
 // Espelha perfil-pesquisador.response-score.ts.

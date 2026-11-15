@@ -78,9 +78,10 @@ interface FormCampanha {
   videoApresentacaoUrl: string;
   idImagemCapa: number | null;
   imagemCapaUrl: string | null;
+  capaNoBanner: boolean;
 }
 
-type CampoTextoCampanha = Exclude<keyof FormCampanha, 'idImagemCapa' | 'imagemCapaUrl'>;
+type CampoTextoCampanha = Exclude<keyof FormCampanha, 'idImagemCapa' | 'imagemCapaUrl' | 'capaNoBanner'>;
 
 const ROTULO_CAMPO_BLOQUEADO: Record<string, string> = {
   titulo: 'Título',
@@ -110,6 +111,7 @@ const paraForm = (campanha: CampanhaResponse): FormCampanha => ({
   videoApresentacaoUrl: campanha.videoApresentacaoUrl ?? '',
   idImagemCapa: campanha.idImagemCapa,
   imagemCapaUrl: campanha.imagemCapaUrl,
+  capaNoBanner: campanha.capaNoBanner,
 });
 
 // Alterar campanha (dono, ou o admin pela Bancada da Campanha). Os campos que o banco trava agora
@@ -208,7 +210,7 @@ export function ModalAlterarCampanha({
     ...(!travado('videoApresentacaoUrl')
       ? { videoApresentacaoUrl: dados.videoApresentacaoUrl.trim() || null }
       : {}),
-    ...(!travado('idImagemCapa') ? { idImagemCapa: dados.idImagemCapa } : {}),
+    ...(!travado('idImagemCapa') ? { idImagemCapa: dados.idImagemCapa, capaNoBanner: dados.capaNoBanner } : {}),
   });
 
   const salvar = async () => {
@@ -496,8 +498,27 @@ export function ModalAlterarCampanha({
                     aoAlterar={(idImagemCapa, imagemCapaUrl) =>
                       setForm({ ...form, idImagemCapa, imagemCapaUrl, videoApresentacaoUrl: '' })
                     }
-                    desabilitado={trabalhando || travado('idImagemCapa')}
+                    // O vídeo congela na aprovação e a campanha tem vídeo OU capa: com vídeo travado, não há como trocar
+                    // por capa. Sem vídeo, a capa muda a qualquer momento (não congela).
+                    desabilitado={trabalhando || travado('idImagemCapa') || (travado('videoApresentacaoUrl') && Boolean(campanha.videoApresentacaoUrl))}
                   />
+                  {travado('videoApresentacaoUrl') && Boolean(campanha.videoApresentacaoUrl) && !travado('idImagemCapa') && (
+                    <p className="legenda sm:col-span-2 texto-fraco">
+                      Esta campanha usa vídeo, que não muda depois da aprovação; por isso não dá para trocar por imagem de capa.
+                    </p>
+                  )}
+                  {form.idImagemCapa !== null && (
+                    <label className="sm:col-span-2 flex items-center gap-2 paragrafo texto-padrao cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.capaNoBanner}
+                        onChange={(evento) => setForm({ ...form, capaNoBanner: evento.target.checked })}
+                        disabled={trabalhando || travado('idImagemCapa')}
+                        className="w-4 h-4 accent-primary"
+                      />
+                      Usar a imagem de capa também no banner do topo da página
+                    </label>
+                  )}
                 </SecaoFicha>
               </div>
             </div>

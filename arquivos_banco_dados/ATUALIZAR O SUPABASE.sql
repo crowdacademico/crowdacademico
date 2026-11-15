@@ -2001,3 +2001,46 @@ END;
 $$;
 REVOKE EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT, INT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT, INT) TO app_nestjs;
+
+-- ============================================================================
+-- GRUPO CQ (14-11-2026) - Imagem de capa editável depois da aprovação. IDEMPOTENTE.
+-- Não precisa parar o Nest: só troca uma função. Cole depois do CP.
+--
+-- O que muda:
+--   1. A imagem de capa sai da lista de campos congelados na aprovação (o 91058 deixa de acontecer). O vídeo continua
+--      congelado; como a campanha tem vídeo OU capa (CK_CAMPANHA_VIDEO_OU_IMAGEM_CAPA), campanha aprovada com vídeo
+--      continua sem capa.
+-- ============================================================================
+-- Campos de campanha que o congelamento trava agora, na ordem em que a trigger confere. Fonte única para a
+-- trigger fn_congela_regras_campanha e para GET /campanha/:id (camposBloqueados); ver DOCUMENTACAO_BD.md [05-K-2-D].
+-- A imagem de capa NÃO congela na aprovação (decisão do Lucas, 14-11-2026): é só apresentação, não muda nada do que
+-- quem apoiou aceitou (meta, modelo, taxa, prazo). Só trava na rejeitada sem reenvios, onde tudo é somente leitura.
+CREATE OR REPLACE FUNCTION public.fn_campanha_campos_bloqueados(p public.campanha)
+RETURNS TEXT[]
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT CASE
+        WHEN p.status = 'rejeitado' AND public.fn_campanha_reenvios_esgotados(p.id_campanha) THEN
+            ARRAY['titulo', 'descricao', 'meta_financeira', 'modelo', 'data_inicio', 'data_fim',
+                  'id_area_conhecimento', 'video_apresentacao_url', 'id_imagem_capa']
+        WHEN public.fn_status_pos_aprovacao(p.status) THEN
+            ARRAY['meta_financeira', 'modelo', 'taxa_plataforma', 'titulo', 'descricao',
+                  'video_apresentacao_url', 'id_area_conhecimento']
+            || CASE WHEN p.data_inicio IS NOT NULL AND p.data_inicio <= NOW()
+                    THEN ARRAY['data_fim', 'data_inicio'] ELSE ARRAY[]::TEXT[] END
+        ELSE ARRAY[]::TEXT[]
+    END;
+$$;
+
+-- ============================================================================
+-- GRUPO CR (14-11-2026) - Capa também no banner da página da campanha. IDEMPOTENTE.
+-- PARE O NEST antes de colar: o grupo altera a tabela campanha (coluna nova), a mesma regra do Grupo BS. Suba o Nest
+-- novo junto. Cole depois do CQ.
+--
+-- O que muda:
+--   1. campanha ganha capa_no_banner (padrão TRUE): a imagem de capa também aparece de fundo no banner do topo da
+--      página da campanha. Desmarcada, a capa fica só no lugar do vídeo. Não congela na aprovação.
+-- ============================================================================
+ALTER TABLE campanha ADD COLUMN IF NOT EXISTS capa_no_banner BOOLEAN NOT NULL DEFAULT TRUE;
+GRANT INSERT (capa_no_banner), UPDATE (capa_no_banner) ON campanha TO app_nestjs;

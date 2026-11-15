@@ -439,7 +439,7 @@ export function CadastroPage({ auth }: PropsPagina) {
                   onClick={() => abrirTermos('cadastro')}
                   className="link-texto"
                 >
-                  Termo de Uso
+                  Termos de Uso
                 </button>
                 .
               </span>

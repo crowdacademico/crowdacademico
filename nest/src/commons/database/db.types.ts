@@ -428,6 +428,7 @@ export interface CampanhaTable {
   taxa_plataforma: string | null;
   descricao: string | null;
   id_imagem_capa: number | null;
+  capa_no_banner: Generated<boolean>;
   data_inicio: Date | null;
   data_fim: Date | null;
   status: Generated<StatusCampanha>;

@@ -16,6 +16,7 @@ export const CAMPANHA_COLUNAS_SELECT = [
   'enviado_aprovacao_em',
   'encerrado_em',
   'id_imagem_capa',
+  'capa_no_banner',
   'video_apresentacao_url',
   'criado_em',
 ] as const;

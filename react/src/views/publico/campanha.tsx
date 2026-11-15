@@ -171,6 +171,13 @@ export function Campanha({ auth }: PropsPagina) {
             className="campanha-detalhe__hero pt-14 pb-24 relative overflow-hidden texto-sobre-escuro superficie-escura"
             style={{ background: 'var(--cor-cianotipo-800)' }}
           >
+            {/* Capa de fundo no banner (capaNoBanner, marcada por padrão), escurecida para o texto continuar legível. */}
+            {campanha.imagemCapaUrl && campanha.capaNoBanner && (
+              <>
+                <img src={campanha.imagemCapaUrl} alt="" aria-hidden="true" className="campanha-detalhe__imagem-capa" />
+                <div className="campanha-detalhe__capa-sobreposicao" aria-hidden="true" />
+              </>
+            )}
             <div className="absolute inset-0 grade-medicao" aria-hidden="true" />
             <div className="max-w-7xl mx-auto px-4 relative z-10">
               <p className="text-sm font-medium texto-sobre-escuro mb-6 flex items-center gap-2">
@@ -193,15 +200,11 @@ export function Campanha({ auth }: PropsPagina) {
                   </span>
                   {campanha.nomePesquisador ?? 'Pesquisador não informado'}
                 </Link>
-                {campanha.instituicaoPesquisador && (
-                  <>
-                    <span aria-hidden="true" className="hidden sm:inline">|</span>
-                    <span className="inline-flex items-center gap-2 veu-claro texto-marca-sobre-escuro microrrotulo px-3 py-1 rounded-full">
-                      <i className="fa-solid fa-building-columns" aria-hidden="true" />
-                      {campanha.instituicaoPesquisador}
-                    </span>
-                  </>
-                )}
+                {/* Área de conhecimento (a Alexia confirmou: a instituição vai só no cartão lateral do pesquisador). */}
+                <span aria-hidden="true" className="hidden sm:inline">|</span>
+                <span className="inline-flex items-center gap-2 veu-claro texto-marca-sobre-escuro microrrotulo px-3 py-1 rounded-full">
+                  {campanha.nomeArea ?? 'Área não informada'}
+                </span>
               </div>
             </div>
           </section>

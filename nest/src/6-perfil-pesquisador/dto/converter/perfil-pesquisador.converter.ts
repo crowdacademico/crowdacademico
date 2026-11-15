@@ -21,6 +21,8 @@ export class PerfilPesquisadorConverter {
   static paraResponseDto(
     entity: PerfilPesquisadorParaConverter,
     cpfDecifrado: string | null,
+    nome: string | null = null,
+    avatarUrl: string | null = null,
   ): PerfilPesquisadorResponse {
     return {
       idUsuario: entity.id_usuario,
@@ -32,6 +34,8 @@ export class PerfilPesquisadorConverter {
       ativadoEm: entity.ativado_em,
       scoreAtual: entity.score_atual,
       scoreAtualizadoEm: entity.score_atualizado_em,
+      nome,
+      avatarUrl,
     };
   }
 }

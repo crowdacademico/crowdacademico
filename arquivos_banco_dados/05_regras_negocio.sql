@@ -2239,6 +2239,8 @@ $$;
 
 -- Campos de campanha que o congelamento trava agora, na ordem em que a trigger confere. Fonte única para a
 -- trigger fn_congela_regras_campanha e para GET /campanha/:id (camposBloqueados); ver DOCUMENTACAO_BD.md [05-K-2-D].
+-- A imagem de capa NÃO congela na aprovação (decisão do Lucas, 14-11-2026): é só apresentação, não muda nada do que
+-- quem apoiou aceitou (meta, modelo, taxa, prazo). Só trava na rejeitada sem reenvios, onde tudo é somente leitura.
 CREATE OR REPLACE FUNCTION public.fn_campanha_campos_bloqueados(p public.campanha)
 RETURNS TEXT[]
 LANGUAGE sql
@@ -2250,7 +2252,7 @@ AS $$
                   'id_area_conhecimento', 'video_apresentacao_url', 'id_imagem_capa']
         WHEN public.fn_status_pos_aprovacao(p.status) THEN
             ARRAY['meta_financeira', 'modelo', 'taxa_plataforma', 'titulo', 'descricao',
-                  'video_apresentacao_url', 'id_area_conhecimento', 'id_imagem_capa']
+                  'video_apresentacao_url', 'id_area_conhecimento']
             || CASE WHEN p.data_inicio IS NOT NULL AND p.data_inicio <= NOW()
                     THEN ARRAY['data_fim', 'data_inicio'] ELSE ARRAY[]::TEXT[] END
         ELSE ARRAY[]::TEXT[]

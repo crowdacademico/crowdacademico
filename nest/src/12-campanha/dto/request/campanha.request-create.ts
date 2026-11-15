@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsDateString,
   IsInt,
   IsIn,
@@ -58,4 +59,9 @@ export class CampanhaRequestCreate {
   @IsOptional()
   @IsInt()
   idImagemCapa?: number | null;
+
+  // A capa também de fundo no banner do topo da página da campanha (padrão: sim).
+  @IsOptional()
+  @IsBoolean()
+  capaNoBanner?: boolean;
 }

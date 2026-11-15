@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { ARMAZENAMENTO_SERVICE } from '../../commons/storage/storage.constants';
+import type { ArmazenamentoService } from '../../commons/storage/storage.service.interface';
+import { Inject, Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { decifrarCpf } from '../../commons/seguranca/cpf-cifra.util';
 import { DatabaseService } from '../../commons/database/database.service';
@@ -6,7 +8,7 @@ import {
   ResultadoPaginado,
   paginar,
 } from '../../commons/database/paginacao.util';
-import { PERFIL_PESQUISADOR_COLUNAS_SELECT } from '../constants/perfil-pesquisador.constants';
+import { PERFIL_PESQUISADOR_COLUNAS_SELECT_QUALIFICADAS } from '../constants/perfil-pesquisador.constants';
 import { PerfilPesquisadorConverter } from '../dto/converter/perfil-pesquisador.converter';
 import { PerfilPesquisadorRequestList } from '../dto/request/perfil-pesquisador.request-list';
 import { PerfilPesquisadorResponse } from '../dto/response/perfil-pesquisador.response';
@@ -22,7 +24,11 @@ import { PerfilPesquisadorResponse } from '../dto/response/perfil-pesquisador.re
 // idUsuarioAutenticado`.
 @Injectable()
 export class PerfilPesquisadorServiceFindAll {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    @Inject(ARMAZENAMENTO_SERVICE)
+    private readonly armazenamento: ArmazenamentoService,
+  ) {}
 
   async executar(
     filtro: PerfilPesquisadorRequestList,
@@ -32,14 +38,33 @@ export class PerfilPesquisadorServiceFindAll {
 
     let query = db
       .selectFrom('perfil_pesquisador')
-      .select(PERFIL_PESQUISADOR_COLUNAS_SELECT)
-      .orderBy('id_usuario');
+      .leftJoin(
+        'usuario',
+        'usuario.id_usuario',
+        'perfil_pesquisador.id_usuario',
+      )
+      .leftJoin('arquivo as foto', (join) =>
+        join
+          .onRef('foto.id_arquivo', '=', 'usuario.id_imagem_perfil')
+          .on('foto.ativo', '=', true),
+      )
+      .select(PERFIL_PESQUISADOR_COLUNAS_SELECT_QUALIFICADAS)
+      .select(['usuario.nome as nome', 'foto.chave as foto_chave'])
+      .orderBy('perfil_pesquisador.id_usuario');
 
     if (filtro.statusPesquisador !== undefined) {
-      query = query.where('status_pesquisador', '=', filtro.statusPesquisador);
+      query = query.where(
+        'perfil_pesquisador.status_pesquisador',
+        '=',
+        filtro.statusPesquisador,
+      );
     }
     if (filtro.tipoVinculo !== undefined) {
-      query = query.where('tipo_vinculo', '=', filtro.tipoVinculo);
+      query = query.where(
+        'perfil_pesquisador.tipo_vinculo',
+        '=',
+        filtro.tipoVinculo,
+      );
     }
 
     // SEQUENCIAL, não Promise.all (mesmo motivo de paginacao.util.ts): uma conexão só por requisição, sem ganho
@@ -58,7 +83,14 @@ export class PerfilPesquisadorServiceFindAll {
         const cpfDecifrado = podeVer
           ? decifrarCpf(linha.cpf_criptografado)
           : null;
-        return PerfilPesquisadorConverter.paraResponseDto(linha, cpfDecifrado);
+        return PerfilPesquisadorConverter.paraResponseDto(
+          linha,
+          cpfDecifrado,
+          linha.nome,
+          linha.foto_chave
+            ? this.armazenamento.montarUrlPublica(linha.foto_chave)
+            : null,
+        );
       }),
     };
   }

@@ -295,14 +295,14 @@ GRANT DELETE ON campanha TO app_nestjs;
 -- carimbo ficam de fora, então toda campanha nasce 'rascunho' (o DEFAULT) e só chega à fila ou ao ar pelas
 -- transições que fn_valida_transicao_campanha e fn_valida_completude_campanha (05) conferem.
 GRANT INSERT (
-    id_usuario, id_area_conhecimento, id_imagem_capa, titulo, modelo, meta_financeira,
+    id_usuario, id_area_conhecimento, id_imagem_capa, capa_no_banner, titulo, modelo, meta_financeira,
     descricao, data_inicio, data_fim, video_apresentacao_url
 ) ON campanha TO app_nestjs;
 -- UPDATE por coluna: campo calculado (valor_bruto_arrecadado, taxa_plataforma, encerrado_em, enviado_aprovacao_em) e imutável
 -- (id_usuario) só mudam por função SECURITY DEFINER ou trigger. Ver DOCUMENTACAO_BD.md [05-K-2-C]. modelo muda até a
 -- aprovação; depois o banco o barra (91005, fn_campanha_erro_congelamento em 05).
 GRANT UPDATE (
-    titulo, descricao, id_area_conhecimento, id_imagem_capa, meta_financeira, modelo,
+    titulo, descricao, id_area_conhecimento, id_imagem_capa, capa_no_banner, meta_financeira, modelo,
     data_inicio, data_fim, video_apresentacao_url,
     status, aprovado_em, id_admin
 ) ON campanha TO app_nestjs;

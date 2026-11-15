@@ -8,7 +8,6 @@ import { BarraBuscaPublica } from '../../components/search/barra-busca-publica';
 import { GrupoFiltroExpansivel } from '../../components/search/grupo-filtro-expansivel';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
-import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import {
   emBreve,
@@ -19,7 +18,6 @@ import type { TituloAcademico } from '../../services/6-perfil-pesquisador/consta
 import type { ModeloCampanha } from '../../services/12-campanha/type/campanha.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
-import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import { CartaoCampanha, EstadoVazio } from './componentes-campanhas';
@@ -67,15 +65,8 @@ export function Explorar({ auth }: PropsPagina) {
       const perfisOrdenados = [...perfis].sort(
         (a, b) => Date.parse(b.ativadoEm ?? '') - Date.parse(a.ativadoEm ?? ''),
       );
-      return Promise.all(
-        perfisOrdenados.map(async (perfil): Promise<{ perfil: PerfilPesquisadorResponse; usuario: UsuarioResponse | null }> => {
-          try {
-            return { perfil, usuario: await usuarioApi.buscar(auth.authFetch, perfil.idUsuario) };
-          } catch {
-            return { perfil, usuario: null };
-          }
-        }),
-      );
+      // Nome e foto já vêm no perfil (uma consulta só; GET /usuario/:id exige login e permissão).
+      return perfisOrdenados.map((perfil): { perfil: PerfilPesquisadorResponse } => ({ perfil }));
     },
     [auth.authFetch, pesquisadoresSolicitados],
   );
@@ -150,9 +141,9 @@ export function Explorar({ auth }: PropsPagina) {
     const termo = normalizar(buscaPesquisador.trim());
     const scoreMinimoNumerico = scoreMinimo === '' ? null : Number(scoreMinimo);
 
-    return (pesquisadoresRecebidos ?? []).filter(({ perfil, usuario }) => {
+    return (pesquisadoresRecebidos ?? []).filter(({ perfil }) => {
       return (
-        (!termo || normalizar(usuario?.nome ?? '').includes(termo)) &&
+        (!termo || normalizar(perfil.nome ?? '').includes(termo)) &&
         (!instituicaoPesquisador || perfil.vinculoInstitucional?.trim() === instituicaoPesquisador) &&
         (nivelAcademico === 'todos' || perfil.tituloAcademico === nivelAcademico) &&
         (scoreMinimoNumerico === null || perfil.scoreAtual >= scoreMinimoNumerico)
@@ -386,14 +377,16 @@ export function Explorar({ auth }: PropsPagina) {
             </div>
           </div>
           <section className="mb-8 flex flex-col gap-4" role="group" aria-label="Filtros de pesquisadores">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <BarraBuscaPublica
-                id="explorar-busca-pesquisador"
-                rotulo="Buscar pelo nome do pesquisador"
-                placeholder="Nome do pesquisador…"
-                valor={buscaPesquisador}
-                aoAlterar={setBuscaPesquisador}
-              />
+            {/* Mesma barra, mesma largura e linha própria da aba de projetos; os filtros vêm numa grade embaixo. */}
+            <BarraBuscaPublica
+              id="explorar-busca-pesquisador"
+              rotulo="Buscar pelo nome do pesquisador"
+              placeholder="Buscar pelo nome do pesquisador…"
+              valor={buscaPesquisador}
+              aoAlterar={setBuscaPesquisador}
+              className="w-full sm:max-w-xl"
+            />
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <label className="rotulo flex flex-col gap-2">
                 Instituição
                 <select
@@ -450,8 +443,8 @@ export function Explorar({ auth }: PropsPagina) {
             <MensagemErro texto={erroPesquisadores} />
           ) : pesquisadoresFiltrados.length ? (
             <div className="grade-pesquisadores">
-              {pesquisadoresFiltrados.map(({ perfil, usuario }) => (
-                <CartaoPesquisador key={perfil.idUsuario} perfil={perfil} usuario={usuario} />
+              {pesquisadoresFiltrados.map(({ perfil }) => (
+                <CartaoPesquisador key={perfil.idUsuario} perfil={perfil} />
               ))}
             </div>
           ) : (

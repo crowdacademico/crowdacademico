@@ -144,6 +144,7 @@ export interface Campanha {
   id_admin: number | null;
   id_area_conhecimento: number;
   id_imagem_capa: number | null;
+  capa_no_banner: Generated<boolean>;
   id_campanha: Generated<number>;
   id_usuario: number;
   meta_financeira: Numeric;

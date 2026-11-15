@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { CabecalhoPagina } from '../../components/layout/cabecalho-pagina';
+import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
+import type { PropsPagina } from '../../services/router/pagina.type';
+import { MockupPerfil } from './mockup-perfil';
+import { useDadosVitrine } from './use-dados-vitrine';
 
 const PERFIS = [
   {
@@ -151,8 +155,9 @@ function ConteudoAba({ ativa }: { ativa: (typeof ABAS)[number]['chave'] }) {
             </tbody>
           </table>
         </div>
-        <p className="paragrafo texto-padrao mt-4">
-          As condições específicas e os valores aplicáveis são apresentados na própria campanha e no checkout.
+        <p className="legenda mt-4">
+          As condições específicas e os valores aplicáveis são apresentados na própria{' '}
+          <span className="whitespace-nowrap">campanha e no checkout.</span>
         </p>
       </>
     );
@@ -205,7 +210,10 @@ function ConteudoAba({ ativa }: { ativa: (typeof ABAS)[number]['chave'] }) {
   );
 }
 
-export function ComoFunciona() {
+export function ComoFunciona({ auth }: PropsPagina) {
+  // Painéis dos três perfis com dados reais da plataforma (nada inventado).
+  const dadosVitrine = useDadosVitrine(auth.authFetch);
+  const taxaPlataforma = useConfiguracoes().obterNumero('taxa_plataforma_padrao', 5);
   const [abaAtiva, setAbaAtiva] = useState<(typeof ABAS)[number]['chave']>('apoiar');
 
   return (
@@ -227,38 +235,13 @@ export function ComoFunciona() {
                 key={perfil.chave}
                 className={`perfil-vitrine ${indice % 2 === 1 ? 'perfil-vitrine--invertido' : ''}`}
               >
-                <div className="perfil-vitrine__painel" aria-hidden="true">
-                  <div className="grade-medicao" />
+                <div className="perfil-vitrine__painel">
+                  <div className="grade-medicao" aria-hidden="true" />
                   <span className="perfil-vitrine__chip">
                     <i className={`fa-solid ${perfil.icone}`} />
                     {perfil.titulo}
                   </span>
-                  <div className={`perfil-vitrine__mockup perfil-vitrine__mockup--${perfil.chave}`}>
-                    <span className="perfil-vitrine__mockup-cabecalho" />
-                    <div className="perfil-vitrine__mockup-linhas">
-                      <span className="perfil-vitrine__mockup-linha">
-                        <i />
-                        <span><b /><b /></span>
-                        <em />
-                      </span>
-                      <span className="perfil-vitrine__mockup-linha">
-                        <i />
-                        <span><b /><b /></span>
-                        <em />
-                      </span>
-                      <span className="perfil-vitrine__mockup-linha">
-                        <i />
-                        <span><b /><b /></span>
-                        <em />
-                      </span>
-                    </div>
-                    <div className="perfil-vitrine__mockup-indicadores">
-                      {Array.from(
-                        { length: perfil.chave === 'pesquisador' ? 4 : 3 },
-                        (_, indicador) => <span key={indicador} />,
-                      )}
-                    </div>
-                  </div>
+                  <MockupPerfil chave={perfil.chave} dados={dadosVitrine} taxaPlataforma={taxaPlataforma} />
                 </div>
                 <div className="perfil-vitrine__conteudo">
                   <p className="rotulo-leitura texto-marca mb-2">
