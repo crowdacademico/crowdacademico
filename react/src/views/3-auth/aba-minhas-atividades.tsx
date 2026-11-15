@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router';
 import { GenericTable } from '../../components/crud/generic-table';
+import { TextoResumido } from '../../components/crud/texto-resumido';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
@@ -70,7 +71,7 @@ function paraComentarioLinha(comentario: ComentarioMeuResponse): ComentarioLinha
       ? 'Removido'
       : comentario.endossado
         ? 'Endossado'
-        : 'Aguardando endosso',
+        : '-', // sem endosso: só um traço ("aguardando" prometia um endosso que quase nunca vem)
   };
 }
 
@@ -131,9 +132,9 @@ export function AbaMinhasAtividades({ auth }: AbaMinhasAtividadesProps) {
             tipo: 'nome',
             umaLinha: true,
             renderizar: (linha) => (
-              <Link to={`/campanha/${linha.idCampanha}`} className="link-texto">
-                {linha.tituloCampanha}
-              </Link>
+              <span className="crud-tabela__nome">
+                <TextoResumido texto={linha.tituloCampanha} link={`/campanha/${linha.idCampanha}`} />
+              </span>
             ),
             textoExibido: (linha) => linha.tituloCampanha,
           },
@@ -207,9 +208,9 @@ export function AbaMinhasAtividades({ auth }: AbaMinhasAtividadesProps) {
               tipo: 'nome',
               umaLinha: true,
               renderizar: (linha) => (
-                <Link to={`/campanha/${linha.idCampanha}`} className="link-texto">
-                  {linha.tituloCampanha}
-                </Link>
+                <span className="crud-tabela__nome">
+                  <TextoResumido texto={linha.tituloCampanha} link={`/campanha/${linha.idCampanha}`} />
+                </span>
               ),
               textoExibido: (linha) => linha.tituloCampanha,
             },

@@ -1,20 +1,23 @@
-import { useCallback, useState } from 'react';
-import { Navigate, NavLink, useParams } from 'react-router';
+import { useCallback, useMemo, useState } from 'react';
+import { Navigate, useParams } from 'react-router';
+import { LayoutAreaUsuario } from '../../components/layout/layout-area-usuario';
 import { AvisoSoPesquisador } from '../../components/crud/aviso-so-pesquisador';
 import { BotaoCriar } from '../../components/crud/botao-criar';
 import { GenericTable } from '../../components/crud/generic-table';
-import { CampoFicha } from '../../components/crud/ficha-consulta';
+import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ListaAnexos } from '../../components/crud/lista-anexos';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { ModalExcluirComentario } from '../../components/crud/modal-excluir-comentario';
+import { CartaoEndosso } from './cartao-endosso';
+import { denunciaApi } from '../../services/19-denuncia/api/denuncia.api';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { ModalExcluirItem } from '../../components/crud/modal-excluir-item';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import {
   ORDEM_ROTULOS_STATUS_CAMPANHA,
-  ROTULO_MODELO_CAMPANHA,
   STATUS_ACEITA_ATUALIZACAO,
   rotuloStatusCampanha,
 } from '../../services/12-campanha/constants/status-campanha.constants';
@@ -103,40 +106,12 @@ function ConteudoEstudio({ auth, secao }: PropsPagina & { secao: SecaoEstudio })
   const statusPesquisador = useSituacaoPesquisador(auth.authFetch, auth.usuario);
 
   return (
-    <div className="largura-site w-full max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-      <header className="mb-6">
-        <h1 className="titulo-pagina texto-forte">Estúdio do pesquisador</h1>
-        <p className="mt-2 paragrafo texto-fraco">
-          Gerencie suas campanhas, recompensas, atualizações, comentários e acompanhe os apoios recebidos.
-        </p>
-      </header>
-
-      <div className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
-        <aside aria-label="Menu do estúdio">
-          <nav aria-label="Seções do estúdio" className="flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible">
-            {SECOES.map((item) => (
-              <NavLink
-                key={item.chave}
-                to={`/estudio-pesquisador/${item.chave}`}
-                end
-                className={({ isActive }) =>
-                  'paragrafo enfase flex shrink-0 items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors lg:w-full ' +
-                  (isActive
-                    ? 'fundo-cartao borda-marca texto-marca shadow-sm'
-                    : 'fundo-cartao borda-padrao texto-herdado hover-fundo-sutil')
-                }
-              >
-                <i className={`fa-solid ${item.icone} w-4`} aria-hidden="true"></i>
-                {item.rotulo}
-              </NavLink>
-            ))}
-          </nav>
-        </aside>
-
-        <section
-          id="estudio-conteudo"
-          className="min-w-0"
-        >
+    <LayoutAreaUsuario
+      titulo="Estúdio do pesquisador"
+      descricao="Gerencie suas campanhas, recompensas, atualizações, comentários e acompanhe os apoios recebidos."
+      rotuloMenu="Seções do estúdio"
+      itens={SECOES.map((item) => ({ to: `/estudio-pesquisador/${item.chave}`, rotulo: item.rotulo, icone: item.icone }))}
+    >
           {statusPesquisador !== null && statusPesquisador !== 'ativo' && (
             <div className="mb-5 rounded-lg border borda-aviso fundo-aviso p-4">
               <p className="paragrafo texto-herdado">
@@ -172,40 +147,24 @@ function ConteudoEstudio({ auth, secao }: PropsPagina & { secao: SecaoEstudio })
               {secao === 'contribuicoes' && <PainelContribuicoes auth={auth} campanhas={campanhas} />}
             </>
           )}
-        </section>
-      </div>
-    </div>
+    </LayoutAreaUsuario>
   );
 }
 
 interface CampanhaLinha extends Omit<CampanhaResponse, 'status'> {
   status: string;
   statusOriginal: CampanhaResponse['status'];
-  temVideo: boolean;
-  // RF-090/091: métricas da lista "Projetos Criados".
+  // RF-090/091: métricas da lista "Projetos Criados". Doadores e o detalhe do repasse ficam no Consultar.
   percentualMeta: number | null;
-  doadoresConfirmados: number | null;
   diasRestantesCaptacao: number | null;
   // O líquido que vale: o real do repasse concluído ou, antes dele, o estimado (valorLiquidoEstimado).
   liquido: number | null;
   repasse: RepasseResponse | null;
 }
 
-// RF-090/091: "R$ X" e, embaixo, de onde vem o número: o repasse concluído (taxa retida e data) ou a estimativa.
+// Só o valor: a data do repasse e a taxa retida estão no Consultar (o texto longo alargava a coluna).
 function renderizarLiquido(linha: CampanhaLinha) {
-  if (linha.liquido === null) return '—';
-  const repasse = linha.repasse;
-  const taxa = repasse ? repasse.taxaPlataforma : linha.taxaPlataforma;
-  return (
-    <span className="inline-flex flex-col leading-tight">
-      <span className="numero">{formatarMoeda(linha.liquido)}</span>
-      <span className="legenda texto-fraco">
-        {repasse
-          ? `repassado em ${repasse.repassadoEm ? formatarDataHora(repasse.repassadoEm) : '—'}; taxa retida ${formatarMoeda(repasse.valorBruto - repasse.valorLiquido)}${taxa === null ? '' : ` (${taxa}%)`}`
-          : `estimado${taxa === null ? ' (taxa padrão)' : `, taxa de ${taxa}%`}`}
-      </span>
-    </span>
-  );
+  return linha.liquido === null ? '—' : <span className="numero">{formatarMoeda(linha.liquido)}</span>;
 }
 
 function textoLiquido(linha: CampanhaLinha): string {
@@ -213,31 +172,21 @@ function textoLiquido(linha: CampanhaLinha): string {
   return `${formatarMoeda(linha.liquido)} ${linha.repasse ? 'repassado' : 'estimado'}`;
 }
 
-const STATUS_COM_CONTRIBUICOES: ReadonlySet<CampanhaResponse['status']> = new Set([
-  'ativo', 'sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao',
-]);
+// Campanha que já terminou (bloco "Campanhas encerradas" do Estúdio).
+const STATUS_ENCERRADA: ReadonlySet<CampanhaResponse['status']> = new Set(['sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao']);
 
 async function montarLinhasCampanhas(
   authFetch: PropsPagina['auth']['authFetch'],
   campanhas: CampanhaResponse[],
 ): Promise<CampanhaLinha[]> {
-  const comContribuicoes = campanhas.filter((campanha) => STATUS_COM_CONTRIBUICOES.has(campanha.status));
-  // Falhar uma métrica não derruba a lista: a célula fica "—".
-  const [repasses, ...resumos] = await Promise.allSettled([
-    comContribuicoes.length > 0 ? contaRecebimentoApi.listarRepasses(authFetch) : Promise.resolve([]),
-    ...comContribuicoes.map((campanha) => contribuicaoApi.resumoDaCampanha(authFetch, campanha.idCampanha)),
-  ]);
+  // Repasse só existe em campanha encerrada; falhar a consulta não derruba a lista (o líquido cai no estimado).
   const repassePorCampanha = new Map<number, RepasseResponse>();
-  if (repasses.status === 'fulfilled') {
-    for (const repasse of repasses.value as RepasseResponse[]) {
+  if (campanhas.some((campanha) => STATUS_ENCERRADA.has(campanha.status))) {
+    const repasses = await contaRecebimentoApi.listarRepasses(authFetch).catch(() => [] as RepasseResponse[]);
+    for (const repasse of repasses) {
       if (repasse.status === 'concluido') repassePorCampanha.set(repasse.idCampanha, repasse);
     }
   }
-  const pagasPorCampanha = new Map<number, number>();
-  comContribuicoes.forEach((campanha, indice) => {
-    const resumo = resumos[indice];
-    if (resumo.status === 'fulfilled') pagasPorCampanha.set(campanha.idCampanha, (resumo.value as { pagas: number }).pagas);
-  });
 
   return campanhas.map((campanha) => {
     const repasse = repassePorCampanha.get(campanha.idCampanha) ?? null;
@@ -245,11 +194,7 @@ async function montarLinhasCampanhas(
       ...campanha,
       status: rotuloStatusCampanha(campanha),
       statusOriginal: campanha.status,
-      temVideo: Boolean(campanha.videoApresentacaoUrl),
       percentualMeta: percentualArrecadado(campanha),
-      doadoresConfirmados: STATUS_COM_CONTRIBUICOES.has(campanha.status)
-        ? (pagasPorCampanha.get(campanha.idCampanha) ?? null)
-        : 0,
       diasRestantesCaptacao: campanha.status === 'ativo' ? diasRestantes(campanha.dataFim) : null,
       liquido: repasse ? repasse.valorLiquido : campanha.valorLiquidoEstimado,
       repasse,
@@ -272,9 +217,18 @@ function PainelCampanhas({
     criando, abrirCriando, fecharCriando, alterando, consultando, excluindo,
     fecharAlterando, fecharConsultando, fecharExcluindo, chaveRecarga, recarregar, acoesCompletas,
   } = useCrudModais<CampanhaLinha>();
-  const listar = useCallback(
-    (): Promise<CampanhaLinha[]> => montarLinhasCampanhas(auth.authFetch, campanhas),
-    [auth.authFetch, campanhas],
+  // Dois blocos (Lucas e Alexia, 14-11-2026): Ativas e Encerradas. Rascunho, em análise e rejeitada ficam nas
+  // Ativas "por enquanto", apagadas (ainda não estão no ar). Colunas enxutas: id, vídeo, lançamento, meta e modalidade
+  // saíram (estão no Consultar); a meta já aparece no % e na barra do arrecadado.
+  const campanhasAtivas = useMemo(() => campanhas.filter((campanha) => !STATUS_ENCERRADA.has(campanha.status)), [campanhas]);
+  const campanhasEncerradas = useMemo(() => campanhas.filter((campanha) => STATUS_ENCERRADA.has(campanha.status)), [campanhas]);
+  const listarAtivas = useCallback(
+    (): Promise<CampanhaLinha[]> => montarLinhasCampanhas(auth.authFetch, campanhasAtivas),
+    [auth.authFetch, campanhasAtivas],
+  );
+  const listarEncerradas = useCallback(
+    (): Promise<CampanhaLinha[]> => montarLinhasCampanhas(auth.authFetch, campanhasEncerradas),
+    [auth.authFetch, campanhasEncerradas],
   );
   const podeCriar = statusPesquisador === 'ativo';
   const mudou = () => {
@@ -282,47 +236,63 @@ function PainelCampanhas({
     aoMudarCampanhas();
   };
 
+  const colunaCampanha = { chave: 'titulo', rotulo: 'campanha', tipo: 'nome', umaLinha: true } as const;
+  const colunaSituacao = { chave: 'status', rotulo: 'situação', tipo: 'status', renderizar: renderizarStatus, textoExibido: textoStatus } as const;
+  const colunasDinheiro = [
+    { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro', renderizar: renderizarArrecadado },
+    { chave: 'percentualMeta', rotulo: '% da meta', tipo: 'numero', renderizar: (linha: CampanhaLinha) => (linha.percentualMeta === null ? '—' : `${linha.percentualMeta}%`) },
+  ] as const;
+  const colunaLiquido = { chave: 'liquido', rotulo: 'líquido', tipo: 'dinheiro', renderizar: renderizarLiquido, textoExibido: textoLiquido } as const;
+  const ajuda = 'Líquido: o que você recebe depois da taxa da plataforma; antes do repasse, é uma estimativa com base no arrecadado até agora.';
+
   return (
     <>
       <GenericTable<CampanhaLinha>
-        titulo="Campanhas"
+        titulo="Campanhas ativas"
         nivelTitulo={2}
-        ajuda="Consulte e gerencie os projetos que você cadastrou. Doadores: contribuições com pagamento confirmado. Líquido: o que você recebe depois da taxa da plataforma; antes do repasse, é uma estimativa com base no arrecadado até agora."
+        ajuda={`No ar e em captação. Rascunhos, campanhas em análise e rejeitadas aparecem aqui mais apagadas, porque ainda não estão no ar. Doadores, repasse e taxa retida: em Consultar. ${ajuda}`}
         acaoTopo={podeCriar && <BotaoCriar rotulo="Nova campanha" aoClicar={abrirCriando} />}
         colunas={[
-          { chave: 'idCampanha', rotulo: 'id', tipo: 'id' },
-          { chave: 'titulo', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
-          { chave: 'status', rotulo: 'situação', tipo: 'status', renderizar: renderizarStatus, textoExibido: textoStatus },
-          { chave: 'dataInicio', rotulo: 'lançamento', tipo: 'data' },
-          { chave: 'dataFim', rotulo: 'encerramento', tipo: 'data' },
-          { chave: 'modelo', rotulo: 'modalidade', tipo: 'texto', renderizar: (linha) => ROTULO_MODELO_CAMPANHA[linha.modelo] },
-          { chave: 'temVideo', rotulo: 'vídeo', tipo: 'simNao' },
-          { chave: 'metaFinanceira', rotulo: 'meta', tipo: 'dinheiro' },
-          { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro', renderizar: renderizarArrecadado },
-          { chave: 'percentualMeta', rotulo: '% da meta', tipo: 'numero', renderizar: (linha) => (linha.percentualMeta === null ? '—' : `${linha.percentualMeta}%`) },
-          { chave: 'doadoresConfirmados', rotulo: 'doadores', tipo: 'numero' },
+          colunaCampanha,
+          colunaSituacao,
+          ...colunasDinheiro,
           { chave: 'diasRestantesCaptacao', rotulo: 'dias rest.', tipo: 'numero' },
-          {
-            chave: 'liquido',
-            rotulo: 'líquido',
-            tipo: 'dinheiro',
-            renderizar: renderizarLiquido,
-            textoExibido: textoLiquido,
-          },
+          colunaLiquido,
         ]}
         chavePrimaria="idCampanha"
-        listar={listar}
+        listar={listarAtivas}
         chaveRecarga={chaveRecarga}
         acoes={acoesCompletas}
+        linhaApagada={(linha) => linha.statusOriginal !== 'ativo'}
         filtrosFacetados={[{ chave: 'status', rotulo: 'Situação', ordem: ORDEM_ROTULOS_STATUS_CAMPANHA }]}
         vazio={{
           icone: 'fa-flask',
-          titulo: 'Nenhuma campanha cadastrada.',
+          titulo: 'Nenhuma campanha ativa.',
           texto: podeCriar
             ? 'Crie uma campanha para começar a compartilhar sua pesquisa.'
             : 'Campanhas são criadas por pesquisadores com perfil ativo.',
         }}
       />
+      <div className="mt-10">
+        <GenericTable<CampanhaLinha>
+          titulo="Campanhas encerradas"
+          nivelTitulo={2}
+          ajuda={`Campanhas que já terminaram: com sucesso, sem atingir a meta, encerradas antes do prazo ou pela moderação. ${ajuda}`}
+          colunas={[
+            colunaCampanha,
+            colunaSituacao,
+            { chave: 'dataFim', rotulo: 'encerramento', tipo: 'data' },
+            ...colunasDinheiro,
+            colunaLiquido,
+          ]}
+          chavePrimaria="idCampanha"
+          listar={listarEncerradas}
+          chaveRecarga={chaveRecarga}
+          acoes={acoesCompletas}
+          filtrosFacetados={[{ chave: 'status', rotulo: 'Situação', ordem: ORDEM_ROTULOS_STATUS_CAMPANHA }]}
+          vazio={{ icone: 'fa-flag-checkered', titulo: 'Nenhuma campanha encerrada ainda.' }}
+        />
+      </div>
       {criando && <ModalCriarCampanha auth={auth} comRecompensas aoMudar={mudou} aoFechar={fecharCriando} />}
       {alterando?.statusOriginal === 'rascunho' && (
         <ModalCriarCampanha auth={auth} idRascunho={alterando.idCampanha} comRecompensas aoMudar={mudou} aoFechar={fecharAlterando} />
@@ -331,7 +301,7 @@ function PainelCampanhas({
         <ModalAlterarCampanha auth={auth} idCampanha={alterando.idCampanha} ehDono aoMudar={mudou} aoFechar={fecharAlterando} />
       )}
       {consultando && (
-        <ModalConsultarCampanha auth={auth} idCampanha={consultando.idCampanha} comoDono aoFechar={fecharConsultando} />
+        <ModalConsultarCampanha auth={auth} idCampanha={consultando.idCampanha} comoDono repasse={consultando.repasse} aoFechar={fecharConsultando} />
       )}
       {excluindo && (
         <ModalExcluirCampanha
@@ -353,11 +323,9 @@ interface RecompensaLinha extends RecompensaResponse {
 
 function PainelRecompensas({ auth, campanhas }: { auth: PropsPagina['auth']; campanhas: CampanhaResponse[] }) {
   const [chaveRecarga, setChaveRecarga] = useState(0);
-  const [campanhaNova, setCampanhaNova] = useState('');
   const [editando, setEditando] = useState<{ campanha: number; recompensa?: RecompensaResponse } | null>(null);
-  const { reportarErro } = useErroToast();
-  const { mostrar } = useToast();
-  const { executar } = useEnvio(reportarErro);
+  const [consultando, setConsultando] = useState<RecompensaLinha | null>(null);
+  const [excluindo, setExcluindo] = useState<RecompensaLinha | null>(null);
   const listar = useCallback(async (): Promise<RecompensaLinha[]> => {
     const listas = await Promise.all(campanhas.map(async (campanha) => {
       const recompensas = await recompensaApi.listar(auth.authFetch, campanha.idCampanha);
@@ -371,9 +339,6 @@ function PainelRecompensas({ auth, campanhas }: { auth: PropsPagina['auth']; cam
     return listas.flat();
   }, [auth.authFetch, campanhas]);
   const recarregar = () => setChaveRecarga((atual) => atual + 1);
-  const selecionada = campanhas.some((campanha) => String(campanha.idCampanha) === campanhaNova)
-    ? campanhaNova
-    : (campanhas[0] ? String(campanhas[0].idCampanha) : '');
 
   return (
     <>
@@ -382,47 +347,35 @@ function PainelRecompensas({ auth, campanhas }: { auth: PropsPagina['auth']; cam
         nivelTitulo={2}
         ajuda="Ofereça reconhecimento, acesso antecipado ou conteúdo digital às pessoas que apoiarem."
         acaoTopo={campanhas.length > 0 && (
-          <div className="flex items-center gap-2 min-w-0">
-            <label className="sr-only" htmlFor="estudio-campanha-recompensa">Campanha da nova recompensa</label>
-            <select id="estudio-campanha-recompensa" className="input-padrao min-w-0 max-w-xs truncate" value={selecionada} onChange={(evento) => setCampanhaNova(evento.target.value)}>
-              {campanhas.map((campanha) => <option key={campanha.idCampanha} value={campanha.idCampanha}>{campanha.titulo}</option>)}
-            </select>
-            <BotaoCriar rotulo="Nova recompensa" aoClicar={() => setEditando({ campanha: Number(selecionada) })} />
-          </div>
+          <BotaoCriar rotulo="Nova recompensa" aoClicar={() => setEditando({ campanha: campanhas[0].idCampanha })} />
         )}
         colunas={[
           { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
           { chave: 'titulo', rotulo: 'recompensa', tipo: 'nome', umaLinha: true },
           { chave: 'tipoRotulo', rotulo: 'tipo', tipo: 'texto' },
           { chave: 'valorMinimo', rotulo: 'a partir de', tipo: 'dinheiro' },
-          { chave: 'escolhidas', rotulo: 'escolhidas', tipo: 'numero' },
           {
             chave: 'situacao',
             rotulo: 'situação',
             tipo: 'status',
-            renderizar: (linha) => (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={'badge ' + (linha.ativo ? 'badge-sucesso' : 'badge-neutro')}>{linha.situacao}</span>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-pequeno"
-                  onClick={() => void executar(async () => {
-                    await recompensaApi.alterar(auth.authFetch, linha.idRecompensa, { ativo: !linha.ativo });
-                    mostrar(linha.ativo ? 'Recompensa desativada.' : 'Recompensa reativada.');
-                    recarregar();
-                  })}
-                >
-                  {linha.ativo ? 'Desativar' : 'Reativar'}
-                </button>
-              </div>
-            ),
+            // Só o selo: desativar e reativar ficam no Alterar; quantas vezes foi concedida, no Consultar.
+            renderizar: (linha) => <span className={'badge ' + (linha.ativo ? 'badge-sucesso' : 'badge-neutro')}>{linha.situacao}</span>,
             textoExibido: (linha) => linha.situacao,
           },
         ]}
         chavePrimaria="idRecompensa"
         listar={listar}
         chaveRecarga={chaveRecarga}
-        acoes={{ alterar: (linha) => setEditando({ campanha: linha.idCampanha, recompensa: linha }) }}
+        acoes={{
+          consultar: setConsultando,
+          alterar: (linha) => setEditando({ campanha: linha.idCampanha, recompensa: linha }),
+          excluir: setExcluindo,
+        }}
+        acaoIndisponivel={(linha, acao) =>
+          acao === 'excluir' && linha.escolhidas > 0
+            ? 'Já foi concedida a quem apoiou: não pode ser excluída. Para tirá-la do ar, desative em Alterar.'
+            : undefined
+        }
         filtrosFacetados={[
           { chave: 'tituloCampanha', rotulo: 'Campanha' },
           { chave: 'tipoRotulo', rotulo: 'Tipo' },
@@ -434,11 +387,47 @@ function PainelRecompensas({ auth, campanhas }: { auth: PropsPagina['auth']; cam
           texto: campanhas.length ? 'Cadastre recompensas simbólicas para suas campanhas.' : undefined,
         }}
       />
+      {consultando && (
+        <ModalFicha titulo="Consultar Recompensa" subtitulo={consultando.titulo} aoFechar={() => setConsultando(null)}>
+          <SecaoFicha titulo="Recompensa">
+            <CampoFicha rotulo="Campanha" valor={consultando.tituloCampanha} largura="cheia" />
+            <CampoFicha rotulo="Tipo" valor={consultando.tipoRotulo} />
+            <CampoFicha rotulo="A partir de" valor={formatarMoeda(consultando.valorMinimo)} />
+            <CampoFicha rotulo="Situação" valor={consultando.situacao} />
+            <CampoFicha rotulo="Concedida" valor={`${consultando.escolhidas} ${consultando.escolhidas === 1 ? 'vez' : 'vezes'}`} />
+            <CampoFicha rotulo="Descrição" valor={consultando.descricao} largura="cheia" />
+            {consultando.links.length > 0 && (
+              <CampoFicha
+                rotulo="Link especial"
+                valor={<a href={consultando.links[0].url} target="_blank" rel="noreferrer" className="link-texto break-all">{consultando.links[0].url}</a>}
+                largura="cheia"
+              />
+            )}
+          </SecaoFicha>
+        </ModalFicha>
+      )}
+      {excluindo && (
+        <ModalExcluirItem
+          nome={excluindo.titulo}
+          campos={
+            <>
+              <CampoFicha rotulo="Campanha" valor={excluindo.tituloCampanha} largura="cheia" />
+              <CampoFicha rotulo="Tipo" valor={excluindo.tipoRotulo} />
+              <CampoFicha rotulo="A partir de" valor={formatarMoeda(excluindo.valorMinimo)} />
+            </>
+          }
+          remover={() => recompensaApi.excluir(auth.authFetch, excluindo.idRecompensa)}
+          mensagemSucesso="Recompensa excluída."
+          aoFechar={() => setExcluindo(null)}
+          aoExcluido={recarregar}
+        />
+      )}
       {editando && (
         <ModalRecompensa
           auth={auth}
           idCampanha={editando.campanha}
           recompensa={editando.recompensa}
+          campanhasParaEscolher={campanhas}
           aoFechar={() => setEditando(null)}
           aoSalva={recarregar}
         />
@@ -456,7 +445,6 @@ interface AtualizacaoLinha extends AtualizacaoCampanhaResponse {
 
 function PainelAtualizacoes({ auth, campanhas }: { auth: PropsPagina['auth']; campanhas: CampanhaResponse[] }) {
   const [chaveRecarga, setChaveRecarga] = useState(0);
-  const [campanhaNova, setCampanhaNova] = useState('');
   const [editando, setEditando] = useState<{ campanha: number; atualizacao?: AtualizacaoCampanhaResponse } | null>(null);
   const [excluindo, setExcluindo] = useState<AtualizacaoCampanhaResponse | null>(null);
   const [consultando, setConsultando] = useState<AtualizacaoLinha | null>(null);
@@ -478,9 +466,6 @@ function PainelAtualizacoes({ auth, campanhas }: { auth: PropsPagina['auth']; ca
     return listas.flat();
   }, [auth.authFetch, campanhas]);
   const recarregar = () => setChaveRecarga((atual) => atual + 1);
-  const selecionada = campanhasPublicaveis.some((campanha) => String(campanha.idCampanha) === campanhaNova)
-    ? campanhaNova
-    : (campanhasPublicaveis[0] ? String(campanhasPublicaveis[0].idCampanha) : '');
 
   return (
     <>
@@ -489,13 +474,7 @@ function PainelAtualizacoes({ auth, campanhas }: { auth: PropsPagina['auth']; ca
         nivelTitulo={2}
         ajuda="Publique o andamento da pesquisa e registre resultados para quem acompanha suas campanhas."
         acaoTopo={campanhasPublicaveis.length > 0 && (
-          <div className="flex items-center gap-2 min-w-0">
-            <label className="sr-only" htmlFor="estudio-campanha-atualizacao">Campanha da nova atualização</label>
-            <select id="estudio-campanha-atualizacao" className="input-padrao min-w-0 max-w-xs truncate" value={selecionada} onChange={(evento) => setCampanhaNova(evento.target.value)}>
-              {campanhasPublicaveis.map((campanha) => <option key={campanha.idCampanha} value={campanha.idCampanha}>{campanha.titulo}</option>)}
-            </select>
-            <BotaoCriar rotulo="Nova atualização" aoClicar={() => setEditando({ campanha: Number(selecionada) })} />
-          </div>
+          <BotaoCriar rotulo="Nova atualização" aoClicar={() => setEditando({ campanha: campanhasPublicaveis[0].idCampanha })} />
         )}
         colunas={[
           { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
@@ -508,7 +487,7 @@ function PainelAtualizacoes({ auth, campanhas }: { auth: PropsPagina['auth']; ca
             rotulo: 'situação',
             tipo: 'status',
             renderizar: (linha) => (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex flex-wrap items-center gap-2">
                 <span className={'badge ' + (linha.ativo ? 'badge-sucesso' : linha.ocultadaModeracao ? 'badge-erro' : 'badge-neutro')}>
                   {linha.situacao}
                 </span>
@@ -561,6 +540,7 @@ function PainelAtualizacoes({ auth, campanhas }: { auth: PropsPagina['auth']; ca
           auth={auth}
           idCampanha={editando.campanha}
           atualizacao={editando.atualizacao}
+          campanhasParaEscolher={campanhasPublicaveis}
           aoFechar={() => setEditando(null)}
           aoSalva={recarregar}
         />
@@ -620,9 +600,7 @@ function PainelComentarios({ auth, campanhas }: { auth: PropsPagina['auth']; cam
   const [chaveRecarga, setChaveRecarga] = useState(0);
   const [excluindo, setExcluindo] = useState<ComentarioLinha | null>(null);
   const [consultando, setConsultando] = useState<ComentarioLinha | null>(null);
-  const { reportarErro } = useErroToast();
-  const { mostrar } = useToast();
-  const { executar } = useEnvio(reportarErro);
+  const [alterando, setAlterando] = useState<ComentarioLinha | null>(null);
   const listar = useCallback(async (): Promise<ComentarioLinha[]> => {
     const listas = await Promise.all(campanhas.map(async (campanha) => {
       const comentarios = await listarComentariosDaCampanha(auth.authFetch, campanha.idCampanha);
@@ -631,18 +609,14 @@ function PainelComentarios({ auth, campanhas }: { auth: PropsPagina['auth']; cam
         ...comentario,
         tituloCampanha: campanha.titulo,
         autor: comentario.nomePesquisador ?? 'Pesquisador removido',
-        endosso: comentario.endossado ? `Endossado (#${comentario.ordemEndosso ?? '—'})` : 'Pendente',
+        // Sem endosso: só um traço ("pendente" prometia um endosso que quase nunca vem).
+        endosso: comentario.endossado ? `Endossado (#${comentario.ordemEndosso ?? '—'})` : '-',
         endossosAtivos,
       }));
     }));
     return listas.flat();
   }, [auth.authFetch, campanhas]);
   const recarregar = () => setChaveRecarga((atual) => atual + 1);
-  const alternarEndosso = (linha: ComentarioLinha, endossar: boolean) => void executar(async () => {
-    await comentarioApi.alternarEndosso(auth.authFetch, linha.idComentario, endossar);
-    mostrar(endossar ? 'Comentário endossado.' : 'Endosso removido.');
-    recarregar();
-  });
 
   return (
     <>
@@ -660,35 +634,15 @@ function PainelComentarios({ auth, campanhas }: { auth: PropsPagina['auth']; cam
               chave: 'endosso',
               rotulo: 'endosso',
               tipo: 'status',
-              renderizar: (linha) => (
-                <span className={'badge ' + (linha.endossado ? 'badge-sucesso' : 'badge-aviso')}>{linha.endosso}</span>
-              ),
+              renderizar: (linha) => (linha.endossado ? <span className="badge badge-sucesso">{linha.endosso}</span> : '-'),
               textoExibido: (linha) => linha.endosso,
             }
           ]}
           chavePrimaria="idComentario"
           listar={listar}
           chaveRecarga={chaveRecarga}
-          acoes={{
-            consultar: setConsultando,
-            excluir: setExcluindo,
-            endossarComentario: (linha) => alternarEndosso(linha, true),
-            removerEndosso: (linha) => alternarEndosso(linha, false),
-          }}
-          acaoIndisponivel={(linha, acao) => {
-            if (acao === 'endossarComentario') {
-              if (linha.endossado) {
-                return null;
-              }
-              return linha.endossosAtivos >= limiteEndossos
-                ? `O limite de ${limiteEndossos} endossos ativos desta campanha foi atingido.`
-                : undefined;
-            }
-            if (acao === 'removerEndosso') {
-              return linha.endossado ? undefined : null;
-            }
-            return undefined;
-          }}
+          // Endossar e tirar o endosso ficam no Alterar (como na maioria dos sistemas), com a prévia do cartão.
+          acoes={{ consultar: setConsultando, alterar: setAlterando, excluir: setExcluindo }}
           filtrosFacetados={[
             { chave: 'tituloCampanha', rotulo: 'Campanha' },
             { chave: 'endosso', rotulo: 'Endosso' },
@@ -696,7 +650,7 @@ function PainelComentarios({ auth, campanhas }: { auth: PropsPagina['auth']; cam
           vazio={{
             icone: 'fa-comments',
             titulo: campanhas.length ? 'Nenhum comentário recebido.' : 'Cadastre uma campanha para receber comentários.',
-            texto: 'Os comentários das campanhas aparecerão aqui para consulta e endosso.',
+            texto: 'Os comentários das campanhas aparecerão aqui. Para endossar, use Alterar.',
           }}
         />
       </div>
@@ -710,6 +664,15 @@ function PainelComentarios({ auth, campanhas }: { auth: PropsPagina['auth']; cam
           </div>
         </ModalFicha>
       )}
+      {alterando && (
+        <ModalEndossoComentario
+          auth={auth}
+          comentario={alterando}
+          limiteEndossos={limiteEndossos}
+          aoFechar={() => setAlterando(null)}
+          aoSalvo={recarregar}
+        />
+      )}
       {excluindo && (
         <ModalExcluirComentario
           autor={excluindo.autor}
@@ -717,11 +680,86 @@ function PainelComentarios({ auth, campanhas }: { auth: PropsPagina['auth']; cam
           excluir={(bloquear) => bloquear
             ? comentarioApi.bloquear(auth.authFetch, excluindo.idComentario).then(() => undefined)
             : comentarioApi.excluir(auth.authFetch, excluindo.idComentario)}
+          denunciar={(idMotivo) => denunciaApi.criar(auth.authFetch, { idComentario: excluindo.idComentario, idMotivo }).then(() => undefined)}
           aoFechar={() => setExcluindo(null)}
           aoExcluido={recarregar}
         />
       )}
     </>
+  );
+}
+
+// Alterar um comentário recebido = decidir o endosso (o texto é do autor e não muda aqui). A prévia mostra o cartão
+// exatamente como aparece no bloco Endosso da página da campanha.
+function ModalEndossoComentario({
+  auth,
+  comentario,
+  limiteEndossos,
+  aoFechar,
+  aoSalvo,
+}: {
+  auth: PropsPagina['auth'];
+  comentario: ComentarioLinha;
+  limiteEndossos: number;
+  aoFechar: () => void;
+  aoSalvo: () => void;
+}) {
+  const { mostrar } = useToast();
+  const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
+  const { ocupado, executar } = useEnvio(reportarErro, limparErro);
+  const [endossado, setEndossado] = useState(comentario.endossado);
+  const limiteAtingido = !comentario.endossado && comentario.endossosAtivos >= limiteEndossos;
+  const mudou = endossado !== comentario.endossado;
+
+  const salvar = () => void executar(async () => {
+    if (mudou) {
+      await comentarioApi.alternarEndosso(auth.authFetch, comentario.idComentario, endossado);
+      mostrar(endossado ? 'Comentário endossado.' : 'Endosso removido.');
+      aoSalvo();
+    }
+    aoFechar();
+  });
+
+  return (
+    <ModalFicha
+      titulo="Alterar Comentário"
+      subtitulo={comentario.tituloCampanha}
+      aoFechar={aoFechar}
+      erro={erro}
+      rodape={<RodapeAcoes aoCancelar={aoFechar} acao={{ rotulo: 'Salvar', rotuloOcupado: 'Salvando...', ocupado, aoClicar: salvar }} />}
+    >
+      <div className="space-y-5">
+        <label className={`flex items-start gap-3 paragrafo texto-padrao ${limiteAtingido ? 'opacity-60' : 'cursor-pointer'}`}>
+          <input
+            type="checkbox"
+            checked={endossado}
+            disabled={limiteAtingido || ocupado}
+            onChange={(evento) => setEndossado(evento.target.checked)}
+            className="mt-1 w-4 h-4 accent-primary"
+          />
+          <span>
+            <span className="enfase texto-forte">Endossar este comentário</span>
+            <span className="block legenda texto-fraco">
+              {limiteAtingido
+                ? `Esta campanha já tem ${limiteEndossos} comentários endossados (o limite). Tire o endosso de outro para endossar este.`
+                : `Endossado, ele aparece no bloco Endosso da página da campanha (até ${limiteEndossos} por campanha).`}
+            </span>
+          </span>
+        </label>
+        <div>
+          <p className="rotulo mb-2">{endossado ? 'Prévia na página da campanha' : 'Comentário (não aparece na página da campanha)'}</p>
+          <div className={endossado ? undefined : 'opacity-60'}>
+            <CartaoEndosso
+              nome={comentario.nomePesquisador}
+              foto={comentario.fotoPesquisador}
+              idPesquisador={comentario.idPesquisador}
+              conteudo={comentario.conteudo}
+              previa
+            />
+          </div>
+        </div>
+      </div>
+    </ModalFicha>
   );
 }
 
@@ -734,9 +772,6 @@ function PainelContribuicoes({ auth, campanhas }: { auth: PropsPagina['auth']; c
 
   return (
     <>
-      <p className="paragrafo texto-fraco mb-4">
-        Consulte os apoios recebidos em cada campanha. A identidade de quem contribuiu anonimamente não é exibida.
-      </p>
       <GenericTable<ContribuicaoRecebida>
         titulo="Contribuições"
         nivelTitulo={2}
@@ -745,14 +780,6 @@ function PainelContribuicoes({ auth, campanhas }: { auth: PropsPagina['auth']; c
           { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
           { chave: 'apoiador', rotulo: 'apoiador', tipo: 'nome', umaLinha: true },
           { chave: 'valor', rotulo: 'valor', tipo: 'dinheiro' },
-          { chave: 'criadoEm', rotulo: 'data', tipo: 'dataHora' },
-          {
-            chave: 'meioPagamento',
-            rotulo: 'meio',
-            tipo: 'texto',
-            renderizar: (linha) => <span>{ROTULO_MEIO_PAGAMENTO[linha.meioPagamento]}</span>,
-            textoExibido: (linha) => ROTULO_MEIO_PAGAMENTO[linha.meioPagamento],
-          },
           {
             chave: 'status',
             rotulo: 'situação',
@@ -764,6 +791,14 @@ function PainelContribuicoes({ auth, campanhas }: { auth: PropsPagina['auth']; c
             ),
             textoExibido: (linha) => ROTULO_STATUS_CONTRIBUICAO[linha.status],
           },
+          {
+            chave: 'meioPagamento',
+            rotulo: 'meio',
+            tipo: 'texto',
+            renderizar: (linha) => <span>{ROTULO_MEIO_PAGAMENTO[linha.meioPagamento]}</span>,
+            textoExibido: (linha) => ROTULO_MEIO_PAGAMENTO[linha.meioPagamento],
+          },
+          { chave: 'criadoEm', rotulo: 'data', tipo: 'dataHora' },
           { chave: 'recompensas', rotulo: 'recompensas', tipo: 'texto' },
         ]}
         chavePrimaria="idContribuicao"

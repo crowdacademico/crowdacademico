@@ -140,6 +140,17 @@
     color: var(--cor-texto-sobre-cor);
   }
 
+  /* Par do .btn-danger, como o verde forte e o claro (btn-primary e btn-sucesso): a ação de perigo mais forte, ao lado
+     da comum (ex.: "Excluir e bloquear" ao lado de "Excluir"). Sólido em repouso, um pouco mais escuro no hover. */
+  .btn-danger-forte {
+    background-color: var(--cor-fundo-erro-forte);
+    color: var(--cor-texto-sobre-cor);
+  }
+
+  .btn-danger-forte:hover:not(:disabled):not([aria-disabled="true"]) {
+    filter: brightness(0.9);
+  }
+
   /* Como o .btn-danger: pastel em repouso, cor sólida no hover. */
   .btn-sucesso {
     background-color: var(--cor-fundo-sucesso);

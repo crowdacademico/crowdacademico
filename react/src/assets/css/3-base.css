@@ -87,6 +87,9 @@
 
   html {
     font-size: calc(16px * var(--escala-fonte));
+    /* Reserva sempre o espaço da barra de rolagem: trocar de página/seção entre uma curta (sem barra) e uma longa
+       (com barra) não empurra mais o conteúdo para os lados ("tabelas dançando" no Estúdio). */
+    scrollbar-gutter: stable;
   }
 
   body {

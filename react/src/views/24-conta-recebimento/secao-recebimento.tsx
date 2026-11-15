@@ -71,7 +71,7 @@ export function SecaoRecebimento({ authFetch }: { authFetch: AuthFetch }) {
   return (
     <>
       <SecaoFicha titulo="Recebimento por Pix" nivel={2}>
-        <MensagemErro texto={erro} className="erro-campo" />
+        <MensagemErro texto={erro} className="erro-campo sm:col-span-2" />
         {conta && !editando && (
           <>
             <CampoFicha rotulo="Chave Pix" valor={`${ROTULO_TIPO_CHAVE_PIX[conta.tipoChave]}: ${conta.chaveMascarada}`} />

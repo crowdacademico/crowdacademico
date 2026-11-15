@@ -5,6 +5,7 @@ import { TabelaComentarios } from '../../components/crud/tabelas/11-tabela-comen
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { comentarioApi } from '../../services/17-comentario/api/comentario.api';
+import { denunciaApi } from '../../services/19-denuncia/api/denuncia.api';
 import { ModalDenunciar } from '../19-denuncia/modal-denunciar';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
@@ -106,6 +107,7 @@ export function SecaoComentariosRecebidos({ auth, idCampanha, publicada }: Secao
               await comentarioApi.excluir(auth.authFetch, excluindo.idComentario);
             }
           }}
+          denunciar={(idMotivo) => denunciaApi.criar(auth.authFetch, { idComentario: excluindo.idComentario, idMotivo }).then(() => undefined)}
           aoFechar={() => setExcluindo(null)}
           aoExcluido={recarregar}
         />

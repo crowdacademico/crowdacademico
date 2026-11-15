@@ -25,7 +25,9 @@ export const TIPOS_COLUNA = {
   status: colunaCurta(FORMATOS.texto),
   // Código de formato fixo (ex.: código CNPq "1.00.00.00-3"): curto e centralizado como status, sem quebrar.
   codigo: colunaCurta(FORMATOS.texto),
-  dinheiro: colunaCurta(FORMATOS.dinheiro),
+  // Dinheiro alinhado à ESQUERDA (decisão do Lucas, 14-11-2026: centralizado fica esquisito), cabeçalho e valores;
+  // continua curta (largura do maior valor, sem quebrar).
+  dinheiro: { ...colunaCurta(FORMATOS.dinheiro), classe: 'crud-tabela__col--curta' },
   data: colunaCurta(FORMATOS.data),
   dataHora: colunaCurta(FORMATOS.dataHora),
   espera: colunaCurta(FORMATOS.espera),

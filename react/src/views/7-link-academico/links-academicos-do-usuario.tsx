@@ -137,8 +137,9 @@ function LinksEditaveis({ auth, idUsuario, nomeUsuario, aoMudarScore, contaPropr
           aoExcluir: (link) => void removerLink(link),
         }}
       />
-      <BotaoMostrarEsconder aberto={verExemplos} aoAlternar={() => setVerExemplos((v) => !v)} rotulo="exemplos de link" className="mt-3" />
-      {verExemplos && (
+      {/* Exemplos de link só para o admin no painel (conta de outra pessoa); na própria conta (área pública), não. */}
+      {!contaPropria && <BotaoMostrarEsconder aberto={verExemplos} aoAlternar={() => setVerExemplos((v) => !v)} rotulo="exemplos de link" className="mt-3" />}
+      {!contaPropria && verExemplos && (
         <ul className="legenda mt-2 space-y-1">
           {tiposLink.map(
             (tipo) =>

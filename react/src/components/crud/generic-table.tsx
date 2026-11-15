@@ -76,6 +76,9 @@ export interface GenericTableProps<T extends Linha> {
   // Ações em coluna própria, em vez de na coluna Ações (ver ColunaAcao).
   acoesEmColuna?: ColunaAcao[];
   filtrosFacetados?: FiltroFacetado<T>[];
+  // Linha "apagada" (opacidade menor, continua clicável): ex.: no Estúdio, a campanha que ainda não está no ar
+  // (rascunho, em análise, rejeitada) no meio das ativas.
+  linhaApagada?: (linha: T) => boolean;
   // Lista vazia (sem filtro): o que apareceria aqui e o próximo passo. Sem isto, uma mensagem genérica.
   vazio?: ConteudoEstadoVazio;
 }
@@ -144,6 +147,7 @@ export function GenericTable<T extends Linha>({
   acoes,
   acaoIndisponivel,
   acoesEmColuna,
+  linhaApagada,
   // Filtros por faceta: array de `{ chave, rotulo, ordem? }`. Genérico: funciona para QUALQUER coluna com
   // valores discretos (ex.: papel, impacto), e as opções de cada dropdown são derivadas sozinhas a partir dos
   // valores que já aparecem em `linha[chave]` (célula com vários valores separada por ", ", mesma convenção da
@@ -701,7 +705,7 @@ export function GenericTable<T extends Linha>({
               </thead>
               <tbody ref={corpoRef}>
                 {linhasPagina.map((linha) => (
-                  <tr key={String(linha[chavePrimaria])}>
+                  <tr key={String(linha[chavePrimaria])} className={linhaApagada?.(linha) ? 'opacity-55' : undefined}>
                     {colunas.map((coluna) => {
                       const tipo = TIPOS_COLUNA[coluna.tipo];
                       return (

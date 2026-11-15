@@ -19,6 +19,7 @@ import { SecaoAtualizacoesCampanha } from '../15-atualizacao-campanha/secao-atua
 import { SecaoRecompensasCampanha } from '../18-recompensa/secao-recompensas-campanha';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
 import { SecaoFinanceiroCampanha } from './secao-financeiro-campanha';
+import type { RepasseResponse } from '../../services/24-conta-recebimento/type/conta-recebimento.type';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
 import { contribuicaoApi } from '../../services/22-contribuicao/api/contribuicao.api';
@@ -30,6 +31,8 @@ interface ModalConsultarCampanhaProps {
   idCampanha: number;
   // Aberto pelo dono (Minhas Campanhas): mostra os comentários recebidos, com endossar e excluir.
   comoDono?: boolean;
+  // Estúdio: o repasse concluído da campanha (valor repassado, data, taxa retida), se houver.
+  repasse?: RepasseResponse | null;
   aoFechar: () => void;
 }
 
@@ -38,7 +41,7 @@ interface ModalConsultarCampanhaProps {
 // é TRANSFORMADA para exibição (`status` vira rótulo em português, `metaFinanceira`/`valorBrutoArrecadado`
 // viram string já formatada em R$): usar a linha direto quebraria o badge de status e formataria moeda em cima
 // de moeda já formatada. `useBuscar` pega o dado cru de verdade.
-export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoFechar }: ModalConsultarCampanhaProps) {
+export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, repasse = null, aoFechar }: ModalConsultarCampanhaProps) {
   const { dado: campanha, carregando, erro } = useBuscar(
     () => campanhaApi.buscar(auth.authFetch, String(idCampanha)),
     [idCampanha],
@@ -198,7 +201,7 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
 
           {/* Financeiro na linha inteira, embaixo de Dados e Auditoria (a mesma peça do Alterar). */}
           <div className={'lg:col-span-3' + ve('dados')}>
-            <SecaoFinanceiroCampanha campanha={campanha} meta={campanha.metaFinanceira} resumoContribuicoes={resumoContribuicoes} />
+            <SecaoFinanceiroCampanha campanha={campanha} meta={campanha.metaFinanceira} resumoContribuicoes={resumoContribuicoes} repasse={repasse} />
           </div>
 
           {/* Orçamento e cronograma, só para ler: a consulta mostra a campanha inteira. Uma linha divisória antes (com o

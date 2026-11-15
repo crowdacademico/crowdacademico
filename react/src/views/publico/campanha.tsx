@@ -33,8 +33,7 @@ import {
 } from './util-campanhas';
 import { CartaoAcoesCampanha, FormComentarCampanha } from './acoes-campanha';
 import { ModalAtualizacoes } from './lista-atualizacoes';
-import { AvatarUsuario } from '../../components/layout/avatar-usuario';
-import { ModalDenunciar } from '../19-denuncia/modal-denunciar';
+import { CartaoEndosso } from './cartao-endosso';
 import { recompensaApi } from '../../services/18-recompensa/api/recompensa.api';
 import { ROTULO_TIPO_RECOMPENSA } from '../../services/18-recompensa/constants/recompensa.constants';
 import type { RecompensaResponse } from '../../services/18-recompensa/type/recompensa.type';
@@ -69,7 +68,6 @@ export function Campanha({ auth }: PropsPagina) {
   const [carregando, setCarregando] = useState(idValido);
   const [aba, setAba] = useState<AbaCampanha>('sobre');
   const [vendoAtualizacoes, setVendoAtualizacoes] = useState(false);
-  const [denunciandoComentario, setDenunciandoComentario] = useState<ComentarioResponse | null>(null);
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
 
   useEffect(() => {
@@ -312,27 +310,13 @@ export function Campanha({ auth }: PropsPagina) {
                         {!comentariosCarregando && !comentarios.erro && comentarios.dados.length > 0 && (
                           <ul className="space-y-4">
                             {comentarios.dados.map((comentario) => (
-                              <li key={comentario.idComentario} className="rounded-lg fundo-sutil border borda-padrao p-4 flex gap-3">
-                                <AvatarUsuario nome={comentario.nomePesquisador} foto={comentario.fotoPesquisador} tamanho="md" />
-                                <div className="min-w-0 flex-1">
-                                  {comentario.idPesquisador !== null ? (
-                                    <Link to={`/pesquisador/${comentario.idPesquisador}`} className="paragrafo enfase texto-forte hover:underline">
-                                      {comentario.nomePesquisador ?? 'Pesquisador'}
-                                    </Link>
-                                  ) : (
-                                    <span className="paragrafo enfase texto-forte">{comentario.nomePesquisador ?? 'Pesquisador'}</span>
-                                  )}
-                                  <p className="paragrafo texto-padrao whitespace-pre-wrap mt-1">{comentario.conteudo}</p>
-                                  {auth.autenticado && comentario.idPesquisador !== auth.usuario?.idUsuario && (
-                                    <button
-                                      type="button"
-                                      className="legenda texto-fraco hover:underline mt-2"
-                                      onClick={() => setDenunciandoComentario(comentario)}
-                                    >
-                                      <i className="fa-solid fa-flag mr-1" aria-hidden="true" /> Denunciar comentário
-                                    </button>
-                                  )}
-                                </div>
+                              <li key={comentario.idComentario}>
+                                <CartaoEndosso
+                                  nome={comentario.nomePesquisador}
+                                  foto={comentario.fotoPesquisador}
+                                  idPesquisador={comentario.idPesquisador}
+                                  conteudo={comentario.conteudo}
+                                />
                               </li>
                             ))}
                           </ul>
@@ -535,14 +519,6 @@ export function Campanha({ auth }: PropsPagina) {
               </div>
             </aside>
           </div>
-          {denunciandoComentario && (
-            <ModalDenunciar
-              authFetch={auth.authFetch}
-              alvo={{ idComentario: denunciandoComentario.idComentario }}
-              nomeAlvo={`o comentário de ${denunciandoComentario.nomePesquisador ?? 'pesquisador'}`}
-              aoFechar={() => setDenunciandoComentario(null)}
-            />
-          )}
           {vendoAtualizacoes && (
             <ModalAtualizacoes
               titulo={campanha.titulo}

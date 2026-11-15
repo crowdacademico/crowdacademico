@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CaixaAviso } from './caixa-aviso';
 import { CampoFicha, SecaoFicha } from './ficha-consulta';
 import { ModalFicha } from './modal-ficha';
@@ -6,30 +6,58 @@ import { RodapeAcoes } from './rodape-acoes';
 import { useErroToast } from '../layout/toast/use-erro-toast';
 import { useToast } from '../layout/toast/use-toast';
 import { useEnvio } from '../../services/constant/hook/use-envio';
+import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
+import type { MotivoDenunciaResponse } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
 
 interface ModalExcluirComentarioProps {
   autor: string;
   conteudo: string;
   // `bloquear`: exclui e impede o autor de comentar de novo nesta campanha (o comentário fica guardado, inativo).
   excluir: (bloquear: boolean) => Promise<void>;
+  // Denunciar à moderação junto (só o dono da campanha denuncia o comentário que recebeu). A denúncia leva o comentário
+  // e já o tira do ar (fn_denuncia_comentario_oculta, 05).
+  denunciar?: (idMotivo: number) => Promise<void>;
   aoFechar: () => void;
   aoExcluido: () => void;
 }
 
-// Excluir um comentário recebido, pelo dono da campanha. Duas saídas no mesmo modal: excluir (apaga de vez, o autor
-// pode comentar de novo) ou excluir e bloquear (para ofensa, ameaça ou spam). Bloquear nunca é automático: nem todo
-// comentário excluído é ofensivo. O autor não é avisado de nenhuma das duas.
-export function ModalExcluirComentario({ autor, conteudo, excluir, aoFechar, aoExcluido }: ModalExcluirComentarioProps) {
+// Excluir um comentário recebido, pelo dono da campanha: excluir (apaga de vez, o autor pode comentar de novo) ou
+// excluir e bloquear (para ofensa, ameaça ou spam). Bloquear nunca é automático: nem todo comentário excluído é
+// ofensivo. Com "Denunciar" marcado, o comentário fica guardado como prova para a moderação: só "Excluir e bloquear"
+// vale (apagar de vez sumiria com o que foi denunciado). O autor não é avisado de nada.
+export function ModalExcluirComentario({ autor, conteudo, excluir, denunciar, aoFechar, aoExcluido }: ModalExcluirComentarioProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { ocupado, executar } = useEnvio(reportarErro, limparErro);
   const [bloqueando, setBloqueando] = useState(false);
+  const [vaiDenunciar, setVaiDenunciar] = useState(false);
+  const [idMotivo, setIdMotivo] = useState('');
+  const [motivos, setMotivos] = useState<MotivoDenunciaResponse[] | null>(null);
+  const [faltaMotivo, setFaltaMotivo] = useState(false);
+
+  useEffect(() => {
+    if (!vaiDenunciar || motivos !== null) return;
+    motivoDenunciaApi.listarPublico({ ativo: true, tipo: 'perfil' }).then(setMotivos).catch(reportarErro);
+  }, [vaiDenunciar, motivos, reportarErro]);
 
   const confirmar = (bloquear: boolean) => {
+    if (vaiDenunciar && idMotivo === '') {
+      setFaltaMotivo(true);
+      return;
+    }
     setBloqueando(bloquear);
     void executar(async () => {
+      if (vaiDenunciar && denunciar) {
+        await denunciar(Number(idMotivo));
+      }
       await excluir(bloquear);
-      mostrar(bloquear ? 'Comentário excluído e autor bloqueado nesta campanha.' : 'Comentário excluído.');
+      mostrar(
+        vaiDenunciar
+          ? 'Comentário denunciado, excluído e autor bloqueado nesta campanha.'
+          : bloquear
+            ? 'Comentário excluído e autor bloqueado nesta campanha.'
+            : 'Comentário excluído.',
+      );
       aoExcluido();
       aoFechar();
     });
@@ -44,8 +72,15 @@ export function ModalExcluirComentario({ autor, conteudo, excluir, aoFechar, aoE
         <RodapeAcoes
           aoCancelar={aoFechar}
           acao={[
-            { rotulo: 'Excluir', rotuloOcupado: 'Excluindo...', ocupado: ocupado && !bloqueando, desabilitado: ocupado, aoClicar: () => confirmar(false), perigo: true },
-            { rotulo: 'Excluir e bloquear', rotuloOcupado: 'Bloqueando...', ocupado: ocupado && bloqueando, desabilitado: ocupado, aoClicar: () => confirmar(true), perigo: true },
+            {
+              rotulo: 'Excluir',
+              rotuloOcupado: 'Excluindo...',
+              ocupado: ocupado && !bloqueando,
+              desabilitado: ocupado || vaiDenunciar,
+              aoClicar: () => confirmar(false),
+              perigo: true,
+            },
+            { rotulo: 'Excluir e bloquear', rotuloOcupado: 'Bloqueando...', ocupado: ocupado && bloqueando, desabilitado: ocupado, aoClicar: () => confirmar(true), perigo: true, forte: true },
           ]}
         />
       }
@@ -55,16 +90,62 @@ export function ModalExcluirComentario({ autor, conteudo, excluir, aoFechar, aoE
         <CampoFicha rotulo="Autor" valor={autor} />
         <CampoFicha rotulo="Texto" valor={conteudo} />
       </SecaoFicha>
-      <CaixaAviso titulo="O que acontece de verdade" tom="erro" espacado>
-        <p>
-          <strong>Excluir:</strong> o comentário é apagado de vez. O autor pode comentar de novo nesta campanha.
-        </p>
-        <p>
-          <strong>Excluir e bloquear:</strong> o comentário some da sua lista, mas fica guardado, e o autor não consegue
-          mais comentar nesta campanha. Use em caso de ofensa, ameaça ou spam.
-        </p>
-        <p>Denunciar o comentário à moderação chega junto com o módulo de denúncias.</p>
-      </CaixaAviso>
+      <CaixaAviso
+        tom="erro"
+        icone="fa-circle-info"
+        titulo={
+          <span className="font-normal">
+            <strong>Excluir e bloquear:</strong> o comentário some da sua lista, mas fica guardado, e o autor não consegue
+            mais comentar nesta campanha. Use em caso de ofensa, ameaça ou spam.
+          </span>
+        }
+        espacado
+      />
+      {denunciar && (
+        <div className="mt-5 space-y-3">
+          <label className="flex items-start gap-3 cursor-pointer paragrafo texto-padrao">
+            <input
+              type="checkbox"
+              checked={vaiDenunciar}
+              disabled={ocupado}
+              onChange={(evento) => {
+                setVaiDenunciar(evento.target.checked);
+                setFaltaMotivo(false);
+              }}
+              className="mt-1 w-4 h-4 accent-primary"
+            />
+            <span>
+              <span className="enfase texto-forte">Denunciar este comentário à moderação</span>
+              <span className="block legenda texto-fraco">
+                Para conteúdo ofensivo, discriminatório, ameaçador, ilegal ou spam. O comentário fica guardado para a
+                moderação analisar, por isso só vale "Excluir e bloquear".
+              </span>
+            </span>
+          </label>
+          {vaiDenunciar && (
+            <label className="block">
+              <span className="rotulo-campo">Motivo da denúncia</span>
+              <select
+                value={idMotivo}
+                onChange={(evento) => {
+                  setIdMotivo(evento.target.value);
+                  setFaltaMotivo(false);
+                }}
+                className={'input-padrao w-full mt-1' + (faltaMotivo ? ' input-erro' : '')}
+                aria-invalid={faltaMotivo || undefined}
+              >
+                <option value="">{motivos === null ? 'Carregando...' : 'Escolha um motivo...'}</option>
+                {(motivos ?? []).map((motivo) => (
+                  <option key={motivo.idMotivo} value={motivo.idMotivo}>
+                    {motivo.descricao}
+                  </option>
+                ))}
+              </select>
+              {faltaMotivo && <span className="block legenda texto-erro mt-1">Escolha o motivo da denúncia.</span>}
+            </label>
+          )}
+        </div>
+      )}
     </ModalFicha>
   );
 }

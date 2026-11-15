@@ -32,6 +32,8 @@ interface ModalAtualizacaoProps {
   idCampanha: number;
   // Sem ela: publicar uma nova. Com ela: alterar o texto e a fase (os anexos entram só na publicação).
   atualizacao?: AtualizacaoCampanhaResponse;
+  // Criar pelo Estúdio: a campanha é escolhida aqui dentro (campo "Campanha"), não numa lista ao lado do botão.
+  campanhasParaEscolher?: { idCampanha: number; titulo: string }[];
   aoFechar: () => void;
   aoSalva: () => void;
 }
@@ -49,7 +51,8 @@ const ACEITA_ARQUIVO = 'image/jpeg,image/png,image/webp,application/pdf';
 // Publicar ou alterar uma atualização de progresso (RF-052, RF-053), num modal por cima do Alterar da campanha. O
 // formato (texto, imagem, PDF ou link, RF-053) sai dos anexos, sem perguntar, e não aparece na tela: os ícones dos
 // anexos já dizem o mesmo.
-export function ModalAtualizacao({ auth, idCampanha, atualizacao, aoFechar, aoSalva }: ModalAtualizacaoProps) {
+export function ModalAtualizacao({ auth, idCampanha, atualizacao, campanhasParaEscolher, aoFechar, aoSalva }: ModalAtualizacaoProps) {
+  const [idCampanhaEscolhida, setIdCampanhaEscolhida] = useState(idCampanha);
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { ocupado, executar } = useEnvio(reportarErro, limparErro);
@@ -111,7 +114,7 @@ export function ModalAtualizacao({ auth, idCampanha, atualizacao, aoFechar, aoSa
           setProgresso(null);
         }
         await atualizacaoCampanhaApi.publicar(auth.authFetch, {
-          idCampanha,
+          idCampanha: idCampanhaEscolhida,
           titulo: titulo.trim(),
           conteudo,
           fase,
@@ -150,6 +153,24 @@ export function ModalAtualizacao({ auth, idCampanha, atualizacao, aoFechar, aoSa
       }
     >
       <SecaoFicha titulo="Atualização">
+        {!atualizacao && campanhasParaEscolher && campanhasParaEscolher.length > 0 && (
+          <Campo rotulo="Campanha" className="sm:col-span-2">
+            {({ atributos }) => (
+              <select
+                {...atributos}
+                value={idCampanhaEscolhida}
+                onChange={(evento) => setIdCampanhaEscolhida(Number(evento.target.value))}
+                className="input-padrao"
+              >
+                {campanhasParaEscolher.map((campanha) => (
+                  <option key={campanha.idCampanha} value={campanha.idCampanha}>
+                    {campanha.titulo}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Campo>
+        )}
         <Campo rotulo="Título" erro={erroDe('titulo')} className="sm:col-span-2">
           {({ atributos, classeErro }) => (
             <input

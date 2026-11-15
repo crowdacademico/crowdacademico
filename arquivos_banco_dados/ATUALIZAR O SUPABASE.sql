@@ -2044,3 +2044,18 @@ $$;
 -- ============================================================================
 ALTER TABLE campanha ADD COLUMN IF NOT EXISTS capa_no_banner BOOLEAN NOT NULL DEFAULT TRUE;
 GRANT INSERT (capa_no_banner), UPDATE (capa_no_banner) ON campanha TO app_nestjs;
+
+-- ============================================================================
+-- GRUPO CS (14-11-2026) - Excluir recompensa que ninguém ganhou ainda. IDEMPOTENTE.
+-- Não precisa parar o Nest: só cria uma policy e um GRANT. Suba o Nest novo junto (rota DELETE /recompensa/:id).
+-- Cole depois do CR.
+--
+-- O que muda:
+--   1. O dono da campanha pode excluir uma recompensa. A que já foi concedida continua presa pela FK (RESTRICT): essa
+--      se desativa no Alterar. O link e os arquivos dela saem junto (CASCADE).
+-- ============================================================================
+DROP POLICY IF EXISTS pol_recompensa_delete ON recompensa;
+CREATE POLICY pol_recompensa_delete ON recompensa FOR DELETE TO app_nestjs USING (
+    EXISTS (SELECT 1 FROM campanha WHERE id_campanha = recompensa.id_campanha AND (id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar'))))
+);
+GRANT DELETE ON recompensa TO app_nestjs;

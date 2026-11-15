@@ -7,6 +7,7 @@ import { RecompensaServiceFindAll } from './service/recompensa.service.findall';
 import { RecompensaServiceLink } from './service/recompensa.service.link';
 import { RecompensaServiceMine } from './service/recompensa.service.mine';
 import { RecompensaServiceUpdate } from './service/recompensa.service.update';
+import { RecompensaServiceRemove } from './service/recompensa.service.remove';
 
 // Recompensa simbólica (RF-103 a RF-105): nome de quem apoiou no projeto, acesso antecipado, um link especial. Sem
 // estoque e sem entrega física. Um módulo para recompensa e link_recompensa (o satélite, como em
@@ -22,6 +23,7 @@ import { RecompensaServiceUpdate } from './service/recompensa.service.update';
     RecompensaServiceCreate,
     RecompensaServiceUpdate,
     RecompensaServiceLink,
+    RecompensaServiceRemove,
     RecompensaServiceMine,
   ],
 })

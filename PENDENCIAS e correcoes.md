@@ -141,6 +141,18 @@ A Alexia trouxe a área pública para dentro do sistema (branch `tentativadeinte
 
 ---
 
+### Imagens geradas por IA para dar vida ao site (anotado em 14-11-2026, sugestão do Claude aprovada pelo Lucas)
+
+Mesmo processo dos cards do Como funciona: prompt base com a paleta escura (#041722 a #082e48, degradê até #0a4a3c) e verde (#0f9b58, #5fc796), sem texto na imagem; originais em `informacoes/Imagens`, convertidas para WebP (qualidade 80) em `react/public/imagens/`. Em ordem de impacto:
+
+1. **Capas padrão das campanhas sem imagem:** uma ilustração por grande área do CNPq (Exatas e da Terra, Biológicas, Engenharias, Saúde, Agrárias, Sociais Aplicadas, Humanas, Linguística/Letras/Artes, Multidisciplinar) = 9 imagens 16:9 (1200x675). Hoje o card mostra só um ícone de frasco. Aparece na Home, no Explorar, no perfil do pesquisador e no banner da campanha.
+2. **Painel lateral do Login e do Cadastro:** ilustração de boas-vindas, retrato 3:4 (~900x1200). Hoje é só o degradê com a grade.
+3. **Confirmação do apoio (`/apoio-confirmado`):** ilustração de celebração, quadrada (800x800).
+4. **Estados vazios (15 telas, `EstadoVazio`):** 2 ou 3 ilustrações pequenas reaproveitáveis ("nada por aqui ainda", "comece a seguir", "sem resultados"), quadradas (400x400), fundo transparente.
+5. **Página de erro / não encontrada:** ilustração leve e bem-humorada, 16:9.
+
+---
+
 ## 3. No dia do deploy
 
 - **Prazo de guarda das notificações (auditoria de 01-11-2026):** a tabela `notificacao` (e-mails e avisos do sino) cresce para sempre; o `log_auditoria` tem prazo de guarda, ela não. Decidir no deploy se ganha um parâmetro de guarda como o do log.

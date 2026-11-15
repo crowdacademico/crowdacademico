@@ -540,6 +540,11 @@ DROP POLICY IF EXISTS pol_recompensa_update ON recompensa;
 CREATE POLICY pol_recompensa_update ON recompensa FOR UPDATE TO app_nestjs USING (
     EXISTS (SELECT 1 FROM campanha WHERE id_campanha = recompensa.id_campanha AND (id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar'))))
 );
+-- Excluir (14-11-2026): mesma regra do UPDATE. A recompensa já concedida não sai: FK_CONTRIBUICAO_RECOMPENSA_RECOMPENSA (RESTRICT).
+DROP POLICY IF EXISTS pol_recompensa_delete ON recompensa;
+CREATE POLICY pol_recompensa_delete ON recompensa FOR DELETE TO app_nestjs USING (
+    EXISTS (SELECT 1 FROM campanha WHERE id_campanha = recompensa.id_campanha AND (id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar'))))
+);
 
 DROP POLICY IF EXISTS pol_seg_campanha_select ON seguir_campanha;
 CREATE POLICY pol_seg_campanha_select ON seguir_campanha FOR SELECT TO app_nestjs USING (id_usuario = (SELECT public.id_usuario_atual()));

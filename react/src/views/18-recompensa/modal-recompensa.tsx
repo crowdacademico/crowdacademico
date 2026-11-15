@@ -28,6 +28,8 @@ interface ModalRecompensaProps {
   idCampanha: number;
   // Sem ela: criar uma nova. Com ela: alterar.
   recompensa?: RecompensaResponse;
+  // Criar pelo Estúdio: a campanha é escolhida aqui dentro (campo "Campanha"), não numa lista ao lado do botão.
+  campanhasParaEscolher?: { idCampanha: number; titulo: string }[];
   aoFechar: () => void;
   aoSalva: () => void;
 }
@@ -39,7 +41,8 @@ const tipoUsaLink = (tipo: TipoRecompensa) => tipo !== 'reconhecimento';
 // Criar ou alterar uma recompensa simbólica (RF-103, RF-104), num modal por cima do Alterar da campanha. Depois de
 // escolhida numa contribuição paga, o valor e o tipo não mudam mais: quem apoiou escolheu por eles (o padrão do Catarse e
 // do Kickstarter). Trocar o link vai junto no mesmo pedido, para o link nunca faltar no meio da troca.
-export function ModalRecompensa({ auth, idCampanha, recompensa, aoFechar, aoSalva }: ModalRecompensaProps) {
+export function ModalRecompensa({ auth, idCampanha, recompensa, campanhasParaEscolher, aoFechar, aoSalva }: ModalRecompensaProps) {
+  const [idCampanhaEscolhida, setIdCampanhaEscolhida] = useState(idCampanha);
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { ocupado, executar } = useEnvio(reportarErro, limparErro);
@@ -49,6 +52,8 @@ export function ModalRecompensa({ auth, idCampanha, recompensa, aoFechar, aoSalv
   const [valorMinimo, setValorMinimo] = useState(recompensa ? String(recompensa.valorMinimo) : '');
   const [tipo, setTipo] = useState<TipoRecompensa>(recompensa?.tipo ?? ORDEM_TIPO_RECOMPENSA[0]);
   const [descricao, setDescricao] = useState(recompensa?.descricao ?? '');
+  // Desativar/reativar mora aqui (saiu do botão da tabela do Estúdio).
+  const [ativo, setAtivo] = useState(recompensa?.ativo ?? true);
   const [idTipoLink, setIdTipoLink] = useState(linkAtual ? String(linkAtual.idTipoLink) : '');
   const [url, setUrl] = useState(linkAtual?.url ?? '');
   const [tiposLink, setTiposLink] = useState<TipoLinkResponse[]>([]);
@@ -79,6 +84,7 @@ export function ModalRecompensa({ auth, idCampanha, recompensa, aoFechar, aoSalv
           descricao: descricao.trim() || null,
           ...(travada ? {} : { valorMinimo: Number(valorMinimo), tipo }),
           ...(linkMudou ? { link } : {}),
+          ...(ativo !== recompensa.ativo ? { ativo } : {}),
         });
         // Virou Reconhecimento: o link que sobrou não entrega nada.
         if (!precisaLink && linkAtual) {
@@ -87,7 +93,7 @@ export function ModalRecompensa({ auth, idCampanha, recompensa, aoFechar, aoSalv
         mostrar('Recompensa alterada.');
       } else {
         await recompensaApi.criar(auth.authFetch, {
-          idCampanha,
+          idCampanha: idCampanhaEscolhida,
           titulo: titulo.trim(),
           tipo,
           valorMinimo: Number(valorMinimo),
@@ -106,6 +112,7 @@ export function ModalRecompensa({ auth, idCampanha, recompensa, aoFechar, aoSalv
       Number(valorMinimo) !== recompensa.valorMinimo ||
       tipo !== recompensa.tipo ||
       descricao !== (recompensa.descricao ?? '') ||
+      ativo !== recompensa.ativo ||
       url !== (linkAtual?.url ?? '') ||
       idTipoLink !== (linkAtual ? String(linkAtual.idTipoLink) : '')
     : titulo !== '' || valorMinimo !== '' || descricao !== '' || url !== '';
@@ -125,6 +132,33 @@ export function ModalRecompensa({ auth, idCampanha, recompensa, aoFechar, aoSalv
       }
     >
       <SecaoFicha titulo="Recompensa">
+        {!recompensa && campanhasParaEscolher && campanhasParaEscolher.length > 0 && (
+          <Campo rotulo="Campanha" className="sm:col-span-2">
+            {({ atributos }) => (
+              <select
+                {...atributos}
+                value={idCampanhaEscolhida}
+                onChange={(evento) => setIdCampanhaEscolhida(Number(evento.target.value))}
+                className="input-padrao"
+              >
+                {campanhasParaEscolher.map((campanha) => (
+                  <option key={campanha.idCampanha} value={campanha.idCampanha}>
+                    {campanha.titulo}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Campo>
+        )}
+        {recompensa && (
+          <label className="sm:col-span-2 flex items-start gap-3 cursor-pointer paragrafo texto-padrao">
+            <input type="checkbox" checked={ativo} onChange={(evento) => setAtivo(evento.target.checked)} className="mt-1 w-4 h-4 accent-primary" />
+            <span>
+              <span className="enfase texto-forte">Recompensa ativa</span>
+              <span className="block legenda texto-fraco">Desmarcada, some para quem for apoiar; quem já ganhou continua vendo.</span>
+            </span>
+          </label>
+        )}
         <Campo rotulo="Título" erro={erroDe('titulo')}>
           {({ atributos, classeErro }) => (
             <input

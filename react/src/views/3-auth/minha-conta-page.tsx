@@ -3,8 +3,9 @@ import { MENSAGEM_NOME_CURTO, NOME_MINIMO_CARACTERES } from '../../services/cons
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import type { FormEvent } from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router';
-import { AvatarUsuario } from '../../components/layout/avatar-usuario';
+import { Navigate, useNavigate, useParams } from 'react-router';
+import { LayoutAreaUsuario } from '../../components/layout/layout-area-usuario';
+import { CapaMinhaConta } from './capa-minha-conta';
 import { Dica } from '../../components/layout/tooltip';
 import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
@@ -19,15 +20,13 @@ import { MedidorSenha } from '../../components/input/medidor-senha';
 import { ConfirmacaoDigitada } from '../../components/input/confirmacao-digitada';
 import { confirmacaoConfere } from '../../components/input/confirmacao-confere';
 import { sessaoApi } from '../../services/3-auth/api/sessao.api';
-import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import {
   ROTULO_TIPO_VINCULO,
   ROTULO_TITULO_ACADEMICO,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
-import { formatarCpfExibicao, formatarDataHora, formatarMesAno } from '../../services/constant/util/formatacao.util';
-import { useBuscar } from '../../services/constant/hook/use-buscar';
+import { formatarCpfExibicao, formatarDataHora } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -35,7 +34,6 @@ import { ModalUpgradePesquisador } from '../6-perfil-pesquisador/modal-upgrade-p
 import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { AuthResponseSessions } from '../../services/3-auth/type/auth.type';
-import type { UsuarioPapelResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 import type { TipoVinculo, TituloAcademico } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import type { SuspensaoResponseDto } from '../../services/constant/type/suspensao.type';
@@ -55,11 +53,8 @@ import { AbaMinhasAtividades } from './aba-minhas-atividades';
 // cabeçalho (ControleTema/ControleFonte), preferência de DISPOSITIVO via localStorage, sem ligação nenhuma com
 // a conta logada.
 //
-// Estrutura (referência ORCID/ResearchGate/Google Acadêmico: "portfólio profissional", abrem com uma FAIXA DE
-// IDENTIDADE larga no topo, não um cartãozinho de canto): FaixaIdentidade (larga, topo: avatar grande, nome,
-// e-mail, "membro desde") + abas de verdade (rota /minha-conta/:aba, não useState: mesma
-// decisão das abas do painel admin). Seções com o MESMO peso visual empilhadas parecem um formulário
-// longo, não um perfil, e um cartão lateral discreto não ancora a tela.
+// Estrutura (14-11-2026): o esqueleto comum da área do usuário (LayoutAreaUsuario, o mesmo do Estúdio): cartão de
+// as seções no menu lateral, a capa (CapaMinhaConta: foto, saudação, números) no topo do conteúdo, cada seção uma rota (/minha-conta/:aba), e o conteúdo num cartão à direita.
 const ABAS_MINHA_CONTA = [
   { chave: 'perfil', rotulo: 'Perfil', icone: 'fa-user' },
   { chave: 'seguranca', rotulo: 'Segurança', icone: 'fa-shield-halved' },
@@ -87,31 +82,14 @@ export function MinhaConta({ auth }: PropsPagina) {
   }
 
   return (
-    // `w-0 min-w-full`: não é decorativo. Sem isso, a barra de abas logo abaixo (rola na horizontal, com rótulo em
-    // whitespace-nowrap para não quebrar linha) faz o NAVEGADOR calcular a largura mínima deste bloco pelo
-    // CONTEÚDO da barra (~600px) e empurra a página inteira para a largura horizontal, em vez do próprio nav
-    // rolar sozinho, mesmo em telas pequenas. `width: 0` tira este bloco do cálculo de "largura mínima pelo
-    // conteúdo" (passa a ter uma largura EXPLÍCITA, não automática); `min-width: 100%` devolve ele ao tamanho
-    // normal (cheio do container, até o teto de --largura-ficha) na hora de desenhar de verdade. Troque só se remover
-    // a barra de abas.
-    <div className="w-0 min-w-full max-w-(--largura-ficha) mx-auto px-8 py-6 sm:px-12 sm:py-10">
-      {/* Um cartão só, do topo ao rodapé - SEM overflow-hidden (mesma
-          lição já aprendida nas antigas páginas de formulário e de ficha:
-          overflow-hidden cria um contexto de scroll que o `sticky` do
-          rodapé da aba Perfil não atravessa). A faixa (fundo-sutil,
-          diferente do corpo) arredonda o PRÓPRIO canto de cima
-          (rounded-t-2xl); o corpo de cada aba é transparente, deixa o
-          fundo-cartao deste wrapper aparecer atrás - só a aba Perfil tem
-          rodapé sticky com fundo próprio, e só ELE precisa arredondar o
-          canto de baixo (rounded-b-2xl), as outras abas terminam lisas e
-          o canto arredondado do wrapper já aparece sozinho por trás. */}
-      <div className="fundo-cartao rounded-2xl shadow-lg border borda-padrao pb-12">
-        <FaixaIdentidade auth={auth} />
-        <BarraAbas abaAtiva={aba} />
-
-        {/* `key`: aberta direto pela URL (ou depois de F5), a aba monta antes de a sessão terminar de carregar e
-            o formulário nasceria com o nome vazio. Trocar a key quando o usuário chega remonta a aba já com o
-            nome certo. */}
+    <LayoutAreaUsuario
+      titulo="Minha conta"
+      descricao="Seus dados, segurança, atividades e contribuições."
+      rotuloMenu="Seções de Minha Conta"
+      itens={ABAS_MINHA_CONTA.map((item) => ({ to: `/minha-conta/${item.chave}`, rotulo: item.rotulo, icone: item.icone }))}
+      preenchimento={false}
+    >
+        <CapaMinhaConta auth={auth} />
         {aba === 'perfil' && (
           <AbaPerfil key={auth.usuario.idUsuario} auth={auth} />
         )}
@@ -128,94 +106,10 @@ export function MinhaConta({ auth }: PropsPagina) {
           </>
         )}
         {aba === 'privacidade' && <AbaPrivacidade auth={auth} />}
-      </div>
-    </div>
+    </LayoutAreaUsuario>
   );
 }
 
-interface FaixaIdentidadeProps {
-  auth: Pick<UseAuthReturn, 'usuario'>;
-}
-
-function FaixaIdentidade({ auth }: FaixaIdentidadeProps) {
-  const usuario = auth.usuario;
-  const membroDesde = usuario?.criadoEm ? formatarMesAno(usuario.criadoEm) : null;
-
-  return (
-    <div className="relative overflow-hidden rounded-t-2xl border-b borda-padrao fundo-sutil px-6 sm:px-8 py-8">
-      {/* Gradiente MUITO discreto (10% de opacidade) em vez de fundo verde
-          chapado - regra já estabelecida no projeto: verde é acento, não
-          fundo. Mesmo truque decorativo do blob em login-page.tsx. */}
-      <div className="pointer-events-none absolute -top-12 -right-12 w-56 h-56 brilho-marca rounded-full blur-3xl"></div>
-
-      <div className="relative flex flex-col sm:flex-row sm:items-center gap-5">
-        {/* Anel ao redor do avatar via padding + fundo-cartao (não
-            hardcoded em branco) - reage ao tema escuro sozinho, mesmos
-            tokens de sempre. */}
-        <div className="p-1 rounded-full fundo-cartao shadow-md shrink-0 w-fit">
-          <AvatarUsuario nome={usuario?.nome} foto={usuario?.avatarUrl} tamanho="xxl" forma="circulo" />
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <h1 className="titulo-pagina break-words">
-            {usuario?.nome}
-          </h1>
-          <div className="paragrafo flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2 texto-fraco">
-            <span className="break-words">{usuario?.email}</span>
-            <span
-              className={
-                'badge gap-1 ' +
-                (usuario?.emailVerificado ? 'badge-sucesso' : 'fundo-aviso texto-aviso')
-              }
-            >
-              <i
-                className={
-                  'fa-solid icone-pequeno ' +
-                  (usuario?.emailVerificado ? 'fa-check' : 'fa-triangle-exclamation')
-                } aria-hidden="true"
-              ></i>
-              {usuario?.emailVerificado ? 'E-mail verificado' : 'E-mail não verificado'}
-            </span>
-            {membroDesde && <span>Membro desde {membroDesde}</span>}
-          </div>
-
-        </div>
-
-      </div>
-    </div>
-  );
-}
-
-// Abas de verdade, não useState (mesma decisão das abas do painel admin): link direto funciona, F5 preserva a
-// aba, botão Voltar navega. Rola na horizontal (não empilha) no mobile, ver `.barra-abas`.
-interface BarraAbasProps {
-  abaAtiva: string;
-}
-
-function BarraAbas({ abaAtiva }: BarraAbasProps) {
-  return (
-    <nav
-      className="barra-abas px-2 sm:px-4"
-      aria-label="Seções de Minha Conta"
-    >
-      {ABAS_MINHA_CONTA.map((item) => (
-        <Link
-          key={item.chave}
-          to={`/minha-conta/${item.chave}`}
-          className={
-            'paragrafo enfase flex items-center gap-2 px-4 py-3.5 whitespace-nowrap border-b-2 transition-colors texto-herdado ' +
-            (item.chave === abaAtiva
-              ? 'borda-marca texto-marca'
-              : 'border-transparent texto-fraco hover-texto-forte')
-          }
-        >
-          <i className={'fa-solid ' + item.icone} aria-hidden="true"></i>
-          {item.rotulo}
-        </Link>
-      ))}
-    </nav>
-  );
-}
 
 // Perfil básico e dados acadêmicos do pesquisador aparecem na mesma aba. A edição abre em ModalFicha.
 interface AbaPerfilProps {
@@ -298,14 +192,14 @@ function AbaPerfil({ auth }: AbaPerfilProps) {
                 <CampoFicha rotulo="Vínculo institucional" valor={perfil.vinculoInstitucional} />
                 <CampoFicha rotulo="Pontuação atual" valor={perfil.scoreAtual} />
               </SecaoFicha>
-              <SecaoFicha titulo="Links acadêmicos" nivel={2}>
-                <LinksAcademicosDoUsuario
-                  auth={auth}
-                  idUsuario={auth.usuario.idUsuario}
-                  nomeUsuario={auth.usuario.nome}
-                  contaPropria
-                />
-              </SecaoFicha>
+              {/* Sem SecaoFicha em volta: o componente já tem o título (com a contagem) e precisa da largura toda; dentro da
+                  grade de 2 colunas ele ficava na metade esquerda, com as URLs cortadas e o título repetido. */}
+              <LinksAcademicosDoUsuario
+                auth={auth}
+                idUsuario={auth.usuario.idUsuario}
+                nomeUsuario={auth.usuario.nome}
+                contaPropria
+              />
             </>
           )}
           {auth.usuario && !auth.usuario.ehPesquisador && (
@@ -318,7 +212,6 @@ function AbaPerfil({ auth }: AbaPerfilProps) {
               </button>
             </div>
           )}
-          <SecaoPapeis auth={auth} />
         </>
       )}
       {editando && auth.usuario && (
@@ -756,55 +649,6 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
         </ModalFicha>
       )}
     </div>
-  );
-}
-
-function SecaoPapeis({ auth }: { auth: Pick<UseAuthReturn, 'usuario' | 'authFetch'> }) {
-  const erros = useErroToast({ mostraTexto: true });
-  const idUsuario = auth.usuario?.idUsuario;
-  const carregarPapeis = (): Promise<UsuarioPapelResponse[]> =>
-    idUsuario
-      ? usuarioPapelApi.listarPorUsuario(auth.authFetch, idUsuario)
-      : Promise.resolve([]);
-  const { dado: papeis, carregando, erro } = useBuscar(
-    carregarPapeis,
-    [auth.authFetch, idUsuario],
-    { erros, mostraTexto: true },
-  );
-
-  return (
-    <section>
-      <h2 className="titulo-bloco titulo-bloco--linha">Papéis da conta</h2>
-      <MensagemErro texto={erro} />
-      {carregando ? (
-        <Carregando />
-      ) : papeis && papeis.length === 0 ? (
-        <EstadoVazio compacto icone="fa-user-tag" titulo="Nenhum papel atribuído." />
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {papeis?.map((papel) => {
-            const suspenso = papel.suspensoAte !== null && new Date(papel.suspensoAte) > new Date();
-            return (
-              <span
-                key={papel.idPapel}
-                className={'badge gap-1 ' + (suspenso ? 'badge-erro' : 'badge-neutro')}
-              >
-                {papel.nomePapel}
-                {suspenso && (
-                  <>
-                    <i className="fa-solid fa-clock icone-pequeno" aria-hidden="true"></i>
-                    suspenso até {formatarDataHora(papel.suspensoAte)}
-                  </>
-                )}
-              </span>
-            );
-          })}
-        </div>
-      )}
-      <p className="legenda texto-fraco mt-2">
-        Para alterar seus papéis, um administrador precisa fazer a atualização pelo painel de usuários.
-      </p>
-    </section>
   );
 }
 

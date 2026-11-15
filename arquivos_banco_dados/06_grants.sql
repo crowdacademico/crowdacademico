@@ -260,6 +260,8 @@ GRANT INSERT, UPDATE ON
     comentario,
     recompensa
 TO app_nestjs;
+-- recompensa tem DELETE (14-11-2026): pol_recompensa_delete (04) restringe ao dono; a já concedida fica presa pela FK.
+GRANT DELETE ON recompensa TO app_nestjs;
 -- solicitacao_encerramento: o dono cria o pedido só com a campanha e a justificativa, e só muda o status (para
 -- cancelar, fn_valida_transicao_solicitacao, 05). Aprovar, rejeitar e o encerramento direto são funções (03).
 GRANT INSERT (id_campanha, justificativa_pesquisador) ON solicitacao_encerramento TO app_nestjs;

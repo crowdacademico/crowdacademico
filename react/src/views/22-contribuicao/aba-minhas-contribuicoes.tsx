@@ -20,7 +20,6 @@ interface ContribuicaoLinha extends MinhaContribuicao {
   campanha: string;
   meio: string;
   situacao: string;
-  recompensa: string;
 }
 
 interface RecompensaLinha extends RecompensaGanha {
@@ -84,7 +83,6 @@ export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'au
       campanha: c.tituloCampanha ?? `Campanha #${c.idCampanha}`,
       meio: ROTULO_MEIO_PAGAMENTO[c.meioPagamento],
       situacao: ROTULO_STATUS_CONTRIBUICAO[c.status],
-      recompensa: c.recompensas ?? '-',
     }));
   }, [auth.authFetch]);
 
@@ -100,7 +98,6 @@ export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'au
           { chave: 'valor', rotulo: 'valor', tipo: 'dinheiro' },
           { chave: 'taxaPagamento', rotulo: 'tarifa', tipo: 'dinheiro' },
           { chave: 'meio', rotulo: 'meio', tipo: 'texto' },
-          { chave: 'recompensa', rotulo: 'recompensas', tipo: 'texto', umaLinha: true },
           { chave: 'criadoEm', rotulo: 'data', tipo: 'dataHora' },
           {
             chave: 'situacao',

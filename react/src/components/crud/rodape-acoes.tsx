@@ -16,6 +16,9 @@ export interface AcaoRodape {
   aoClicar?: () => void;
   formulario?: string;
   perigo?: boolean;
+  // Com `perigo`: a ação de perigo mais forte (vermelho sólido, `.btn-danger-forte`) ao lado da comum (pastel), o mesmo
+  // par dos verdes: ex.: "Excluir e bloquear" ao lado de "Excluir".
+  forte?: boolean;
   // Ação positiva que não é a principal (verde claro, `.btn-sucesso`), ao lado da principal (verde forte): ex.: "Marcar
   // como pago" ao lado de "Reenfileirar".
   secundaria?: boolean;
@@ -77,7 +80,7 @@ export function RodapeAcoes({
           onClick={item.aoClicar}
           disabled={item.ocupado || item.desabilitado}
           aria-disabled={item.aparenciaIndisponivel ? true : undefined}
-          className={'btn flex-1 whitespace-nowrap ' + (item.perigo ? 'btn-danger' : item.secundaria ? 'btn-sucesso' : 'btn-primary')}
+          className={'btn flex-1 whitespace-nowrap ' + (item.perigo ? (item.forte ? 'btn-danger-forte' : 'btn-danger') : item.secundaria ? 'btn-sucesso' : 'btn-primary')}
         >
           {item.ocupado && item.rotuloOcupado ? item.rotuloOcupado : item.rotulo}
         </button>
