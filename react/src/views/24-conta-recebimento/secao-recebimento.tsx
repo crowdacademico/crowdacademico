@@ -96,7 +96,8 @@ export function SecaoRecebimento({ authFetch }: { authFetch: AuthFetch }) {
         </CaixaAviso>
       )}
 
-      <div className="flex flex-wrap items-center gap-2 mb-12">
+      {/* mt-5: o botão colava no campo da chave (16-11-2026, Alexia). */}
+      <div className="flex flex-wrap items-center gap-2 mt-5 mb-12">
         {mostrarFormulario ? (
           <>
             <button type="button" className="btn btn-primary" disabled={ocupado || chave.trim() === ''} onClick={() => void cadastrar()}>
