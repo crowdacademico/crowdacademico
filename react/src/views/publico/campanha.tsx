@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { Carregando } from '../../components/layout/carregando';
@@ -34,12 +35,13 @@ import {
 import { CartaoAcoesCampanha, FormComentarCampanha } from './acoes-campanha';
 import { ModalAtualizacoes } from './lista-atualizacoes';
 import { ModalApoiar } from './modal-apoiar';
+import { definirTituloDaPagina } from '../../components/layout/definir-titulo-pagina';
 import { CartaoEndosso } from './cartao-endosso';
 import { recompensaApi } from '../../services/18-recompensa/api/recompensa.api';
 import { ROTULO_TIPO_RECOMPENSA } from '../../services/18-recompensa/constants/recompensa.constants';
 import type { RecompensaResponse } from '../../services/18-recompensa/type/recompensa.type';
 
-type AbaCampanha = 'sobre' | 'orcamento' | 'cronograma' | 'recompensas' | 'atualizacoes' | 'comentar';
+type AbaCampanha = 'sobre' | 'orcamento' | 'cronograma' | 'recompensas' | 'comentar';
 
 interface EstadoSecundario<T> {
   dados: T[];
@@ -158,6 +160,11 @@ export function Campanha({ auth }: PropsPagina) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.authFetch, idCampanha, idValido]);
 
+  // A aba do navegador com o nome da campanha (TituloDaPagina põe só "Campanha").
+  useEffect(() => {
+    if (campanha) definirTituloDaPagina(campanha.titulo);
+  }, [campanha]);
+
   const percentual = campanha ? percentualArrecadado(campanha) : null;
   const publicada = campanha ? STATUS_PUBLICADA.has(campanha.status) : false;
   const dias = campanha ? diasRestantes(campanha.dataFim) : null;
@@ -173,10 +180,22 @@ export function Campanha({ auth }: PropsPagina) {
     { chave: 'orcamento', rotulo: 'Orçamento' },
     { chave: 'cronograma', rotulo: 'Cronograma' },
     { chave: 'recompensas', rotulo: 'Recompensas' },
-    // Atualizações abre um modal estilo blog (não troca o painel): ver ModalAtualizacoes.
-    { chave: 'atualizacoes', rotulo: 'Atualizações' },
     ...(podeComentar ? [{ chave: 'comentar' as const, rotulo: 'Comentar' }] : []),
   ];
+  // Abas no padrão da W3C (ARIA Authoring Practices): só a aba ativa entra no Tab; as setas, Home e End trocam de aba e
+  // levam o foco junto (16-11-2026, auditoria Nielsen/WCAG).
+  const moverAba = (evento: KeyboardEvent<HTMLButtonElement>, atual: number) => {
+    const destino =
+      evento.key === 'ArrowRight' ? (atual + 1) % abas.length
+        : evento.key === 'ArrowLeft' ? (atual - 1 + abas.length) % abas.length
+          : evento.key === 'Home' ? 0
+            : evento.key === 'End' ? abas.length - 1
+              : null;
+    if (destino === null) return;
+    evento.preventDefault();
+    setAba(abas[destino].chave);
+    document.getElementById(`tab-btn-${abas[destino].chave}`)?.focus();
+  };
 
   return (
     <main id="view-campanha" className="view-section flex-grow pagina-publica campanha-detalhe">
@@ -198,14 +217,14 @@ export function Campanha({ auth }: PropsPagina) {
             )}
             <div className="absolute inset-0 grade-medicao" aria-hidden="true" />
             <div className="max-w-7xl mx-auto px-4 relative z-10">
-              <p className="text-sm font-medium texto-sobre-escuro mb-6 flex items-center gap-2">
+              <nav aria-label="Trilha de navegação" className="text-sm font-medium texto-sobre-escuro mb-6 flex items-center gap-2">
                 <Link className="inline-flex items-center gap-2 hover-texto-sobre-escuro-forte transition" to="/">
                   <i className="fa-solid fa-house text-xs" aria-hidden="true" />
                   Home
                 </Link>
                 <i className="fa-solid fa-chevron-right text-xs" aria-hidden="true" />
-                <span>{campanha.nomeArea ?? 'Campanha'}</span>
-              </p>
+                <span aria-current="page">{campanha.nomeArea ?? 'Campanha'}</span>
+              </nav>
               <span className="veu-claro texto-sobre-escuro-forte microrrotulo px-3 py-1.5 rounded-full mb-4 inline-flex items-center gap-2">
                 <i className="fa-solid fa-flask" aria-hidden="true" />
                 Projeto {ROTULO_MODELO_CAMPANHA[campanha.modelo]}
@@ -250,7 +269,9 @@ export function Campanha({ auth }: PropsPagina) {
                     <span className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30 group-hover:bg-primary transition-colors">
                       <i className="fa-solid fa-play text-white text-2xl ml-1" aria-hidden="true" />
                     </span>
-                    <span className="microrrotulo">Assistir à apresentação do projeto</span>
+                    <span className="microrrotulo">
+                      Assistir à apresentação do projeto<span className="sr-only"> (abre em outra aba)</span>
+                    </span>
                     <span className="absolute bottom-4 left-4 bg-white/90 texto-padrao microrrotulo px-3 py-1 rounded-full border borda-padrao">
                       Vídeo de apresentação
                     </span>
@@ -265,22 +286,37 @@ export function Campanha({ auth }: PropsPagina) {
                 )}
               </div>
 
-              <div id="project-tab-buttons" role="tablist" aria-label="Detalhes da campanha" className="campanha-detalhe__abas fundo-cartao rounded-xl shadow-sm border borda-padrao mb-8 p-2 flex items-center gap-2 overflow-x-auto hide-scrollbar">
-                {abas.map((item) => (
-                  <button
-                    aria-controls={`tab-${item.chave}`}
-                    aria-selected={aba === item.chave}
-                    aria-haspopup={item.chave === 'atualizacoes' ? 'dialog' : undefined}
-                    className={`whitespace-nowrap rounded-lg px-4 py-2 font-semibold transition-colors ${aba === item.chave ? 'fundo-realce texto-forte' : 'texto-padrao hover-fundo-sutil'}`}
-                    id={`tab-btn-${item.chave}`}
-                    key={item.chave}
-                    onClick={() => (item.chave === 'atualizacoes' ? setVendoAtualizacoes(true) : setAba(item.chave))}
-                    role="tab"
-                    type="button"
-                  >
-                    {item.rotulo}
-                  </button>
-                ))}
+              <div id="project-tab-buttons" className="campanha-detalhe__abas fundo-cartao rounded-xl shadow-sm border borda-padrao mb-8 p-2 flex items-center gap-2 overflow-x-auto hide-scrollbar">
+                <div role="tablist" aria-label="Detalhes da campanha" className="flex items-center gap-2">
+                  {abas.map((item, indice) => (
+                    <button
+                      aria-controls={`tab-${item.chave}`}
+                      aria-selected={aba === item.chave}
+                      tabIndex={aba === item.chave ? 0 : -1}
+                      className={`whitespace-nowrap rounded-lg px-4 py-2 font-semibold transition-colors ${aba === item.chave ? 'fundo-realce texto-forte' : 'texto-padrao hover-fundo-sutil'}`}
+                      id={`tab-btn-${item.chave}`}
+                      key={item.chave}
+                      onClick={() => setAba(item.chave)}
+                      onKeyDown={(evento) => moverAba(evento, indice)}
+                      role="tab"
+                      type="button"
+                    >
+                      {item.rotulo}
+                    </button>
+                  ))}
+                </div>
+                {/* Atualizações não é aba: abre o blog da campanha numa janela (ModalAtualizacoes). Fica separada, com o
+                    ícone de janela, para não parecer que troca o painel de baixo. */}
+                <span className="h-6 border-l borda-padrao shrink-0" aria-hidden="true" />
+                <button
+                  type="button"
+                  aria-haspopup="dialog"
+                  onClick={() => setVendoAtualizacoes(true)}
+                  className="whitespace-nowrap rounded-lg px-4 py-2 font-semibold texto-padrao hover-fundo-sutil transition-colors inline-flex items-center gap-2"
+                >
+                  <i className="fa-regular fa-newspaper" aria-hidden="true" />
+                  Atualizações
+                </button>
               </div>
 
               <div className="campanha-detalhe__painel-conteudo fundo-cartao rounded-xl shadow-sm border borda-padrao">
@@ -461,7 +497,7 @@ export function Campanha({ auth }: PropsPagina) {
                     </div>
                     <div className="fundo-aviso rounded-xl p-3 border borda-aviso text-center">
                       <div className="numero text-xl font-bold texto-aviso">{dias === null ? '—' : dias}</div>
-                      <div className="microrrotulo texto-aviso">Dias rest.</div>
+                      <div className="microrrotulo texto-aviso">Dias restantes</div>
                     </div>
                     <div className="fundo-marca-sutil rounded-xl p-3 border borda-marca text-center">
                       <div className="numero text-xl font-bold texto-marca">

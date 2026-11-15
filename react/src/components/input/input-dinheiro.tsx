@@ -1,10 +1,12 @@
-import type { InputHTMLAttributes } from 'react';
+import type { InputHTMLAttributes, Ref } from 'react';
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 
 type InputDinheiroProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type'> & {
   // Reais com ponto decimal ("1234.50"), ou '' quando vazio: o formato que Number() e a API entendem.
   valor: string;
   aoMudar: (valor: string) => void;
+  // Para quem precisa levar o foco até o campo (ex.: o modal Apoiar mostrando o que falta). React 19: ref é prop comum.
+  ref?: Ref<HTMLInputElement>;
 };
 
 // Valor em reais no estilo caixa registradora, o dos aplicativos de banco: cada dígito entra pela direita, nos

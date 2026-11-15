@@ -90,7 +90,6 @@ export function Explorar({ auth }: PropsPagina) {
   const [buscaPesquisador, setBuscaPesquisador] = useState('');
   const [instituicaoPesquisador, setInstituicaoPesquisador] = useState('');
   const [nivelAcademico, setNivelAcademico] = useState<'todos' | TituloAcademico>('todos');
-  const [scoreMinimo, setScoreMinimo] = useState('');
   const [modoLista, setModoLista] = useState(false);
   const [pagina, setPagina] = useState(1);
 
@@ -139,17 +138,15 @@ export function Explorar({ auth }: PropsPagina) {
   );
   const pesquisadoresFiltrados = useMemo(() => {
     const termo = normalizar(buscaPesquisador.trim());
-    const scoreMinimoNumerico = scoreMinimo === '' ? null : Number(scoreMinimo);
 
     return (pesquisadoresRecebidos ?? []).filter(({ perfil }) => {
       return (
         (!termo || normalizar(perfil.nome ?? '').includes(termo)) &&
         (!instituicaoPesquisador || perfil.vinculoInstitucional?.trim() === instituicaoPesquisador) &&
-        (nivelAcademico === 'todos' || perfil.tituloAcademico === nivelAcademico) &&
-        (scoreMinimoNumerico === null || perfil.scoreAtual >= scoreMinimoNumerico)
+        (nivelAcademico === 'todos' || perfil.tituloAcademico === nivelAcademico)
       );
     });
-  }, [buscaPesquisador, instituicaoPesquisador, nivelAcademico, pesquisadoresRecebidos, scoreMinimo]);
+  }, [buscaPesquisador, instituicaoPesquisador, nivelAcademico, pesquisadoresRecebidos]);
 
   function limparFiltros() {
     const novosParametros = new URLSearchParams(parametros);
@@ -166,7 +163,6 @@ export function Explorar({ auth }: PropsPagina) {
     setBuscaPesquisador('');
     setInstituicaoPesquisador('');
     setNivelAcademico('todos');
-    setScoreMinimo('');
   }
 
   function trocarAba(aba: AbaExplorar) {
@@ -186,10 +182,10 @@ export function Explorar({ auth }: PropsPagina) {
             {abaAtiva === 'projetos'
               ? carregandoConsulta
                 ? 'Carregando projetos…'
-                : `${resultados.length} projetos nesta consulta`
+                : `${resultados.length} ${resultados.length === 1 ? 'projeto' : 'projetos'} nesta consulta`
               : carregandoPesquisadores
                 ? 'Carregando pesquisadores…'
-                : `${pesquisadoresFiltrados.length} pesquisadores nesta consulta`}
+                : `${pesquisadoresFiltrados.length} ${pesquisadoresFiltrados.length === 1 ? 'pesquisador' : 'pesquisadores'} nesta consulta`}
           </p>
         </CabecalhoPagina>
 
@@ -317,7 +313,15 @@ export function Explorar({ auth }: PropsPagina) {
         {carregandoConsulta && <Carregando />}
         {!carregandoConsulta && erroConsulta && <MensagemErro texto={erroConsulta} />}
         {!carregandoConsulta && !erroConsulta && resultados.length === 0 && (
-          <EstadoVazio>
+          <EstadoVazio
+            acao={
+              campanhas?.length ? (
+                <button type="button" className="btn btn-secondary" onClick={limparFiltros}>
+                  Limpar filtros
+                </button>
+              ) : undefined
+            }
+          >
             {campanhas?.length
               ? 'Nenhuma campanha corresponde aos filtros selecionados.'
               : 'Nenhuma campanha está disponível nesta consulta.'}
@@ -372,7 +376,7 @@ export function Explorar({ auth }: PropsPagina) {
             <div>
               <h2 id="explorar-pesquisadores-titulo" className="titulo-secao">Pesquisadores ativos</h2>
               <p className="paragrafo texto-padrao mt-2 max-w-2xl">
-                Encontre pesquisadores por instituição, nome, nível acadêmico ou score.
+                Encontre pesquisadores por nome, instituição ou nível acadêmico.
               </p>
             </div>
           </div>
@@ -386,7 +390,8 @@ export function Explorar({ auth }: PropsPagina) {
               aoAlterar={setBuscaPesquisador}
               className="w-full sm:max-w-xl"
             />
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            {/* Sem o filtro "Score mínimo" (16-11-2026, Lucas): palavra técnica, sem explicação para o público. */}
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <label className="rotulo flex flex-col gap-2">
                 Instituição
                 <select
@@ -413,19 +418,6 @@ export function Explorar({ auth }: PropsPagina) {
                   ))}
                 </select>
               </label>
-              <label className="rotulo flex flex-col gap-2">
-                Score mínimo
-                <input
-                  className="input-padrao"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={scoreMinimo}
-                  onChange={(evento) => setScoreMinimo(evento.target.value)}
-                  placeholder="Qualquer score"
-                />
-              </label>
             </div>
             <div className="flex justify-end">
               <button
@@ -448,7 +440,15 @@ export function Explorar({ auth }: PropsPagina) {
               ))}
             </div>
           ) : (
-            <EstadoVazio>
+            <EstadoVazio
+              acao={
+                pesquisadoresRecebidos?.length ? (
+                  <button type="button" className="btn btn-secondary" onClick={limparFiltrosPesquisadores}>
+                    Limpar filtros
+                  </button>
+                ) : undefined
+              }
+            >
               {pesquisadoresRecebidos?.length
                 ? 'Nenhum pesquisador corresponde aos filtros selecionados.'
                 : 'Nenhum pesquisador ativo está disponível no momento.'}

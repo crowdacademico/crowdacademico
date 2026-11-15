@@ -64,7 +64,7 @@ export function Footer() {
             <i className="fa-brands fa-cc-visa" title="Cartões de crédito" role="img" aria-label="Cartões de crédito" />
             <i className="fa-solid fa-shield-halved" title="Conformidade LGPD" role="img" aria-label="Conformidade LGPD" />
           </div>
-          <p className="legenda texto-herdado">Transações processadas em ambiente seguro e criptografado de ponta a ponta.</p>
+          <p className="legenda texto-herdado">Pagamentos processados pelo Asaas, intermediador de pagamento. O número do cartão nunca passa pela plataforma.</p>
         </div>
       </div>
 

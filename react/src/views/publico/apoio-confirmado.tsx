@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
-import { contribuicaoPublicaApi } from '../../services/22-contribuicao/api/contribuicao-publica.api';
 import { ROTULO_MEIO_PAGAMENTO } from '../../services/22-contribuicao/constants/contribuicao.constants';
 import type { StatusContribuicao } from '../../services/constant/type/enums-do-banco.gerado';
-import { lerApoio } from './apoio-em-andamento';
+import { lerApoio, useSituacaoApoio } from './apoio-em-andamento';
+import { PainelPix } from './painel-pix';
 
 const ROTULOS_STATUS: Record<StatusContribuicao, string> = {
   pendente: 'Aguardando pagamento',
@@ -21,40 +21,16 @@ const ROTULOS_STATUS: Record<StatusContribuicao, string> = {
   reembolso_manual: 'Reembolso em análise',
 };
 
-// Volta da página de pagamento do Asaas (pelo "voltar" do navegador ou pelo retorno automático, ASAAS_URL_RETORNO no
-// Nest). Mostra a situação do apoio que saiu do modal Apoiar desta aba (apoio-em-andamento.ts), consultada a cada 15 s
-// enquanto o pagamento não chega: quem confirma é o aviso do Asaas (webhook), nunca esta tela.
+// O apoio em andamento nesta aba (apoio-em-andamento.ts): o Pix gerado no modal Apoiar (o mesmo QR, depois de fechar o
+// modal ou dar F5), ou a volta da página do Asaas no cartão e no boleto (pelo "voltar" do navegador ou pelo retorno
+// automático, ASAAS_URL_RETORNO no Nest). A situação é consultada a cada 15 s enquanto o pagamento não chega: quem confirma
+// é o aviso do Asaas (webhook), nunca esta tela.
 export function ApoioConfirmado({ auth }: PropsPagina) {
   const [apoio] = useState(lerApoio);
-  const [status, setStatus] = useState<StatusContribuicao>('pendente');
-  const [erroConsulta, setErroConsulta] = useState<string | null>(null);
+  const { status, erro: erroConsulta } = useSituacaoApoio(auth.authFetch, apoio);
   const { obterNumero, obterConfiguracao } = useConfiguracoes();
   const prazoDesistencia = obterNumero('desistencia_prazo_dias', 7);
   const emailSuporte = String(obterConfiguracao('email_suporte', 'o e-mail de suporte') ?? 'o e-mail de suporte');
-
-  useEffect(() => {
-    if (!apoio) return;
-    let ativo = true;
-    let espera: number | undefined;
-    const consultar = async () => {
-      try {
-        const resultado = await contribuicaoPublicaApi.buscar(auth.authFetch, apoio.idContribuicao, apoio.tokenSessao);
-        if (!ativo) return;
-        setStatus(resultado.status);
-        setErroConsulta(null);
-        if (resultado.status === 'pendente') espera = window.setTimeout(() => void consultar(), 15_000);
-      } catch (erro: unknown) {
-        if (!ativo) return;
-        setErroConsulta(erro instanceof Error ? erro.message : 'Não foi possível consultar a situação do pagamento.');
-        espera = window.setTimeout(() => void consultar(), 15_000);
-      }
-    };
-    void consultar();
-    return () => {
-      ativo = false;
-      if (espera !== undefined) window.clearTimeout(espera);
-    };
-  }, [auth.authFetch, apoio]);
 
   if (!apoio) {
     return (
@@ -107,13 +83,20 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
               ? `Seu apoio de ${formatarMoeda(apoio.valor)} a "${apoio.tituloCampanha}" foi confirmado.`
               : naoConcluido
                 ? 'Nenhum valor foi cobrado por esta cobrança. Você pode apoiar de novo.'
-                : 'Se você já pagou na página do Asaas, a confirmação chega em instantes. Esta tela atualiza sozinha.'}
+                : apoio.pix
+                  ? 'Pague o Pix abaixo. Esta tela atualiza sozinha quando o pagamento for confirmado.'
+                  : 'Se você já pagou na página do Asaas, a confirmação chega em instantes. Esta tela atualiza sozinha.'}
           </p>
           <p className="legenda texto-fraco mb-6" role="status">
             {ROTULOS_STATUS[status]} · Protocolo <span className="font-dado">{apoio.idContribuicao}</span>
           </p>
           <MensagemErro texto={erroConsulta} />
 
+          {status === 'pendente' && apoio.pix && (
+            <div className="mb-6">
+              <PainelPix pix={apoio.pix} linkPagamento={apoio.provedorTeste ? undefined : apoio.linkPagamento} />
+            </div>
+          )}
           {status === 'pendente' &&
             (apoio.provedorTeste ? (
               <p className="paragrafo fundo-info texto-info rounded-xl p-4 mb-6 text-left">
@@ -121,9 +104,12 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
                 Campo de Testes.
               </p>
             ) : (
-              <a href={apoio.linkPagamento} className="btn btn-primary w-full justify-center mb-6">
-                Voltar à página de pagamento
-              </a>
+              !apoio.pix &&
+              apoio.linkPagamento && (
+                <a href={apoio.linkPagamento} className="btn btn-primary w-full justify-center mb-6">
+                  Voltar à página de pagamento
+                </a>
+              )
             ))}
           {naoConcluido && (
             <Link

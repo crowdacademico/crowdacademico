@@ -30,5 +30,18 @@ export class RecompensaGanhaResponse {
   descricao: string | null;
   tipo: TipoRecompensa;
   idContribuicao: number;
+  // A recompensa vale (recompensa_liberada, 03): no Tudo ou Nada, só depois que a campanha bate a meta. Sem isso, o link
+  // não vem (a RLS esconde) e a tela diz "libera quando a campanha bater a meta".
+  liberada: boolean;
   links: RecompensaLinkResponse[];
+}
+
+// Quem ganhou uma recompensa, para o dono da campanha (listar_ganhadores_recompensa, 05). Só o nome.
+export class RecompensaGanhadorResponse {
+  idContribuicao: number;
+  // O nome, ou "Apoiador anônimo".
+  apoiador: string;
+  valor: number;
+  ganhaEm: Date;
+  liberada: boolean;
 }

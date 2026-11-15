@@ -11,6 +11,7 @@ import { ModalExcluirComentario } from '../../components/crud/modal-excluir-come
 import { CartaoEndosso } from './cartao-endosso';
 import { denunciaApi } from '../../services/19-denuncia/api/denuncia.api';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { SecaoGanhadoresRecompensa } from '../18-recompensa/secao-ganhadores-recompensa';
 import { ModalExcluirItem } from '../../components/crud/modal-excluir-item';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
@@ -70,7 +71,7 @@ function ehSecaoEstudio(valor: string | undefined): valor is SecaoEstudio {
 export function EstudioPesquisador({ auth }: PropsPagina) {
   const { secao } = useParams();
   if (auth.carregando) return null;
-  if (!auth.usuario) return <Navigate to="/login" replace />;
+  if (!auth.usuario) return <Navigate to="/login" replace state={{ voltarPara: '/estudio-pesquisador' }} />;
   if (!auth.usuario.ehPesquisador) {
     return (
       <main className="largura-site w-full max-w-3xl mx-auto px-4 py-8">
@@ -372,7 +373,6 @@ function PainelRecompensas({ auth, campanhas }: { auth: PropsPagina['auth']; cam
             <CampoFicha rotulo="Tipo" valor={consultando.tipoRotulo} />
             <CampoFicha rotulo="A partir de" valor={formatarMoeda(consultando.valorMinimo)} />
             <CampoFicha rotulo="Situação" valor={consultando.situacao} />
-            <CampoFicha rotulo="Concedida" valor={`${consultando.escolhidas} ${consultando.escolhidas === 1 ? 'vez' : 'vezes'}`} />
             <CampoFicha rotulo="Descrição" valor={consultando.descricao} largura="cheia" />
             {consultando.links.length > 0 && (
               <CampoFicha
@@ -382,6 +382,7 @@ function PainelRecompensas({ auth, campanhas }: { auth: PropsPagina['auth']; cam
               />
             )}
           </SecaoFicha>
+          <SecaoGanhadoresRecompensa authFetch={auth.authFetch} idRecompensa={consultando.idRecompensa} />
         </ModalFicha>
       )}
       {excluindo && (

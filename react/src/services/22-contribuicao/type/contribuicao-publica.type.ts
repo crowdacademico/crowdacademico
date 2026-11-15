@@ -7,6 +7,14 @@ export interface ContribuicaoPixPublica {
   copiaECola: string;
   qrCodeBase64?: string;
   expiraEm: string;
+  // QR de TESTE do sandbox (o Asaas não gerou o da cobrança): o pagamento de teste é o "Confirmar pagamento" do painel do Asaas.
+  simulado?: boolean;
+}
+
+export interface ContribuicaoBoletoPublica {
+  link: string;
+  linhaDigitavel: string;
+  venceEm: string;
 }
 
 export interface ContribuicaoCriadaPublica {
@@ -19,9 +27,10 @@ export interface ContribuicaoCriadaPublica {
   meioPagamento: MeioPagamento;
   status: StatusContribuicao;
   criadoEm: string;
-  // Pix e cartão: a página de pagamento do Asaas, para onde o modal Apoiar manda quem apoia.
+  // Pix e cartão: a página de pagamento do Asaas (no cartão, para onde o modal Apoiar manda quem apoia; no Pix, alternativa ao QR do modal).
   linkPagamento?: string;
   pix?: ContribuicaoPixPublica;
+  boleto?: ContribuicaoBoletoPublica;
 }
 
 export interface StatusContribuicaoPublica {
@@ -33,8 +42,8 @@ export interface StatusContribuicaoPublica {
   criadoEm: string;
 }
 
-// Boleto existe no Nest, mas nasce desligado e não é oferecido na área pública.
-export type MeioApoioPublico = 'pix' | 'cartao_credito';
+// O débito existe no enum do banco, mas o Nest não aceita (MEIOS_PAGAMENTO_ACEITOS).
+export type MeioApoioPublico = 'pix' | 'cartao_credito' | 'boleto';
 
 export interface ContribuicaoPublicaRequest {
   idCampanha: number;

@@ -50,5 +50,17 @@ export interface RecompensaGanha {
   descricao: string | null;
   tipo: TipoRecompensa;
   idContribuicao: number;
+  // A recompensa vale: no Tudo ou Nada, só depois que a campanha bate a meta (sem isso, o link não vem).
+  liberada: boolean;
   links: RecompensaLink[];
+}
+
+// Quem ganhou uma recompensa (GET /recompensa/:id/ganhadores; só o dono da campanha e o admin).
+export interface RecompensaGanhador {
+  idContribuicao: number;
+  // O nome, ou "Apoiador anônimo".
+  apoiador: string;
+  valor: number;
+  ganhaEm: string;
+  liberada: boolean;
 }

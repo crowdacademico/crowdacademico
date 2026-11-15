@@ -24,6 +24,8 @@ export interface AcaoRodape {
   secundaria?: boolean;
   // Parece indisponível, mas continua clicável: o clique mostra o motivo (ver .btn[aria-disabled] em 4-componentes.css).
   aparenciaIndisponivel?: boolean;
+  // Texto ao passar o mouse (ex.: com aparenciaIndisponivel, o que falta para a ação valer).
+  dica?: string;
 }
 
 interface RodapeAcoesProps {
@@ -80,6 +82,7 @@ export function RodapeAcoes({
           onClick={item.aoClicar}
           disabled={item.ocupado || item.desabilitado}
           aria-disabled={item.aparenciaIndisponivel ? true : undefined}
+          title={item.dica}
           className={'btn flex-1 whitespace-nowrap ' + (item.perigo ? (item.forte ? 'btn-danger-forte' : 'btn-danger') : item.secundaria ? 'btn-sucesso' : 'btn-primary')}
         >
           {item.ocupado && item.rotuloOcupado ? item.rotuloOcupado : item.rotulo}

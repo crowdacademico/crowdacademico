@@ -983,7 +983,8 @@ CREATE TRIGGER trg_contrib_recompensa_valida
 -- Regra:      RF-104 e RF-105: quem contribui ganha, sem escolher, todas as recompensas ativas da campanha cujo valor
 --             mínimo a contribuição alcança (com R$ 151, as de R$ 50, R$ 100 e R$ 150). Só quem tem conta: a recompensa é
 --             para alguém. O valor que conta é o da contribuição, sem a tarifa. Recompensa criada depois não vale para
---             contribuição antiga. Aparece como ganha quando a contribuição é paga.
+--             contribuição antiga. Aparece como ganha quando a contribuição é paga; vale (o link aparece) conforme
+--             recompensa_liberada (03). Quem apoia como anônimo não ganha o reconhecimento (é o nome publicado).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_concede_recompensas()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -992,7 +993,9 @@ BEGIN
         INSERT INTO contribuicao_recompensa (id_contribuicao, id_recompensa)
         SELECT NEW.id_contribuicao, r.id_recompensa
         FROM recompensa r
-        WHERE r.id_campanha = NEW.id_campanha AND r.ativo AND r.valor_minimo <= NEW.valor;
+        WHERE r.id_campanha = NEW.id_campanha AND r.ativo AND r.valor_minimo <= NEW.valor
+          -- Reconhecimento é o nome publicado: quem apoiou como anônimo não ganha esse (16-11-2026).
+          AND NOT (NEW.anonima AND r.tipo = 'reconhecimento');
     END IF;
     RETURN NULL;
 END;
@@ -2582,6 +2585,56 @@ BEGIN
     WHERE ca.id_usuario = public.id_usuario_atual()
       AND c.status IN ('confirmado', 'repassado')
     ORDER BY c.criado_em DESC, c.id_contribuicao DESC;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     listar_ganhadores_recompensa
+-- Assinatura: (p_id_recompensa INT) -> TABLE (quem ganhou a recompensa)
+-- Bloco:      [05-K-1]
+-- Regra:      Para o dono da campanha (ou o admin) saber a quem entregar a recompensa, principalmente o reconhecimento
+--             (16-11-2026, Alexia). Só contribuição paga e não devolvida (confirmado ou repassado). Só o NOME: o e-mail de
+--             quem apoiou não vai para o pesquisador (a entrega digital é pelo link na plataforma). Apoio anônimo, sem
+--             conta ou de conta excluída aparece como "Apoiador anônimo". `liberada` = recompensa_liberada (03): no Tudo
+--             ou Nada, falso até a campanha bater a meta. Sem ser dono nem admin: 92043.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.listar_ganhadores_recompensa(p_id_recompensa INT)
+RETURNS TABLE (
+    id_contribuicao INT,
+    apoiador VARCHAR,
+    valor DECIMAL,
+    ganha_em TIMESTAMPTZ,
+    liberada BOOLEAN
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM recompensa r JOIN campanha ca ON ca.id_campanha = r.id_campanha
+        WHERE r.id_recompensa = p_id_recompensa
+          AND (ca.id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'))
+    ) THEN
+        RAISE EXCEPTION 'Só o dono da campanha vê quem ganhou a recompensa.' USING ERRCODE = '92043';
+    END IF;
+
+    RETURN QUERY
+    SELECT c.id_contribuicao,
+           CASE
+               WHEN c.anonima OR u.id_usuario IS NULL OR u.deletado THEN 'Apoiador anônimo'
+               ELSE u.nome
+           END::VARCHAR,
+           c.valor,
+           cr.adquirida_em,
+           public.recompensa_liberada(c.id_contribuicao)
+    FROM contribuicao_recompensa cr
+    JOIN contribuicao c ON c.id_contribuicao = cr.id_contribuicao
+    LEFT JOIN usuario u ON u.id_usuario = c.id_usuario
+    WHERE cr.id_recompensa = p_id_recompensa
+      AND c.status IN ('confirmado', 'repassado')
+    ORDER BY cr.adquirida_em, c.id_contribuicao;
 END;
 $$;
 
@@ -7316,6 +7369,76 @@ END;
 $$;
 
 -- ----------------------------------------------------------------------------
+-- Função:     enfileirar_aviso_recompensas
+-- Assinatura: (p_id_campanha INT, p_id_contribuicao INT DEFAULT NULL) -> INT
+-- Bloco:      [05-Q]
+-- Regra:      Avisa (e-mail e sino, 'recompensa_liberada') quem tem recompensa liberada: uma mensagem por pessoa, com os
+--             nomes das recompensas. Com p_id_contribuicao, só aquela contribuição (o pagamento que acabou de chegar, no
+--             flexível); sem ele, a campanha inteira (o Tudo ou Nada que bateu a meta). Só o que recompensa_liberada (03)
+--             deixa. Devolve quantas pessoas foram avisadas. SECURITY DEFINER, sem autorização (só os gatilhos chamam).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.enfileirar_aviso_recompensas(p_id_campanha INT, p_id_contribuicao INT DEFAULT NULL)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_linha RECORD;
+    v_total INT := 0;
+BEGIN
+    FOR v_linha IN
+        SELECT co.id_usuario,
+               ca.titulo,
+               string_agg(DISTINCT r.titulo, ', ') AS recompensas
+        FROM contribuicao co
+        JOIN campanha ca ON ca.id_campanha = co.id_campanha
+        JOIN contribuicao_recompensa cr ON cr.id_contribuicao = co.id_contribuicao
+        JOIN recompensa r ON r.id_recompensa = cr.id_recompensa
+        WHERE co.id_campanha = p_id_campanha
+          AND co.id_usuario IS NOT NULL
+          AND (p_id_contribuicao IS NULL OR co.id_contribuicao = p_id_contribuicao)
+          AND public.recompensa_liberada(co.id_contribuicao)
+        GROUP BY co.id_usuario, ca.titulo
+    LOOP
+        IF public.enfileirar_notificacao(v_linha.id_usuario, 'recompensa_liberada',
+               jsonb_build_object('id_campanha', p_id_campanha, 'titulo', v_linha.titulo,
+                                  'recompensas', v_linha.recompensas)) IS NOT NULL THEN
+            v_total := v_total + 1;
+        END IF;
+    END LOOP;
+    RETURN v_total;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_notifica_recompensa_paga
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-Q]
+-- Regra:      Contribuição que acabou de ser paga e já libera a recompensa (flexível, ou Tudo ou Nada que já bateu a
+--             meta): avisa quem apoiou. No Tudo ou Nada ainda no ar, o aviso sai quando a campanha bate a meta
+--             (fn_notifica_situacao_campanha).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_notifica_recompensa_paga()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    PERFORM public.enfileirar_aviso_recompensas(NEW.id_campanha, NEW.id_contribuicao);
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_notifica_recompensa_paga ON contribuicao;
+CREATE TRIGGER trg_notifica_recompensa_paga
+AFTER UPDATE OF status ON contribuicao
+FOR EACH ROW
+WHEN (NEW.status = 'confirmado' AND OLD.status IS DISTINCT FROM NEW.status AND NEW.id_usuario IS NOT NULL)
+EXECUTE FUNCTION public.fn_notifica_recompensa_paga();
+
+-- ----------------------------------------------------------------------------
 -- Função:     fn_notifica_situacao_campanha (trigger)
 -- Bloco:      [05-Q]
 -- Regra:      E-mails de quando a campanha muda de situação:
@@ -7355,6 +7478,12 @@ BEGIN
     ) THEN
         PERFORM public.enfileirar_notificacao_doadores(NEW.id_campanha, 'campanha_encerrada_antes',
             jsonb_build_object('vai_para_pesquisador', public.destino_dinheiro_campanha(NEW.id_campanha) = 'repasse'));
+    END IF;
+    -- Tudo ou Nada que saiu do ar com o dinheiro indo para o pesquisador: as recompensas que esperavam a meta valem
+    -- agora (recompensa_liberada, 03). Avisa quem ganhou (16-11-2026).
+    IF OLD.status = 'ativo' AND NEW.modelo = 'all-or-nothing'
+       AND public.destino_dinheiro_campanha(NEW.id_campanha) = 'repasse' THEN
+        PERFORM public.enfileirar_aviso_recompensas(NEW.id_campanha);
     END IF;
     RETURN NULL;
 END;

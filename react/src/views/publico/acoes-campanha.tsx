@@ -155,7 +155,7 @@ export function CartaoAcoesCampanha({ auth, campanha }: AcoesCampanhaProps) {
               Denunciar esta campanha
             </button>
           ) : (
-            <Link to="/login" className="text-sm texto-fraco hover:underline">
+            <Link to="/login" state={{ voltarPara: `/campanha/${campanha.idCampanha}` }} className="text-sm texto-fraco hover:underline">
               <i className="fa-solid fa-flag mr-2" aria-hidden="true" />
               Entre na sua conta para denunciar esta campanha
             </Link>

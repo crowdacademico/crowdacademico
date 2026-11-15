@@ -6,6 +6,7 @@ import { RecompensaServiceCreate } from './service/recompensa.service.create';
 import { RecompensaServiceFindAll } from './service/recompensa.service.findall';
 import { RecompensaServiceLink } from './service/recompensa.service.link';
 import { RecompensaServiceMine } from './service/recompensa.service.mine';
+import { RecompensaServiceWinners } from './service/recompensa.service.winners';
 import { RecompensaServiceUpdate } from './service/recompensa.service.update';
 import { RecompensaServiceRemove } from './service/recompensa.service.remove';
 
@@ -25,6 +26,7 @@ import { RecompensaServiceRemove } from './service/recompensa.service.remove';
     RecompensaServiceLink,
     RecompensaServiceRemove,
     RecompensaServiceMine,
+    RecompensaServiceWinners,
   ],
 })
 export class RecompensaModule {}

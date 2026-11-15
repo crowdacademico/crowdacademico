@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import {
   classeBadgeCampanha,
@@ -66,7 +67,7 @@ export function CartaoCampanha({
           type="button"
           className={`botao-seguir ${seguindo ? 'botao-seguir--ativo' : ''}`}
           aria-pressed={seguindo}
-          aria-label={seguindo ? 'Deixar de seguir esta campanha' : 'Seguir esta campanha'}
+          aria-label={seguindo ? `Deixar de seguir: ${campanha.titulo}` : `Seguir: ${campanha.titulo}`}
           disabled={seguirDesabilitado}
           onClick={() => aoAlternarSeguir?.(campanha.idCampanha, campanha.titulo)}
         >
@@ -172,10 +173,12 @@ export function CartaoCampanha({
   );
 }
 
-export function EstadoVazio({ children }: { children: string }) {
+// `acao`: a saída do estado vazio (ex.: "Limpar filtros" quando o filtro não achou nada; Nielsen 9, ajudar a sair do erro).
+export function EstadoVazio({ children, acao }: { children: string; acao?: ReactNode }) {
   return (
     <div className="fundo-cartao border borda-padrao rounded-xl p-8 text-center">
       <p className="paragrafo texto-padrao">{children}</p>
+      {acao && <div className="mt-4">{acao}</div>}
     </div>
   );
 }

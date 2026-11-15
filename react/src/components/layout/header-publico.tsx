@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
 import { ControleFonte } from './cabecalho/controle-fonte';
 import { ControleTema } from './cabecalho/controle-tema';
@@ -6,6 +6,7 @@ import { MenuUsuario } from './cabecalho/menu-usuario';
 import { SinoAtividade } from './cabecalho/sino-atividade';
 import { DevLoginRapido } from './cabecalho/dev-login-rapido';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
+import { useFocoPreso } from '../../services/constant/hook/use-foco-preso';
 
 interface HeaderPublicoProps {
   auth: UseAuthReturn;
@@ -21,14 +22,10 @@ export function HeaderPublico({ auth }: HeaderPublicoProps) {
   const [menuAberto, setMenuAberto] = useState(false);
   const localizacao = useLocation();
 
-  useEffect(() => {
-    if (!menuAberto) return;
-    const fecharComEscape = (evento: KeyboardEvent) => {
-      if (evento.key === 'Escape') setMenuAberto(false);
-    };
-    window.addEventListener('keydown', fecharComEscape);
-    return () => window.removeEventListener('keydown', fecharComEscape);
-  }, [menuAberto]);
+  // Gaveta do celular é uma janela (role=dialog): o foco entra nela ao abrir, o Tab fica lá dentro, o Esc fecha e o foco
+  // volta ao botão do menu (WCAG 2.4.3, ordem do foco). Antes só o Esc funcionava, e o Tab passeava pela página atrás.
+  const gavetaRef = useRef<HTMLElement>(null);
+  useFocoPreso(gavetaRef, menuAberto, () => setMenuAberto(false));
 
   return (
     <header data-topo-fixo className="header-publico fundo-cartao border-b borda-padrao sticky top-0 z-50 shadow-sm">
@@ -107,6 +104,8 @@ export function HeaderPublico({ auth }: HeaderPublicoProps) {
             aria-label="Navegação principal móvel"
             aria-modal="true"
             role="dialog"
+            ref={gavetaRef}
+            tabIndex={-1}
             className="header-publico__gaveta-menu fundo-cartao"
           >
             <div className="flex items-center justify-between p-5 border-b borda-padrao">

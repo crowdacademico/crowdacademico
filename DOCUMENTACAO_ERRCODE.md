@@ -187,6 +187,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92040 | `fn_atualizacao_ocultacao` | `atualizacao_campanha` | Atualização excluída pela moderação (mantendo o registro): o dono não a põe de volta |
 | 92041 | `contribuicoes_recebidas_pesquisador` | `contribuicao` | Consulta das contribuições recebidas sem sessão (a rota do Nest já exige login; é a defesa do banco) |
 | 92042 | `desistir_contribuicao` | `contribuicao` | Desistir de um apoio sem sessão, ou de uma contribuição que não é de quem pede (a mensagem diz "não encontrada")
+| 92043 | `listar_ganhadores_recompensa` | `recompensa` | Ver quem ganhou uma recompensa sem ser o dono da campanha nem admin |
 
 ## 93xxx - Limite de taxa (429)
 

@@ -4,6 +4,8 @@ export class ContribuicaoPixResponse {
   // Imagem do QR code em base64 (sem prefixo data:). Pode não vir: dá para montar o QR a partir do copia-e-cola.
   qrCodeBase64?: string;
   expiraEm: Date;
+  // QR de TESTE do sandbox: a tela avisa que o pagamento de teste é pelo painel do Asaas.
+  simulado?: boolean;
 }
 
 export class ContribuicaoCartaoResponse {

@@ -1,9 +1,13 @@
-import type { MeioPagamento } from '../../services/constant/type/enums-do-banco.gerado';
+import { useEffect, useState } from 'react';
+import type { AuthFetch } from '../../services/3-auth/type/auth.type';
+import { contribuicaoPublicaApi } from '../../services/22-contribuicao/api/contribuicao-publica.api';
+import type { ContribuicaoPixPublica } from '../../services/22-contribuicao/type/contribuicao-publica.type';
+import type { MeioPagamento, StatusContribuicao } from '../../services/constant/type/enums-do-banco.gerado';
 
-// O apoio que acabou de sair para a página de pagamento do Asaas. Fica guardado na ABA (sessionStorage) para a tela
-// /apoio-confirmado, quando a pessoa volta (pelo "voltar" do navegador ou pelo retorno automático do Asaas), saber qual
-// contribuição acompanhar e mostrar o protocolo. O token é o que deixa quem apoiou sem conta consultar a própria
-// contribuição (X-Token-Sessao); por isso fica só nesta aba e nunca vai na URL.
+// O apoio que acabou de ser criado pelo modal Apoiar. Fica guardado na ABA (sessionStorage) para a tela /apoio-confirmado
+// mostrar o mesmo QR do Pix depois de um F5, ou a situação quando a pessoa volta da página do Asaas (cartão e boleto). O
+// token é o que deixa quem apoiou sem conta consultar a própria contribuição (X-Token-Sessao); por isso fica só nesta aba
+// e nunca vai na URL.
 export interface ApoioEmAndamento {
   idContribuicao: number;
   tokenSessao: string;
@@ -14,7 +18,9 @@ export interface ApoioEmAndamento {
   valorCobrado: number;
   meioPagamento: MeioPagamento;
   criadoEm: string;
+  // Página do Asaas (cartão), boleto do Asaas, ou alternativa ao QR (Pix). Vazio quando o provedor não mandou.
   linkPagamento: string;
+  pix?: ContribuicaoPixPublica;
   // Provedor de teste (fake.local): não sai do site; o pagamento de mentira é feito pela T5 do Campo de Testes.
   provedorTeste: boolean;
 }
@@ -46,17 +52,43 @@ export function lerApoio(): ApoioEmAndamento | null {
       typeof apoio.valorCobrado === 'number' &&
       typeof apoio.meioPagamento === 'string' &&
       typeof apoio.criadoEm === 'string' &&
-      typeof apoio.linkPagamento === 'string';
+      typeof apoio.linkPagamento === 'string' &&
+      (apoio.pix === undefined || typeof apoio.pix.copiaECola === 'string');
     return ok ? (apoio as ApoioEmAndamento) : null;
   } catch {
     return null;
   }
 }
 
-export function esquecerApoio(): void {
-  try {
-    sessionStorage.removeItem(CHAVE);
-  } catch {
-    // nada a fazer
-  }
+// A situação do apoio, consultada a cada 15 s enquanto o pagamento não chega. Quem confirma é o aviso do Asaas (webhook);
+// a tela só mostra. Usado pelo modal Apoiar (depois de gerar o Pix) e por /apoio-confirmado.
+export function useSituacaoApoio(authFetch: AuthFetch, apoio: ApoioEmAndamento | null) {
+  const [status, setStatus] = useState<StatusContribuicao>('pendente');
+  const [erro, setErro] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!apoio) return;
+    let ativo = true;
+    let espera: number | undefined;
+    const consultar = async () => {
+      try {
+        const resultado = await contribuicaoPublicaApi.buscar(authFetch, apoio.idContribuicao, apoio.tokenSessao);
+        if (!ativo) return;
+        setStatus(resultado.status);
+        setErro(null);
+        if (resultado.status === 'pendente') espera = window.setTimeout(() => void consultar(), 15_000);
+      } catch (falha: unknown) {
+        if (!ativo) return;
+        setErro(falha instanceof Error ? falha.message : 'Não foi possível consultar a situação do pagamento.');
+        espera = window.setTimeout(() => void consultar(), 15_000);
+      }
+    };
+    void consultar();
+    return () => {
+      ativo = false;
+      if (espera !== undefined) window.clearTimeout(espera);
+    };
+  }, [authFetch, apoio]);
+
+  return { status, erro };
 }

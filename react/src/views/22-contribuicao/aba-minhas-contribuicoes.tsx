@@ -133,7 +133,7 @@ export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'au
       <GenericTable<RecompensaLinha>
         titulo="Recompensas ganhas"
         nivelTitulo={2}
-        ajuda="Toda recompensa que o valor de uma contribuição sua alcançou, quando ela foi paga. O link especial só você, o pesquisador e a administração enxergam."
+        ajuda="Toda recompensa que o valor de uma contribuição sua paga alcançou. Na campanha Tudo ou Nada, ela é liberada quando a campanha bate a meta. Se a contribuição for devolvida, a recompensa sai daqui. O link especial só você, o pesquisador e a administração enxergam."
         colunas={[
           { chave: 'idRecompensa', rotulo: 'id', tipo: 'id' },
           { chave: 'titulo', rotulo: 'recompensa', tipo: 'nome', umaLinha: true },
@@ -145,14 +145,16 @@ export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'au
             rotulo: 'link',
             tipo: 'texto',
             renderizar: (linha: RecompensaLinha) =>
-              linha.links[0] ? (
+              !linha.liberada ? (
+                <span className="badge badge-aviso">Aguardando a meta</span>
+              ) : linha.links[0] ? (
                 <a href={linha.links[0].url} target="_blank" rel="noreferrer" className="link-texto">
                   <i className="fa-solid fa-link" aria-hidden="true"></i> Abrir
                 </a>
               ) : (
                 '-'
               ),
-            textoExibido: (linha: RecompensaLinha) => (linha.links[0] ? 'Abrir' : '-'),
+            textoExibido: (linha: RecompensaLinha) => (!linha.liberada ? 'Aguardando a meta' : linha.links[0] ? 'Abrir' : '-'),
           },
         ]}
         chavePrimaria="chave"

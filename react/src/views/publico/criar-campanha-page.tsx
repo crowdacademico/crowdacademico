@@ -19,7 +19,7 @@ export function CriarCampanhaPage({ auth }: PropsPagina) {
     return null;
   }
   if (!auth.usuario) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ voltarPara: '/criar-campanha' }} />;
   }
   if (situacaoPesquisador === null) {
     return <Carregando className="largura-site mx-auto px-4 py-8" />;

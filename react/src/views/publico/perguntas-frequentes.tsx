@@ -50,7 +50,7 @@ export function PerguntasFrequentes() {
     {
       pergunta: 'O que são as recompensas?',
       resposta:
-        'Agradecimentos simbólicos (seu nome nos agradecimentos, acesso antecipado aos resultados ou um conteúdo digital). Quem apoia com conta ganha automaticamente todas as que o valor alcança.',
+        'Agradecimentos simbólicos (seu nome nos agradecimentos, acesso antecipado aos resultados ou um conteúdo digital). Quem apoia com conta ganha automaticamente todas as que o valor alcança, e você recebe um e-mail quando elas são liberadas: na campanha flexível, assim que o pagamento é confirmado; na Tudo ou Nada, quando a campanha bate a meta. Elas ficam em Minha Conta, na aba Contribuições. Se o apoio for devolvido, a recompensa sai. Quem apoia como anônimo não ganha o reconhecimento por nome.',
     },
   ];
 

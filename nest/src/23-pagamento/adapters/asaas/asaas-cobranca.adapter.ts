@@ -17,7 +17,7 @@ import {
   pedirDevolucaoBoletoAsaas,
 } from './asaas-cobranca-boleto';
 import { linkPagamentoAsaas } from './asaas-cobranca-cartao';
-import { dadosPixAsaas } from './asaas-cobranca-pix';
+import { dadosPixAsaas, pixDeTesteSandbox } from './asaas-cobranca-pix';
 import {
   type AsaasLista,
   type AsaasPayment,
@@ -94,6 +94,8 @@ export function totalEstornado(pagamento: AsaasPayment): number {
       .reduce((soma, r) => soma + (r.value ?? 0), 0),
   );
 }
+
+const ESPERA_QR_SANDBOX_MS = 8_000;
 
 function marcador(chaveIdempotencia: string): string {
   return `ref:${chaveIdempotencia}`;
@@ -177,7 +179,7 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
         case 'pix':
           return {
             ...resultado,
-            pix: await this.pixOpcional(pagamento.id, params.expiraEm),
+            pix: await this.pixDaCobranca(pagamento.id, params.expiraEm),
             linkPagamento: linkPagamentoAsaas(pagamento),
           };
         case 'boleto':
@@ -201,22 +203,28 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
     }
   }
 
-  // O QR e o "copia e cola" à parte (GET /pixQrCode) são opcionais desde que quem apoia paga na página do Asaas
-  // (linkPagamento), que mostra o QR ela mesma. Se essa chamada falhar (no sandbox, em 16-11-2026, respondia 400 "erro
-  // desconhecido" com a chave Pix ativa), a cobrança continua valendo e só fica sem os dados do Pix; antes, a falha cancelava a
-  // cobrança e ninguém conseguia apoiar.
-  private async pixOpcional(idCobranca: string, expiraEm: Date) {
+  // O QR e o "copia e cola" da cobrança, que o modal Apoiar mostra. Em produção são obrigatórios: sem eles a pessoa não
+  // teria como pagar, e a falha cancela a cobrança (catch de criarCobranca). No sandbox, se o Asaas não gerar (ele chegou a
+  // ficar dias falhando), entra um QR de TESTE (pixDeTesteSandbox), com espera curta, para a tela não travar 20 s.
+  private async pixDaCobranca(idCobranca: string, expiraEm: Date) {
+    const sandbox = this.config.ambiente === 'sandbox';
     try {
-      return await dadosPixAsaas(this.http, idCobranca, expiraEm);
-    } catch (erro) {
-      this.logger.warn(
-        'QR do Pix indisponível na cobrança ' +
-          idCobranca +
-          ': ' +
-          (erro instanceof Error ? erro.message : String(erro)) +
-          '. Segue só com a página de pagamento.',
+      return await dadosPixAsaas(
+        this.http,
+        idCobranca,
+        expiraEm,
+        sandbox ? ESPERA_QR_SANDBOX_MS : undefined,
       );
-      return undefined;
+    } catch (erro) {
+      if (!sandbox) throw erro;
+      this.logger.warn(
+        'Sandbox sem QR do Pix na cobrança ' +
+          idCobranca +
+          ' (' +
+          (erro instanceof Error ? erro.message : String(erro)) +
+          '): segue com um QR de teste. Pague pelo "Confirmar pagamento" do painel do Asaas.',
+      );
+      return pixDeTesteSandbox(idCobranca, expiraEm);
     }
   }
 

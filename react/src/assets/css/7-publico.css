@@ -1345,6 +1345,55 @@
       color: var(--cor-texto-marca);
     }
 
+    /* Modal Apoiar: cada forma de pagamento é um cartão clicável (o rádio de verdade fica escondido, para o teclado e o
+       leitor de tela). A escolhida tem borda e fundo da marca; a indisponível fica apagada, com o motivo (16-11-2026). */
+    .opcao-pagamento {
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--cor-borda);
+      border-radius: var(--radius-xl);
+      background-color: var(--cor-fundo-cartao);
+      cursor: pointer;
+      transition: border-color 150ms, background-color 150ms;
+    }
+
+    .opcao-pagamento:hover {
+      border-color: var(--cor-borda-forte);
+    }
+
+    .opcao-pagamento:has(input:focus-visible) {
+      outline: 2px solid var(--cor-marca);
+      outline-offset: 2px;
+    }
+
+    .opcao-pagamento[data-escolhida] {
+      border-color: var(--cor-marca);
+      background-color: var(--cor-fundo-sucesso);
+    }
+
+    .opcao-pagamento[data-indisponivel] {
+      cursor: not-allowed;
+      opacity: 0.6;
+      background-color: var(--cor-fundo-sutil);
+    }
+
+    .opcao-pagamento[data-indisponivel]:hover {
+      border-color: var(--cor-borda);
+    }
+
+    .opcao-pagamento__icone {
+      width: 1.5rem;
+      text-align: center;
+      font-size: 1.25rem;
+      color: var(--cor-texto-fraco);
+    }
+
+    .opcao-pagamento[data-escolhida] .opcao-pagamento__icone {
+      color: var(--cor-texto-marca);
+    }
+
     .painel-leitura {
       border: 1px solid var(--cor-borda);
       border-radius: var(--radius-xl);

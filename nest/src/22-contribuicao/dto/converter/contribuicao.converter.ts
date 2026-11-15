@@ -43,6 +43,7 @@ export class ContribuicaoConverter {
             copiaECola: cobranca.pix.copiaECola,
             qrCodeBase64: cobranca.pix.qrCodeBase64,
             expiraEm: cobranca.pix.expiraEm,
+            simulado: cobranca.pix.simulado,
           }
         : undefined,
       cartao:

@@ -5,6 +5,7 @@ import type {
   RecompensaRequestCreate,
   RecompensaRequestUpdate,
   RecompensaResponse,
+  RecompensaGanhador,
 } from '../type/recompensa.type';
 
 const corpo = (metodo: string, dados: object) => ({ method: metodo, body: JSON.stringify(dados) });
@@ -16,6 +17,9 @@ export const recompensaApi = {
     authFetch(`/recompensa?idCampanha=${idCampanha}`).then(tratarResposta<RecompensaResponse[]>),
   minhas: (authFetch: AuthFetch): Promise<RecompensaGanha[]> =>
     authFetch('/recompensa/minhas').then(tratarResposta<RecompensaGanha[]>),
+  // Quem ganhou (só o dono da campanha e o admin).
+  ganhadores: (authFetch: AuthFetch, idRecompensa: number): Promise<RecompensaGanhador[]> =>
+    authFetch(`/recompensa/${idRecompensa}/ganhadores`).then(tratarResposta<RecompensaGanhador[]>),
   criar: (authFetch: AuthFetch, dados: RecompensaRequestCreate): Promise<RecompensaResponse> =>
     authFetch('/recompensa', corpo('POST', dados)).then(tratarResposta<RecompensaResponse>),
   alterar: (authFetch: AuthFetch, idRecompensa: number, dados: RecompensaRequestUpdate): Promise<RecompensaResponse> =>

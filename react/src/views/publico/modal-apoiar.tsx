@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { CaixaAviso } from '../../components/crud/caixa-aviso';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
@@ -14,9 +14,12 @@ import type { MeioApoioPublico } from '../../services/22-contribuicao/type/contr
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import { ErroHttp } from '../../services/constant/api/http.util';
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
-import { guardarApoio } from './apoio-em-andamento';
+import { guardarApoio, useSituacaoApoio, type ApoioEmAndamento } from './apoio-em-andamento';
+import { PainelPix } from './painel-pix';
 
 const VALORES_SUGERIDOS = [25, 50, 100, 150, 200];
+// Valor já marcado ao abrir (o padrão dos formulários de doação: começar pelo apoio médio, e o resumo nunca nasce vazio).
+const VALOR_PADRAO = 50;
 const VALOR_MAXIMO = 99_999_999.99;
 
 interface ModalApoiarProps {
@@ -29,31 +32,79 @@ interface ModalApoiarProps {
   aoFechar: () => void;
 }
 
+interface OpcaoMeio {
+  meio: MeioApoioPublico;
+  rotulo: string;
+  icone: string;
+  detalhe: string;
+  // Por que não dá para usar este meio agora (null = dá).
+  indisponivel: string | null;
+}
+
 const centavos = (valor: number) => Math.round(valor * 100) / 100;
 
-// "Apoiar esta pesquisa" (16-11-2026, decisão do Lucas): aqui a pessoa só escolhe o valor (e o meio, quando o cartão é
-// permitido) e vê o total; o pagamento em si é na página do Asaas (Pix com QR, ou cartão), para onde "Ir para o pagamento"
-// manda. A volta cai em /apoio-confirmado, que acompanha a situação (ver apoio-em-andamento.ts). Substitui a antiga página
-// /checkout, que tinha a tela de QR própria.
+function ehProvedorTeste(link: string | undefined): boolean {
+  if (!link) return false;
+  try {
+    return new URL(link).hostname === 'fake.local';
+  } catch {
+    return false;
+  }
+}
+
+// "Apoiar esta pesquisa" (16-11-2026, decisões do Lucas): a pessoa escolhe o valor e a forma de pagamento e vê o total.
+// - Pix: "Gerar Pix" mostra o QR, o "copia e cola" e a contagem aqui mesmo (PainelPix), e a situação atualiza sozinha.
+// - Cartão e boleto: a pessoa vai para a página do Asaas (o cartão é digitado lá; o sistema nunca vê o número). A volta
+//   cai em /apoio-confirmado (ver apoio-em-andamento.ts).
+// Todas as formas aparecem sempre; as que não valem para aquela pessoa e campanha ficam apagadas, com o motivo.
 //
 // As regras continuam no banco (trigger de contribuição, 05): valor mínimo, Tudo ou Nada só Pix, sem conta só Pix, faixa e
-// interruptor do cartão. Aqui elas só decidem o que mostrar, para a pessoa não esbarrar num erro evitável.
+// interruptor do cartão, interruptor do boleto. Aqui elas só decidem o que mostrar, para a pessoa não esbarrar num erro.
 export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFechar }: ModalApoiarProps) {
   const navigate = useNavigate();
   const { obterNumero, obterConfiguracao } = useConfiguracoes();
   const minimo = obterNumero('valor_minimo_contribuicao', 5);
   const tarifaPix = obterNumero('taxa_pagamento_pix', 1.99);
   const cartaoLigado = String(obterConfiguracao('cartao_habilitado', true)) === 'true';
+  const boletoLigado = String(obterConfiguracao('boleto_habilitado', false)) === 'true';
   const minimoCartao = obterNumero('valor_minimo_contribuicao_cartao', 20);
   const maximoCartao = obterNumero('valor_maximo_contribuicao_cartao', 500);
   const cartaoPercentual = obterNumero('taxa_cartao_percentual', 1.99);
   const cartaoFixa = obterNumero('taxa_cartao_fixa', 0.49);
+  const tarifaBoleto = obterNumero('taxa_pagamento_boleto', 1.99);
+  const diasBoleto = obterNumero('boleto_vencimento_dias', 3);
 
   const flexivel = campanha.modelo === 'flexivel';
-  // Cartão: só com conta, só em campanha flexível e com o cartão ligado pelo admin. Fora disso, Pix sem escolha nenhuma.
-  const podeCartao = auth.usuario !== null && flexivel && cartaoLigado;
+  // Entrar na conta a partir do modal volta para cá, com o modal aberto e o mesmo valor.
+  const voltarAoApoio = `/campanha/${campanha.idCampanha}?apoiar=1`;
+  // Formas de pagamento (heurísticas de Nielsen, 16-11-2026, Lucas): o que a pessoa NÃO pode resolver some (campanha Tudo
+  // ou Nada, meio desligado pela plataforma), e a Tudo ou Nada ganha uma explicação explícita de por que é só Pix; o que
+  // ela PODE resolver (entrar na conta) aparece apagado, com o caminho. As regras continuam no banco
+  // (validar_contribuicao_all_or_nothing e fn_valida_contribuicao_valor_minimo, 05).
+  const pedeConta = (nome: string) => (auth.usuario ? null : `Entre na sua conta para pagar com ${nome}.`);
+  const todas: (OpcaoMeio & { visivel: boolean })[] = [
+    { meio: 'pix', rotulo: 'Pix', icone: 'fa-brands fa-pix', detalhe: `Confirmado na hora. Tarifa de ${formatarMoeda(tarifaPix)}.`, indisponivel: null, visivel: true },
+    {
+      meio: 'cartao_credito',
+      rotulo: 'Cartão de crédito',
+      icone: 'fa-regular fa-credit-card',
+      detalhe: `À vista, de ${formatarMoeda(minimoCartao)} a ${formatarMoeda(maximoCartao)}, na página segura do Asaas. Tarifa de ${cartaoPercentual}% + ${formatarMoeda(cartaoFixa)}.`,
+      indisponivel: pedeConta('cartão'),
+      visivel: cartaoLigado && flexivel,
+    },
+    {
+      meio: 'boleto',
+      rotulo: 'Boleto',
+      icone: 'fa-solid fa-barcode',
+      detalhe: `Vence em ${diasBoleto} dias; confirmado cerca de 1 dia útil depois de pago. Tarifa de ${formatarMoeda(tarifaBoleto)}.`,
+      indisponivel: pedeConta('boleto'),
+      visivel: boletoLigado && flexivel,
+    },
+  ];
+  const opcoes: OpcaoMeio[] = todas.filter((opcao) => opcao.visivel);
+  const algumaPedeConta = opcoes.some((opcao) => opcao.indisponivel !== null);
 
-  const [valor, setValor] = useState(valorInicial && valorInicial > 0 ? valorInicial.toFixed(2) : '');
+  const [valor, setValor] = useState((valorInicial && valorInicial > 0 ? valorInicial : VALOR_PADRAO).toFixed(2));
   const [meio, setMeio] = useState<MeioApoioPublico>('pix');
   const [cienteFlexivel, setCienteFlexivel] = useState(false);
   const [aceitouTermos, setAceitouTermos] = useState(false);
@@ -61,9 +112,17 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
   const [erro, setErro] = useState<string | undefined>(undefined);
   // Falha sem resposta clara (rede, servidor): pode ter criado a cobrança; não deixa tentar de novo daqui.
   const [bloqueado, setBloqueado] = useState(false);
+  // Clicou no botão com algo faltando: a mensagem do que falta fica em vermelho, e o foco vai até o item.
+  const [insistiu, setInsistiu] = useState(false);
+  const valorRef = useRef<HTMLInputElement>(null);
+  const cienciaRef = useRef<HTMLInputElement>(null);
+  const termosRef = useRef<HTMLInputElement>(null);
+  // Pix gerado: o modal passa a mostrar o QR e a situação.
+  const [apoioPix, setApoioPix] = useState<ApoioEmAndamento | null>(null);
+  const situacao = useSituacaoApoio(auth.authFetch, apoioPix);
 
-  // Voltar da página do Asaas: o navegador pode restaurar esta página da memória (cache de voltar/avançar), com o modal
-  // parado em "Gerando a cobrança..." e o endereço já trocado para /apoio-confirmado. Recarrega para abrir o acompanhamento.
+  // Voltar da página do Asaas (cartão, boleto): o navegador pode restaurar esta página da memória (cache de voltar/avançar),
+  // com o modal parado em "Gerando a cobrança..." e o endereço já trocado para /apoio-confirmado. Recarrega.
   useEffect(() => {
     const aoMostrar = (evento: PageTransitionEvent) => {
       if (evento.persisted) window.location.reload();
@@ -73,7 +132,7 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
   }, []);
 
   const numero = Number(valor);
-  const meioUsado: MeioApoioPublico = podeCartao ? meio : 'pix';
+  const meioUsado: MeioApoioPublico = opcoes.find((opcao) => opcao.meio === meio)?.indisponivel ? 'pix' : meio;
   const erroValor =
     valor === ''
       ? null
@@ -91,15 +150,33 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
     ? null
     : meioUsado === 'pix'
       ? tarifaPix
-      : centavos(Math.ceil(((numero + cartaoFixa) / (1 - cartaoPercentual / 100)) * 100) / 100 - numero);
+      : meioUsado === 'boleto'
+        ? tarifaBoleto
+        : centavos(Math.ceil(((numero + cartaoFixa) / (1 - cartaoPercentual / 100)) * 100) / 100 - numero);
   const total = tarifa === null ? null : centavos(numero + tarifa);
+  const nomeMeio = meioUsado === 'pix' ? 'Pix' : meioUsado === 'boleto' ? 'boleto' : 'cartão';
 
   const alcancadas = valorOk ? recompensas.filter((item) => item.valorMinimo <= numero) : [];
   const proxima = recompensas.find((item) => !valorOk || item.valorMinimo > numero);
 
   const podeIr = valorOk && aceitouTermos && (!flexivel || cienteFlexivel) && !auth.aceitePendente && !enviando && !bloqueado;
+  // O que falta para o botão ligar, dito embaixo dos Termos (botão apagado sem explicação parece quebrado).
+  const falta = !valorOk
+    ? 'Escolha um valor válido para continuar.'
+    : flexivel && !cienteFlexivel
+      ? 'Confirme que entendeu a campanha flexível para continuar.'
+      : !aceitouTermos
+        ? 'Aceite os Termos de Uso para continuar.'
+        : null;
+  // O botão parece apagado, mas o clique responde: leva a pessoa até o que falta (o padrão .btn[aria-disabled] do sistema).
+  const mostrarFalta = () => {
+    setInsistiu(true);
+    const alvo = !valorOk ? valorRef.current : flexivel && !cienteFlexivel ? cienciaRef.current : termosRef.current;
+    alvo?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    alvo?.focus({ preventScroll: true });
+  };
 
-  const irParaPagamento = async () => {
+  const continuar = async () => {
     if (!podeIr) return;
     setEnviando(true);
     setErro(undefined);
@@ -110,18 +187,8 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
         meioPagamento: meioUsado,
         ...(flexivel ? { cienteModeloFlexivel: true } : {}),
       });
-      if (!criada.linkPagamento) {
-        setBloqueado(true);
-        setErro('A cobrança foi registrada, mas a página de pagamento não veio. Não tente de novo agora; fale com o suporte.');
-        return;
-      }
-      let provedorTeste = false;
-      try {
-        provedorTeste = new URL(criada.linkPagamento).hostname === 'fake.local';
-      } catch {
-        provedorTeste = false;
-      }
-      guardarApoio({
+      const link = meioUsado === 'boleto' ? criada.boleto?.link : criada.linkPagamento;
+      const apoio: ApoioEmAndamento = {
         idContribuicao: criada.idContribuicao,
         tokenSessao: criada.tokenSessao,
         idCampanha: campanha.idCampanha,
@@ -131,16 +198,33 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
         valorCobrado: criada.valorCobrado,
         meioPagamento: criada.meioPagamento,
         criadoEm: criada.criadoEm,
-        linkPagamento: criada.linkPagamento,
-        provedorTeste,
-      });
-      if (provedorTeste) {
+        linkPagamento: link ?? '',
+        pix: criada.pix,
+        provedorTeste: ehProvedorTeste(link),
+      };
+      if (meioUsado === 'pix') {
+        if (!criada.pix) {
+          setBloqueado(true);
+          setErro('O Pix foi registrado, mas o código não veio. Não tente de novo agora; fale com o suporte.');
+          return;
+        }
+        guardarApoio(apoio);
+        setApoioPix(apoio);
+        return;
+      }
+      if (!link) {
+        setBloqueado(true);
+        setErro('A cobrança foi registrada, mas a página de pagamento não veio. Não tente de novo agora; fale com o suporte.');
+        return;
+      }
+      guardarApoio(apoio);
+      if (apoio.provedorTeste) {
         void navigate('/apoio-confirmado');
         return;
       }
       // O "voltar" do navegador, na página do Asaas, cai no acompanhamento (e não de novo neste modal).
       window.history.replaceState(null, '', '/apoio-confirmado');
-      window.location.assign(criada.linkPagamento);
+      window.location.assign(link);
     } catch (falha: unknown) {
       // O servidor RESPONDEU (qualquer status): ou recusou antes de cobrar (valor, campanha fechada, termo), ou o Asaas
       // falhou e o Nest já marcou a contribuição como 'erro' e cancelou a cobrança (contribuicao.service.create.ts). Nos
@@ -159,11 +243,60 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
     }
   };
 
+  // ---------- Depois de gerar o Pix ----------
+  if (apoioPix?.pix) {
+    const confirmado = situacao.status === 'confirmado' || situacao.status === 'repassado';
+    const naoConcluido = situacao.status === 'expirado' || situacao.status === 'erro';
+    return (
+      <ModalFicha
+        titulo={confirmado ? 'Obrigado pelo apoio!' : 'Pague com Pix'}
+        subtitulo={campanha.titulo}
+        aoFechar={aoFechar}
+        erro={situacao.erro ?? undefined}
+        fecharAoClicarFora={false}
+        rodape={<RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Fechar" />}
+      >
+        <SecaoFicha titulo={`Total: ${formatarMoeda(apoioPix.valorCobrado)}`} colunas={1}>
+          {confirmado ? (
+            <div className="fundo-sucesso texto-sucesso rounded-xl p-5 text-center" role="status">
+              <i className="fa-solid fa-circle-check text-3xl mb-2" aria-hidden="true" />
+              <p className="paragrafo enfase">Pagamento confirmado. Seu apoio de {formatarMoeda(apoioPix.valor)} já conta para a meta.</p>
+            </div>
+          ) : naoConcluido ? (
+            <CaixaAviso titulo="O pagamento não foi concluído" tom="aviso">
+              <p>Nenhum valor foi cobrado por este Pix. Feche e apoie de novo, se quiser.</p>
+            </CaixaAviso>
+          ) : (
+            <>
+              <PainelPix pix={apoioPix.pix} linkPagamento={apoioPix.provedorTeste ? undefined : apoioPix.linkPagamento} />
+              {apoioPix.provedorTeste && (
+                <p className="legenda texto-info fundo-info rounded-lg p-3">
+                  Provedor de pagamento de TESTE: confirme o pagamento de mentira pela T5 do Campo de Testes.
+                </p>
+              )}
+              <p className="legenda texto-fraco text-center" role="status">
+                Aguardando o pagamento. Esta janela atualiza sozinha quando ele for confirmado.
+              </p>
+            </>
+          )}
+          <p className="legenda texto-fraco text-center">
+            Protocolo <span className="font-dado">{apoioPix.idContribuicao}</span>. Se fechar esta janela, o Pix continua valendo:{' '}
+            <Link to="/apoio-confirmado" className="link-texto">
+              ver o apoio em andamento
+            </Link>
+            .
+          </p>
+        </SecaoFicha>
+      </ModalFicha>
+    );
+  }
+
+  // ---------- Escolha do valor e da forma ----------
   return (
     <ModalFicha
       titulo="Apoiar esta pesquisa"
       subtitulo={campanha.titulo}
-      ajuda="Escolha o valor aqui; o pagamento é feito na página segura do Asaas, o intermediador de pagamento da plataforma."
+      ajuda="Pix: o QR aparece aqui mesmo. Cartão e boleto: o pagamento é na página segura do Asaas, o intermediador de pagamento da plataforma."
       aoFechar={aoFechar}
       erro={erro}
       fecharAoClicarFora={false}
@@ -172,11 +305,14 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
           aoCancelar={aoFechar}
           largura="md"
           acao={{
-            rotulo: 'Ir para o pagamento',
+            rotulo: (meioUsado === 'pix' ? 'Gerar Pix' : 'Ir para o pagamento') + (total === null ? '' : ` · ${formatarMoeda(total)}`),
             rotuloOcupado: 'Gerando a cobrança...',
             ocupado: enviando,
-            desabilitado: !podeIr,
-            aoClicar: () => void irParaPagamento(),
+            // Desligado de verdade só enquanto envia ou quando não dá para tentar de novo; o resto é "falta algo".
+            desabilitado: enviando || bloqueado || auth.aceitePendente,
+            aparenciaIndisponivel: !podeIr,
+            dica: falta ?? undefined,
+            aoClicar: () => (falta ? mostrarFalta() : void continuar()),
           }}
         />
       }
@@ -189,48 +325,71 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
               key={sugestao}
               aria-pressed={numero === sugestao}
               onClick={() => setValor(sugestao.toFixed(2))}
-              className="pilula-valor py-2.5 rounded-lg text-sm font-bold border-2 transition-colors"
+              className="pilula-valor py-2.5 rounded-lg text-sm font-bold border-2 transition-colors inline-flex items-center justify-center gap-2"
             >
               {formatarMoeda(sugestao)}
+              {numero === sugestao && <i className="fa-solid fa-circle-check" aria-hidden="true" />}
             </button>
           ))}
         </div>
         <Campo rotulo="Outro valor" erro={erroValor ?? undefined} dica={`Mínimo de ${formatarMoeda(minimo)}.`}>
           {({ atributos, classeErro }) => (
-            <InputDinheiro {...atributos} valor={valor} aoMudar={setValor} className={'input-padrao' + classeErro} />
+            <InputDinheiro {...atributos} ref={valorRef} valor={valor} aoMudar={setValor} placeholder="R$ 0,00" className={'input-padrao' + classeErro} />
           )}
         </Campo>
       </SecaoFicha>
 
-      {podeCartao && (
-        <SecaoFicha titulo="Forma de pagamento" colunas={1}>
-          <div className="flex flex-col gap-2" role="radiogroup" aria-label="Forma de pagamento">
-            <label className="flex items-start gap-3 cursor-pointer paragrafo texto-padrao">
-              <input type="radio" name="meio-apoio" checked={meio === 'pix'} onChange={() => setMeio('pix')} className="mt-1 accent-primary" />
-              <span>
-                <span className="enfase texto-forte">Pix</span>
-                <span className="block legenda texto-fraco">Confirmado na hora. Tarifa de {formatarMoeda(tarifaPix)}.</span>
-              </span>
-            </label>
-            <label className="flex items-start gap-3 cursor-pointer paragrafo texto-padrao">
-              <input
-                type="radio"
-                name="meio-apoio"
-                checked={meio === 'cartao_credito'}
-                onChange={() => setMeio('cartao_credito')}
-                className="mt-1 accent-primary"
-              />
-              <span>
-                <span className="enfase texto-forte">Cartão de crédito</span>
-                <span className="block legenda texto-fraco">
-                  À vista, de {formatarMoeda(minimoCartao)} a {formatarMoeda(maximoCartao)}. Tarifa de {cartaoPercentual}% +{' '}
-                  {formatarMoeda(cartaoFixa)}.
+      <SecaoFicha titulo="Forma de pagamento" colunas={1}>
+        <div className="flex flex-col gap-2" role="radiogroup" aria-label="Forma de pagamento">
+          {opcoes.map((opcao) => {
+            const escolhida = meioUsado === opcao.meio;
+            return (
+              <label
+                key={opcao.meio}
+                className="opcao-pagamento"
+                data-escolhida={escolhida ? '' : undefined}
+                data-indisponivel={opcao.indisponivel ? '' : undefined}
+              >
+                <input
+                  type="radio"
+                  name="meio-apoio"
+                  checked={escolhida}
+                  disabled={opcao.indisponivel !== null}
+                  onChange={() => setMeio(opcao.meio)}
+                  className="sr-only"
+                />
+                <i className={opcao.icone + ' opcao-pagamento__icone'} aria-hidden="true" />
+                <span className="flex-1 min-w-0">
+                  <span className="block enfase texto-forte">{opcao.rotulo}</span>
+                  <span className="block legenda texto-fraco">{opcao.indisponivel ?? opcao.detalhe}</span>
                 </span>
-              </span>
-            </label>
-          </div>
-        </SecaoFicha>
-      )}
+                {escolhida && <i className="fa-solid fa-circle-check texto-marca text-lg" aria-hidden="true" />}
+                {opcao.indisponivel && (
+                  <span className="legenda texto-fraco inline-flex items-center gap-1.5 shrink-0">
+                    Requer conta <i className="fa-solid fa-lock" aria-hidden="true" />
+                  </span>
+                )}
+              </label>
+            );
+          })}
+        </div>
+        {!flexivel && (
+          <CaixaAviso titulo="Esta campanha aceita só Pix" tom="info">
+            <p>
+              Ela é <strong>Tudo ou Nada</strong>: se a meta não for atingida até o fim do prazo, o valor do apoio volta para você
+              (a tarifa do intermediador não volta). O Pix é o único meio que devolve o dinheiro sozinho e na hora.
+            </p>
+          </CaixaAviso>
+        )}
+        {algumaPedeConta && (
+          <p className="legenda texto-fraco">
+            Cartão e boleto pedem uma conta, para a devolução e as recompensas chegarem a você.{' '}
+            <Link to="/login" state={{ voltarPara: voltarAoApoio }} className="link-texto">
+              Entrar
+            </Link>
+          </p>
+        )}
+      </SecaoFicha>
 
       {recompensas.length > 0 && (
         <SecaoFicha titulo="Recompensas" colunas={1}>
@@ -248,9 +407,16 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
                 Apoiar com {formatarMoeda(proxima.valorMinimo)} e ganhar “{proxima.titulo}”
               </button>
             )}
+            {auth.usuario && alcancadas.length > 0 && (
+              <p className="legenda texto-fraco mt-2">
+                {flexivel
+                  ? 'Liberadas assim que o pagamento for confirmado. Você recebe um e-mail e elas ficam em Minha Conta.'
+                  : 'Liberadas quando a campanha bater a meta. Você recebe um e-mail e elas ficam em Minha Conta.'}
+              </p>
+            )}
             {!auth.usuario && (
               <p className="legenda texto-aviso mt-2">
-                As recompensas vão só para quem apoia com a conta: <Link to="/login" className="link-texto link-texto--cor-herdada">entre</Link> antes de continuar.
+                As recompensas vão só para quem apoia com a conta: <Link to="/login" state={{ voltarPara: voltarAoApoio }} className="link-texto link-texto--cor-herdada">entre</Link> antes de continuar.
               </p>
             )}
           </div>
@@ -258,16 +424,16 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
       )}
 
       <SecaoFicha titulo="Resumo" colunas={1}>
-        <dl className="paragrafo grid grid-cols-[1fr_auto] gap-x-4 gap-y-1">
+        <dl className="paragrafo grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 fundo-sutil border borda-padrao rounded-xl p-4">
           <dt className="texto-fraco">Apoio (vai para a campanha)</dt>
           <dd className="numero texto-forte text-right">{valorOk ? formatarMoeda(numero) : '—'}</dd>
-          <dt className="texto-fraco">Tarifa do {meioUsado === 'pix' ? 'Pix' : 'cartão'} (do intermediador)</dt>
+          <dt className="texto-fraco">Tarifa do {nomeMeio} (do intermediador)</dt>
           <dd className="numero texto-padrao text-right">{tarifa === null ? '—' : formatarMoeda(tarifa)}</dd>
-          <dt className="enfase texto-forte border-t borda-padrao pt-1">Total a pagar</dt>
-          <dd className="numero enfase texto-forte text-right border-t borda-padrao pt-1">{total === null ? '—' : formatarMoeda(total)}</dd>
+          <dt className="enfase texto-forte border-t borda-padrao pt-2 mt-1">Total a pagar</dt>
+          <dd className="numero enfase texto-forte text-right border-t borda-padrao pt-2 mt-1">{total === null ? '—' : formatarMoeda(total)}</dd>
         </dl>
         <p className="legenda texto-fraco">
-          A tarifa é do intermediador de pagamento, não da plataforma. O valor exato aparece na página de pagamento.{' '}
+          A tarifa é do intermediador de pagamento, não da plataforma; o valor exato aparece ao gerar a cobrança.{' '}
           <Link to="/transparencia" className="link-texto">Ver as taxas</Link>
         </p>
       </SecaoFicha>
@@ -282,6 +448,7 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
             <label className="flex items-start gap-3 cursor-pointer">
               <input
                 type="checkbox"
+                ref={cienciaRef}
                 checked={cienteFlexivel}
                 onChange={(evento) => setCienteFlexivel(evento.target.checked)}
                 className="mt-1 w-4 h-4 accent-primary"
@@ -289,12 +456,7 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
               <span className="enfase">Entendi que o valor vai para o pesquisador mesmo sem a meta.</span>
             </label>
           </CaixaAviso>
-        ) : (
-          <p className="paragrafo texto-padrao">
-            <span className="enfase texto-forte">Tudo ou Nada:</span> se a meta não for atingida até o fim do prazo, o valor do
-            apoio volta para você (a tarifa do intermediador não volta).
-          </p>
-        )}
+        ) : null}
         {auth.aceitePendente && (
           <p className="paragrafo texto-erro" role="alert">
             Aceite a versão nova dos Termos de Uso na sua conta antes de apoiar.
@@ -303,6 +465,7 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
         <label className="flex items-start gap-3 cursor-pointer paragrafo texto-padrao">
           <input
             type="checkbox"
+            ref={termosRef}
             checked={aceitouTermos}
             onChange={(evento) => setAceitouTermos(evento.target.checked)}
             className="mt-1 w-4 h-4 accent-primary"
@@ -310,11 +473,16 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
           <span>
             Li e aceito os{' '}
             <Link to="/termos" target="_blank" className="link-texto">
-              Termos de Uso
+              Termos de Uso<span className="sr-only"> (abre em outra aba)</span>
             </Link>{' '}
             e as condições deste apoio.
           </span>
         </label>
+        {falta && !enviando && (
+          <p className={insistiu ? 'legenda enfase texto-erro' : 'legenda texto-fraco'} role="status">
+            {falta}
+          </p>
+        )}
       </SecaoFicha>
     </ModalFicha>
   );

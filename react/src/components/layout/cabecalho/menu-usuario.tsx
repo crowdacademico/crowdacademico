@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { AvatarUsuario } from '../avatar-usuario';
 import { useFecharAoClicarFora } from '../../../services/constant/hook/use-fechar-ao-clicar-fora';
 import type { UseAuthReturn } from '../../../services/3-auth/hook/use-auth';
@@ -14,6 +14,7 @@ interface MenuUsuarioProps {
 // "Minha Conta" linka para /minha-conta: a seção "Preferências" de lá cobre o que seria um item "Configurações"
 // à parte, por isso ele não existe aqui.
 export function MenuUsuario({ auth }: MenuUsuarioProps) {
+  const localizacao = useLocation();
   const [aberto, setAberto] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -126,6 +127,7 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
             <>
               <Link
                 to="/login"
+                state={{ voltarPara: localizacao.pathname + localizacao.search }}
                 onClick={() => setAberto(false)}
                 className="paragrafo enfase flex items-center gap-3 px-4 py-2.5 texto-padrao hover-fundo-sutil transition-colors"
               >

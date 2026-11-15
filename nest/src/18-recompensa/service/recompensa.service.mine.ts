@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
-import { STATUS_CONTRIBUICAO_PAGA } from '../constants/recompensa.constants';
 import { RecompensaConverter } from '../dto/converter/recompensa.converter';
 import { RecompensaGanhaResponse } from '../dto/response/recompensa.response';
 
-// As recompensas que a própria conta ganhou (RF-105), com o link especial. Só contribuição paga conta.
+// As recompensas que a própria conta ganhou (RF-105), com o link especial. Só contribuição paga e não devolvida conta
+// (devolução, desistência e reembolso tiram a recompensa, 16-11-2026). `liberada`: ver recompensa_liberada (03).
 @Injectable()
 export class RecompensaServiceMine {
   constructor(private readonly database: DatabaseService) {}
@@ -24,9 +25,12 @@ export class RecompensaServiceMine {
         'r.descricao',
         'r.tipo',
         'c.id_contribuicao',
+        sql<boolean>`public.recompensa_liberada(c.id_contribuicao)`.as(
+          'liberada',
+        ),
       ])
       .where('c.id_usuario', '=', idUsuario)
-      .where('c.status', 'in', STATUS_CONTRIBUICAO_PAGA)
+      .where('c.status', 'in', ['confirmado', 'repassado'])
       .orderBy('cr.adquirida_em', 'desc')
       .execute();
     if (linhas.length === 0) return [];
@@ -48,6 +52,7 @@ export class RecompensaServiceMine {
       descricao: l.descricao,
       tipo: l.tipo,
       idContribuicao: l.id_contribuicao,
+      liberada: l.liberada,
       links: links
         .filter((link) => link.id_recompensa === l.id_recompensa)
         .map((link) => RecompensaConverter.paraLink(link)),

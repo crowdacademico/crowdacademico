@@ -57,6 +57,10 @@ const BOTOES: Partial<
   [TIPO_NOTIFICACAO.pesquisadorReativado]: entrar,
   [TIPO_NOTIFICACAO.denunciaProcedente]: entrar,
   [TIPO_NOTIFICACAO.moderacaoEncerrouCampanha]: entrar,
+  [TIPO_NOTIFICACAO.recompensaLiberada]: ({ urlPainel }) => ({
+    texto: 'Ver minhas recompensas',
+    url: `${urlPainel}/minha-conta/contribuicoes`,
+  }),
 };
 
 // null = sem o link que o tipo exige: o worker marca o e-mail como falha não recuperável.

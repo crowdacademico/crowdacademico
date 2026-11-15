@@ -5,6 +5,7 @@ import { ROTAS, ROTAS_ADMIN, ROTAS_CONTA } from './services/router/rotas.constan
 import { AdminLayout } from './components/layout/painel-admin/admin-layout';
 import { campoTestes } from './services/router/campo-testes-opcional';
 import { LayoutPublico } from './components/layout/layout-publico';
+import { TituloDaPagina } from './components/layout/titulo-da-pagina';
 import type { ReactNode } from 'react';
 
 // useAuth() chamado uma vez só, aqui em cima: os layouts e cada página recebem o mesmo `auth`
@@ -17,6 +18,8 @@ function App() {
   const auth = useAuth();
 
   const rotas = (
+    <>
+    <TituloDaPagina />
     <Routes>
       <Route element={<LayoutPublico auth={auth} />}>
         {ROTAS.map(({ caminho, elemento: Elemento }) => (
@@ -58,6 +61,7 @@ function App() {
         </Route>
       </Route>
     </Routes>
+    </>
   );
 
   // Provider do Campo de Testes: só em desenvolvimento e só se a pasta existir (campo-testes-opcional.ts).

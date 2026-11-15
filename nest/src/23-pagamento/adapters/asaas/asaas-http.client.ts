@@ -7,6 +7,8 @@ export type MetodoHttp = 'GET' | 'POST' | 'PUT' | 'DELETE';
 export interface OpcoesRequisicao {
   query?: Record<string, string | number | undefined>;
   corpo?: unknown;
+  // Espera menor que a padrão (ASAAS_TIMEOUT_MS) para uma chamada que tem plano B (o QR do Pix no sandbox).
+  timeoutMs?: number;
 }
 
 // Cliente HTTP do Asaas: a ÚNICA porta de saída para a rede deste adapter. Responsabilidades:
@@ -44,7 +46,7 @@ export class AsaasHttpClient {
     const controlador = new AbortController();
     const relogio = setTimeout(
       () => controlador.abort(),
-      this.config.timeoutMs,
+      opcoes.timeoutMs ?? this.config.timeoutMs,
     );
     let resposta: Response;
     try {

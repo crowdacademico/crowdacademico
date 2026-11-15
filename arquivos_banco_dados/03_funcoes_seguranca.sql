@@ -1297,3 +1297,31 @@ BEGIN
     RETURN v_linhas > 0;
 END;
 $$;
+
+-- [03-R-1] recompensa_liberada (16-11-2026, Lucas e Alexia): quando a recompensa de uma contribuição vale de verdade, e o
+-- link especial dela aparece para quem ganhou (pol_link_recompensa_select, 04). Vale só com a contribuição PAGA e não
+-- devolvida (confirmado ou já repassado): devolução, desistência e reembolso tiram a recompensa. No Tudo ou Nada, só
+-- quando o dinheiro vai mesmo para o pesquisador (destino_dinheiro_campanha = 'repasse': bateu a meta, ou encerrou antes
+-- do prazo com a meta batida); antes disso a recompensa fica "aguardando a meta", porque se a meta falhar tudo é
+-- devolvido e o conteúdo digital teria saído de graça. No flexível, vale assim que paga.
+-- Aqui (e não em 05) porque a policy de 04 depende dela; plpgsql para poder citar destino_dinheiro_campanha, que só
+-- nasce em 05 (o corpo plpgsql só é conferido quando roda).
+CREATE OR REPLACE FUNCTION public.recompensa_liberada(p_id_contribuicao INT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1
+        FROM contribuicao co
+        JOIN campanha ca ON ca.id_campanha = co.id_campanha
+        WHERE co.id_contribuicao = p_id_contribuicao
+          AND co.status IN ('confirmado', 'repassado')
+          AND ca.status <> 'encerrado_moderacao'
+          AND (ca.modelo = 'flexivel' OR public.destino_dinheiro_campanha(ca.id_campanha) = 'repasse')
+    );
+END;
+$$;

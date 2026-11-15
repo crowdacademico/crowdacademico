@@ -135,6 +135,7 @@ export interface AuditoriaFinanceira {
 
 export interface Campanha {
   aprovado_em: Timestamp | null;
+  capa_no_banner: Generated<boolean>;
   criado_em: Generated<Timestamp>;
   data_fim: Timestamp | null;
   data_inicio: Timestamp | null;
@@ -143,9 +144,8 @@ export interface Campanha {
   enviado_aprovacao_em: Timestamp | null;
   id_admin: number | null;
   id_area_conhecimento: number;
-  id_imagem_capa: number | null;
-  capa_no_banner: Generated<boolean>;
   id_campanha: Generated<number>;
+  id_imagem_capa: number | null;
   id_usuario: number;
   meta_financeira: Numeric;
   modelo: Generated<ModeloCampanha>;
@@ -180,6 +180,7 @@ export interface Configuracoes {
 
 export interface Contribuicao {
   anonima: Generated<boolean>;
+  ciencia_modelo_em: Timestamp | null;
   cobranca_cancelada_em: Timestamp | null;
   criado_em: Generated<Timestamp>;
   dinheiro_liberado_em: Timestamp | null;
@@ -208,13 +209,13 @@ export interface ContribuicaoRecompensa {
 }
 
 export interface Denuncia {
+  comentario_conteudo: string | null;
+  comentario_endossado: boolean | null;
+  comentario_id_campanha: number | null;
   contestacao: string | null;
   contestacao_status: StatusContestacao | null;
   contestada_em: Timestamp | null;
   criado_em: Generated<Timestamp>;
-  comentario_conteudo: string | null;
-  comentario_endossado: boolean | null;
-  comentario_id_campanha: number | null;
   id_campanha_alvo: number | null;
   id_comentario: number | null;
   id_denuncia: Generated<number>;

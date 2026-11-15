@@ -236,7 +236,7 @@ export function Home({ auth }: PropsPagina) {
             <Link to="/explorar" className="btn btn-primary btn-grande shadow-marca hover:-translate-y-0.5">
               Ver projetos em captação
             </Link>
-            <Link to="/cadastro" className="btn btn-grande veu-claro backdrop-blur-sm hover-veu-claro texto-sobre-escuro-forte">
+            <Link to="/criar-campanha" className="btn btn-grande veu-claro backdrop-blur-sm hover-veu-claro texto-sobre-escuro-forte">
               Submeter uma pesquisa
             </Link>
           </div>
@@ -324,7 +324,7 @@ export function Home({ auth }: PropsPagina) {
             aoAlternarSeguir={seguimento.alternarSeguir}
           />
           <div className="mt-12 text-center">
-            <Link to="/explorar" className="fundo-cartao border-2 borda-padrao texto-padrao font-bold py-3 px-8 rounded-xl hover-fundo-sutil hover-borda-forte hover-texto-forte transition-all shadow-sm">
+            <Link to="/explorar" className="btn btn-secondary btn-grande">
               Ver todos os projetos
             </Link>
           </div>

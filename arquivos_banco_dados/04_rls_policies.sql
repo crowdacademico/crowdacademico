@@ -678,10 +678,13 @@ CREATE POLICY pol_link_recompensa_select ON link_recompensa FOR SELECT TO app_ne
         WHERE r.id_recompensa = link_recompensa.id_recompensa
           AND (c.id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar')))
     )
+    -- Quem ganhou só vê o link com a recompensa liberada (16-11-2026): antes bastava ter a recompensa ligada, e uma
+    -- contribuição Pix gerada e nunca paga já mostrava o link.
     OR EXISTS (
         SELECT 1 FROM contribuicao_recompensa cr JOIN contribuicao co ON co.id_contribuicao = cr.id_contribuicao
         WHERE cr.id_recompensa = link_recompensa.id_recompensa
           AND co.id_usuario = (SELECT public.id_usuario_atual())
+          AND public.recompensa_liberada(co.id_contribuicao)
     )
 );
 DROP POLICY IF EXISTS pol_link_recompensa_insert ON link_recompensa;

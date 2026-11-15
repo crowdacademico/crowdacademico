@@ -834,7 +834,11 @@ INSERT INTO modelo_mensagem (tipo_evento, canal, titulo, corpo, ativo, obrigator
 ('campanha_encerrada_antes', 'interna', 'Campanha encerrada antes do prazo',
  E'"{{titulo}}" terminou antes do prazo.{{#vai_para_pesquisador}} O valor vai para o pesquisador.{{/vai_para_pesquisador}}{{^vai_para_pesquisador}} A sua contribuição vai ser devolvida.{{/vai_para_pesquisador}}', TRUE, FALSE),
 ('lembrete_fim_campanha', 'interna', 'Campanha perto do fim',
- E'"{{titulo}}" termina em {{data_fim}}. Ainda dá tempo de apoiar.', TRUE, FALSE)
+ E'"{{titulo}}" termina em {{data_fim}}. Ainda dá tempo de apoiar.', TRUE, FALSE),
+('recompensa_liberada', 'email', 'Sua recompensa está liberada',
+ E'Obrigado por apoiar "{{titulo}}"! A sua recompensa está liberada: {{recompensas}}.\n\nVeja e acesse em Minha Conta, na aba Contribuições, em "Recompensas ganhas".', TRUE, FALSE),
+('recompensa_liberada', 'interna', 'Recompensa liberada',
+ E'Sua recompensa de "{{titulo}}" está liberada: {{recompensas}}.', TRUE, FALSE)
 ON CONFLICT (tipo_evento, canal) DO NOTHING;
 
 -- ============================================================================

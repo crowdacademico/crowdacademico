@@ -11,6 +11,7 @@ import { BotaoMostrarSenha } from '../../components/input/botao-mostrar-senha';
 import { MedidorSenha } from '../../components/input/medidor-senha';
 import { CamposVinculoPerfil } from '../6-perfil-pesquisador/campos-vinculo-perfil';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
+import { useToast } from '../../components/layout/toast/use-toast';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { ErroHttp } from '../../services/constant/api/http.util';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -55,6 +56,7 @@ function cpfValido(cpf: string): boolean {
 }
 
 export function CadastroPage({ auth }: PropsPagina) {
+  const { mostrar: mostrarAviso } = useToast();
   const navigate = useNavigate();
   const [passo, setPasso] = useState<1 | 2>(1);
   const [tipoConta, setTipoConta] = useState<TipoConta | null>(null);
@@ -142,6 +144,8 @@ export function CadastroPage({ auth }: PropsPagina) {
           `${window.location.origin}/verificar-email?token=${tokenDev}`,
       );
     }
+    // Antes a pessoa caía na Home sem aviso nenhum (16-11-2026).
+    mostrarAviso('Conta criada!', `Enviamos um link de confirmação para ${email}. Abra o e-mail para confirmar o endereço.`, 'sucesso');
     void navigate('/');
   };
 

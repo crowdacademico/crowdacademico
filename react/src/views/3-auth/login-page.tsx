@@ -21,13 +21,20 @@ import type { PropsPagina } from '../../services/router/pagina.type';
 // login. O login social com Google é só alert() de protótipo, como no original; "Esqueceu a senha?" leva a
 // /esqueci-senha.
 //
-// Depois de entrar, volta para a página do painel que a guarda do AdminLayout interceptou (`voltarPara`). Só
-// aceita caminho interno de /admin, nunca um endereço de fora, para um link montado não mandar a pessoa para
-// outro site depois do login.
+// Depois de entrar, volta para onde a pessoa estava (`voltarPara`): a página do painel que a guarda do AdminLayout
+// interceptou, ou a página pública de onde ela clicou em "Entrar" (a campanha com o modal Apoiar aberto, Submeter
+// pesquisa, o Estúdio). Antes só valia /admin, e quem entrava a partir de uma campanha caía na Home (16-11-2026). Só
+// aceita caminho interno ("/..." e nunca "//...", que o navegador leria como outro site), para um link montado não mandar
+// a pessoa para fora depois do login.
 function destinoDepoisDoLogin(estado: unknown): string {
   if (typeof estado === 'object' && estado !== null && 'voltarPara' in estado) {
     const { voltarPara } = estado;
-    if (typeof voltarPara === 'string' && voltarPara.startsWith('/admin/')) {
+    if (
+      typeof voltarPara === 'string' &&
+      voltarPara.startsWith('/') &&
+      !voltarPara.startsWith('//') &&
+      !voltarPara.startsWith('/login')
+    ) {
       return voltarPara;
     }
   }
