@@ -16,6 +16,9 @@ import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { CamposVinculoPerfil } from './campos-vinculo-perfil';
+import { CamposChavePix } from '../24-conta-recebimento/campos-chave-pix';
+import { salvarChavePixDoNovoPesquisador } from '../24-conta-recebimento/salvar-chave-pix';
+import type { TipoChavePix } from '../../services/constant/type/enums-do-banco.gerado';
 import { LinksAcademicosDoUsuario } from '../7-link-academico/links-academicos-do-usuario';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
@@ -95,6 +98,10 @@ export function ModalUpgradePesquisador({
   // Depois de criar o perfil, mantém os dados travados e permite revisar os links que não foram salvos.
   const [perfilCriado, setPerfilCriado] = useState(false);
   const [linksPendentes, setLinksPendentes] = useState<LinkAcademicoResponse[]>([]);
+  // Chave Pix opcional (16-11-2026): só quando a pessoa vira pesquisadora na própria conta. O admin criando o perfil de
+  // outra pessoa não informa chave: a chave é sempre de quem está logado (POST /conta-recebimento).
+  const [tipoChavePix, setTipoChavePix] = useState<TipoChavePix>('cpf');
+  const [chavePix, setChavePix] = useState('');
   const proximoIdRascunho = useRef(-1);
   const limiteLinks = useConfiguracoes().obterNumero('limite_links_academicos_perfil', 5);
   const { dado: tiposLink } = useBuscar(() => tipoLinkApi.listar(auth.authFetch, { escopo: 'perfil' }), []);
@@ -167,6 +174,7 @@ export function ModalUpgradePesquisador({
         await auth.renovarSessaoAgora().catch(() => {
           auth.atualizarUsuarioLocal((atual) => (atual ? { ...atual, ehPesquisador: true } : atual));
         });
+        await salvarChavePixDoNovoPesquisador(auth.authFetch, tipoChavePix, chavePix, mostrar);
       }
       aoConcluido(perfilCriado);
       if (linksPendentes.length > 0) {
@@ -291,6 +299,15 @@ export function ModalUpgradePesquisador({
                     aoAlterarTituloAcademico={(titulo) => setForm({ ...form, tituloAcademico: titulo })}
                     erroVinculoInstitucional={erroDe('vinculoInstitucional') ?? errosCampo.vinculoInstitucional}
                   />
+                  {ehContaPropria && (
+                    <CamposChavePix
+                      tipoChave={tipoChavePix}
+                      aoAlterarTipo={setTipoChavePix}
+                      chave={chavePix}
+                      aoAlterarChave={setChavePix}
+                      opcional
+                    />
+                  )}
                 </SecaoFicha>
               </fieldset>
             )}

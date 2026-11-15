@@ -40,6 +40,8 @@ export interface StatusContribuicaoPublica {
   meioPagamento: MeioPagamento;
   status: StatusContribuicao;
   criadoEm: string;
+  // A versão do Termo de Uso aceita ao apoiar, e quando (null = sem registro).
+  termoAceito: { versao: string; aceitoEm: string } | null;
 }
 
 // O débito existe no enum do banco, mas o Nest não aceita (MEIOS_PAGAMENTO_ACEITOS).
@@ -49,6 +51,8 @@ export interface ContribuicaoPublicaRequest {
   idCampanha: number;
   valor: number;
   meioPagamento: MeioApoioPublico;
+  // RF-086: a caixa "Li e aceito os Termos de Uso". A API recusa sem ela (16-11-2026).
+  aceiteTermos: true;
   // RF-041: obrigatório (true) em campanha flexível; o Nest recusa sem ele e grava a data da ciência.
   cienteModeloFlexivel?: boolean;
 }

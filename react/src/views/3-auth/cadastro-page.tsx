@@ -10,6 +10,9 @@ import { CampoCpf } from '../../components/input/campo-cpf';
 import { BotaoMostrarSenha } from '../../components/input/botao-mostrar-senha';
 import { MedidorSenha } from '../../components/input/medidor-senha';
 import { CamposVinculoPerfil } from '../6-perfil-pesquisador/campos-vinculo-perfil';
+import { CamposChavePix } from '../24-conta-recebimento/campos-chave-pix';
+import { salvarChavePixDoNovoPesquisador } from '../24-conta-recebimento/salvar-chave-pix';
+import type { TipoChavePix } from '../../services/constant/type/enums-do-banco.gerado';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
@@ -127,6 +130,12 @@ export function CadastroPage({ auth }: PropsPagina) {
       'É preciso aceitar o Termo de Uso do pesquisador.',
   }));
 
+  // A chave Pix é opcional aqui (16-11-2026, pedido da Alexia): salva logo depois do perfil, que dá o CPF para conferir
+  // a titularidade. Se falhar, a conta e o perfil continuam criados (salvarChavePixDoNovoPesquisador só avisa).
+  const [tipoChavePix, setTipoChavePix] = useState<TipoChavePix>('cpf');
+  const [chavePix, setChavePix] = useState('');
+  const salvarChavePix = () => salvarChavePixDoNovoPesquisador(auth.authFetch, tipoChavePix, chavePix, mostrarAviso);
+
   const criarPerfilPesquisador = async () => {
     await perfilPesquisadorApi.criar(auth.authFetch, {
       cpf,
@@ -171,6 +180,7 @@ export function CadastroPage({ auth }: PropsPagina) {
       limparErro();
       try {
         await criarPerfilPesquisador();
+        await salvarChavePix();
         concluirCadastro(tokenVerificacaoEmailDev);
       } catch (erroPerfil) {
         reportarErro(new Error(
@@ -210,6 +220,7 @@ export function CadastroPage({ auth }: PropsPagina) {
           return;
         }
       }
+      if (tipoConta === 'pesquisador') await salvarChavePix();
       concluirCadastro(resultado.tokenVerificacaoEmailDev);
     } catch (erroRequisicao) {
       if (erroRequisicao instanceof ErroHttp && erroRequisicao.status === 409) {
@@ -370,9 +381,14 @@ export function CadastroPage({ auth }: PropsPagina) {
                 aoAlterarTituloAcademico={setTituloAcademico}
                 erroVinculoInstitucional={erroDe('vinculoInstitucional')}
               />
-              <p className="legenda texto-fraco">
-                Links acadêmicos e chave Pix podem ser informados depois, nas respectivas áreas do perfil.
-              </p>
+              <CamposChavePix
+                tipoChave={tipoChavePix}
+                aoAlterarTipo={setTipoChavePix}
+                chave={chavePix}
+                aoAlterarChave={setChavePix}
+                opcional
+              />
+              <p className="legenda texto-fraco">Os links acadêmicos podem ser informados depois, no seu perfil.</p>
             </section>
           )}
 

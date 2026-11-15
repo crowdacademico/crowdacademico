@@ -12,6 +12,8 @@ interface LinhaContribuicao {
   meio_pagamento: string;
   status: string;
   criado_em: Date;
+  termo_versao: string | null;
+  termo_aceito_em: Date | null;
 }
 
 // GET /contribuicao/:id. Quem contribuiu COM conta consulta pelo login; quem contribuiu SEM conta, pelo tokenSessao que
@@ -34,8 +36,12 @@ export class ContribuicaoServiceFind {
       { idUsuario: usuario?.idUsuario, tokenSessao },
       async (client) => {
         const resultado = await client.query<LinhaContribuicao>(
-          `SELECT id_contribuicao, id_campanha, valor, meio_pagamento, status, criado_em
-           FROM contribuicao WHERE id_contribuicao = $1`,
+          `SELECT c.id_contribuicao, c.id_campanha, c.valor, c.meio_pagamento, c.status, c.criado_em,
+                  t.versao AS termo_versao, a.aceito_em AS termo_aceito_em
+           FROM contribuicao c
+           LEFT JOIN aceite_termo_contribuicao a ON a.id_contribuicao = c.id_contribuicao
+           LEFT JOIN termos_de_uso t ON t.id_termo = a.id_termo
+           WHERE c.id_contribuicao = $1`,
           [idContribuicao],
         );
         return resultado.rows[0];
@@ -51,6 +57,10 @@ export class ContribuicaoServiceFind {
       meioPagamento: linha.meio_pagamento,
       status: linha.status,
       criadoEm: linha.criado_em,
+      termoAceito:
+        linha.termo_versao && linha.termo_aceito_em
+          ? { versao: linha.termo_versao, aceitoEm: linha.termo_aceito_em }
+          : null,
     };
   }
 }

@@ -9,7 +9,10 @@ const BASE = '/conta-recebimento';
 
 export const contaRecebimentoApi = {
   // null = ainda sem chave.
-  buscar: (authFetch: AuthFetch): Promise<ContaRecebimentoResponse | null> => authFetch(BASE).then(tratarResposta<ContaRecebimentoResponse | null>),
+  // Sem chave, o Nest devolve null, que o Express manda como corpo VAZIO, e tratarResposta lê como undefined. Sem o `?? null`,
+  // a seção Recebimento achava que ainda estava carregando e sumia: só quem já tinha chave via onde cadastrar (16-11-2026).
+  buscar: (authFetch: AuthFetch): Promise<ContaRecebimentoResponse | null> =>
+    authFetch(BASE).then(tratarResposta<ContaRecebimentoResponse | null>).then((conta) => conta ?? null),
   cadastrar: (authFetch: AuthFetch, tipoChave: TipoChavePix, chave: string): Promise<ContaRecebimentoResponse | null> =>
     authFetch(BASE, { method: 'POST', body: JSON.stringify({ tipoChave, chave }) }).then(tratarResposta<ContaRecebimentoResponse | null>),
   remover: (authFetch: AuthFetch): Promise<void> => authFetch(BASE, { method: 'DELETE' }).then(tratarResposta<void>),

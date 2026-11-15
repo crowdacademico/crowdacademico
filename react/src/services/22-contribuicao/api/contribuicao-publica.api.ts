@@ -22,9 +22,10 @@ export const contribuicaoPublicaApi = {
   buscar: (
     authFetch: AuthFetch,
     idContribuicao: number,
-    tokenSessao: string,
+    // Quem apoiou sem conta consulta pelo token; com conta, o login basta (sem o token).
+    tokenSessao?: string,
   ): Promise<StatusContribuicaoPublica> =>
     authFetch(`/contribuicao/${idContribuicao}`, {
-      headers: { 'X-Token-Sessao': tokenSessao },
+      headers: tokenSessao ? { 'X-Token-Sessao': tokenSessao } : {},
     }).then(tratarResposta<StatusContribuicaoPublica>),
 };

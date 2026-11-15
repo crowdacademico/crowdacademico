@@ -7,4 +7,7 @@ export class ContribuicaoResponseFind {
   meioPagamento: string;
   status: string;
   criadoEm: Date;
+  // O Termo de Uso aceito ao apoiar (aceite_termo_contribuicao): a versão e quando. null = sem registro (contribuição
+  // antiga, ou nenhuma versão ativa no dia). O IP também é gravado, mas não sai daqui.
+  termoAceito: { versao: string; aceitoEm: Date } | null;
 }

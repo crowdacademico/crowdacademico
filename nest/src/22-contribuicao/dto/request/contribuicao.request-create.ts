@@ -1,4 +1,5 @@
 import {
+  Equals,
   IsBoolean,
   IsIn,
   IsInt,
@@ -43,6 +44,12 @@ export class ContribuicaoRequestCreate {
   @IsOptional()
   @IsBoolean()
   anonima?: boolean;
+
+  // RF-086: o aceite dos Termos de Uso, a caixa "Li e aceito" do modal Apoiar. Obrigatório e sempre true (16-11-2026,
+  // pergunta da Alexia): antes a caixa só existia na tela, e quem chamasse a API direto criava o apoio sem ela. O aceite
+  // gravado (aceite_termo_contribuicao: versão do Termo vigente, data e IP) agora prova que a pessoa marcou.
+  @Equals(true, { message: 'Aceite os Termos de Uso para apoiar.' })
+  aceiteTermos: boolean;
 
   // RF-041: obrigatório (true) em campanha flexível; o serviço checa, porque só ele sabe o modelo da campanha. Em
   // all-or-nothing é ignorado.

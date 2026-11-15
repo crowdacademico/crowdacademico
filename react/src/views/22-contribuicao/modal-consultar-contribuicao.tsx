@@ -4,6 +4,8 @@ import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
+import { contribuicaoPublicaApi } from '../../services/22-contribuicao/api/contribuicao-publica.api';
+import type { StatusContribuicaoPublica } from '../../services/22-contribuicao/type/contribuicao-publica.type';
 import { formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
@@ -74,6 +76,14 @@ export function ModalConsultarContribuicao({ authFetch, contribuicao, rotuloMeio
       .then(setCampanha)
       .catch(() => setCampanha('indisponivel'));
   }, [authFetch, contribuicao.idCampanha]);
+  // undefined = carregando; null = não deu para consultar.
+  const [detalhe, setDetalhe] = useState<StatusContribuicaoPublica | null | undefined>(undefined);
+  useEffect(() => {
+    contribuicaoPublicaApi
+      .buscar(authFetch, contribuicao.idContribuicao)
+      .then(setDetalhe)
+      .catch(() => setDetalhe(null));
+  }, [authFetch, contribuicao.idContribuicao]);
 
   return (
     <ModalFicha
@@ -98,6 +108,17 @@ export function ModalConsultarContribuicao({ authFetch, contribuicao, rotuloMeio
         <CampoFicha rotulo="Total cobrado" valor={formatarMoeda(contribuicao.valor + contribuicao.taxaPagamento)} />
         <CampoFicha rotulo="Meio de pagamento" valor={rotuloMeio} />
         <CampoFicha rotulo="Repasse" valor={contribuicao.idRepasse === null ? 'Ainda não' : `#${contribuicao.idRepasse}`} />
+      </SecaoFicha>
+      {/* RF-086 (16-11-2026): o aceite que o banco gravou ao apoiar (aceite_termo_contribuicao). */}
+      <SecaoFicha titulo="Termo de Uso aceito">
+        <CampoFicha
+          rotulo="Versão"
+          valor={detalhe === undefined ? 'Carregando...' : detalhe?.termoAceito ? detalhe.termoAceito.versao : 'Sem registro'}
+        />
+        <CampoFicha
+          rotulo="Aceito em"
+          valor={detalhe?.termoAceito ? formatarDataHora(detalhe.termoAceito.aceitoEm) : detalhe === undefined ? 'Carregando...' : '—'}
+        />
       </SecaoFicha>
     </ModalFicha>
   );

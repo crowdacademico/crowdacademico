@@ -4,13 +4,13 @@ import { CaixaAviso } from '../../components/crud/caixa-aviso';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { GenericTable } from '../../components/crud/generic-table';
 import { ModalConfirmacao } from '../../components/crud/modal-confirmacao';
-import { Campo } from '../../components/input/campo';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { Tooltip } from '../../components/layout/tooltip';
 import { contaRecebimentoApi } from '../../services/24-conta-recebimento/api/conta-recebimento.api';
-import { ORDEM_TIPO_CHAVE_PIX, ROTULO_TIPO_CHAVE_PIX } from '../../services/24-conta-recebimento/constants/conta-recebimento.constants';
+import { ROTULO_TIPO_CHAVE_PIX } from '../../services/24-conta-recebimento/constants/conta-recebimento.constants';
+import { CamposChavePix } from './campos-chave-pix';
 import { rotuloSituacaoRepasse } from '../../services/23-pagamento/constants/status-repasse.constants';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
@@ -86,24 +86,7 @@ export function SecaoRecebimento({ authFetch }: { authFetch: AuthFetch }) {
           </>
         )}
         {mostrarFormulario && (
-          <>
-            <Campo rotulo="Tipo de chave">
-              {({ atributos, classeErro }) => (
-                <select {...atributos} value={tipoChave} onChange={(evento) => setTipoChave(evento.target.value as TipoChavePix)} className={'input-padrao' + classeErro}>
-                  {ORDEM_TIPO_CHAVE_PIX.map((tipo) => (
-                    <option key={tipo} value={tipo}>
-                      {ROTULO_TIPO_CHAVE_PIX[tipo]}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </Campo>
-            <Campo rotulo="Chave">
-              {({ atributos, classeErro }) => (
-                <input {...atributos} value={chave} onChange={(evento) => setChave(evento.target.value)} className={'input-padrao' + classeErro} />
-              )}
-            </Campo>
-          </>
+          <CamposChavePix tipoChave={tipoChave} aoAlterarTipo={setTipoChave} chave={chave} aoAlterarChave={setChave} />
         )}
       </SecaoFicha>
 

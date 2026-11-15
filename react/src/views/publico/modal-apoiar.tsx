@@ -185,6 +185,7 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
         idCampanha: campanha.idCampanha,
         valor: numero,
         meioPagamento: meioUsado,
+        aceiteTermos: true,
         ...(flexivel ? { cienteModeloFlexivel: true } : {}),
       });
       const link = meioUsado === 'boleto' ? criada.boleto?.link : criada.linkPagamento;

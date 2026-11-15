@@ -2,7 +2,7 @@ import type { MouseEvent } from 'react';
 import { Outlet } from 'react-router';
 import { BarraCarregamento } from './barra-carregamento/barra-carregamento';
 import { Footer } from './footer';
-import { HeaderPublico } from './header-publico';
+import { Header } from './header';
 import { LimiteErro } from './limite-erro';
 import { useAlturaTopoFixo, useTopoAoTrocarDePagina } from './use-posicao-da-tela';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
@@ -36,7 +36,7 @@ export function LayoutPublico({ auth }: LayoutPublicoProps) {
     <div className="layout-publico w-full min-h-0 flex flex-col flex-1">
       <PularParaConteudoPublico />
       <BarraCarregamento />
-      <HeaderPublico auth={auth} />
+      <Header auth={auth} variante="publico" />
       <div
         id="conteudo-publico"
         data-conteudo-principal

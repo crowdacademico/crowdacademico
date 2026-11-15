@@ -294,7 +294,7 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 
 ### `components/layout/`
 
-`layout.tsx` (cabeçalho, breadcrumb, `<main>` e rodapé das rotas restritas), `header.tsx`, `footer.tsx`, `logo-marca.tsx` (o logo, seção 12), `breadcrumb.tsx`, `avatar-usuario.tsx`, `tooltip.tsx`, `carregando.tsx`, `limite-erro.tsx`, `barra-abas-botoes.tsx`, `barra-carregamento/`, `toast/` e `cabecalho/` (busca global, menu do usuário, sino, controles de tema e de fonte, entrar como). As páginas públicas usam `layout-publico.tsx`, `header-publico.tsx` e `footer-publico.tsx`, com navegação própria e o visual do protótipo; controles de tema, fonte, usuário e sino são reutilizados.
+`layout.tsx` (cabeçalho, breadcrumb, `<main>` e rodapé das rotas restritas), `header.tsx`, `footer.tsx`, `logo-marca.tsx` (o logo, seção 12), `breadcrumb.tsx`, `avatar-usuario.tsx`, `tooltip.tsx`, `carregando.tsx`, `limite-erro.tsx`, `barra-abas-botoes.tsx`, `barra-carregamento/`, `toast/` e `cabecalho/` (busca global, menu do usuário, sino, controles de tema e de fonte, entrar como). As páginas públicas usam `layout-publico.tsx`. Cabeçalho e rodapé são ÚNICOS no sistema: `footer.tsx` (desde 14-11-2026) e `header.tsx` (desde 16-11-2026), com `variante="publico"` (links de navegação, "Submeter pesquisa" e a gaveta de menu no celular) ou `variante="painel"` (o painel navega pelo menu lateral).
 
 📌 **Destaques:**
 - **`LimiteErro`:** um erro de renderização mostra um aviso no lugar do trecho que quebrou (com botão de recarregar), em vez de tela em branco. Em volta do conteúdo de todas as páginas e da área do painel (o menu continua de pé). Recomeça ao trocar de página.
@@ -534,7 +534,7 @@ Em Repasses em Atenção e Reembolsos Manuais (lista e ficha), o "último motivo
 - **Área pública e fluxos ainda incompletos:** as páginas públicas e o Estúdio do Pesquisador já existem. O apoio é um modal na campanha: o Pix é pago pelo QR no próprio modal; cartão e boleto, na página do Asaas. O Estúdio lista e gerencia campanhas, mas ainda não mostra todas as métricas previstas nem o valor líquido estimado. O histórico de contribuições fica em Minha Conta, sem área própria para doadores. Não há rota de transparência registrada em `ROTAS`.
 - **Termos e privacidade:** `/termos` mostra o Termo de Uso ativo de conta/contribuições via backend. O protótipo tinha texto Lorem Ipsum; uma política de privacidade separada só deve ser exibida quando houver conteúdo oficial publicado.
 - **Conteúdo sem backend:** páginas institucionais usam texto explicativo, mas não reproduzem métricas, perfis ou campanhas fictícias.
-- **Cabeçalhos e rodapés separados:** as páginas públicas usam os equivalentes próprios do protótipo (`header-publico.tsx` e `footer-publico.tsx`); `header.tsx`, `footer.tsx` e `layout.tsx` continuam exclusivos do layout restrito e não foram alterados.
+- **Cabeçalho e rodapé únicos:** `header.tsx` (com a variante `publico` ou `painel`) e `footer.tsx` servem as duas áreas, com a mesma marca oficial (`LogoMarca`).
 - **Botões de autenticação:** "Continuar com Google" ainda é simulado.
 - **Trocar logo e ícone pelo painel** (aba Identidade Visual): hoje a marca são arquivos do projeto (seção 12).
 - ⚠️ **Nenhum teste automatizado no React.**

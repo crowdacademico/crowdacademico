@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Navigate, useParams } from 'react-router';
+import { Link, Navigate, useParams } from 'react-router';
+import { CaixaAviso } from '../../components/crud/caixa-aviso';
 import { LayoutAreaUsuario } from '../../components/layout/layout-area-usuario';
 import { AvisoSoPesquisador } from '../../components/crud/aviso-so-pesquisador';
 import { BotaoCriar } from '../../components/crud/botao-criar';
@@ -104,6 +105,12 @@ function ConteudoEstudio({ auth, secao }: PropsPagina & { secao: SecaoEstudio })
     { mostraTexto: true },
   );
   const statusPesquisador = useSituacaoPesquisador(auth.authFetch, auth.usuario);
+  // Sem chave Pix confirmada, o repasse espera calado (16-11-2026): o Estúdio avisa quem já tem campanha.
+  const { dado: contaPix, carregando: carregandoPix, erro: erroPix } = useBuscar(
+    () => contaRecebimentoApi.buscar(auth.authFetch),
+    [auth.authFetch],
+  );
+  const faltaChavePix = (campanhas?.length ?? 0) > 0 && !carregandoPix && !erroPix && !contaPix?.titularidadeVerificada;
 
   return (
     <LayoutAreaUsuario
@@ -120,6 +127,23 @@ function ConteudoEstudio({ auth, secao }: PropsPagina & { secao: SecaoEstudio })
                   : 'Esta conta não possui um perfil de pesquisador ativo.'}
                 {' '}Você pode acompanhar seus dados; ações restritas continuam sujeitas às regras da plataforma.
               </p>
+            </div>
+          )}
+          {faltaChavePix && (
+            <div className="mb-5">
+              <CaixaAviso
+                titulo={contaPix ? 'Sua chave Pix não está confirmada' : 'Cadastre sua chave Pix para receber'}
+                tom="aviso"
+                icone="fa-key"
+              >
+                <p>
+                  O dinheiro das suas campanhas vai para a chave Pix no seu CPF.{' '}
+                  {contaPix ? 'A chave cadastrada não foi confirmada no seu nome, e' : 'Sem ela,'} o repasse fica esperando.{' '}
+                  <Link to="/minha-conta/financeiro" className="link-texto link-texto--cor-herdada">
+                    Ir para Minha Conta &gt; Financeiro
+                  </Link>
+                </p>
+              </CaixaAviso>
             </div>
           )}
           {carregando ? (
