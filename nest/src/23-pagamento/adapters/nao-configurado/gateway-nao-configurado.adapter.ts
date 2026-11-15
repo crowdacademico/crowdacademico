@@ -42,6 +42,10 @@ export class GatewayNaoConfiguradoAdapter
     return Promise.reject(this.erro());
   }
 
+  consultarTarifas(): Promise<null> {
+    return Promise.reject(this.erro());
+  }
+
   transferir(): Promise<ResultadoRepasse> {
     return Promise.reject(this.erro());
   }

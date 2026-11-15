@@ -71,7 +71,7 @@ export function CartaoCampanha({
           disabled={seguirDesabilitado}
           onClick={() => aoAlternarSeguir?.(campanha.idCampanha, campanha.titulo)}
         >
-          <i className={`${seguindo ? 'fa-solid' : 'fa-regular'} fa-heart`} aria-hidden="true" />
+          <i className={`${seguindo ? 'fa-solid' : 'fa-regular'} fa-bell icone-sino`} aria-hidden="true" />
         </button>
         <span className={`badge ${classeBadgeCampanha(campanha)} cartao-campanha__status`}>
           {rotuloStatusCampanha(campanha)}

@@ -12,6 +12,7 @@ import {
 } from '../../ports/cobranca-gateway.port';
 import { AsaasHttpClient } from './asaas-http.client';
 import { type ConfiguracaoAsaas } from './asaas.config';
+import type { TarifasProvedor } from '../../dto/tarifas-provedor.dto';
 import {
   dadosBoletoAsaas,
   pedirDevolucaoBoletoAsaas,
@@ -22,6 +23,7 @@ import {
   type AsaasLista,
   type AsaasPayment,
   type AsaasRefund,
+  type AsaasTarifasConta,
 } from './asaas.types';
 
 export const NOME_PROVEDOR = 'asaas';
@@ -346,6 +348,36 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
   }
 
   // DELETE /payments/{id}: só funciona em cobrança ainda não paga. Paga => o Asaas recusa (400) e vira RECUSADO.
+  // As tarifas de hoje da conta (GET /myAccount/fees), com o desconto enquanto ele vale. Cartão: à vista.
+  async consultarTarifas(): Promise<TarifasProvedor> {
+    const t = await this.http.requisitar<AsaasTarifasConta>(
+      'GET',
+      '/myAccount/fees',
+    );
+    const agora = Date.now();
+    const vale = (data: string | null | undefined) =>
+      !!data && Date.parse(data.replace(' ', 'T')) > agora;
+    const pix = t.payment.pix;
+    const boleto = t.payment.bankSlip;
+    const cartao = t.payment.creditCard;
+    return {
+      pix:
+        pix.fixedFeeValueWithDiscount !== null && vale(pix.discountExpiration)
+          ? pix.fixedFeeValueWithDiscount
+          : pix.fixedFeeValue,
+      boleto:
+        boleto.discountValue !== null && vale(boleto.expirationDate)
+          ? boleto.discountValue
+          : boleto.defaultValue,
+      cartaoPercentual:
+        cartao.hasValidDiscount &&
+        cartao.discountOneInstallmentPercentage !== null
+          ? cartao.discountOneInstallmentPercentage
+          : cartao.oneInstallmentPercentage,
+      cartaoFixa: cartao.operationValue,
+    };
+  }
+
   async cancelarCobranca(idCobranca: string): Promise<void> {
     await this.http.requisitar(
       'DELETE',

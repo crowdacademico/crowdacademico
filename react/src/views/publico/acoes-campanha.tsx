@@ -110,7 +110,7 @@ export function CartaoAcoesCampanha({ auth, campanha }: AcoesCampanhaProps) {
             aria-pressed={segue}
             className={`btn justify-center min-w-[7.5rem] ${segue ? 'btn-secondary' : 'btn-primary'} text-sm`}
           >
-            <i className={`fa-${segue ? 'solid' : 'regular'} fa-bell`} aria-hidden="true" />
+            <i className={`fa-${segue ? 'solid' : 'regular'} fa-bell icone-sino`} aria-hidden="true" />
             {segue ? 'Seguindo' : 'Seguir'}
           </button>
         )}

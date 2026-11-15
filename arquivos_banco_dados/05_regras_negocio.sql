@@ -3682,6 +3682,52 @@ END;
 $$;
 
 -- ----------------------------------------------------------------------------
+-- Função:     sincronizar_tarifas_provedor
+-- Assinatura: (p_pix DECIMAL, p_boleto DECIMAL, p_cartao_percentual DECIMAL, p_cartao_fixa DECIMAL) -> INT
+-- Bloco:      [05-K-2]
+-- Regra:      Grava as tarifas que o provedor informou hoje (GET /myAccount/fees no Asaas, com o desconto quando vale)
+--             nos 4 parâmetros que o modal Apoiar e a Transparência mostram ANTES de a pessoa pagar (RF-063). Só troca
+--             o que mudou, e a troca fica no log de auditoria, como em ajustar_tarifa_pagamento. O valor COBRADO não
+--             depende disto (a cobrança é corrigida pelo líquido do provedor). Valor fora do esperado: 90036, nada muda.
+--             Chamada pelo Nest (tarefa diária e o botão de Parâmetros, que confere configuracao_gerenciar antes).
+--             Devolve quantos parâmetros mudaram (16-11-2026).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.sincronizar_tarifas_provedor(
+    p_pix DECIMAL, p_boleto DECIMAL, p_cartao_percentual DECIMAL, p_cartao_fixa DECIMAL
+)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_alterados INT := 0;
+    v_linhas    INT;
+    v_par       RECORD;
+BEGIN
+    IF p_pix IS NULL OR p_pix < 0 OR p_boleto IS NULL OR p_boleto < 0 OR p_cartao_fixa IS NULL OR p_cartao_fixa < 0
+       OR p_cartao_percentual IS NULL OR p_cartao_percentual < 0 OR p_cartao_percentual >= 100 THEN
+        RAISE EXCEPTION 'Tarifa do provedor fora do esperado.' USING ERRCODE = '90036';
+    END IF;
+
+    FOR v_par IN
+        SELECT * FROM (VALUES
+            ('taxa_pagamento_pix', p_pix),
+            ('taxa_pagamento_boleto', p_boleto),
+            ('taxa_cartao_percentual', p_cartao_percentual),
+            ('taxa_cartao_fixa', p_cartao_fixa)
+        ) AS t(chave, valor)
+    LOOP
+        UPDATE configuracoes SET valor = to_char(v_par.valor, 'FM999999990.00')
+        WHERE chave = v_par.chave AND id_usuario IS NULL AND valor::DECIMAL IS DISTINCT FROM v_par.valor;
+        GET DIAGNOSTICS v_linhas = ROW_COUNT;
+        v_alterados := v_alterados + v_linhas;
+    END LOOP;
+    RETURN v_alterados;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
 -- Função:     fn_sincroniza_arrecadado_campanha
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]

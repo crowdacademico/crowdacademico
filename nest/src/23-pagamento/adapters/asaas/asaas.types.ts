@@ -99,3 +99,25 @@ export const TIPO_CHAVE_PIX_ASAAS = {
   telefone: 'PHONE',
   aleatoria: 'EVP',
 } as const;
+
+// GET /myAccount/fees (só os campos que o sistema usa). O desconto vale até a data de expiração dele.
+export interface AsaasTarifasConta {
+  payment: {
+    bankSlip: {
+      defaultValue: number;
+      discountValue: number | null;
+      expirationDate: string | null;
+    };
+    creditCard: {
+      operationValue: number;
+      oneInstallmentPercentage: number;
+      discountOneInstallmentPercentage: number | null;
+      hasValidDiscount: boolean;
+    };
+    pix: {
+      fixedFeeValue: number;
+      fixedFeeValueWithDiscount: number | null;
+      discountExpiration: string | null;
+    };
+  };
+}

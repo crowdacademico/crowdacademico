@@ -212,7 +212,7 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
       >
         {/* Enviando: o ícone vira um indicador girando, o texto não muda ("Atualizando…" era mais largo e fazia pular). */}
         <i
-          className={dadosSeguimento?.enviando ? 'fa-solid fa-spinner fa-spin' : `fa-${dadosSeguimento?.seguindo ? 'solid' : 'regular'} fa-bell`}
+          className={dadosSeguimento?.enviando ? 'fa-solid fa-spinner fa-spin' : `fa-${dadosSeguimento?.seguindo ? 'solid' : 'regular'} fa-bell icone-sino`}
           aria-hidden="true"
         />
         {dadosSeguimento?.seguindo ? 'Seguindo' : 'Seguir'}

@@ -29,16 +29,25 @@ function porArrecadacao(campanhas: CampanhaResponse[]) {
   );
 }
 
+// O avanço automático é da Alexia, de propósito: as campanhas se revezam no destaque, sem uma ficar sempre na frente.
+// A WCAG 2.2.2 (nível A) não proíbe o movimento; exige um jeito de pausar (16-11-2026). Daí o botão Pausar/Continuar ao
+// lado das setas. Quem pediu "menos movimento" no sistema operacional já não tem avanço automático, nem o botão.
+const movimentoReduzido = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 function ControlesCarrossel({
   trilhoRef,
   rotulo,
   quantidade,
   desabilitado = false,
+  pausado,
+  aoAlternarPausa,
 }: {
   trilhoRef: RefObject<HTMLDivElement | null>;
   rotulo: string;
   quantidade: number;
   desabilitado?: boolean;
+  pausado: boolean;
+  aoAlternarPausa: () => void;
 }) {
   const [limites, setLimites] = useState({ inicio: true, fim: true });
   const atualizarLimites = useCallback(() => {
@@ -69,6 +78,19 @@ function ControlesCarrossel({
 
   return (
     <div className="carrossel-cartoes__controles" role="group" aria-label={`Navegar por ${rotulo}`}>
+      {!movimentoReduzido() && quantidade > 1 && (
+        <button
+          aria-label={pausado ? `Continuar a passagem automática: ${rotulo}` : `Pausar a passagem automática: ${rotulo}`}
+          aria-pressed={pausado}
+          title={pausado ? 'Continuar' : 'Pausar'}
+          className="carrossel-cartoes__seta"
+          disabled={desabilitado}
+          onClick={aoAlternarPausa}
+          type="button"
+        >
+          <i className={`fa-solid ${pausado ? 'fa-play' : 'fa-pause'}`} aria-hidden="true" />
+        </button>
+      )}
       <button
         aria-label={`Itens anteriores: ${rotulo}`}
         className="carrossel-cartoes__seta"
@@ -101,7 +123,9 @@ function BlocoCampanhas({
   carregandoSeguimento,
   emAtualizacao,
   aoAlternarSeguir,
+  pausado,
 }: {
+  pausado: boolean;
   campanhas: CampanhaResponse[];
   carregando: boolean;
   erro: string | null;
@@ -114,14 +138,15 @@ function BlocoCampanhas({
 }) {
   useEffect(() => {
     const trilho = trilhoRef.current;
-    if (!trilho || carregando || erro || campanhas.length < 2) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!trilho || carregando || erro || campanhas.length < 2 || pausado) return;
+    if (movimentoReduzido()) return;
 
-    let pausado = false;
-    const pausar = () => { pausado = true; };
-    const retomar = () => { pausado = false; };
+    // Pausa momentânea com o mouse em cima ou o foco do teclado dentro (a do botão é a prop `pausado`).
+    let pausaMomentanea = false;
+    const pausar = () => { pausaMomentanea = true; };
+    const retomar = () => { pausaMomentanea = false; };
     const avancar = () => {
-      if (pausado || document.hidden || trilho.scrollWidth <= trilho.clientWidth) return;
+      if (pausaMomentanea || document.hidden || trilho.scrollWidth <= trilho.clientWidth) return;
       const noFim = trilho.scrollLeft + trilho.clientWidth >= trilho.scrollWidth - 2;
       trilho.scrollTo({
         left: noFim ? 0 : trilho.scrollLeft + trilho.clientWidth * 0.8,
@@ -141,7 +166,7 @@ function BlocoCampanhas({
       trilho.removeEventListener('focusin', pausar);
       trilho.removeEventListener('focusout', retomar);
     };
-  }, [campanhas.length, carregando, erro, trilhoRef]);
+  }, [campanhas.length, carregando, erro, trilhoRef, pausado]);
 
   if (carregando) return <Carregando />;
   if (erro) return <MensagemErro texto={erro} />;
@@ -183,6 +208,8 @@ export function Home({ auth }: PropsPagina) {
   );
   const carrosselDestaque = useRef<HTMLDivElement>(null);
   const carrosselEmBreve = useRef<HTMLDivElement>(null);
+  const [pausadoDestaque, setPausadoDestaque] = useState(false);
+  const [pausadoEmBreve, setPausadoEmBreve] = useState(false);
   const areas = useMemo(() => {
     const idsAreasEmCampanhas = new Set((campanhas ?? []).map((campanha) => campanha.idAreaConhecimento));
     return (areasConhecimento ?? [])
@@ -312,6 +339,8 @@ export function Home({ auth }: PropsPagina) {
                 quantidade={projetosDestaque.length}
                 rotulo="projetos em alta"
                 trilhoRef={carrosselDestaque}
+                pausado={pausadoDestaque}
+                aoAlternarPausa={() => setPausadoDestaque((atual) => !atual)}
               />
             </div>
           </div>
@@ -321,6 +350,7 @@ export function Home({ auth }: PropsPagina) {
             erro={erro}
             vazio="Nenhuma campanha está em captação no momento."
             trilhoRef={carrosselDestaque}
+            pausado={pausadoDestaque}
             seguidas={seguimento.seguidas}
             carregandoSeguimento={seguimento.carregando}
             emAtualizacao={seguimento.emAtualizacao}
@@ -342,6 +372,8 @@ export function Home({ auth }: PropsPagina) {
             quantidade={futuras.length}
             rotulo="campanhas futuras"
             trilhoRef={carrosselEmBreve}
+            pausado={pausadoEmBreve}
+            aoAlternarPausa={() => setPausadoEmBreve((atual) => !atual)}
           />
         </div>
         <BlocoCampanhas
@@ -350,6 +382,7 @@ export function Home({ auth }: PropsPagina) {
           erro={erro}
           vazio="Sem campanhas em breve no momento."
           trilhoRef={carrosselEmBreve}
+          pausado={pausadoEmBreve}
           seguidas={seguimento.seguidas}
           carregandoSeguimento={seguimento.carregando}
           emAtualizacao={seguimento.emAtualizacao}

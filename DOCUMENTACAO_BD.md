@@ -657,6 +657,8 @@ Cada trigger observa uma tabela que alimenta alguma dimensão e recalcula só qu
 > - **`listar_ganhadores_recompensa(id_recompensa)`** (SECURITY DEFINER): quem ganhou, só o nome ("Apoiador anônimo" quando for o caso) e se já está liberada; só o dono da campanha e o admin (92043).
 > - **Avisos:** `apoio_confirmado` (o comprovante, com as recompensas já liberadas) e `recompensa_liberada` (o Tudo ou Nada que bateu a meta); ver `[05-Q]`.
 >
+> 📌 **Tarifas sincronizadas com o provedor (16-11-2026, grupo CW):** `sincronizar_tarifas_provedor(pix, boleto, cartao_percentual, cartao_fixa)` grava nos 4 parâmetros de tarifa o que o provedor cobra hoje (no Asaas, a consulta de tarifas da conta, `myAccount/fees`, com o desconto enquanto vale). Só troca o que mudou (fica no log de auditoria); valor fora do esperado: 90036. Chamada pela tarefa diária das 5h e pelo botão de Parâmetros (`PagamentoServiceSyncFees`). O valor cobrado nunca dependeu disto; o que ficava velho era o total mostrado antes de pagar.
+>
 > 📌 **Comentar e seguir só campanha publicada (16-11-2026, grupo CU):** `fn_valida_comentario_campanha_ativa` (91020) e `fn_valida_seguir_campanha_publicada` (91034) viraram SECURITY DEFINER. Antes liam a situação da campanha com a RLS de quem comentava: o rascunho de outra pessoa, invisível, voltava NULL e passava. Campanha não encontrada conta como não publicada.
 
 > 📌 **Mensagens sem palavra técnica:** as mensagens das faixas 90 a 93 chegam à tela como estão, então não citam nome de tabela, de coluna nem de chave de `configuracoes`; dinheiro aparece como "R$ 500,00" e datas no formato brasileiro.
@@ -1246,7 +1248,7 @@ O raciocínio de arquitetura por trás de regras que valem para o banco inteiro.
 
 ## Como conferir este inventário
 
-**Contagem do inventário** (recontada nos `.sql` em 16-11-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **122 policies**, **125 triggers** no `05` (119 comuns e 6 `CONSTRAINT TRIGGER`), **197 funções** (157 no `05`, 38 no `03`, 1 no `08`, 1 no `01`), **69 índices** no `02` e **144 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (recontada nos `.sql` em 16-11-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **122 policies**, **125 triggers** no `05` (119 comuns e 6 `CONSTRAINT TRIGGER`), **198 funções** (158 no `05`, 38 no `03`, 1 no `08`, 1 no `01`), **69 índices** no `02` e **144 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
 
 Para recontar direto do banco (no SQL Editor do Supabase ou no banco local):
 

@@ -372,6 +372,9 @@ GRANT EXECUTE ON FUNCTION public.enviar_lembretes_fim_campanha() TO app_nestjs;
 -- ajustar_tarifa_pagamento: o POST /contribuicao grava a tarifa real que o provedor informou ao criar a cobrança.
 REVOKE EXECUTE ON FUNCTION public.ajustar_tarifa_pagamento(INT, DECIMAL) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.ajustar_tarifa_pagamento(INT, DECIMAL) TO app_nestjs;
+-- sincronizar_tarifas_provedor: a tarefa diária e o botão de Parâmetros (o Nest confere configuracao_gerenciar antes).
+REVOKE EXECUTE ON FUNCTION public.sincronizar_tarifas_provedor(DECIMAL, DECIMAL, DECIMAL, DECIMAL) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.sincronizar_tarifas_provedor(DECIMAL, DECIMAL, DECIMAL, DECIMAL) TO app_nestjs;
 -- Cartão: o worker de repasse cria o repasse da parte liberada; o pesquisador vê o que ainda falta liberar.
 REVOKE EXECUTE ON FUNCTION public.criar_repasses_liberados() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.criar_repasses_liberados() TO app_nestjs;

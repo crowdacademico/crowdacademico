@@ -272,6 +272,11 @@ export class FakeGatewayAdapter
   }
 
   // Cancela uma cobrança aberta (a mesma coisa de expirar, sem emitir evento: quem cancela é o próprio sistema).
+  // O provedor de teste não tem tarifa própria: os parâmetros de configuracoes ficam como estão.
+  consultarTarifas(): Promise<null> {
+    return Promise.resolve(null);
+  }
+
   cancelarCobranca(idCobranca: string): Promise<void> {
     const c = this.cobrancas.get(idCobranca);
     if (!c) {

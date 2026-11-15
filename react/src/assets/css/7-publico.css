@@ -573,6 +573,33 @@
       opacity: 0.6;
     }
 
+    /* "Seguir" é sempre o sino (16-11-2026: antes era coração nos cartões e sino na campanha). Animação leve, só CSS: o
+       sino balança ao passar o mouse ou focar, e uma vez quando a pessoa passa a seguir (aria-pressed vira true). Quem
+       pediu "menos movimento" no sistema não vê animação nenhuma. */
+    @keyframes sino-balanco {
+      0%, 100% { transform: rotate(0); }
+      20% { transform: rotate(14deg); }
+      40% { transform: rotate(-10deg); }
+      60% { transform: rotate(6deg); }
+      80% { transform: rotate(-3deg); }
+    }
+
+    .icone-sino {
+      transform-origin: 50% 10%;
+    }
+
+    button:hover:not(:disabled) > .icone-sino,
+    button:focus-visible > .icone-sino,
+    button[aria-pressed="true"] > .icone-sino {
+      animation: sino-balanco 0.7s ease-in-out;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .icone-sino {
+        animation: none !important;
+      }
+    }
+
     .cartao-campanha:hover {
       transform: translateY(-0.25rem);
       box-shadow: var(--shadow-xl);

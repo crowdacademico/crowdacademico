@@ -3,6 +3,7 @@ import {
   ResultadoCobranca,
   ResultadoEstorno,
 } from '../dto/resultado-cobranca.dto';
+import type { TarifasProvedor } from '../dto/tarifas-provedor.dto';
 
 // Token de injeção - todo consumidor usa @Inject(COBRANCA_GATEWAY) contra a INTERFACE, nunca a classe do adapter.
 // Mesmo padrão de PG_POOL e ARMAZENAMENTO_SERVICE.
@@ -57,4 +58,7 @@ export interface CobrancaGatewayPort {
   // depois o que o sistema já não contabiliza. Cobrança inexistente => NAO_ENCONTRADO; já paga (ou que o provedor não
   // deixa mais cancelar) => RECUSADO: quem chama trata os dois como "nada mais a cancelar".
   cancelarCobranca(idCobranca: string): Promise<void>;
+  // As tarifas que o provedor cobra hoje desta conta (com o desconto, quando valendo), para o sistema mostrar o total
+  // certo ANTES de a pessoa pagar (RF-063). null = o provedor não informa (o de teste: os parâmetros ficam como estão).
+  consultarTarifas(): Promise<TarifasProvedor | null>;
 }

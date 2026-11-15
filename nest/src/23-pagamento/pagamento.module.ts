@@ -6,6 +6,8 @@ import { FakeGatewayAdapter } from './adapters/fake/fake-gateway.adapter';
 import { FakeGatewayPersistencia } from './adapters/fake/fake-gateway.persistencia';
 import { GatewayNaoConfiguradoAdapter } from './adapters/nao-configurado/gateway-nao-configurado.adapter';
 import { PagamentoControllerWebhook } from './controllers/pagamento.controller.webhook';
+import { PagamentoControllerSyncFees } from './controllers/pagamento.controller.sync-fees';
+import { PagamentoServiceSyncFees } from './service/pagamento.service.sync-fees';
 import { EventoPagamentoService } from './evento-pagamento.service';
 import { PagamentoServiceAuthorizeWithdrawal } from './service/pagamento.service.authorize-withdrawal';
 import { PagamentoServiceReconcile } from './service/pagamento.service.reconcile';
@@ -82,7 +84,7 @@ export function criarAdapter(
 
 @Module({
   imports: [ConfigModule],
-  controllers: [PagamentoControllerWebhook],
+  controllers: [PagamentoControllerWebhook, PagamentoControllerSyncFees],
   providers: [
     {
       provide: ADAPTER_PAGAMENTO,
@@ -96,6 +98,7 @@ export function criarAdapter(
     FakeGatewayPersistencia,
     EventoPagamentoService,
     PagamentoServiceWebhook,
+    PagamentoServiceSyncFees,
     PagamentoServiceAuthorizeWithdrawal,
     PagamentoServiceRefundPending,
     PagamentoServiceTransferPending,

@@ -1232,6 +1232,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | pub | GET | `/contribuicao/:id` *(acompanhar a contribuição: com login, pelo próprio usuário; sem conta, pelo cabeçalho `X-Token-Sessao`; traz `termoAceito`, a versão do Termo e quando)* |
 | pub | GET | `/compartilhar/campanha/:id` *(prévia do link, Open Graph: HTML pequeno com título, descrição e capa para o robô do WhatsApp/LinkedIn/X, e redireciona para a página da campanha)* |
 | pub | POST | `/pagamento/webhook/:provedor` · `/pagamento/webhook/:provedor/autorizacao-saque` *(quem chama é o provedor; a autenticidade é o token dele, conferido antes de tocar no banco; a segunda responde se uma transferência ou devolução pode sair)* |
+| AUTH | POST | `/pagamento/tarifas/sincronizar` *(o botão de Parâmetros: lê no provedor as tarifas de hoje e grava nos 4 parâmetros; exige `configuracao_gerenciar`; a tarefa diária das 5h faz o mesmo, `sincronizar_tarifas_provedor`)* |
 | AUTH | GET · POST · DELETE | `/conta-recebimento` *(a chave Pix do próprio pesquisador, conferida no provedor)* |
 | AUTH | GET | `/conta-recebimento/repasses` · `/conta-recebimento/cartao-a-liberar` |
 | AUTH | GET | `/pagamento-admin/revisoes` · `/pagamento-admin/reembolsos-manuais` · `/pagamento-admin/repasses/atencao` |

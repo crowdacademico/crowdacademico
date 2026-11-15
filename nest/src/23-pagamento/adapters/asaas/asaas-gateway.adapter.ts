@@ -58,6 +58,9 @@ export class AsaasGatewayAdapter
   cancelarCobranca(idCobranca: string): Promise<void> {
     return this.cobranca.cancelarCobranca(idCobranca);
   }
+  consultarTarifas() {
+    return this.cobranca.consultarTarifas();
+  }
 
   transferir(params: TransferirParams): Promise<ResultadoRepasse> {
     return this.repasse.transferir(params);

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { CaixaAviso } from '../../components/crud/caixa-aviso';
+import { MetricasEstudio } from './metricas-estudio';
 import { LayoutAreaUsuario } from '../../components/layout/layout-area-usuario';
 import { AvisoSoPesquisador } from '../../components/crud/aviso-so-pesquisador';
 import { BotaoCriar } from '../../components/crud/botao-criar';
@@ -157,6 +158,7 @@ function ConteudoEstudio({ auth, secao }: PropsPagina & { secao: SecaoEstudio })
             </div>
           ) : (
             <>
+              {secao === 'campanhas' && <MetricasEstudio authFetch={auth.authFetch} campanhas={campanhas} />}
               {secao === 'campanhas' && (
                 <PainelCampanhas
                   auth={auth}

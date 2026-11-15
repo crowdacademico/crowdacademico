@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
@@ -11,6 +11,9 @@ import {
 } from './modal-configuracao';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { ConfiguracoesResponse } from '../../services/11-configuracoes/type/configuracoes.type';
+import { tarifasApi } from '../../services/23-pagamento/api/tarifas.api';
+import { useToast } from '../../components/layout/toast/use-toast';
+import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // Aba "Parâmetros do Sistema" do painel admin: rota /admin/parametros-sistema (a tabela, a API e as variáveis
 // internas continuam "configuracoes"; ver rotas.constants.ts).
@@ -33,6 +36,33 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
     acoesCompletas,
   } = useCrudModais<LinhaParametro>();
 
+  // Sincronizar as tarifas com o provedor (16-11-2026): as 4 de pagamento passam a ser as que o provedor cobra hoje (com o
+  // desconto enquanto vale). A tarefa diária das 5h faz o mesmo; o botão é para não esperar. O log abaixo mostra o de/para.
+  const { mostrar } = useToast();
+  const [sincronizando, setSincronizando] = useState(false);
+  const sincronizarTarifas = async () => {
+    setSincronizando(true);
+    try {
+      const r = await tarifasApi.sincronizar(auth.authFetch);
+      if (!r.sincronizado) {
+        mostrar('Nada a sincronizar.', 'O provedor de teste não tem tarifa própria: os parâmetros ficam como estão.', 'aviso');
+      } else {
+        mostrar(
+          r.alterados > 0 ? `Tarifas atualizadas: ${r.alterados} parâmetro(s).` : 'As tarifas já estavam iguais às do provedor.',
+          r.tarifas
+            ? `Pix ${formatarMoeda(r.tarifas.pix)} · cartão ${r.tarifas.cartaoPercentual}% + ${formatarMoeda(r.tarifas.cartaoFixa)} · boleto ${formatarMoeda(r.tarifas.boleto)}`
+            : undefined,
+          'sucesso',
+        );
+        if (r.alterados > 0) recarregar();
+      }
+    } catch (erro) {
+      mostrar(traduzirErro(erro), undefined, 'erro');
+    } finally {
+      setSincronizando(false);
+    }
+  };
+
   const listarConfiguracoes = useCallback(
     () =>
       configuracoesApi
@@ -45,6 +75,12 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable<LinhaParametro>
         titulo="Parâmetros do Sistema"
+        acaoTopo={
+          <button type="button" className="btn btn-secondary" disabled={sincronizando} onClick={() => void sincronizarTarifas()} title="Lê no provedor de pagamento as tarifas de hoje (Pix, cartão e boleto) e atualiza os parâmetros. Roda sozinho todo dia às 5h.">
+            <i className="fa-solid fa-rotate" aria-hidden="true" />
+            {sincronizando ? 'Sincronizando...' : 'Sincronizar tarifas com o provedor'}
+          </button>
+        }
         colunas={[
           { chave: 'idConfig', rotulo: 'id', tipo: 'id' },
           // A descrição é o que o admin lê; a chave fica ao lado, para quem precisa dela (documentação, suporte).
