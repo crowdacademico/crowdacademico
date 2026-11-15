@@ -22,6 +22,11 @@ export function Transparencia() {
   const cartaoFixa = obterNumero('taxa_cartao_fixa', 0.49);
   const valorMinimo = obterNumero('valor_minimo_contribuicao', 5);
   const boletoHabilitado = obterConfiguracao('boleto_habilitado', false) === true;
+  const cartaoHabilitado = obterConfiguracao('cartao_habilitado', true) !== false;
+  const cartaoMinimo = obterNumero('valor_minimo_contribuicao_cartao', 20);
+  const cartaoMaximo = obterNumero('valor_maximo_contribuicao_cartao', 500);
+  const carenciaRepasse = obterNumero('repasse_carencia_dias', 15);
+  const prazoDesistencia = obterNumero('desistencia_prazo_dias', 7);
 
   const [valor, setValor] = useState('100');
   const [meio, setMeio] = useState<Meio>('pix');
@@ -41,12 +46,14 @@ export function Transparencia() {
 
   const meios: { chave: Meio; rotulo: string; tarifa: string; observacao: string }[] = [
     { chave: 'pix', rotulo: 'Pix', tarifa: formatarMoeda(tarifaPix), observacao: 'Aceito em todas as campanhas.' },
-    {
-      chave: 'cartao',
-      rotulo: 'Cartão de crédito',
-      tarifa: `${cartaoPercentual}% + ${formatarMoeda(cartaoFixa)}`,
-      observacao: 'Só em campanhas flexíveis, para quem tem conta.',
-    },
+    ...(cartaoHabilitado
+      ? [{
+          chave: 'cartao' as const,
+          rotulo: 'Cartão de crédito',
+          tarifa: `${cartaoPercentual}% + ${formatarMoeda(cartaoFixa)}`,
+          observacao: `Só em campanhas flexíveis, para quem tem conta, de ${formatarMoeda(cartaoMinimo)} a ${formatarMoeda(cartaoMaximo)}.`,
+        }]
+      : []),
     ...(boletoHabilitado
       ? [{
           chave: 'boleto' as const,
@@ -63,8 +70,8 @@ export function Transparencia() {
       <div className="mx-auto max-w-5xl px-4">
         <CabecalhoPagina
           className="mb-12"
-          titulo="Transparência"
-          descricao="Quanto a plataforma cobra, quanto custa cada meio de pagamento e quanto do seu apoio chega ao pesquisador."
+          titulo="Taxas e transparência"
+          descricao="Quanto a plataforma cobra, quanto custa cada meio de pagamento, para onde vai o seu apoio e quanto dele chega ao pesquisador."
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
@@ -97,6 +104,33 @@ export function Transparencia() {
             </dl>
           </section>
         </div>
+
+        <section className="fundo-cartao border borda-padrao rounded-xl p-6 sm:p-8 mb-10" aria-labelledby="transparencia-fluxo">
+          <h2 id="transparencia-fluxo" className="subtitulo texto-forte mb-2">Para onde vai o seu apoio</h2>
+          <p className="paragrafo texto-padrao mb-6">
+            O dinheiro não vai direto para o pesquisador. Ele passa por etapas, e nenhuma depende de ação manual.
+          </p>
+          <ol className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ['Você paga', 'O pagamento é feito na página segura do provedor de pagamento, e a plataforma não guarda dados do seu cartão.'],
+              ['Fica guardado', 'Cada apoio confirmado fica na conta da plataforma no provedor até o fim da campanha.'],
+              ['A campanha encerra', 'Ao fim do prazo, o sistema decide o destino conforme o modelo e a meta da campanha.'],
+              ['Repasse ou devolução', `O pesquisador recebe por Pix, após ${carenciaRepasse} dias de carência, ou cada apoiador recebe o valor de volta.`],
+            ].map(([titulo, texto], indice) => (
+              <li key={titulo} className="flex items-start gap-3">
+                <span className="pagina-publica__indice shrink-0">{indice + 1}</span>
+                <div>
+                  <h3 className="font-bold texto-forte mb-1">{titulo}</h3>
+                  <p className="paragrafo texto-padrao">{texto}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <p className="legenda mt-6 texto-fraco">
+            Você pode desistir de um apoio em até {prazoDesistencia} dias. A taxa da campanha fica fixa desde a
+            aprovação, mesmo que a taxa da plataforma mude depois.
+          </p>
+        </section>
 
         <section className="fundo-cartao border borda-padrao rounded-xl p-6 sm:p-8" aria-labelledby="transparencia-simulador">
           <h2 id="transparencia-simulador" className="subtitulo texto-forte mb-6">Simulador</h2>
@@ -162,12 +196,17 @@ export function Transparencia() {
               </div>
             </dl>
           </div>
-          <p className="legenda mt-6 texto-fraco">
-            Estimativa. A tarifa do cartão e a do boleto são confirmadas pelo provedor no pagamento. O mínimo de{' '}
-            {formatarMoeda(taxaMinimaRepasse)} vale para o repasse inteiro da campanha, não para cada apoio: aqui o
-            simulador trata o seu apoio como se fosse o único da campanha. Em campanha Tudo ou Nada que não bate a meta,
-            o valor do apoio é devolvido (a tarifa do meio de pagamento, não).
-          </p>
+          <ul className="legenda mt-6 texto-fraco list-disc pl-5 space-y-1">
+            <li>Estimativa. A tarifa do cartão e a do boleto são confirmadas pelo provedor no pagamento.</li>
+            <li>
+              O mínimo de {formatarMoeda(taxaMinimaRepasse)} vale para o repasse inteiro da campanha, não para cada
+              apoio. Aqui, o simulador trata o seu apoio como se fosse o único da campanha.
+            </li>
+            <li>
+              Em campanha Tudo ou Nada que não atinge a meta, o valor do apoio é devolvido, mas a tarifa do meio de
+              pagamento não.
+            </li>
+          </ul>
         </section>
       </div>
     </div>

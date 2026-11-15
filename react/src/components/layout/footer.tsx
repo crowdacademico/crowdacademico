@@ -9,17 +9,18 @@ const COLUNAS = [
     titulo: 'Explore projetos',
     links: [
       { rotulo: 'Explorar campanhas', to: '/explorar' },
-      { rotulo: 'Sobre e curadoria', to: '/sobre' },
+      { rotulo: 'Como funciona', to: '/como-funciona' },
       { rotulo: 'Perguntas frequentes', to: '/perguntas-frequentes' },
       { rotulo: 'Transparência e taxas', to: '/transparencia' },
       { rotulo: 'Termos da plataforma', to: '/termos' },
     ],
   },
   {
-    titulo: 'Para pesquisadores',
+    titulo: 'O CrowdAcadêmico',
     links: [
-      { rotulo: 'Como funciona', to: '/como-funciona' },
+      { rotulo: 'Sobre o projeto', to: '/sobre' },
       { rotulo: 'Estúdio do pesquisador', to: '/estudio-pesquisador' },
+      { rotulo: 'Termos da plataforma', to: '/termos' },
     ],
   },
 ];
