@@ -35,8 +35,11 @@ import { CartaoAcoesCampanha, FormComentarCampanha } from './acoes-campanha';
 import { ModalAtualizacoes } from './lista-atualizacoes';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
 import { ModalDenunciar } from '../19-denuncia/modal-denunciar';
+import { recompensaApi } from '../../services/18-recompensa/api/recompensa.api';
+import { ROTULO_TIPO_RECOMPENSA } from '../../services/18-recompensa/constants/recompensa.constants';
+import type { RecompensaResponse } from '../../services/18-recompensa/type/recompensa.type';
 
-type AbaCampanha = 'sobre' | 'orcamento' | 'cronograma' | 'atualizacoes' | 'comentar';
+type AbaCampanha = 'sobre' | 'orcamento' | 'cronograma' | 'recompensas' | 'atualizacoes' | 'comentar';
 
 interface EstadoSecundario<T> {
   dados: T[];
@@ -56,6 +59,7 @@ export function Campanha({ auth }: PropsPagina) {
   const [campanha, setCampanha] = useState<CampanhaResponse | null>(null);
   const [orcamentos, setOrcamentos] = useState<EstadoSecundario<OrcamentoCampanhaResponse>>(VAZIO);
   const [marcos, setMarcos] = useState<EstadoSecundario<MarcoCronogramaResponse>>(VAZIO);
+  const [recompensas, setRecompensas] = useState<EstadoSecundario<RecompensaResponse>>(VAZIO);
   const [atualizacoes, setAtualizacoes] = useState<EstadoSecundario<AtualizacaoCampanhaResponse>>(VAZIO);
   const [comentarios, setComentarios] = useState<EstadoSecundario<ComentarioResponse>>(VAZIO);
   const [comentariosCarregando, setComentariosCarregando] = useState(false);
@@ -75,6 +79,7 @@ export function Campanha({ auth }: PropsPagina) {
     setCarregando(true);
     setCampanha(null);
     setOrcamentos(VAZIO);
+    setRecompensas(VAZIO);
     setMarcos(VAZIO);
     setAtualizacoes(VAZIO);
     setComentarios(VAZIO);
@@ -97,12 +102,13 @@ export function Campanha({ auth }: PropsPagina) {
 
         setComentariosCarregando(true);
         setApoiosCarregando(true);
-        const [orcamento, cronograma, novidades, endossos, resumoApoios] = await Promise.allSettled([
+        const [orcamento, cronograma, novidades, endossos, resumoApoios, listaRecompensas] = await Promise.allSettled([
           orcamentoCampanhaApi.listar(auth.authFetch, idCampanha),
           marcoCronogramaApi.listar(auth.authFetch, idCampanha),
           atualizacaoCampanhaApi.listar(auth.authFetch, idCampanha),
           comentarioApi.listarPagina(auth.authFetch, idCampanha, 1, 100, true),
           contribuicaoApi.apoiosPublicosCampanha(auth.authFetch, idCampanha),
+          recompensaApi.listar(auth.authFetch, idCampanha),
         ]);
         executarSeAtivo(ativo, () => {
           setOrcamentos({
@@ -123,6 +129,12 @@ export function Campanha({ auth }: PropsPagina) {
           });
           setComentariosCarregando(false);
           setApoiosPagos(resumoApoios.status === 'fulfilled' ? resumoApoios.value.pagas : null);
+          setRecompensas({
+            dados: listaRecompensas.status === 'fulfilled'
+              ? listaRecompensas.value.filter((item) => item.ativo).sort((a, b) => a.valorMinimo - b.valorMinimo)
+              : [],
+            erro: listaRecompensas.status === 'rejected',
+          });
           setErroApoios(resumoApoios.status === 'rejected');
           setApoiosCarregando(false);
         });
@@ -155,6 +167,7 @@ export function Campanha({ auth }: PropsPagina) {
     { chave: 'sobre', rotulo: 'Sobre o projeto' },
     { chave: 'orcamento', rotulo: 'Orçamento' },
     { chave: 'cronograma', rotulo: 'Cronograma' },
+    { chave: 'recompensas', rotulo: 'Recompensas' },
     // Atualizações abre um modal estilo blog (não troca o painel): ver ModalAtualizacoes.
     { chave: 'atualizacoes', rotulo: 'Atualizações' },
     ...(podeComentar ? [{ chave: 'comentar' as const, rotulo: 'Comentar' }] : []),
@@ -328,6 +341,43 @@ export function Campanha({ auth }: PropsPagina) {
                     )}
                   </section>
                 )}
+                {aba === 'recompensas' && (
+                  <section id="tab-recompensas" aria-labelledby="tab-btn-recompensas" role="tabpanel">
+                    <h2 className="titulo-secao texto-forte mb-2">Recompensas</h2>
+                    <p className="paragrafo texto-fraco mb-5">
+                      Quem apoia com conta ganha automaticamente todas as recompensas que o valor do apoio alcança, sem precisar
+                      escolher. São agradecimentos simbólicos, sem entrega física.
+                    </p>
+                    {!publicada && <p className="paragrafo texto-fraco">As recompensas ainda não estão disponíveis para esta campanha.</p>}
+                    {publicada && recompensas.erro && <p className="paragrafo texto-fraco">Não foi possível carregar as recompensas.</p>}
+                    {publicada && !recompensas.erro && recompensas.dados.length === 0 && (
+                      <p className="paragrafo texto-fraco">Esta campanha não oferece recompensas.</p>
+                    )}
+                    {publicada && !recompensas.erro && recompensas.dados.length > 0 && (
+                      <ul className="flex flex-col gap-4">
+                        {recompensas.dados.map((item) => (
+                          <li key={item.idRecompensa} className="rounded-xl border borda-padrao fundo-sutil p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+                            <div className="min-w-0 flex-1">
+                              <p className="microrrotulo texto-marca mb-1">
+                                A partir de <span className="numero">{formatarMoeda(item.valorMinimo)}</span> · {ROTULO_TIPO_RECOMPENSA[item.tipo]}
+                              </p>
+                              <h3 className="subtitulo texto-forte">{item.titulo}</h3>
+                              {item.descricao && <p className="paragrafo texto-padrao mt-2 whitespace-pre-wrap">{item.descricao}</p>}
+                            </div>
+                            {aceitaApoios && (
+                              <Link
+                                to={`/checkout?idCampanha=${campanha.idCampanha}&valor=${item.valorMinimo}`}
+                                className="btn btn-primary justify-center shrink-0"
+                              >
+                                Apoiar com {formatarMoeda(item.valorMinimo)}
+                              </Link>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+                )}
                 {aba === 'comentar' && podeComentar && (
                   <section id="tab-comentar" aria-labelledby="tab-btn-comentar" role="tabpanel">
                     <h2 className="titulo-secao texto-forte mb-2">Comentar</h2>
@@ -408,7 +458,7 @@ export function Campanha({ auth }: PropsPagina) {
                         >
                           <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(percentual, 100)}%` }} />
                         </div>
-                        <p className="legenda mt-2">{percentual}% da meta arrecadada</p>
+                        <p className="legenda mt-2 texto-fraco">{percentual}% da meta arrecadada</p>
                       </>
                     )}
                   </div>

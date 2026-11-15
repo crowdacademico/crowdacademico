@@ -157,7 +157,7 @@ function ConteudoAba({ ativa }: { ativa: (typeof ABAS)[number]['chave'] }) {
             </tbody>
           </table>
         </div>
-        <p className="legenda mt-4">
+        <p className="legenda mt-4 texto-fraco">
           As condições específicas e os valores aplicáveis são apresentados na própria{' '}
           <span className="whitespace-nowrap">campanha e no checkout.</span>
         </p>

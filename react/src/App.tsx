@@ -22,9 +22,8 @@ function App() {
         {ROTAS.map(({ caminho, elemento: Elemento }) => (
           <Route key={caminho} path={caminho} element={<Elemento auth={auth} />} />
         ))}
-      </Route>
-
-      <Route element={<Layout auth={auth} />}>
+        {/* Minha Conta (área do usuário, fora do painel) no MESMO layout público: antes ficava no layout da restrita,
+            e o cabeçalho trocava de repente ao entrar nela. Continua exigindo login. */}
         {ROTAS_CONTA.map(({ caminho, elemento: Elemento }) => (
           <Route
             key={caminho}
@@ -36,6 +35,9 @@ function App() {
             )}
           />
         ))}
+      </Route>
+
+      <Route element={<Layout auth={auth} />}>
         <Route path="/admin/minhas-campanhas" element={<Navigate to="/estudio-pesquisador" replace />} />
         <Route path="/minhas-campanhas" element={<Navigate to="/estudio-pesquisador" replace />} />
         <Route path="/apoiar" element={<RedirecionarMantendoBusca para="/checkout" />} />

@@ -38,7 +38,9 @@ export function Checkout({ auth }: PropsPagina) {
     campanha: CampanhaResponse;
   } | null>(null);
   const [falhaCampanha, setFalhaCampanha] = useState<{ id: number; mensagem: string } | null>(null);
-  const [valor, setValor] = useState('150');
+  // ?valor= vem do "Apoiar com R$ X" da aba Recompensas da campanha; sem ele (ou inválido), 150.
+  const valorDaUrl = Number(parametros.get('valor'));
+  const [valor, setValor] = useState(Number.isFinite(valorDaUrl) && valorDaUrl > 0 ? String(valorDaUrl) : '150');
   const [aceitouTermos, setAceitouTermos] = useState(false);
   const [cienteFlexivel, setCienteFlexivel] = useState(false);
   const [enviando, setEnviando] = useState(false);

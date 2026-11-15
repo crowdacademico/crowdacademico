@@ -199,7 +199,7 @@ function renderizarLiquido(linha: CampanhaLinha) {
   return (
     <span className="inline-flex flex-col leading-tight">
       <span className="numero">{formatarMoeda(linha.liquido)}</span>
-      <span className="legenda">
+      <span className="legenda texto-fraco">
         {repasse
           ? `repassado em ${repasse.repassadoEm ? formatarDataHora(repasse.repassadoEm) : '—'}; taxa retida ${formatarMoeda(repasse.valorBruto - repasse.valorLiquido)}${taxa === null ? '' : ` (${taxa}%)`}`
           : `estimado${taxa === null ? ' (taxa padrão)' : `, taxa de ${taxa}%`}`}

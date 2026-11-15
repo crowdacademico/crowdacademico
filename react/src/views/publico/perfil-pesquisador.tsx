@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { AvatarUsuario } from '../../components/layout/avatar-usuario';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
@@ -38,6 +37,12 @@ interface EstadoSeguimento {
 // um menu ao lado (denunciar o perfil, copiar o link), pontuação no cartão lateral, formação e vínculo em pílulas,
 // campanhas separadas em ativas e encerradas, e as publicações (as atualizações de todas as campanhas dele, a mais
 // recente em cima).
+function iniciais(nome: string | null | undefined): string {
+  const partes = (nome ?? '').trim().split(/\s+/).filter(Boolean);
+  const letras = partes.length > 1 ? partes[0][0] + partes[partes.length - 1][0] : (partes[0] ?? '?').slice(0, 2);
+  return letras.toLocaleUpperCase('pt-BR');
+}
+
 export function PerfilPesquisador({ auth }: PropsPagina) {
   const { idUsuario } = useParams();
   const navegar = useNavigate();
@@ -197,7 +202,8 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
     <div className="flex items-center gap-2" ref={menuRef}>
       <button
         type="button"
-        className={`btn ${dadosSeguimento?.seguindo ? 'btn-secondary' : 'btn-primary'}`}
+        // No topo escuro: Seguir em destaque (verde); Seguindo em véu translúcido, como as pílulas do topo.
+        className={`btn ${dadosSeguimento?.seguindo ? 'veu-claro texto-sobre-escuro-forte hover:bg-white/15' : 'btn-primary'}`}
         disabled={auth.autenticado && (!dadosSeguimento || dadosSeguimento.seguindo === null || dadosSeguimento.enviando)}
         aria-pressed={dadosSeguimento?.seguindo ?? false}
         onClick={() => void alternarSeguir()}
@@ -208,21 +214,21 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
       <div className="relative">
         <button
           type="button"
-          className="btn btn-secondary px-3"
+          className="btn veu-claro texto-sobre-escuro-forte hover:bg-white/15 px-3"
           aria-haspopup="menu"
           aria-expanded={menuAberto}
           aria-label="Mais opções do perfil"
           onClick={() => setMenuAberto((aberto) => !aberto)}
         >
-          <i className="fa-solid fa-chevron-down" aria-hidden="true" />
+          <i className={`fa-solid fa-chevron-down transition-transform ${menuAberto ? 'rotate-180' : ''}`} aria-hidden="true" />
         </button>
         {menuAberto && (
-          <div role="menu" className="absolute right-0 mt-2 w-56 fundo-cartao border borda-padrao rounded-xl shadow-xl py-2 z-20 text-left">
-            <button type="button" role="menuitem" className="w-full px-4 py-2 text-sm texto-padrao hover-fundo-sutil text-left" onClick={() => void copiarLink()}>
-              <i className="fa-solid fa-link mr-2 texto-fraco" aria-hidden="true" /> Copiar link do perfil
+          <div role="menu" className="absolute left-0 top-full mt-2 w-60 fundo-cartao border borda-padrao rounded-xl shadow-xl py-1.5 z-30 overflow-hidden">
+            <button type="button" role="menuitem" className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-left texto-padrao hover-fundo-sutil transition-colors" onClick={() => void copiarLink()}>
+              <i className="fa-solid fa-link w-4 text-center texto-fraco" aria-hidden="true" /> Copiar link do perfil
             </button>
-            <button type="button" role="menuitem" className="w-full px-4 py-2 text-sm texto-erro hover-fundo-sutil text-left" onClick={denunciar}>
-              <i className="fa-solid fa-flag mr-2" aria-hidden="true" /> Denunciar perfil
+            <button type="button" role="menuitem" className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-left texto-erro hover-fundo-sutil transition-colors" onClick={denunciar}>
+              <i className="fa-solid fa-flag w-4 text-center" aria-hidden="true" /> Denunciar perfil
             </button>
           </div>
         )}
@@ -232,7 +238,8 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
 
   return (
     <div id="view-perfil-pesquisador" className="pagina-publica view-section flex-grow fundo-pagina min-h-screen pb-16">
-      <header id="perfil-pesquisador-capa" className="superficie-escura relative mb-10 overflow-hidden py-14">
+      {/* Sem overflow-hidden e numa camada acima (z-10): o menu do Seguir abre por cima do conteúdo, não por trás. */}
+      <header id="perfil-pesquisador-capa" className="superficie-escura relative z-10 mb-10 py-14">
         <div className="mx-auto max-w-5xl px-4 flex flex-col sm:flex-row sm:items-center gap-8">
           <div className="shrink-0">
             {pesquisador?.avatarUrl ? (
@@ -242,9 +249,14 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
                 className="w-36 h-36 sm:w-44 sm:h-44 rounded-full object-cover border-4 border-white/20 shadow-2xl"
               />
             ) : (
-              <div className="scale-125 sm:scale-150 origin-left">
-                <AvatarUsuario nome={pesquisador?.nome} tamanho="xxl" />
-              </div>
+              // Sem foto: as iniciais no MESMO tamanho da foto. Não usar scale: ele só aumenta o desenho, sem ocupar espaço,
+              // e o círculo ficava por cima do nome ao lado.
+              <span
+                className="w-36 h-36 sm:w-44 sm:h-44 rounded-full flex items-center justify-center fundo-marca-sobre-escuro texto-sobre-escuro-forte text-5xl font-bold border-4 border-white/20 shadow-2xl select-none"
+                aria-hidden="true"
+              >
+                {iniciais(pesquisador?.nome)}
+              </span>
             )}
           </div>
           <div className="min-w-0 flex-1">
@@ -309,7 +321,7 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
                     >
                       <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(0, Math.min(100, pontuacao))}%` }} />
                     </div>
-                    {score?.rotulo && <p className="legenda mt-2">{score.rotulo}</p>}
+                    {score?.rotulo && <p className="legenda mt-2 texto-fraco">{score.rotulo}</p>}
                   </div>
                 )}
                 <dl className="grid grid-cols-3 gap-2 text-center">
@@ -326,7 +338,6 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
                     <dd className="numero text-xl font-bold texto-forte">{campanhas ? encerradas.length : '—'}</dd>
                   </div>
                 </dl>
-                {botaoSeguir}
               </div>
             </aside>
           </div>

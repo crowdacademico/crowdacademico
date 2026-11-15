@@ -89,7 +89,7 @@ export function Transparencia() {
                 <div key={item.chave} className="flex justify-between gap-4 border-b borda-padrao pb-2 last:border-0">
                   <dt>
                     <span className="font-bold texto-forte">{item.rotulo}</span>
-                    <span className="block legenda">{item.observacao}</span>
+                    <span className="block legenda texto-fraco">{item.observacao}</span>
                   </dt>
                   <dd className="numero font-bold texto-forte whitespace-nowrap">{item.tarifa}</dd>
                 </div>
@@ -162,7 +162,7 @@ export function Transparencia() {
               </div>
             </dl>
           </div>
-          <p className="legenda mt-6">
+          <p className="legenda mt-6 texto-fraco">
             Estimativa. A tarifa do cartão e a do boleto são confirmadas pelo provedor no pagamento. O mínimo de{' '}
             {formatarMoeda(taxaMinimaRepasse)} vale para o repasse inteiro da campanha, não para cada apoio: aqui o
             simulador trata o seu apoio como se fosse o único da campanha. Em campanha Tudo ou Nada que não bate a meta,

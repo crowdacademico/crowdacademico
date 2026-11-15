@@ -263,7 +263,7 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
               ? `Sua contribuição de ${formatarMoeda(contribuicao.valor)} foi confirmada.`
               : `Sua contribuição de ${formatarMoeda(contribuicao.valor)} foi registrada e aguarda pagamento.`}
           </p>
-          <p className="legenda mb-8">
+          <p className="legenda mb-8 texto-fraco">
             {ROTULOS_STATUS[status] ?? 'Situação do pagamento em consulta'} · Protocolo{' '}
             <span className="font-dado">{contribuicao.idContribuicao}</span>
           </p>
@@ -319,7 +319,7 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
                   </span>
                 </p>
               )}
-              <p className="legenda mt-3">
+              <p className="legenda mt-3 texto-fraco">
                 Válido até{' '}
                 {contribuicao.pix
                   ? new Date(contribuicao.pix.expiraEm).toLocaleString('pt-BR')
@@ -391,7 +391,7 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
             >
               <div className="bg-primary h-full rounded-full" style={{ width: `${percentualLimitado}%` }} />
             </div>
-            <p className="legenda mt-3">
+            <p className="legenda mt-3 texto-fraco">
               {pagamentoConfirmado && financeiroAtual
                 ? 'Valores consultados na campanha após a confirmação.'
                 : pagamentoConfirmado

@@ -116,7 +116,7 @@ export function CartaoAcoesCampanha({ auth, campanha }: AcoesCampanhaProps) {
         )}
       </div>
       {!auth.autenticado && (
-        <p className="legenda -mt-3">Entre na sua conta para seguir e receber as novidades desta campanha.</p>
+        <p className="legenda -mt-3 texto-fraco">Entre na sua conta para seguir e receber as novidades desta campanha.</p>
       )}
 
       <div className="border-t borda-padrao pt-5">
@@ -148,7 +148,7 @@ export function CartaoAcoesCampanha({ auth, campanha }: AcoesCampanhaProps) {
       {!ehDono && STATUS_ACEITA_DENUNCIA.has(campanha.status) && (
         <div className="border-t borda-padrao pt-4">
           {denunciada ? (
-            <p className="legenda" role="status">Denúncia registrada. A moderação vai analisar.</p>
+            <p className="legenda texto-fraco" role="status">Denúncia registrada. A moderação vai analisar.</p>
           ) : auth.autenticado ? (
             <button type="button" onClick={() => setDenunciando(true)} className="text-sm texto-fraco hover:underline">
               <i className="fa-solid fa-flag mr-2" aria-hidden="true" />
@@ -215,7 +215,7 @@ export function FormComentarCampanha({ auth, campanha }: AcoesCampanhaProps) {
   if (!auth.autenticado || ehDono || !aceitaComentario) return null;
   if (!ehPesquisador) {
     return (
-      <p className="legenda mt-6">
+      <p className="legenda mt-6 texto-fraco">
         Pesquisadores podem comentar campanhas de outros pesquisadores. O comentário aparece aqui quando o autor da
         campanha o endossa.
       </p>
@@ -254,10 +254,10 @@ export function FormComentarCampanha({ auth, campanha }: AcoesCampanhaProps) {
       <h3 id="comentar-campanha-titulo" className="subtitulo texto-forte mb-2">
         Seu comentário como pesquisador
       </h3>
-      {carregandoMeus && <p className="legenda">Carregando…</p>}
+      {carregandoMeus && <p className="legenda texto-fraco">Carregando…</p>}
       {!carregandoMeus && meuComentario && (
         <div className="rounded-lg fundo-sutil border borda-padrao p-4">
-          <p className="legenda mb-2">
+          <p className="legenda mb-2 texto-fraco">
             {meuComentario.endossado
               ? 'O autor endossou o seu comentário: ele aparece na lista acima.'
               : 'Enviado ao autor da campanha. Aparece nesta página se ele endossar.'}
@@ -267,7 +267,7 @@ export function FormComentarCampanha({ auth, campanha }: AcoesCampanhaProps) {
       )}
       {!carregandoMeus && !meuComentario && (
         <form onSubmit={(evento) => void enviar(evento)} className="space-y-3">
-          <p className="legenda">
+          <p className="legenda texto-fraco">
             Um comentário por campanha. Ele vai para o autor, que pode endossá-lo para aparecer nesta página.
           </p>
           <label htmlFor="comentario-texto" className="sr-only">
@@ -283,7 +283,7 @@ export function FormComentarCampanha({ auth, campanha }: AcoesCampanhaProps) {
             aria-describedby="comentario-contador"
           />
           <div className="flex items-center justify-between gap-3">
-            <span id="comentario-contador" className="legenda numero">
+            <span id="comentario-contador" className="legenda numero texto-fraco">
               {tamanho}/{limite}
             </span>
             <button type="submit" className="btn btn-primary" disabled={enviando || tamanho === 0 || tamanho > limite}>

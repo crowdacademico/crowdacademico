@@ -24,7 +24,7 @@ export function ListaAtualizacoes({ atualizacoes, tituloCampanha }: ListaAtualiz
             <article className="fundo-cartao border borda-padrao rounded-xl p-6">
               <p className="rotulo-leitura texto-marca mb-2">{ROTULO_FASE_ATUALIZACAO[atualizacao.fase]}</p>
               <h3 className="subtitulo">{atualizacao.titulo}</h3>
-              <p className="legenda mt-2">
+              <p className="legenda mt-2 texto-fraco">
                 {dataPublicacao(atualizacao.publicadoEm)}
                 {campanha && (
                   <>

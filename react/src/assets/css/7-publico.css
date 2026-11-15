@@ -1159,36 +1159,12 @@
       line-height: 1.1;
     }
 
-    .layout-publico .rotulo {
-      font-size: 0.6875rem;
-      letter-spacing: 0.1em;
-      line-height: 1.2;
-      color: var(--cor-texto-fraco);
-    }
-
     .layout-publico .titulo-hero {
       font-family: var(--font-serif);
       font-size: 4.5rem;
       font-weight: 600;
       line-height: 1.02;
       letter-spacing: -0.03em;
-    }
-
-    .layout-publico .paragrafo-denso {
-      font-family: var(--font-dado);
-      font-size: var(--font-size-legenda);
-    }
-
-    .layout-publico .legenda {
-      font-size: var(--font-size-legenda);
-      line-height: 1.45;
-      color: var(--cor-texto-fraco);
-    }
-
-    .layout-publico .subtitulo {
-      font-size: var(--font-size-subtitulo);
-      line-height: 1.3;
-      letter-spacing: -0.01em;
     }
 
     .layout-publico .numero {

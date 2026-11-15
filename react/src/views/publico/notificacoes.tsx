@@ -119,7 +119,7 @@ export function Notificacoes({ auth }: PropsPagina) {
                       <div className="min-w-0 flex-1">
                         <h2 className="subtitulo">{notificacao.titulo}</h2>
                         <p className="paragrafo texto-padrao mt-1 whitespace-pre-wrap">{notificacao.mensagem}</p>
-                        <p className="legenda mt-2">{dataNotificacao(notificacao.criadoEm)}</p>
+                        <p className="legenda mt-2 texto-fraco">{dataNotificacao(notificacao.criadoEm)}</p>
                       </div>
                       {!lida && (
                         <button

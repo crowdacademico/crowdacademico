@@ -125,7 +125,7 @@ export function CartaoCampanha({
                   <span className="paragrafo-denso">Meta: {formatarMoeda(campanha.metaFinanceira)}</span>
                 </div>
               </div>
-              <span className="fundo-realce px-2 py-1 rounded-md legenda mt-3 inline-block">
+              <span className="fundo-realce px-2 py-1 rounded-md legenda mt-3 inline-block texto-fraco">
                 <i className="fa-regular fa-clock mr-1" aria-hidden="true" />
                 {rotuloTempo}
               </span>
@@ -155,7 +155,7 @@ export function CartaoCampanha({
                   </div>
                 </div>
               )}
-              <div className="flex flex-nowrap justify-between items-center gap-2 legenda mt-3">
+              <div className="flex flex-nowrap justify-between items-center gap-2 legenda mt-3 texto-fraco">
                 <span className="fundo-realce px-2 py-1 rounded-md">
                   Meta: {formatarMoeda(campanha.metaFinanceira)}
                 </span>
