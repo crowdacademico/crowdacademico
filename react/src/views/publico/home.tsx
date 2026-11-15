@@ -11,6 +11,7 @@ import { useBuscar } from '../../services/constant/hook/use-buscar';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import { CartaoCampanha, EstadoVazio } from './componentes-campanhas';
 import { campanhaVisivelNoCatalogo, formatarNumeroCompacto, percentualArrecadado } from './util-campanhas';
+import { useDuvidasFrequentes } from './use-duvidas-frequentes';
 import { useSeguirCampanhas } from './use-seguir-campanhas';
 
 function iconeDaArea(nome: string) {
@@ -174,6 +175,8 @@ export function Home({ auth }: PropsPagina) {
     erro: erroAreas,
   } = useBuscar(() => areaConhecimentoApi.listarPublico(), []);
   const seguimento = useSeguirCampanhas(auth);
+  // As perguntas da Home são as marcadas `naHome` na FAQ (mesma fonte e mesmo texto da página /perguntas-frequentes).
+  const duvidasHome = useDuvidasFrequentes().filter((duvida) => duvida.naHome);
   const campanhas = useMemo(
     () => campanhasRecebidas?.filter(campanhaVisivelNoCatalogo) ?? null,
     [campanhasRecebidas],
@@ -408,18 +411,12 @@ export function Home({ auth }: PropsPagina) {
             <h2 className="titulo-secao texto-forte mt-3">Antes de conhecer uma campanha</h2>
           </div>
           <div className="home-perguntas">
-            <details className="home-perguntas__item">
-              <summary className="home-perguntas__pergunta">Que informações encontro em uma campanha?<i className="fa-solid fa-plus" aria-hidden="true" /></summary>
-              <p className="paragrafo texto-padrao">A página apresenta os dados publicados pelo pesquisador, como descrição, meta, orçamento e cronograma quando disponíveis.</p>
-            </details>
-            <details className="home-perguntas__item">
-              <summary className="home-perguntas__pergunta">Como acompanho o andamento do projeto?<i className="fa-solid fa-plus" aria-hidden="true" /></summary>
-              <p className="paragrafo texto-padrao">Consulte a página da campanha e suas atualizações públicas. Se ainda não houver atualizações, essa informação será indicada na própria página.</p>
-            </details>
-            <details className="home-perguntas__item">
-              <summary className="home-perguntas__pergunta">Como apoio financeiramente?<i className="fa-solid fa-plus" aria-hidden="true" /></summary>
-              <p className="paragrafo texto-padrao">Na página da campanha, clique em "Apoiar esta pesquisa", escolha o valor e pague o Pix gerado.</p>
-            </details>
+            {duvidasHome.map((duvida) => (
+              <details className="home-perguntas__item" key={duvida.chave}>
+                <summary className="home-perguntas__pergunta">{duvida.pergunta}<i className="fa-solid fa-plus" aria-hidden="true" /></summary>
+                <p className="paragrafo texto-padrao">{duvida.resposta}</p>
+              </details>
+            ))}
           </div>
           <div className="text-center mt-8">
             <Link to="/perguntas-frequentes" className="inline-flex items-center gap-2 texto-marca font-bold hover:underline">

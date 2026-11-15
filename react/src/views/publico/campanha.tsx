@@ -371,10 +371,22 @@ export function Campanha({ auth }: PropsPagina) {
                 {aba === 'recompensas' && (
                   <section id="tab-recompensas" aria-labelledby="tab-btn-recompensas" role="tabpanel">
                     <h2 className="titulo-secao texto-forte mb-2">Recompensas</h2>
+                    {/* Texto mais direto (16-11-2026, Alexia): o antigo dava a entender que bastava criar a conta para ganhar.
+                        Visitante vê o mesmo padrão do "Entre na sua conta para denunciar", que leva ao login e volta. */}
                     <p className="paragrafo texto-fraco mb-5">
-                      Quem apoia com conta ganha automaticamente todas as recompensas que o valor do apoio alcança, sem precisar
+                      Ao apoiar, você ganha automaticamente todas as recompensas que o valor do seu apoio alcança, sem precisar
                       escolher. São agradecimentos simbólicos, sem entrega física.
                     </p>
+                    {!auth.autenticado && publicada && recompensas.dados.length > 0 && (
+                      <Link
+                        to="/login"
+                        state={{ voltarPara: `/campanha/${campanha.idCampanha}` }}
+                        className="paragrafo texto-marca enfase hover:underline inline-flex items-center gap-2 mb-5"
+                      >
+                        <i className="fa-solid fa-gift" aria-hidden="true" />
+                        Entre na sua conta para ganhar as recompensas ao apoiar
+                      </Link>
+                    )}
                     {!publicada && <p className="paragrafo texto-fraco">As recompensas ainda não estão disponíveis para esta campanha.</p>}
                     {publicada && recompensas.erro && <p className="paragrafo texto-fraco">Não foi possível carregar as recompensas.</p>}
                     {publicada && !recompensas.erro && recompensas.dados.length === 0 && (

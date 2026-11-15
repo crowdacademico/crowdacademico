@@ -86,7 +86,7 @@ export const ROTAS: Rota[] = [
   { caminho: '/checkout', elemento: Checkout, rotuloBreadcrumb: 'Apoiar campanha' }, // só redireciona links antigos para o modal Apoiar da campanha,
   { caminho: '/apoio-confirmado', elemento: ApoioConfirmado, rotuloBreadcrumb: 'Confirmação do apoio' },
   { caminho: '/como-funciona', elemento: ComoFunciona, rotuloBreadcrumb: 'Como funciona' },
-  { caminho: '/transparencia', elemento: Transparencia, rotuloBreadcrumb: 'Transparência' },
+  { caminho: '/transparencia', elemento: Transparencia, rotuloBreadcrumb: 'Taxas e transparência' },
   { caminho: '/perguntas-frequentes', elemento: PerguntasFrequentes, rotuloBreadcrumb: 'Perguntas frequentes' },
   { caminho: '/sobre', elemento: Sobre, rotuloBreadcrumb: 'Sobre' },
   { caminho: '/termos', elemento: TermosUso, rotuloBreadcrumb: 'Termo de Uso' },
