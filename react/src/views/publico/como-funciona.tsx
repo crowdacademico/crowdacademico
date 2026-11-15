@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { CabecalhoPagina } from '../../components/layout/cabecalho-pagina';
-import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
-import type { PropsPagina } from '../../services/router/pagina.type';
-import { MockupPerfil } from './mockup-perfil';
-import { useDadosVitrine } from './use-dados-vitrine';
 
 const PERFIS = [
   {
     chave: 'visitante',
+    imagem: '/imagens/perfil-visitante.webp',
+    descricaoImagem: 'Ilustração de uma jovem explorando um museu de ciências.',
     titulo: 'Visitante',
     icone: 'fa-eye',
     chamada: 'Explore projetos sem barreira nenhuma',
@@ -22,7 +20,9 @@ const PERFIS = [
   },
   {
     chave: 'apoiador',
-    titulo: 'Apoiador cadastrado',
+    imagem: '/imagens/perfil-apoiador.webp',
+    descricaoImagem: 'Ilustração de uma pessoa comemorando no celular o apoio a um projeto.',
+    titulo: 'Cadastre-se',
     icone: 'fa-hand-holding-heart',
     chamada: 'Apoie com transparência total',
     destaque: 'transparência total',
@@ -35,6 +35,8 @@ const PERFIS = [
   },
   {
     chave: 'pesquisador',
+    imagem: '/imagens/perfil-pesquisador.webp',
+    descricaoImagem: 'Ilustração de uma cientista sorrindo em sua mesa, com gráficos, microscópio e vidrarias de laboratório.',
     titulo: 'Pesquisador',
     icone: 'fa-flask',
     chamada: 'Gerencie campanhas com controle real',
@@ -210,10 +212,7 @@ function ConteudoAba({ ativa }: { ativa: (typeof ABAS)[number]['chave'] }) {
   );
 }
 
-export function ComoFunciona({ auth }: PropsPagina) {
-  // Painéis dos três perfis com dados reais da plataforma (nada inventado).
-  const dadosVitrine = useDadosVitrine(auth.authFetch);
-  const taxaPlataforma = useConfiguracoes().obterNumero('taxa_plataforma_padrao', 5);
+export function ComoFunciona() {
   const [abaAtiva, setAbaAtiva] = useState<(typeof ABAS)[number]['chave']>('apoiar');
 
   return (
@@ -235,13 +234,21 @@ export function ComoFunciona({ auth }: PropsPagina) {
                 key={perfil.chave}
                 className={`perfil-vitrine ${indice % 2 === 1 ? 'perfil-vitrine--invertido' : ''}`}
               >
+                {/* Ilustração de cada perfil (14-11-2026): WebP 1200x675, ~55 KB; originais em informacoes/Imagens. */}
                 <div className="perfil-vitrine__painel">
-                  <div className="grade-medicao" aria-hidden="true" />
+                  <img
+                    src={perfil.imagem}
+                    alt={perfil.descricaoImagem}
+                    width={1200}
+                    height={675}
+                    loading="lazy"
+                    decoding="async"
+                    className="perfil-vitrine__imagem"
+                  />
                   <span className="perfil-vitrine__chip">
-                    <i className={`fa-solid ${perfil.icone}`} />
+                    <i className={`fa-solid ${perfil.icone}`} aria-hidden="true" />
                     {perfil.titulo}
                   </span>
-                  <MockupPerfil chave={perfil.chave} dados={dadosVitrine} taxaPlataforma={taxaPlataforma} />
                 </div>
                 <div className="perfil-vitrine__conteudo">
                   <p className="rotulo-leitura texto-marca mb-2">

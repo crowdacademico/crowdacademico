@@ -44,23 +44,17 @@
     gap: 2rem;
   }
 
+  /* Card do perfil: a ilustração cobre o card inteiro (16:9, a proporção da imagem); a pílula fica por cima. */
   .perfil-vitrine__painel {
     position: relative;
     display: flex;
-    min-height: 18rem;
+    aspect-ratio: 16 / 9;
     flex-direction: column;
     overflow: hidden;
     border-radius: var(--radius-2xl);
     background: var(--gradiente-hero);
     padding: 1.5rem;
     box-shadow: var(--shadow-xl);
-  }
-
-  .perfil-vitrine__painel > .grade-medicao {
-    position: absolute;
-    inset: 0;
-    opacity: 0.45;
-    pointer-events: none;
   }
 
   .perfil-vitrine__chip {
@@ -82,124 +76,12 @@
     backdrop-filter: blur(0.5rem);
   }
 
-  .perfil-vitrine__mockup {
-    position: relative;
-    flex: 1;
-    min-height: 10rem;
-    border-radius: var(--radius-xl);
-    background: var(--cor-fundo-cartao);
-    padding: 1.125rem;
-    box-shadow: var(--shadow-md);
-  }
-
-  /* O mockup é desenho: barras em tons médios (texto-fraco, borda-forte, marca) para aparecer no cartão branco
-     com as cores da restrita, mais claras que as do protótipo (sem isso o cartão parecia vazio). */
-  .perfil-vitrine__mockup-cabecalho {
-    display: block;
-    width: 38%;
-    height: 0.625rem;
-    margin-bottom: 0.75rem;
-    border-radius: var(--radius-full);
-    background: var(--cor-texto-fraco);
-    opacity: 0.55;
-  }
-
-  .perfil-vitrine__mockup-linhas {
-    border-top: 1px solid var(--cor-borda);
-  }
-
-  .perfil-vitrine__mockup-linha {
-    display: flex;
-    min-height: 2.5rem;
-    align-items: center;
-    gap: 0.625rem;
-    border-bottom: 1px solid var(--cor-borda);
-  }
-
-  .perfil-vitrine__mockup-linha > i {
-    width: 1.5rem;
-    height: 1.5rem;
-    flex: 0 0 1.5rem;
-    border-radius: 0.375rem;
-    background: color-mix(in srgb, var(--cor-marca) 35%, transparent);
-  }
-
-  .perfil-vitrine__mockup-linha > span {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 0.3rem;
-  }
-
-  .perfil-vitrine__mockup-linha b,
-  .perfil-vitrine__mockup-linha em,
-  .perfil-vitrine__mockup-indicadores span {
-    display: block;
-    height: 0.375rem;
-    border-radius: var(--radius-full);
-    background: var(--cor-borda-forte);
-  }
-
-  .perfil-vitrine__mockup-linha b:first-child {
-    width: 72%;
-    background: var(--cor-texto-fraco);
-    opacity: 0.6;
-  }
-
-  .perfil-vitrine__mockup-linha b:last-child {
-    width: 46%;
-    opacity: 0.6;
-  }
-
-  .perfil-vitrine__mockup-linha em {
-    width: 2rem;
-    background: color-mix(in srgb, var(--cor-marca) 60%, transparent);
-  }
-
-  .perfil-vitrine__mockup-indicadores {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.625rem;
-    margin-top: 0.75rem;
-  }
-
-  .perfil-vitrine__mockup-indicadores span {
-    height: 1.75rem;
-    border: 1px solid var(--cor-borda);
-    background: var(--cor-fundo-sutil);
-  }
-
-  .perfil-vitrine__mockup--visitante .perfil-vitrine__mockup-indicadores,
-  .perfil-vitrine__mockup--apoiador .perfil-vitrine__mockup-indicadores {
-    display: none;
-  }
-
-  .perfil-vitrine__mockup--apoiador .perfil-vitrine__mockup-linha > i {
-    border-radius: var(--radius-full);
-  }
-
-  .perfil-vitrine__mockup--pesquisador .perfil-vitrine__mockup-linhas {
-    display: none;
-  }
-
-  .perfil-vitrine__mockup--pesquisador .perfil-vitrine__mockup-indicadores {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin-top: 0;
-  }
-
-  .perfil-vitrine__mockup--pesquisador .perfil-vitrine__mockup-indicadores span {
-    position: relative;
-    height: 4rem;
-  }
-
-  .perfil-vitrine__mockup--pesquisador .perfil-vitrine__mockup-indicadores span::after {
+  .perfil-vitrine__imagem {
     position: absolute;
-    inset: auto 0.5rem 0.5rem;
-    height: 0.375rem;
-    border-radius: var(--radius-full);
-    background: var(--cor-borda-forte);
-    content: '';
-    opacity: 0.5;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .perfil-vitrine__conteudo {
@@ -1209,7 +1091,6 @@
       }
 
       .perfil-vitrine__painel {
-        min-height: 19rem;
         padding: 1.75rem;
       }
 
