@@ -138,8 +138,8 @@ function ConteudoEstudio({ auth, secao }: PropsPagina & { secao: SecaoEstudio })
                 icone="fa-key"
               >
                 <p>
-                  O dinheiro das suas campanhas vai para a chave Pix no seu CPF.{' '}
-                  {contaPix ? 'A chave cadastrada não foi confirmada no seu nome, e' : 'Sem ela,'} o repasse fica esperando.{' '}
+                  O dinheiro das suas campanhas vai para a chave Pix.{' '}
+                  {contaPix && 'A chave cadastrada não foi confirmada no seu nome. '}
                   <Link to="/minha-conta/financeiro" className="link-texto link-texto--cor-herdada">
                     Ir para Minha Conta &gt; Financeiro
                   </Link>

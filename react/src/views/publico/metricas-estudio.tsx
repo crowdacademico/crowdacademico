@@ -14,7 +14,6 @@ const PUBLICADA: ReadonlySet<CampanhaResponse['status']> = new Set(['ativo', 'su
 interface Metricas {
   apoios: number;
   liquidoEstimado: number;
-  taxas: number[];
   recebido: number;
   previsto: number;
 }
@@ -33,11 +32,9 @@ async function buscarMetricas(authFetch: AuthFetch, campanhas: CampanhaResponse[
     (c) => PUBLICADA.has(c.status) && c.valorBrutoArrecadado > 0 && !repassadas.has(c.idCampanha),
   );
   const detalhes = await Promise.all(comDinheiro.map((c) => campanhaApi.buscar(authFetch, c.idCampanha).catch(() => null)));
-  const taxas = [...new Set(detalhes.map((d) => d?.taxaAplicada).filter((t): t is number => typeof t === 'number'))];
   return {
     apoios: recebidas.length,
     liquidoEstimado: detalhes.reduce((total, d) => total + (d?.valorLiquidoEstimado ?? 0), 0),
-    taxas,
     recebido: repasses.filter((r) => r.status === 'concluido').reduce((total, r) => total + r.valorLiquido, 0),
     previsto: repasses
       .filter((r) => r.status === 'pendente' || r.status === 'processando')
@@ -45,17 +42,19 @@ async function buscarMetricas(authFetch: AuthFetch, campanhas: CampanhaResponse[
   };
 }
 
+// O ícone fica na linha do rótulo (não ao lado do valor), para o valor usar a largura toda do cartão: com o ícone ao
+// lado, "R$ 6.555,55" já vazava do cartão.
 function Cartao({ icone, rotulo, valor, detalhe }: { icone: string; rotulo: string; valor: string; detalhe?: string }) {
   return (
-    <div className="fundo-cartao border borda-padrao rounded-xl p-4 flex items-start gap-3 min-w-0">
-      <span className="w-10 h-10 shrink-0 rounded-lg fundo-sutil texto-marca flex items-center justify-center" aria-hidden="true">
-        <i className={`fa-solid ${icone}`} />
-      </span>
-      <div className="min-w-0">
-        <p className="legenda texto-fraco">{rotulo}</p>
-        <p className="numero numero--kpi texto-forte">{valor}</p>
-        {detalhe && <p className="legenda texto-fraco">{detalhe}</p>}
-      </div>
+    <div className="fundo-cartao border borda-padrao rounded-xl p-4 min-w-0">
+      <p className="legenda texto-fraco flex items-center gap-2 mb-2">
+        <span className="w-7 h-7 shrink-0 rounded-lg fundo-sutil texto-marca flex items-center justify-center" aria-hidden="true">
+          <i className={`fa-solid ${icone}`} />
+        </span>
+        {rotulo}
+      </p>
+      <p className="numero numero--kpi texto-forte whitespace-nowrap">{valor}</p>
+      {detalhe && <p className="legenda texto-fraco mt-1">{detalhe}</p>}
     </div>
   );
 }
@@ -66,24 +65,12 @@ export function MetricasEstudio({ authFetch, campanhas }: { authFetch: AuthFetch
   const publicadas = campanhas.filter((c) => PUBLICADA.has(c.status));
   const arrecadado = publicadas.reduce((total, c) => total + c.valorBrutoArrecadado, 0);
   const carregando = dado === null;
-  const taxa =
-    dado && dado.taxas.length === 1 ? `já sem a taxa da plataforma (${dado.taxas[0]}%)` : 'já sem a taxa da plataforma';
 
   return (
-    <section aria-label="Resumo das suas campanhas" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
-      <Cartao
-        icone="fa-sack-dollar"
-        rotulo="Arrecadado"
-        valor={formatarMoeda(arrecadado)}
-        detalhe={`em ${publicadas.length} ${publicadas.length === 1 ? 'campanha' : 'campanhas'} no ar ou encerradas`}
-      />
+    <section aria-label="Resumo das suas campanhas" className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-3 mb-6">
+      <Cartao icone="fa-sack-dollar" rotulo="Arrecadado" valor={formatarMoeda(arrecadado)} />
       <Cartao icone="fa-hand-holding-heart" rotulo="Apoios recebidos" valor={carregando ? '…' : String(dado.apoios)} detalhe="pagos" />
-      <Cartao
-        icone="fa-calculator"
-        rotulo="Você recebe (estimado)"
-        valor={carregando ? '…' : formatarMoeda(dado.liquidoEstimado)}
-        detalhe={taxa}
-      />
+      <Cartao icone="fa-calculator" rotulo="Líquido (estimado)" valor={carregando ? '…' : formatarMoeda(dado.liquidoEstimado)} />
       <Cartao
         icone="fa-building-columns"
         rotulo="Repasses recebidos"
