@@ -37,7 +37,8 @@ export interface ResultadoCobranca {
   pix?: DadosPix;
   // Só quando a cobrança foi criada com split.
   idSplit?: string;
-  // Só em cobrança de cartão: a página segura do provedor onde quem apoia digita o cartão e paga.
+  // Pix e cartão: a página de pagamento do provedor, para onde a área pública manda quem apoia (no cartão, é onde a
+  // pessoa digita o cartão; no Pix, mostra o QR).
   linkPagamento?: string;
   // Só em cobrança por boleto.
   boleto?: DadosBoleto;

@@ -37,6 +37,7 @@ export class ContribuicaoConverter {
       meioPagamento: linha.meio_pagamento,
       status: linha.status,
       criadoEm: linha.criado_em,
+      linkPagamento: cobranca.linkPagamento,
       pix: cobranca.pix
         ? {
             copiaECola: cobranca.pix.copiaECola,
@@ -44,9 +45,10 @@ export class ContribuicaoConverter {
             expiraEm: cobranca.pix.expiraEm,
           }
         : undefined,
-      cartao: cobranca.linkPagamento
-        ? { linkPagamento: cobranca.linkPagamento }
-        : undefined,
+      cartao:
+        cobranca.linkPagamento && linha.meio_pagamento === 'cartao_credito'
+          ? { linkPagamento: cobranca.linkPagamento }
+          : undefined,
       boleto: cobranca.boleto ? { ...cobranca.boleto } : undefined,
     };
   }

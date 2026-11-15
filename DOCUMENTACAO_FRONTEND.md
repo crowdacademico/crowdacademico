@@ -34,7 +34,7 @@
 
 O `react/` contém quatro áreas: o painel administrativo; as páginas públicas do site; a "Minha Conta", fora do painel; e o Estúdio do Pesquisador, também fora do painel. Também contém as telas de entrada (login, cadastro, esqueci a senha, criar nova senha e verificar e-mail).
 
-O painel lista, cria, altera, consulta e exclui os registros dos módulos que o Nest expõe. A área pública inclui Home, Explorar, campanhas, perfis de pesquisadores, checkout e confirmação de apoio, páginas institucionais, notificações e criação de campanha. A `Minha Conta` inclui o histórico de contribuições; não existe um dashboard separado para doadores. O Estúdio reúne as áreas de trabalho do pesquisador.
+O painel lista, cria, altera, consulta e exclui os registros dos módulos que o Nest expõe. A área pública inclui Home, Explorar, campanhas, perfis de pesquisadores, o modal Apoiar e o acompanhamento do apoio, páginas institucionais, notificações e criação de campanha. A `Minha Conta` inclui o histórico de contribuições; não existe um dashboard separado para doadores. O Estúdio reúne as áreas de trabalho do pesquisador.
 
 📌 **O painel não é descartável.** Ele é o admin de verdade, não uma ferramenta de desenvolvimento. Por isso a pasta se chama `components/crud/` e o CSS, `5-crud.css`.
 
@@ -113,13 +113,13 @@ react/
 
 📌 **Fonte única: `services/router/rotas.constants.ts`.** As rotas, o breadcrumb, o menu lateral e a busca global (Ctrl+K) leem a mesma lista; ninguém tem cópia.
 
-- **`ROTAS`** (sob `LayoutPublico`, sem menu lateral): Home (`/`), explorar, campanha e atualizações (`/explorar`, `/campanha/:id`, `/campanha/:id/atualizacoes`), perfil público (`/pesquisador/:idUsuario`), como funciona, sobre, termos, checkout, confirmação de apoio, notificações, criação de campanha, Estúdio do Pesquisador e telas de autenticação. Algumas rotas desse grupo exigem sessão. As páginas ficam em `views/publico/` quando não pertencem a um módulo Nest.
+- **`ROTAS`** (sob `LayoutPublico`, sem menu lateral): Home (`/`), explorar, campanha e atualizações (`/explorar`, `/campanha/:id`, `/campanha/:id/atualizacoes`), perfil público (`/pesquisador/:idUsuario`), como funciona, sobre, termos, checkout (só redireciona para o modal Apoiar), acompanhamento do apoio, notificações, criação de campanha, Estúdio do Pesquisador e telas de autenticação. Algumas rotas desse grupo exigem sessão. As páginas ficam em `views/publico/` quando não pertencem a um módulo Nest.
 - **`ROTAS_CONTA`**: páginas autenticadas fora do painel, atualmente `Minha Conta` (`/minha-conta/:aba`). O acesso exige sessão.
 - **`ROTAS_ADMIN`** (dentro do `AdminLayout`, com menu lateral). Cada entrada tem `caminho`, `elemento` e os metadados: `rotuloBreadcrumb` (`null` = não aparece), `paiCaminho` (a listagem dona de uma rota de detalhe), `rotuloMenu`, `grupoMenu` e `icone`.
 
 📌 **Rotas de verdade, nunca abas em `useState`:** link direto, botão Voltar e F5 funcionam. O item ativo do menu sai da própria URL (`NavLink`).
 
-**Redirecionamentos (`App.tsx` e `redirecionar-area-conta.tsx`):** `/minha-conta` → `/minha-conta/perfil`; `/minhas-contribuicoes` e `/painel-doador` → `/minha-conta/contribuicoes`; `/painel-pesquisador`, `/minhas-campanhas` e `/admin/minhas-campanhas` → Estúdio do Pesquisador; `/apoiar` → `/checkout`. A Home pública ocupa `/`; o Dashboard administrativo continua em `/admin/dashboard`.
+**Redirecionamentos (`App.tsx` e `redirecionar-area-conta.tsx`):** `/minha-conta` → `/minha-conta/perfil`; `/minhas-contribuicoes` e `/painel-doador` → `/minha-conta/contribuicoes`; `/painel-pesquisador`, `/minhas-campanhas` e `/admin/minhas-campanhas` → Estúdio do Pesquisador; `/apoiar` → `/checkout` → `/campanha/:id?apoiar=1` (abre o modal Apoiar). A Home pública ocupa `/`; o Dashboard administrativo continua em `/admin/dashboard`.
 
 📌 **A entrada no painel é restrita a papéis de gestão.** O `AdminLayout` exige sessão e confere `podeAcessarPainelAdmin`: contas que têm somente os papéis `usuario` e/ou `pesquisador` voltam para Minha Conta. Essa verificação só controla a entrada no painel; o Nest e a RLS continuam decidindo o que cada papel pode ler ou alterar. As áreas autenticadas fora do painel têm suas próprias guardas.
 
@@ -163,7 +163,7 @@ react/
 
 Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto** com as operações, e todo método autenticado recebe `authFetch` como primeiro parâmetro (injetado, nunca importado: o service não sabe nada de token).
 
-📌 **A chamada continua passando pelo service mesmo quando o endpoint é público.** Um endpoint que permite visitante pode usar `authFetch` sem exigir sessão; ele envia o token se houver e mantém o tratamento comum de resposta. Por exemplo, o checkout e a consulta de status da contribuição usam `services/22-contribuicao/api/contribuicao-publica.api.ts`. Chamadas diretas com `fetch` ficam restritas aos casos em que a API existente já usa esse padrão, com o motivo documentado no service.
+📌 **A chamada continua passando pelo service mesmo quando o endpoint é público.** Um endpoint que permite visitante pode usar `authFetch` sem exigir sessão; ele envia o token se houver e mantém o tratamento comum de resposta. Por exemplo, o modal Apoiar e a consulta de status da contribuição usam `services/22-contribuicao/api/contribuicao-publica.api.ts`. Chamadas diretas com `fetch` ficam restritas aos casos em que a API existente já usa esse padrão, com o motivo documentado no service.
 
 📌 **Peças comuns da camada de API:**
 
@@ -414,7 +414,7 @@ O formato que serviria para todos os tamanhos com um arquivo só é o SVG (desen
 
 - **Layout público** (`components/layout/layout-publico.tsx`): cabeçalho, navegação, controles de tema e fonte, menu da conta, conteúdo e rodapé próprios. As páginas sob esse layout estão em `ROTAS`; algumas, como checkout e Estúdio, exigem sessão ou aplicam regras próprias de acesso. Minha Conta fica em `ROTAS_CONTA`, com seu próprio layout e guarda de login.
 - **Páginas públicas** (`views/publico/`): Home, Explorar, página de campanha e atualizações, perfil público do pesquisador, Como funciona, Sobre, Termos, notificações, criação de campanha, checkout e confirmação do apoio. As telas de campanha e perfil usam dados da API; a página do perfil permite seguir o pesquisador e mostra a contagem de seguidores.
-- **Checkout e confirmação:** `Checkout` cria a contribuição pela API; `ApoioConfirmado` lê o estado guardado do apoio e consulta sua situação. A integração pública do checkout oferece Pix.
+- **Apoiar e acompanhamento:** o "Apoiar" da campanha abre `ModalApoiar`, que cria a contribuição pela API e manda a pessoa para a página de pagamento do Asaas; `ApoioConfirmado` (`/apoio-confirmado`) lê o apoio guardado na aba (`apoio-em-andamento.ts`) e consulta a situação. `/checkout` só redireciona links antigos. Fluxo completo: `DOCUMENTACAO_FINANCEIRO.md`, seção 2.4.
 - **Estúdio do Pesquisador** (`/estudio-pesquisador/:secao`): área autenticada para contas com perfil de pesquisador. As seções Campanhas, Recompensas, Atualizações, Comentários e Contribuições têm URLs próprias; a rota base abre Campanhas. O menu usa links de rota, então endereço direto, voltar e recarregar preservam a seção.
 - **Rotas legadas de conta:** `/minhas-contribuicoes` e `/painel-doador` levam à aba Contribuições da Minha Conta; `/painel-pesquisador` e `/minhas-campanhas` levam ao Estúdio.
 
@@ -531,7 +531,7 @@ Em Repasses em Atenção e Reembolsos Manuais (lista e ficha), o "último motivo
 
 ## 16. O que não existe ainda e débitos conhecidos
 
-- **Área pública e fluxos ainda incompletos:** as páginas públicas e o Estúdio do Pesquisador já existem. O checkout explica o modelo da campanha, mas não exibe as recompensas alcançadas pelo valor nem registra uma ciência específica desse aviso pela API; oferece Pix. O Estúdio lista e gerencia campanhas, mas ainda não mostra todas as métricas previstas nem o valor líquido estimado. O histórico de contribuições fica em Minha Conta, sem área própria para doadores. Não há rota de transparência registrada em `ROTAS`.
+- **Área pública e fluxos ainda incompletos:** as páginas públicas e o Estúdio do Pesquisador já existem. O apoio é um modal na campanha e o pagamento é na página do Asaas (Pix, e cartão quando permitido); o boleto não é oferecido. O Estúdio lista e gerencia campanhas, mas ainda não mostra todas as métricas previstas nem o valor líquido estimado. O histórico de contribuições fica em Minha Conta, sem área própria para doadores. Não há rota de transparência registrada em `ROTAS`.
 - **Termos e privacidade:** `/termos` mostra o Termo de Uso ativo de conta/contribuições via backend. O protótipo tinha texto Lorem Ipsum; uma política de privacidade separada só deve ser exibida quando houver conteúdo oficial publicado.
 - **Conteúdo sem backend:** páginas institucionais usam texto explicativo, mas não reproduzem métricas, perfis ou campanhas fictícias.
 - **Cabeçalhos e rodapés separados:** as páginas públicas usam os equivalentes próprios do protótipo (`header-publico.tsx` e `footer-publico.tsx`); `header.tsx`, `footer.tsx` e `layout.tsx` continuam exclusivos do layout restrito e não foram alterados.

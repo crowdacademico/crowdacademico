@@ -35,6 +35,8 @@ export class ContribuicaoResponseCreate {
   // Sempre 'pendente' na criação: quem confirma é o webhook do gateway (PR-05).
   status: string;
   criadoEm: Date;
+  // Pix e cartão: a página de pagamento do provedor. O "Apoiar" da área pública manda quem apoia para lá.
+  linkPagamento?: string;
   // Só em contribuição PIX.
   pix?: ContribuicaoPixResponse;
   // Só em contribuição com cartão.

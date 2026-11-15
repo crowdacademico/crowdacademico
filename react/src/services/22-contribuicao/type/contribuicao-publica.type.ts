@@ -1,6 +1,6 @@
 import type { MeioPagamento, StatusContribuicao } from '../../constant/type/enums-do-banco.gerado';
 
-// Checkout e confirmação do apoio na área pública (POST /contribuicao e GET /contribuicao/:id com X-Token-Sessao).
+// Apoio na área pública (modal Apoiar e /apoio-confirmado) (POST /contribuicao e GET /contribuicao/:id com X-Token-Sessao).
 // Espelha os DTOs de resposta do Nest em nest/src/22-contribuicao/dto/response/.
 
 export interface ContribuicaoPixPublica {
@@ -19,6 +19,8 @@ export interface ContribuicaoCriadaPublica {
   meioPagamento: MeioPagamento;
   status: StatusContribuicao;
   criadoEm: string;
+  // Pix e cartão: a página de pagamento do Asaas, para onde o modal Apoiar manda quem apoia.
+  linkPagamento?: string;
   pix?: ContribuicaoPixPublica;
 }
 
@@ -31,10 +33,13 @@ export interface StatusContribuicaoPublica {
   criadoEm: string;
 }
 
+// Boleto existe no Nest, mas nasce desligado e não é oferecido na área pública.
+export type MeioApoioPublico = 'pix' | 'cartao_credito';
+
 export interface ContribuicaoPublicaRequest {
   idCampanha: number;
   valor: number;
-  meioPagamento: 'pix';
+  meioPagamento: MeioApoioPublico;
   // RF-041: obrigatório (true) em campanha flexível; o Nest recusa sem ele e grava a data da ciência.
   cienteModeloFlexivel?: boolean;
 }

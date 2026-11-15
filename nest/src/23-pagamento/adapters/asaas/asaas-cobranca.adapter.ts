@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { GatewayPagamentoErro } from '../../ports/erro-gateway-pagamento';
 import {
   type MeioPagamentoGateway,
@@ -15,7 +16,7 @@ import {
   dadosBoletoAsaas,
   pedirDevolucaoBoletoAsaas,
 } from './asaas-cobranca-boleto';
-import { linkPagamentoCartaoAsaas } from './asaas-cobranca-cartao';
+import { linkPagamentoAsaas } from './asaas-cobranca-cartao';
 import { dadosPixAsaas } from './asaas-cobranca-pix';
 import {
   type AsaasLista,
@@ -107,11 +108,12 @@ function marcador(chaveIdempotencia: string): string {
 //   3. TARIFA REAL: o Asaas já informa na criação quanto vai cair na conta (`netValue`). Se não cobrir a contribuição
 //      certinho, o valor da cobrança é corrigido ANTES de a pessoa ver o Pix ou a página do cartão: quem apoia paga a
 //      tarifa de verdade, nem a mais nem a menos (ajustarAoLiquido);
-//   4. o que é do meio: QR do Pix, link da página segura do cartão, ou o boleto com a linha digitável.
+//   4. o que é do meio: QR do Pix e a página de pagamento do Asaas (Pix e cartão), ou o boleto com a linha digitável.
 // Se algo falhar depois de a cobrança existir, ela é CANCELADA antes de devolver o erro: sem isso ficaria aberta e pagável
 // sem nenhuma contribuição ligada a ela. `split` não é usado: se vier, recusa (nunca ignora dinheiro que seria dividido).
 export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
   readonly provedor = NOME_PROVEDOR;
+  private readonly logger = new Logger(AsaasCobrancaAdapter.name);
 
   constructor(
     private readonly http: AsaasHttpClient,
@@ -149,6 +151,15 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
           dueDate: dataBrasilia(params.expiraEm),
           description: params.descricao?.slice(0, 500),
           externalReference: params.chaveIdempotencia,
+          // Depois de pagar, o Asaas devolve a pessoa ao site (ASAAS_URL_RETORNO, opcional: ver asaas.config.ts).
+          ...(this.config.urlRetorno
+            ? {
+                callback: {
+                  successUrl: this.config.urlRetorno,
+                  autoRedirect: true,
+                },
+              }
+            : {}),
         },
       },
     );
@@ -166,7 +177,8 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
         case 'pix':
           return {
             ...resultado,
-            pix: await dadosPixAsaas(this.http, pagamento.id, params.expiraEm),
+            pix: await this.pixOpcional(pagamento.id, params.expiraEm),
+            linkPagamento: linkPagamentoAsaas(pagamento),
           };
         case 'boleto':
           return {
@@ -180,12 +192,31 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
         default:
           return {
             ...resultado,
-            linkPagamento: linkPagamentoCartaoAsaas(pagamento),
+            linkPagamento: linkPagamentoAsaas(pagamento),
           };
       }
     } catch (erro) {
       await this.cancelarCobranca(pagamento.id).catch(() => undefined);
       throw erro;
+    }
+  }
+
+  // O QR e o "copia e cola" à parte (GET /pixQrCode) são opcionais desde que quem apoia paga na página do Asaas
+  // (linkPagamento), que mostra o QR ela mesma. Se essa chamada falhar (no sandbox, em 16-11-2026, respondia 400 "erro
+  // desconhecido" com a chave Pix ativa), a cobrança continua valendo e só fica sem os dados do Pix; antes, a falha cancelava a
+  // cobrança e ninguém conseguia apoiar.
+  private async pixOpcional(idCobranca: string, expiraEm: Date) {
+    try {
+      return await dadosPixAsaas(this.http, idCobranca, expiraEm);
+    } catch (erro) {
+      this.logger.warn(
+        'QR do Pix indisponível na cobrança ' +
+          idCobranca +
+          ': ' +
+          (erro instanceof Error ? erro.message : String(erro)) +
+          '. Segue só com a página de pagamento.',
+      );
+      return undefined;
     }
   }
 

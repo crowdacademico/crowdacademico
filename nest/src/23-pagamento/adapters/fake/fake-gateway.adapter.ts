@@ -367,7 +367,12 @@ export class FakeGatewayAdapter
       chaveIdempotencia: params.chaveIdempotencia,
       estornosPorChave: new Map(),
     };
-    if (params.meioPagamento === 'cartao_credito') {
+    // Pix e cartão têm "página de pagamento", como no Asaas. O domínio fake.local não existe: a área pública reconhece
+    // e, em vez de sair do site, vai direto à tela de acompanhamento (o pagamento de mentira é feito pela T5).
+    if (
+      params.meioPagamento === 'cartao_credito' ||
+      params.meioPagamento === 'pix'
+    ) {
       cobranca.linkPagamento = `https://fake.local/pagar/${idCobranca}`;
     }
     if (params.meioPagamento === 'boleto') {

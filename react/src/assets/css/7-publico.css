@@ -1338,6 +1338,13 @@
       border-color: var(--cor-borda-forte);
     }
 
+    /* Valor escolhido (aria-pressed): a mesma cor de "escolhido" do resto da área pública. */
+    .pilula-valor[aria-pressed="true"] {
+      border-color: var(--cor-marca);
+      background-color: var(--cor-fundo-sucesso);
+      color: var(--cor-texto-marca);
+    }
+
     .painel-leitura {
       border: 1px solid var(--cor-borda);
       border-radius: var(--radius-xl);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { Carregando } from '../../components/layout/carregando';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
@@ -33,6 +33,7 @@ import {
 } from './util-campanhas';
 import { CartaoAcoesCampanha, FormComentarCampanha } from './acoes-campanha';
 import { ModalAtualizacoes } from './lista-atualizacoes';
+import { ModalApoiar } from './modal-apoiar';
 import { CartaoEndosso } from './cartao-endosso';
 import { recompensaApi } from '../../services/18-recompensa/api/recompensa.api';
 import { ROTULO_TIPO_RECOMPENSA } from '../../services/18-recompensa/constants/recompensa.constants';
@@ -68,6 +69,12 @@ export function Campanha({ auth }: PropsPagina) {
   const [carregando, setCarregando] = useState(idValido);
   const [aba, setAba] = useState<AbaCampanha>('sobre');
   const [vendoAtualizacoes, setVendoAtualizacoes] = useState(false);
+  // Modal Apoiar aberto pelo endereço (?apoiar=1&valor=50): os links antigos do /checkout e o "Apoiar de novo" chegam
+  // com ele aberto.
+  const [parametros, setParametros] = useSearchParams();
+  const abrirApoio = (valor?: number) =>
+    setParametros(valor ? { apoiar: '1', valor: String(valor) } : { apoiar: '1' }, { replace: true });
+  const fecharApoio = () => setParametros({}, { replace: true });
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
 
   useEffect(() => {
@@ -349,12 +356,13 @@ export function Campanha({ auth }: PropsPagina) {
                               {item.descricao && <p className="paragrafo texto-padrao mt-2 whitespace-pre-wrap">{item.descricao}</p>}
                             </div>
                             {aceitaApoios && (
-                              <Link
-                                to={`/checkout?idCampanha=${campanha.idCampanha}&valor=${item.valorMinimo}`}
+                              <button
+                                type="button"
+                                onClick={() => abrirApoio(item.valorMinimo)}
                                 className="btn btn-primary justify-center shrink-0"
                               >
                                 Apoiar com {formatarMoeda(item.valorMinimo)}
-                              </Link>
+                              </button>
                             )}
                           </li>
                         ))}
@@ -468,13 +476,14 @@ export function Campanha({ auth }: PropsPagina) {
                     </p>
                   )}
                   {aceitaApoios ? (
-                    <Link
+                    <button
+                      type="button"
                       className="btn btn-primary w-full justify-center text-lg py-4 mb-6"
-                      to={`/checkout?idCampanha=${campanha.idCampanha}`}
+                      onClick={() => abrirApoio()}
                     >
                       Apoiar esta pesquisa
                       <i className="fa-solid fa-arrow-right" aria-hidden="true" />
-                    </Link>
+                    </button>
                   ) : (
                     <p className="paragrafo texto-fraco mb-6" role="status">
                       {emBreve(campanha)
@@ -525,6 +534,17 @@ export function Campanha({ auth }: PropsPagina) {
               atualizacoes={publicada ? atualizacoes.dados : []}
               erro={atualizacoes.erro}
               aoFechar={() => setVendoAtualizacoes(false)}
+            />
+          )}
+          {aceitaApoios && parametros.get('apoiar') === '1' && (
+            <ModalApoiar
+              auth={auth}
+              campanha={campanha}
+              recompensas={recompensas.dados
+                .filter((item) => item.ativo)
+                .sort((a, b) => a.valorMinimo - b.valorMinimo)}
+              valorInicial={Number(parametros.get('valor')) || undefined}
+              aoFechar={fecharApoio}
             />
           )}
         </>

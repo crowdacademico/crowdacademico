@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useToast } from './use-toast';
 import { ErroHttp } from '../../../services/constant/api/http.util';
 import { traduzirErro } from '../../../services/constant/api/traduzir-erro.util';
@@ -25,7 +25,10 @@ export function useErroToast({ mostraTexto = false }: OpcoesErroToast = {}) {
   const [errosCampo, setErrosCampo] = useState<Record<string, string>>({});
   const { mostrar } = useToast();
 
-  const reportarErro = (erroRequisicao: unknown): string => {
+  // useCallback: as telas põem reportarErro na lista de dependências de um useEffect que busca dados. Recriada a cada
+  // render, ela fazia o efeito rodar de novo a cada resposta (a resposta muda o estado, que renderiza, que recria a
+  // função): em Minha Conta > Acadêmico, GET /conta-recebimento umas 12 vezes por segundo, sem parar (16-11-2026).
+  const reportarErro = useCallback((erroRequisicao: unknown): string => {
     const mensagem = traduzirErro(erroRequisicao);
     const campos = erroRequisicao instanceof ErroHttp ? erroRequisicao.campos : undefined;
     const porCampo = Object.fromEntries(
@@ -39,14 +42,14 @@ export function useErroToast({ mostraTexto = false }: OpcoesErroToast = {}) {
       mostrar(mensagem, undefined, 'erro');
     }
     return mensagem;
-  };
+  }, [mostraTexto, mostrar]);
 
-  const limparErro = () => {
+  const limparErro = useCallback(() => {
     setErro('');
     setErrosCampo({});
-  };
+  }, []);
 
-  const limparErroCampo = (campo: string) => {
+  const limparErroCampo = useCallback((campo: string) => {
     setErrosCampo((atuais) => {
       if (!(campo in atuais)) {
         return atuais;
@@ -55,7 +58,7 @@ export function useErroToast({ mostraTexto = false }: OpcoesErroToast = {}) {
       delete restantes[campo];
       return restantes;
     });
-  };
+  }, []);
 
   return { erro, reportarErro, limparErro, setErro, errosCampo, limparErroCampo };
 }

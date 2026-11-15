@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { DependencyList } from 'react';
 import { useErroToast } from '../../../components/layout/toast/use-erro-toast';
 
@@ -51,7 +51,7 @@ export function useBuscar<T>(buscar: () => Promise<T>, dependencias: DependencyL
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...dependencias, versao]);
 
-  const recarregar = () => setVersao((atual) => atual + 1);
+  const recarregar = useCallback(() => setVersao((atual) => atual + 1), []);
 
   return { dado, carregando, erro, reportarErro, limparErro, recarregar };
 }

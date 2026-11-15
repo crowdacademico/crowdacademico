@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 // As telas de listagem do painel repetiam o MESMO bloco de estado
 // (criando/alterando/consultando/excluindo/chaveRecarga+recarregar), só com nomes diferentes (`alterando`,
@@ -22,7 +22,7 @@ export function useCrudModais<T>() {
   // de propósito: quem decide QUANDO recarregar é sempre o componente
   // pai, não a tabela genérica).
   const [chaveRecarga, setChaveRecarga] = useState(0);
-  const recarregar = () => setChaveRecarga((atual) => atual + 1);
+  const recarregar = useCallback(() => setChaveRecarga((atual) => atual + 1), []);
 
   return {
     criando,

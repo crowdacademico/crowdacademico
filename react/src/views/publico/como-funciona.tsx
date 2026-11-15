@@ -59,7 +59,7 @@ const ETAPAS_APOIO = [
   {
     numero: 2,
     titulo: 'Defina seu apoio',
-    texto: 'Escolha o valor e uma forma de pagamento disponível no checkout da campanha.',
+    texto: 'Clique em Apoiar na página da campanha, escolha o valor e pague com Pix na página segura do intermediador de pagamento.',
   },
   {
     numero: 3,
@@ -159,7 +159,7 @@ function ConteudoAba({ ativa }: { ativa: (typeof ABAS)[number]['chave'] }) {
         </div>
         <p className="legenda mt-4 texto-fraco">
           As condições específicas e os valores aplicáveis são apresentados na própria{' '}
-          <span className="whitespace-nowrap">campanha e no checkout.</span>
+          <span className="whitespace-nowrap">campanha, ao clicar em Apoiar.</span>
         </p>
       </>
     );

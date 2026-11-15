@@ -55,6 +55,12 @@ import { ConfigService } from '@nestjs/config';
 //     Antes de pedir uma transferência, o sistema procura se ela já foi pedida (para nunca transferir duas vezes). Isto é
 //     quantas páginas de 100 transferências recentes olhar. Aumente só se a conta fizer centenas de transferências por dia.
 //
+//   ASAAS_URL_RETORNO=https://SEU-DOMINIO/apoio-confirmado    (opcional; recomendado em produção)
+//     Para onde o Asaas manda quem apoiou, logo depois de pagar na página dele. Vazio: a pessoa fica na página do Asaas e
+//     volta ao site pelo botão "voltar" do navegador (cai na mesma tela /apoio-confirmado). ATENÇÃO: o Asaas só aceita um
+//     endereço do domínio cadastrado na conta (Minha Conta > Informações > site); com outro domínio (ou localhost) ele RECUSA
+//     criar a cobrança, e ninguém consegue apoiar. Por isso fica vazio em desenvolvimento.
+//
 //   ASAAS_BASE_URL=                                         (opcional; só para testes)
 //     Substitui a URL derivada de ASAAS_ENV (ex.: um servidor de mentira local). Deixe vazio na prática.
 // =====================================================================================================================
@@ -69,6 +75,7 @@ export interface ConfiguracaoAsaas {
   userAgent: string;
   timeoutMs: number;
   paginasBuscaTransferencia: number;
+  urlRetorno?: string;
 }
 
 const URL_SANDBOX = 'https://api-sandbox.asaas.com/v3';
@@ -172,5 +179,6 @@ export function lerConfiguracaoAsaas(
     paginasBuscaTransferencia: Math.trunc(
       numero('ASAAS_BUSCA_TRANSFERENCIA_PAGINAS', 3),
     ),
+    urlRetorno: texto('ASAAS_URL_RETORNO'),
   };
 }

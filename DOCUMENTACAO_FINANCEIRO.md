@@ -35,15 +35,14 @@ Como o dinheiro anda no sistema: quem paga, quanto, para onde vai, quando volta,
 
 | Peça | Onde | O que faz |
 |---|---|---|
-| Contribuição | `nest/src/22-contribuicao` | Recebe o pedido de apoio, calcula a tarifa, pede a cobrança ao provedor e devolve o Pix "copia e cola" ou o link do cartão |
+| Contribuição | `nest/src/22-contribuicao` | Recebe o pedido de apoio, calcula a tarifa, pede a cobrança ao provedor e devolve a página de pagamento do provedor (Pix e cartão), além do Pix "copia e cola" e do boleto |
 | Provedor de pagamento | `nest/src/23-pagamento` | Fala com o provedor (adapters), recebe os avisos dele (webhook), responde à validação de saque e roda as tarefas automáticas (repasse, devolução, conferência) |
 | Chave Pix do pesquisador | `nest/src/24-conta-recebimento` | O pesquisador cadastra a chave Pix onde recebe; o sistema confere no provedor se a chave é do mesmo CPF |
 | Pendências do admin | `nest/src/25-pagamento-revisao` | Avisos que precisam de uma pessoa, reembolsos manuais, repasses com erro e a auditoria financeira (só leitura) |
 | Regras do dinheiro | `arquivos_banco_dados/05_regras_negocio.sql` | Máquina de estados, tarifa, destino do dinheiro, filas, auditoria. O banco é quem decide; o Nest executa |
+| Apoio na área pública | `react/src/views/publico/modal-apoiar.tsx`, `apoio-confirmado.tsx`, `apoio-em-andamento.ts` | O botão "Apoiar" da campanha abre um modal (valor, forma de pagamento quando o cartão é permitido, total com a tarifa) e manda a pessoa para a página de pagamento do provedor; a volta acompanha a situação |
 | Telas | `react/src/views/24-conta-recebimento`, `react/src/views/25-pagamento-revisao`, `react/src/views/20-solicitacao-encerramento` | Chave Pix e repasses em Minha Conta, pendências no painel, cancelar ou encerrar a campanha |
 | Bancada de pagamento (T5) | `react/src/30-campo-testes`, `nest/src/30-campo-testes` | Faz o papel de quem paga e do provedor para testar o fluxo inteiro pela tela. Só fora de produção |
-
-📌 **Ainda não existe a tela pública de apoiar (checkout).** Hoje uma contribuição nasce pela T5 ou pela API (`POST /contribuicao`). O fluxo do dinheiro inteiro já funciona por trás dela.
 
 ### 2.1 Provedor trocável e partes desligáveis
 
@@ -101,6 +100,20 @@ O sistema não conhece o Asaas: conhece três "tomadas" (ports, em `nest/src/23-
 - O banco é o mesmo do modo normal: as contribuições do modo rápido ficam com o provedor `fake` e as tarefas automáticas só tratam as do provedor ligado, então nunca se misturam com as do Asaas.
 - Em produção o provedor de teste não sobe: o Nest se recusa a iniciar com `PAYMENT_PROVIDER=fake` e `NODE_ENV=production` (`pagamento.module.ts`).
 
+### 2.4 Como a pessoa apoia (área pública)
+
+Decidido em 16-11-2026 (Lucas): **o pagamento é feito na página do provedor**, não numa tela do sistema.
+
+1. Na página da campanha, **Apoiar esta pesquisa** (ou "Apoiar com R$ X", na aba Recompensas) abre o modal **Apoiar** (`modal-apoiar.tsx`). A pessoa escolhe o valor e vê as recompensas que ele alcança (só para ver: ninguém escolhe, RF-105), a tarifa estimada e o total a pagar. A escolha entre Pix e cartão só aparece quando o cartão é permitido (pessoa logada, campanha flexível, `cartao_habilitado`); fora disso é Pix sem pergunta. A ciência do modelo flexível (RF-041) e o aceite dos Termos também ficam no modal.
+2. **Ir para o pagamento** cria a contribuição (`POST /contribuicao`) e leva a pessoa à **página de pagamento do Asaas** (`invoiceUrl`, o campo `linkPagamento` da resposta). No Pix, a página mostra o QR e o "copia e cola"; no cartão, é onde o cartão é digitado (o sistema nunca vê o número).
+3. **A volta:** antes de sair, o modal guarda o apoio na aba do navegador (`apoio-em-andamento.ts`, sessionStorage, com o token que deixa quem apoiou sem conta consultar a própria contribuição; nunca vai na URL) e troca o endereço da página por `/apoio-confirmado`. Assim, o "voltar" do navegador, na página do Asaas, cai na tela de acompanhamento, que consulta a situação a cada 15 s e mostra o protocolo. Com `ASAAS_URL_RETORNO` preenchida no Nest, o próprio Asaas devolve a pessoa a essa tela depois de pagar (só com o domínio cadastrado na conta do Asaas; em desenvolvimento fica vazia, ver `asaas.config.ts`).
+4. Quem confirma o pagamento continua sendo o aviso do provedor (webhook); a tela só mostra.
+
+- **Por quê:** a tela de QR própria duplicava o que o Asaas já faz (QR, validade, situação) e perdia o QR ao atualizar a página. Com a página do provedor, o cartão sai de graça e a pessoa sempre consegue voltar à cobrança.
+- **Caso-limite:** o provedor de teste devolve uma página `https://fake.local/...`, que não existe: o modal reconhece e vai direto à tela de acompanhamento, e o pagamento de mentira é feito pela T5.
+- **Caso-limite:** erro com resposta do servidor (valor abaixo do mínimo, campanha encerrada) deixa corrigir e tentar de novo; falha de rede ou do servidor bloqueia o botão, porque a cobrança pode ter sido criada.
+- O endereço antigo `/checkout?idCampanha=...` (e `/apoiar`) só redireciona para a campanha com o modal aberto.
+
 ---
 
 ## 3. Meios de pagamento
@@ -111,7 +124,7 @@ O sistema não conhece o Asaas: conhece três "tomadas" (ports, em `nest/src/23-
 | Campanhas | Tudo-ou-nada e flexível | **Só flexível** | **Só flexível** |
 | Valor | A partir de `valor_minimo_contribuicao` | De `valor_minimo_contribuicao_cartao` a `valor_maximo_contribuicao_cartao` (R$ 20 a R$ 500), à vista | A partir de `valor_minimo_contribuicao` |
 | Tarifa estimada | `taxa_pagamento_pix` (fixa) | `taxa_cartao_percentual` + `taxa_cartao_fixa` (calculada para que, descontada a tarifa, sobre o valor inteiro) | `taxa_pagamento_boleto` (fixa) |
-| Onde a pessoa paga | QR Code ou "copia e cola", válido por `pix_validade_horas` | Página segura do provedor (o sistema nunca vê o número do cartão) | Boleto do provedor (link e linha digitável), vence em `boleto_vencimento_dias` |
+| Onde a pessoa paga | Página de pagamento do provedor, com o QR Code e o "copia e cola", válido por `pix_validade_horas` | Página segura do provedor (o sistema nunca vê o número do cartão) | Boleto do provedor (link e linha digitável), vence em `boleto_vencimento_dias` |
 | Quando o dinheiro fica disponível | Na hora | Cerca de `cartao_dias_liberacao` dias depois. Até lá, a parte do cartão não entra no repasse | Quando o provedor confirma o pagamento (cerca de 1 dia útil) |
 
 - **Por que o tudo-ou-nada aceita só Pix:** no tudo-ou-nada que não bate a meta, todo o dinheiro volta. O Pix volta sozinho; o cartão pode ser contestado e demora; o boleto só volta se cada pessoa informar uma conta bancária. No flexível o dinheiro quase nunca volta (só se a moderação derrubar a campanha). O boleto nasce desligado pelo mesmo motivo.

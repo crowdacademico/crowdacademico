@@ -83,7 +83,7 @@ export const ROTAS: Rota[] = [
   { caminho: '/', elemento: Home, rotuloBreadcrumb: null },
   { caminho: '/explorar', elemento: Explorar, rotuloBreadcrumb: 'Explorar projetos' },
   { caminho: '/campanha/:id', elemento: Campanha, rotuloBreadcrumb: 'Campanha' },
-  { caminho: '/checkout', elemento: Checkout, rotuloBreadcrumb: 'Apoiar campanha' },
+  { caminho: '/checkout', elemento: Checkout, rotuloBreadcrumb: 'Apoiar campanha' }, // só redireciona links antigos para o modal Apoiar da campanha,
   { caminho: '/apoio-confirmado', elemento: ApoioConfirmado, rotuloBreadcrumb: 'Confirmação do apoio' },
   { caminho: '/como-funciona', elemento: ComoFunciona, rotuloBreadcrumb: 'Como funciona' },
   { caminho: '/transparencia', elemento: Transparencia, rotuloBreadcrumb: 'Transparência' },
