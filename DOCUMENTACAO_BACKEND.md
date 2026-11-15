@@ -1193,6 +1193,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | DELETE | `/link-atualizacao/:id` |
 | AUTH | GET | `/atualizacao-campanha/moderacao` *(as atualizações de todas as campanhas, com os anexos, a mais nova primeiro; a RLS escopa: quem tem `atualizacao_moderar` vê todas, os outros as visíveis e as próprias ocultas)* |
 | pub | GET | `/comentario` *(filtro `endossado`: só os endossados, na ordem do endosso)* |
+| AUTH | GET | `/comentario/minhas` *(os comentários que a conta logada escreveu)* |
 | AUTH | POST | `/comentario` |
 | AUTH | PATCH | `/comentario/:id` |
 | AUTH | DELETE | `/comentario/:id` |
@@ -1203,9 +1204,11 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | DELETE | `/seguir-pesquisador/:idPesquisador` |
 | pub | GET | `/seguir-pesquisador/:idPesquisador/seguidores` *(só o número, para a página do perfil)* |
 | pub | GET | `/recompensa` *(`?idCampanha=`; o link especial só vem para o dono, o admin e quem ganhou)* |
-| AUTH | GET | `/recompensa/minhas` *(as recompensas que a conta ganhou, com o link)* |
+| AUTH | GET | `/recompensa/minhas` *(as recompensas que a conta ganhou, com o link e `liberada`: no Tudo ou Nada, só depois da meta)* |
+| AUTH | GET | `/recompensa/:id/ganhadores` *(quem ganhou, só o nome; só o dono da campanha e o admin: `listar_ganhadores_recompensa`, 92043)* |
 | AUTH | POST | `/recompensa` · `/recompensa/:id/link` *(só o dono da campanha)* |
-| AUTH | PATCH | `/recompensa/:id` *(alterar ou desativar; não existe excluir)* |
+| AUTH | PATCH | `/recompensa/:id` *(alterar ou desativar)* |
+| AUTH | DELETE | `/recompensa/:id` *(só a que ninguém ganhou ainda; a ganha a FK segura, e se desativa no PATCH)* |
 | AUTH | DELETE | `/recompensa/link/:idLinkRecompensa` |
 | **Moderação** | | |
 | AUTH | GET · POST | `/denuncia` |
@@ -1220,10 +1223,14 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | pub | GET | `/arquivo/:id` · `/arquivo/avatar/:idUsuario` |
 | AUTH | DELETE | `/arquivo/:id` |
 | **Pagamento** | | |
-| pub | POST | `/contribuicao` *(contribuir não exige conta, RF-077; devolve o Pix "copia e cola" ou o link da página segura do cartão)* |
+| pub | POST | `/contribuicao` *(contribuir não exige conta, RF-077; exige `aceiteTermos: true` (RF-086); devolve o Pix (QR e "copia e cola"), a página do provedor (`linkPagamento`) e, no boleto, o boleto)* |
 | AUTH | GET | `/contribuicao/campanha/:idCampanha/resumo` *(quantas e quanto por meio e situação, para o Consultar da campanha; só o dono ou quem tem `contribuicao_visualizar_sensivel`)* |
 | AUTH | GET | `/contribuicao/minhas` *(o histórico da conta logada, com as recompensas ganhas de cada contribuição)* |
-| pub | GET | `/contribuicao/:id` *(acompanhar a contribuição: com login, pelo próprio usuário; sem conta, pelo cabeçalho `X-Token-Sessao`)* |
+| AUTH | GET | `/contribuicao/recebidas` *(as contribuições pagas das campanhas do pesquisador logado; anônimo aparece como "Apoiador anônimo")* |
+| pub | GET | `/contribuicao/campanha/:idCampanha/apoios` *(só o número de apoios pagos, para a página da campanha)* |
+| AUTH | POST | `/contribuicao/:id/desistir` *(desistir do apoio em até `desistencia_prazo_dias` (CDC, art. 49); a devolução é automática; `desistir_contribuicao`, 92042)* |
+| pub | GET | `/contribuicao/:id` *(acompanhar a contribuição: com login, pelo próprio usuário; sem conta, pelo cabeçalho `X-Token-Sessao`; traz `termoAceito`, a versão do Termo e quando)* |
+| pub | GET | `/compartilhar/campanha/:id` *(prévia do link, Open Graph: HTML pequeno com título, descrição e capa para o robô do WhatsApp/LinkedIn/X, e redireciona para a página da campanha)* |
 | pub | POST | `/pagamento/webhook/:provedor` · `/pagamento/webhook/:provedor/autorizacao-saque` *(quem chama é o provedor; a autenticidade é o token dele, conferido antes de tocar no banco; a segunda responde se uma transferência ou devolução pode sair)* |
 | AUTH | GET · POST · DELETE | `/conta-recebimento` *(a chave Pix do próprio pesquisador, conferida no provedor)* |
 | AUTH | GET | `/conta-recebimento/repasses` · `/conta-recebimento/cartao-a-liberar` |
@@ -1610,7 +1617,7 @@ Testado com o backend rodando de verdade contra o Postgres real (não só compil
 | Escolha | `4-mail/email.config.ts` | `EMAIL_PROVIDER`, com as mesmas regras de `PAYMENT_PROVIDER` |
 | Textos | tabela `modelo_mensagem` + `27-notificacao/util/montar-texto-modelo.ts` | Um texto por `tipo_evento` e canal, editável no painel; `{{campo}}`, `{{#campo}}...{{/campo}}` e `{{^campo}}...{{/campo}}`; nunca quebra por dado faltando |
 | Moldura do e-mail | `4-mail/modelos/` | Saudação, botão de cada tipo (`modelos-email.ts`) e o HTML e texto puro (`layout-email.ts`), fixos |
-| Worker | `4-mail/service/email.service.send-pending.ts` | `@Cron` a cada 1 minuto, interruptor `tarefa_envio_email_ligada` (ligado no banco de produção, desligado no de demonstração: o card fica na T6), lote de 20, `PG_POOL` direto |
+| Worker | `4-mail/service/email.service.send-pending.ts` | `@Cron` a cada 1 minuto, interruptor `tarefa_envio_email_ligada` (nasce ligado nos dois bancos desde 16-11-2026; o card da T6 desliga quando precisar), lote de 20, `PG_POOL` direto |
 | Fila | `notificacao` + funções de `[05-Q]` | `reservar_proxima_notificacao`, `concluir_notificacao`, `falhar_notificacao` (espera crescente) |
 | Enfileirar pelo Nest | `27-notificacao/service/notificacao.service.enqueue.ts` | Só verificação de conta e recuperação de senha (o token só o Nest conhece) |
 | Painel | `27-notificacao` | `GET /notificacao`, `/notificacao/resumo`, `POST /notificacao/:id/reenviar`, `/cancelar` (só e-mail) |

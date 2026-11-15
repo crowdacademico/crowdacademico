@@ -31,7 +31,7 @@ interface RecompensaLinha extends RecompensaGanha {
 // Aba Contribuições da Minha Conta (RF-009, RF-089, RF-105): o histórico de contribuições da própria conta e as
 // recompensas que ela ganhou (todas as que o valor de cada contribuição paga alcançou), em tabela, com a campanha e o link
 // especial de cada uma. Mora em 22-contribuicao (o dono do dado). Contribuir é
-// na página pública da campanha, que ainda não existe; hoje uma contribuição nasce pela T5 do Campo de Testes.
+// pelo modal Apoiar da página pública da campanha (modal-apoiar.tsx); a T5 do Campo de Testes também cria, para testes.
 export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
   const [consultando, setConsultando] = useState<ContribuicaoLinha | null>(null);
   const [chaveRecarga, setChaveRecarga] = useState(0);

@@ -650,6 +650,15 @@ Cada trigger observa uma tabela que alimenta alguma dimensão e recalcula só qu
 
 ### [05-K-1] Regras Transversais - Integridade e Escopo
 
+> 📌 **Recompensas (16-11-2026, grupos CT e CV do ATUALIZAR):**
+> - **`recompensa_liberada(id_contribuicao)`** (`[03-R-1]`, em 03 porque a policy de 04 depende dela): a recompensa só VALE com a contribuição paga e não devolvida (`confirmado` ou `repassado`) e, no Tudo ou Nada, só quando o dinheiro vai para o pesquisador (`destino_dinheiro_campanha = 'repasse'`: bateu a meta, ou encerrou antes com a meta batida). Devolução, desistência e reembolso tiram a recompensa.
+> - **`pol_link_recompensa_select`** (04): quem ganhou só vê o link especial com a recompensa liberada. Corrigiu um furo: um Pix gerado e nunca pago já mostrava o link.
+> - **`fn_concede_recompensas`**: continua ligando, quando a contribuição nasce, todas as recompensas que o valor alcança (só com conta), menos o **reconhecimento** para quem apoia como anônimo (é o nome publicado).
+> - **`listar_ganhadores_recompensa(id_recompensa)`** (SECURITY DEFINER): quem ganhou, só o nome ("Apoiador anônimo" quando for o caso) e se já está liberada; só o dono da campanha e o admin (92043).
+> - **Avisos:** `apoio_confirmado` (o comprovante, com as recompensas já liberadas) e `recompensa_liberada` (o Tudo ou Nada que bateu a meta); ver `[05-Q]`.
+>
+> 📌 **Comentar e seguir só campanha publicada (16-11-2026, grupo CU):** `fn_valida_comentario_campanha_ativa` (91020) e `fn_valida_seguir_campanha_publicada` (91034) viraram SECURITY DEFINER. Antes liam a situação da campanha com a RLS de quem comentava: o rascunho de outra pessoa, invisível, voltava NULL e passava. Campanha não encontrada conta como não publicada.
+
 > 📌 **Mensagens sem palavra técnica:** as mensagens das faixas 90 a 93 chegam à tela como estão, então não citam nome de tabela, de coluna nem de chave de `configuracoes`; dinheiro aparece como "R$ 500,00" e datas no formato brasileiro.
 
 | Tabela | Trigger (função) | Regra |
@@ -878,6 +887,8 @@ Regras conferidas no PGlite com o banco inteiro, usando o papel real `app_nestjs
 | `enfileirar_notificacao(id_usuario, tipo, dados)` | gatilhos e o Nest (verificação de conta, nova senha) | Uma linha por canal ligado do evento; copia o e-mail e o nome da conta; o sino nunca leva `dados.segredo`; conta excluída ou inexistente, ou nenhum canal ligado: nada gravado (`NULL`) |
 | `enfileirar_notificacao_doadores(id_campanha, tipo, dados)` | só gatilhos (sem `EXECUTE` para o `app_nestjs`) | Um e-mail por pessoa com conta que pagou alguma contribuição da campanha |
 | `enfileirar_notificacao_seguidores(id_campanha, tipo, dados)` | só gatilhos | Quem segue a campanha ou o pesquisador dono, uma vez por pessoa, nunca o dono |
+| `enfileirar_aviso_recompensas(id_campanha, id_contribuicao)` | `fn_notifica_situacao_campanha` (Tudo ou Nada que bateu a meta) | `recompensa_liberada` para cada pessoa com recompensa liberada, com os nomes delas (16-11-2026) |
+| `fn_notifica_apoio_confirmado()` (gatilho `trg_notifica_apoio_confirmado`, `contribuicao` virando `confirmado`, com conta) | o banco | `apoio_confirmado`: o comprovante de quem apoiou (campanha, valor, protocolo, prazo para desistir) e, se o pagamento já libera recompensas, elas no mesmo e-mail (16-11-2026) |
 | `enviar_lembretes_fim_campanha()` | a tarefa de encerrar campanhas, a cada 15 minutos (sem sessão) | Lembrete a quem segue uma campanha ativa e ainda não contribuiu, quando falta `lembrete_fim_campanha_horas` (48; 0 desliga) para o fim (RF-055). Uma vez por pessoa e campanha: a marca é o próprio aviso já enviado, sem coluna nova |
 | `reservar_proxima_notificacao(p_ignorar_espera)` | o envio (sem sessão) | A próxima `pendente` vencida (com `TRUE`, só no "Rodar agora" da T6, também a que espera nova tentativa); conta a tentativa e empurra `proxima_tentativa_em` (`email_lease_minutos`); `FOR UPDATE SKIP LOCKED` |
 | `concluir_notificacao(...)` | o envio | `enviado`, com assunto, provedor e id da mensagem; apaga `dados.segredo` |

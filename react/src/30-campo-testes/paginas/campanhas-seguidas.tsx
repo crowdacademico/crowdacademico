@@ -19,7 +19,7 @@ const ehChamadaDeCampanhas = (chamada: Pick<RegistroChamada, 'caminho'>) => !ehC
 
 // T4: as campanhas que a conta logada segue (RF-010, RF-011), com as mesmas colunas do T2. O Consultar mostra as
 // atualizações publicadas (o que quem segue recebe por e-mail, RF-054). No segundo card, os pesquisadores que ela segue
-// (RF-029; o botão de verdade fica na página pública do perfil, que ainda não existe; aqui se segue pelo coração da T1).
+// (RF-029; o botão de verdade fica na página pública do perfil, /pesquisador/:id; aqui se segue também pelo coração da T1).
 // Cada card tem o próprio Registro de Chamadas, como os da T5. Deixar de seguir tira da lista na hora.
 export function CampanhasSeguidas({ auth }: PropsPagina) {
   const { chaveRecarga, recarregar } = useCrudModais<CampanhaLinha>();

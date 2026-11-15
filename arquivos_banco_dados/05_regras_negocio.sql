@@ -5691,8 +5691,15 @@ EXECUTE FUNCTION fn_atualizacao_ocultacao();
 --             'encerrado_moderacao') e em campanha que ainda não foi publicada
 --             ('rascunho' ou 'aguardando_aprovacao'), que só o dono enxerga.
 -- ----------------------------------------------------------------------------
+-- SECURITY DEFINER (16-11-2026): a situação da campanha é lida sem a RLS de quem comenta. Antes a leitura era com a
+-- RLS, e o rascunho de outra pessoa (invisível para ela) voltava NULL e passava pela checagem: dava para comentar num
+-- rascunho alheio sabendo o id. Ficou escondido enquanto existia a leitura de desenvolvimento [07-B-4].
 CREATE OR REPLACE FUNCTION fn_valida_comentario_campanha_ativa()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 DECLARE
     v_status status_campanha;
 BEGIN
@@ -5704,14 +5711,14 @@ BEGIN
         RAISE EXCEPTION 'Operação bloqueada: não é possível comentar em campanhas rejeitadas ou sob moderação.'
             USING ERRCODE = '91020';
     END IF;
-    IF v_status IN ('rascunho', 'aguardando_aprovacao') THEN
+    IF v_status IS NULL OR v_status IN ('rascunho', 'aguardando_aprovacao') THEN
         RAISE EXCEPTION 'Operação bloqueada: esta campanha ainda não foi publicada, então não recebe comentários.'
             USING ERRCODE = '91020';
     END IF;
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- ----------------------------------------------------------------------------
 -- Trigger:   trg_valida_comentario_status
@@ -5737,8 +5744,14 @@ EXECUTE FUNCTION fn_valida_comentario_campanha_ativa();
 --             rejeitada e encerrada por moderação não são públicas. Vale só na hora de seguir: quem já segue
 --             continua seguindo se a campanha mudar de status depois.
 -- ----------------------------------------------------------------------------
+-- SECURITY DEFINER (16-11-2026): mesmo motivo de fn_valida_comentario_campanha_ativa (o rascunho alheio, invisível
+-- pela RLS, voltava NULL e deixava seguir).
 CREATE OR REPLACE FUNCTION fn_valida_seguir_campanha_publicada()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 DECLARE
     v_status status_campanha;
 BEGIN
@@ -5746,14 +5759,14 @@ BEGIN
     FROM campanha
     WHERE id_campanha = NEW.id_campanha;
 
-    IF v_status NOT IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado') THEN
+    IF v_status IS NULL OR v_status NOT IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado') THEN
         RAISE EXCEPTION 'Só é possível seguir uma campanha publicada.'
             USING ERRCODE = '91034';
     END IF;
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- ----------------------------------------------------------------------------
 -- Trigger:   trg_seguir_campanha_valida_publicada
@@ -7373,8 +7386,9 @@ $$;
 -- Assinatura: (p_id_campanha INT, p_id_contribuicao INT DEFAULT NULL) -> INT
 -- Bloco:      [05-Q]
 -- Regra:      Avisa (e-mail e sino, 'recompensa_liberada') quem tem recompensa liberada: uma mensagem por pessoa, com os
---             nomes das recompensas. Com p_id_contribuicao, só aquela contribuição (o pagamento que acabou de chegar, no
---             flexível); sem ele, a campanha inteira (o Tudo ou Nada que bateu a meta). Só o que recompensa_liberada (03)
+--             nomes das recompensas, para a campanha inteira (o Tudo ou Nada que bateu a meta). p_id_contribuicao filtra
+--             uma contribuição só (não usado hoje: o pagamento que já libera recompensa avisa pelo apoio_confirmado,
+--             fn_notifica_apoio_confirmado). Só o que recompensa_liberada (03)
 --             deixa. Devolve quantas pessoas foram avisadas. SECURITY DEFINER, sem autorização (só os gatilhos chamam).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.enfileirar_aviso_recompensas(p_id_campanha INT, p_id_contribuicao INT DEFAULT NULL)
@@ -7412,31 +7426,48 @@ END;
 $$;
 
 -- ----------------------------------------------------------------------------
--- Função:     fn_notifica_recompensa_paga
+-- Função:     fn_notifica_apoio_confirmado
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-Q]
--- Regra:      Contribuição que acabou de ser paga e já libera a recompensa (flexível, ou Tudo ou Nada que já bateu a
---             meta): avisa quem apoiou. No Tudo ou Nada ainda no ar, o aviso sai quando a campanha bate a meta
---             (fn_notifica_situacao_campanha).
+-- Regra:      O comprovante de quem apoiou com conta (16-11-2026): quando o pagamento é confirmado, e-mail e sino
+--             'apoio_confirmado' com a campanha, o valor, o protocolo e o prazo para desistir (desistencia_prazo_dias).
+--             Se o pagamento já libera recompensas (flexível, ou Tudo ou Nada que já bateu a meta: recompensa_liberada,
+--             03), elas vêm NESTE e-mail, para não chegarem dois no mesmo minuto. No Tudo ou Nada ainda no ar, o aviso
+--             das recompensas sai à parte quando a campanha bate a meta (fn_notifica_situacao_campanha). Sem conta não
+--             há para onde mandar (o gatilho só roda com id_usuario).
 -- ----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.fn_notifica_recompensa_paga()
+CREATE OR REPLACE FUNCTION public.fn_notifica_apoio_confirmado()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+    v_titulo      VARCHAR;
+    v_recompensas TEXT;
 BEGIN
-    PERFORM public.enfileirar_aviso_recompensas(NEW.id_campanha, NEW.id_contribuicao);
+    SELECT titulo INTO v_titulo FROM campanha WHERE id_campanha = NEW.id_campanha;
+    IF public.recompensa_liberada(NEW.id_contribuicao) THEN
+        SELECT string_agg(DISTINCT r.titulo, ', ') INTO v_recompensas
+        FROM contribuicao_recompensa cr
+        JOIN recompensa r ON r.id_recompensa = cr.id_recompensa
+        WHERE cr.id_contribuicao = NEW.id_contribuicao;
+    END IF;
+    PERFORM public.enfileirar_notificacao(NEW.id_usuario, 'apoio_confirmado',
+        jsonb_build_object('id_campanha', NEW.id_campanha, 'titulo', v_titulo, 'valor', NEW.valor,
+                           'protocolo', NEW.id_contribuicao::TEXT,
+                           'prazo_desistencia', public.config_numero('desistencia_prazo_dias', 7)::INT::TEXT,
+                           'recompensas', v_recompensas));
     RETURN NULL;
 END;
 $$;
 
-DROP TRIGGER IF EXISTS trg_notifica_recompensa_paga ON contribuicao;
-CREATE TRIGGER trg_notifica_recompensa_paga
+DROP TRIGGER IF EXISTS trg_notifica_apoio_confirmado ON contribuicao;
+CREATE TRIGGER trg_notifica_apoio_confirmado
 AFTER UPDATE OF status ON contribuicao
 FOR EACH ROW
 WHEN (NEW.status = 'confirmado' AND OLD.status IS DISTINCT FROM NEW.status AND NEW.id_usuario IS NOT NULL)
-EXECUTE FUNCTION public.fn_notifica_recompensa_paga();
+EXECUTE FUNCTION public.fn_notifica_apoio_confirmado();
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_notifica_situacao_campanha (trigger)

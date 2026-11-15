@@ -2333,3 +2333,137 @@ INSERT INTO modelo_mensagem (tipo_evento, canal, titulo, corpo, ativo, obrigator
 ('recompensa_liberada', 'interna', 'Recompensa liberada',
  E'Sua recompensa de "{{titulo}}" está liberada: {{recompensas}}.', TRUE, FALSE)
 ON CONFLICT (tipo_evento, canal) DO NOTHING;
+
+-- ============================================================================
+-- GRUPO CU (16-11-2026) - Comentar e seguir só campanha publicada: correção de segurança. IDEMPOTENTE.
+-- Não precisa parar o Nest: só troca duas funções. Cole depois do CT.
+--
+-- O que muda: as regras que barram comentar (91020) e seguir (91034) uma campanha ainda não publicada liam a situação
+-- da campanha com a RLS de quem comentava. O rascunho de outra pessoa, invisível para ela, voltava vazio e passava:
+-- dava para comentar ou seguir um rascunho alheio sabendo o id. Agora leem sem a RLS (SECURITY DEFINER), e campanha
+-- não encontrada conta como não publicada.
+-- ============================================================================
+-- SECURITY DEFINER (16-11-2026): a situação da campanha é lida sem a RLS de quem comenta. Antes a leitura era com a
+-- RLS, e o rascunho de outra pessoa (invisível para ela) voltava NULL e passava pela checagem: dava para comentar num
+-- rascunho alheio sabendo o id. Ficou escondido enquanto existia a leitura de desenvolvimento [07-B-4].
+CREATE OR REPLACE FUNCTION fn_valida_comentario_campanha_ativa()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_status status_campanha;
+BEGIN
+    SELECT status INTO v_status
+    FROM campanha
+    WHERE id_campanha = NEW.id_campanha;
+
+    IF v_status IN ('rejeitado', 'encerrado_moderacao') THEN
+        RAISE EXCEPTION 'Operação bloqueada: não é possível comentar em campanhas rejeitadas ou sob moderação.'
+            USING ERRCODE = '91020';
+    END IF;
+    IF v_status IS NULL OR v_status IN ('rascunho', 'aguardando_aprovacao') THEN
+        RAISE EXCEPTION 'Operação bloqueada: esta campanha ainda não foi publicada, então não recebe comentários.'
+            USING ERRCODE = '91020';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- SECURITY DEFINER (16-11-2026): mesmo motivo de fn_valida_comentario_campanha_ativa (o rascunho alheio, invisível
+-- pela RLS, voltava NULL e deixava seguir).
+CREATE OR REPLACE FUNCTION fn_valida_seguir_campanha_publicada()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_status status_campanha;
+BEGIN
+    SELECT status INTO v_status
+    FROM campanha
+    WHERE id_campanha = NEW.id_campanha;
+
+    IF v_status IS NULL OR v_status NOT IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado') THEN
+        RAISE EXCEPTION 'Só é possível seguir uma campanha publicada.'
+            USING ERRCODE = '91034';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ============================================================================
+-- GRUPO CV (16-11-2026) - E-mail "Recebemos seu apoio" (comprovante de quem apoiou). IDEMPOTENTE.
+-- Não precisa parar o Nest: um gatilho e dois modelos de mensagem. Suba o Nest novo junto (tipo de aviso
+-- apoio_confirmado). Cole depois do CU.
+--
+-- O que muda:
+--   1. Quem apoia com conta recebe e-mail e aviso no sino quando o pagamento é confirmado: campanha, valor, protocolo e
+--      prazo para desistir. Antes não recebia nada até a campanha terminar.
+--   2. Se o pagamento já libera recompensas, elas vêm neste mesmo e-mail (sai o gatilho trg_notifica_recompensa_paga do
+--      grupo CT, para não chegarem dois e-mails no mesmo minuto). O aviso de recompensa do Tudo ou Nada que bate a meta
+--      continua.
+--   3. Corrige o texto do e-mail de recompensa do grupo CT: a aba da Minha Conta se chama Financeiro (só se o texto
+--      ainda for o original; um texto já editado no painel fica como está).
+-- ============================================================================
+-- ----------------------------------------------------------------------------
+-- Função:     fn_notifica_apoio_confirmado
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-Q]
+-- Regra:      O comprovante de quem apoiou com conta (16-11-2026): quando o pagamento é confirmado, e-mail e sino
+--             'apoio_confirmado' com a campanha, o valor, o protocolo e o prazo para desistir (desistencia_prazo_dias).
+--             Se o pagamento já libera recompensas (flexível, ou Tudo ou Nada que já bateu a meta: recompensa_liberada,
+--             03), elas vêm NESTE e-mail, para não chegarem dois no mesmo minuto. No Tudo ou Nada ainda no ar, o aviso
+--             das recompensas sai à parte quando a campanha bate a meta (fn_notifica_situacao_campanha). Sem conta não
+--             há para onde mandar (o gatilho só roda com id_usuario).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_notifica_apoio_confirmado()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_titulo      VARCHAR;
+    v_recompensas TEXT;
+BEGIN
+    SELECT titulo INTO v_titulo FROM campanha WHERE id_campanha = NEW.id_campanha;
+    IF public.recompensa_liberada(NEW.id_contribuicao) THEN
+        SELECT string_agg(DISTINCT r.titulo, ', ') INTO v_recompensas
+        FROM contribuicao_recompensa cr
+        JOIN recompensa r ON r.id_recompensa = cr.id_recompensa
+        WHERE cr.id_contribuicao = NEW.id_contribuicao;
+    END IF;
+    PERFORM public.enfileirar_notificacao(NEW.id_usuario, 'apoio_confirmado',
+        jsonb_build_object('id_campanha', NEW.id_campanha, 'titulo', v_titulo, 'valor', NEW.valor,
+                           'protocolo', NEW.id_contribuicao::TEXT,
+                           'prazo_desistencia', public.config_numero('desistencia_prazo_dias', 7)::INT::TEXT,
+                           'recompensas', v_recompensas));
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_notifica_recompensa_paga ON contribuicao;
+DROP FUNCTION IF EXISTS public.fn_notifica_recompensa_paga();
+DROP TRIGGER IF EXISTS trg_notifica_apoio_confirmado ON contribuicao;
+CREATE TRIGGER trg_notifica_apoio_confirmado
+AFTER UPDATE OF status ON contribuicao
+FOR EACH ROW
+WHEN (NEW.status = 'confirmado' AND OLD.status IS DISTINCT FROM NEW.status AND NEW.id_usuario IS NOT NULL)
+EXECUTE FUNCTION public.fn_notifica_apoio_confirmado();
+
+INSERT INTO modelo_mensagem (tipo_evento, canal, titulo, corpo, ativo, obrigatoria) VALUES
+('apoio_confirmado', 'email', 'Recebemos seu apoio',
+ E'Obrigado por apoiar "{{titulo}}"! O pagamento de {{valor}} foi confirmado e já conta para a meta.\n\nProtocolo do seu apoio: {{protocolo}}. Guarde este número.\n\n{{#recompensas}}Suas recompensas já estão liberadas: {{recompensas}}. Veja em Minha Conta, na aba Financeiro.{{/recompensas}}\n\nSe mudar de ideia, você pode desistir em até {{prazo_desistencia}} dias, em Minha Conta, na aba Financeiro. O valor do apoio volta; a tarifa do meio de pagamento não.', TRUE, FALSE),
+('apoio_confirmado', 'interna', 'Apoio confirmado',
+ E'Seu apoio de {{valor}} a "{{titulo}}" foi confirmado. Protocolo {{protocolo}}.', TRUE, FALSE)
+ON CONFLICT (tipo_evento, canal) DO NOTHING;
+
+UPDATE modelo_mensagem
+   SET corpo = replace(corpo, 'Veja e acesse em Minha Conta, na aba Contribuições, em "Recompensas ganhas".', 'Veja e acesse em Minha Conta, na aba Financeiro, em "Recompensas ganhas".')
+ WHERE tipo_evento = 'recompensa_liberada' AND canal = 'email'
+   AND corpo LIKE '%aba Contribuições%';

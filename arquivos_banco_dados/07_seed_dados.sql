@@ -836,7 +836,11 @@ INSERT INTO modelo_mensagem (tipo_evento, canal, titulo, corpo, ativo, obrigator
 ('lembrete_fim_campanha', 'interna', 'Campanha perto do fim',
  E'"{{titulo}}" termina em {{data_fim}}. Ainda dá tempo de apoiar.', TRUE, FALSE),
 ('recompensa_liberada', 'email', 'Sua recompensa está liberada',
- E'Obrigado por apoiar "{{titulo}}"! A sua recompensa está liberada: {{recompensas}}.\n\nVeja e acesse em Minha Conta, na aba Contribuições, em "Recompensas ganhas".', TRUE, FALSE),
+ E'Obrigado por apoiar "{{titulo}}"! A sua recompensa está liberada: {{recompensas}}.\n\nVeja e acesse em Minha Conta, na aba Financeiro, em "Recompensas ganhas".', TRUE, FALSE),
+('apoio_confirmado', 'email', 'Recebemos seu apoio',
+ E'Obrigado por apoiar "{{titulo}}"! O pagamento de {{valor}} foi confirmado e já conta para a meta.\n\nProtocolo do seu apoio: {{protocolo}}. Guarde este número.\n\n{{#recompensas}}Suas recompensas já estão liberadas: {{recompensas}}. Veja em Minha Conta, na aba Financeiro.{{/recompensas}}\n\nSe mudar de ideia, você pode desistir em até {{prazo_desistencia}} dias, em Minha Conta, na aba Financeiro. O valor do apoio volta; a tarifa do meio de pagamento não.', TRUE, FALSE),
+('apoio_confirmado', 'interna', 'Apoio confirmado',
+ E'Seu apoio de {{valor}} a "{{titulo}}" foi confirmado. Protocolo {{protocolo}}.', TRUE, FALSE),
 ('recompensa_liberada', 'interna', 'Recompensa liberada',
  E'Sua recompensa de "{{titulo}}" está liberada: {{recompensas}}.', TRUE, FALSE)
 ON CONFLICT (tipo_evento, canal) DO NOTHING;
@@ -847,9 +851,10 @@ ON CONFLICT (tipo_evento, canal) DO NOTHING;
 -- rode este arquivo só até a linha acima deste bloco.
 -- ============================================================================
 
--- O envio de e-mail nasce DESLIGADO no banco de demonstração (no de produção, ligado, [07-C]): o e-mail espera na
--- fila até alguém conferir e clicar em Rodar agora na T6, sem sair sozinho nem gastar a cota do provedor nos testes.
-UPDATE configuracoes SET valor = 'false' WHERE chave = 'tarefa_envio_email_ligada' AND id_usuario IS NULL;
+-- O envio de e-mail nasce LIGADO também no banco de demonstração (16-11-2026, Lucas; antes nascia desligado para
+-- conferir na T6 antes de sair, e virou a pegadinha de "configurei o Gmail e nada chegou"). Fora de produção, a trava
+-- EMAIL_REDIRECIONAR_PARA (Nest) manda todo e-mail para quem está testando, e o provedor de teste não manda nada; o
+-- card "Enviar os e-mails" da T6 continua desligando quando precisar.
 
 -- Permissões das ferramentas de teste do painel. trg_permissao_auto_admin (05) dá cada uma ao admin assim que a
 -- linha nasce; um banco de produção não roda esta parte, então nasce sem elas.

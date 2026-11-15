@@ -89,10 +89,7 @@ Os requisitos são atualizados com a revisão externa; aqui fica só o que preci
   - 🟡 **Dois ícones diferentes para "Seguir":** coração nos cartões, sino na página da campanha. Recomendação: o mesmo ícone nos dois (o sino combina com "receber novidades").
   - ✅ **Abas da campanha** (16-11-2026): as setas, Home e End trocam de aba (padrão da W3C), e "Atualizações" saiu da fila de abas: virou um botão separado, com ícone, que abre a janela.
   - ✅ **"Score mínimo" no Explorar** (16-11-2026, Lucas): filtro removido (palavra técnica sem explicação para o público).
-- **Botões de compartilhar** (WhatsApp, Facebook, copiar link) e **prévia de link** (Open Graph, um endpoint pequeno no Nest que devolve as meta tags). Ideias do Atlas (P1 e P2 do roteiro).
-- **Quantas pessoas seguem a campanha:** a contagem pública (`GET /seguir-campanha/:id/seguidores`, só o número) já aparece no Consultar da campanha; falta mostrá-la na página pública. O botão de seguir campanha já aparece nas listas públicas, e seguir pesquisador já está no perfil público.
-- **Ações públicas na campanha:** ainda faltam criar comentário e denunciar pela página pública; os comentários endossados e as atualizações publicadas já são exibidos.
-- **Compartilhamento e prévia do link:** faltam botões para WhatsApp, Facebook e copiar link, além de metadados Open Graph para a prévia.
+- ✅ **Prévia do link ao compartilhar (Open Graph):** já existe desde 14-11-2026 (`GET /compartilhar/campanha/:id`, `campanha.controller.share.ts`; os botões de compartilhar da campanha usam esse endereço). Só aparece de verdade com o site no ar: o robô do WhatsApp não alcança o `localhost`. Conferido em 16-11-2026.
 - **Painel de projetos do pesquisador (RF-090/091):** o Estúdio já lista e permite gerenciar campanhas; faltam as métricas previstas e o valor líquido estimado nessa área.
 
 
@@ -121,6 +118,8 @@ Ideia detalhada e registrada aqui pra não se perder. **Decisão: não construir
 
 
 ### Documentação da integração da área pública (anotado em 14-11-2026; fica para depois, a pedido do Lucas)
+
+> **16-11-2026:** atualizados a `MATRIZ-RASTREABILIDADE-RF.md` (RFs da área pública), o inventário de rotas do `DOCUMENTACAO_BACKEND.md` (seção 13), a `DOCUMENTACAO_BD.md` (recompensas, avisos, correção de comentar/seguir) e a `DOCUMENTACAO_FRONTEND.md` (modal Apoiar, chave Pix, cabeçalho único, acessibilidade). O que segue abaixo e não foi citado aqui continua por fazer.
 
 A Alexia trouxe a área pública para dentro do sistema (branch `tentativadeintegracao`, continuada na `area-publica`). O código e o banco estão sendo consertados; a documentação fica para o fim:
 

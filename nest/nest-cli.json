@@ -31,20 +31,22 @@
             ".request-start-upload.ts",
             ".request-update.ts",
             ".request-verify-email.ts",
-            ".response.ts",
             ".response-accepted-term.ts",
             ".response-active.ts",
             ".response-create.ts",
-            ".response-mine.ts",
             ".response-export-data.ts",
             ".response-find.ts",
             ".response-login-history.ts",
             ".response-login.ts",
+            ".response-mine.ts",
+            ".response-public-count.ts",
+            ".response-received.ts",
             ".response-register.ts",
             ".response-score.ts",
             ".response-sessions.ts",
             ".response-summary.ts",
-            ".response-upload-started.ts"
+            ".response-upload-started.ts",
+            ".response.ts"
           ]
         }
       }

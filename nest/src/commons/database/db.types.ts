@@ -565,6 +565,8 @@ export interface ContribuicaoTable {
   // Quando o provedor liberou o dinheiro (só cartão; Pix fica NULL). Escrito só por aplicar_evento_pagamento (05).
   dinheiro_liberado_em: Date | null;
   id_repasse: number | null;
+  // RF-041: quando quem apoiou confirmou que entendeu o modelo flexível (NULL no Tudo ou Nada).
+  ciencia_modelo_em: Date | null;
 }
 
 // Espelha 01_extensoes_enums_tabelas.sql (tabela repasse). Só leitura no Nest: quem cria e muda repasse são as funções

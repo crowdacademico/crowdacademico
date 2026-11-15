@@ -24,6 +24,7 @@ export const TIPO_NOTIFICACAO = {
   campanhaEncerradaAntes: 'campanha_encerrada_antes',
   lembreteFimCampanha: 'lembrete_fim_campanha',
   recompensaLiberada: 'recompensa_liberada',
+  apoioConfirmado: 'apoio_confirmado',
 } as const;
 
 export type TipoNotificacao =
@@ -77,6 +78,14 @@ export const CAMPOS_POR_TIPO: Record<TipoNotificacao, readonly string[]> = {
   campanha_encerrada_antes: ['nome', 'titulo', 'vai_para_pesquisador'],
   lembrete_fim_campanha: ['nome', 'titulo', 'data_fim'],
   recompensa_liberada: ['nome', 'titulo', 'recompensas'],
+  apoio_confirmado: [
+    'nome',
+    'titulo',
+    'valor',
+    'protocolo',
+    'prazo_desistencia',
+    'recompensas',
+  ],
 };
 
 export const camposDoTipo = (tipo: string): readonly string[] =>

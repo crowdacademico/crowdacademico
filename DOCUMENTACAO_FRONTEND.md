@@ -415,6 +415,8 @@ O formato que serviria para todos os tamanhos com um arquivo só é o SVG (desen
 - **Layout público** (`components/layout/layout-publico.tsx`): cabeçalho, navegação, controles de tema e fonte, menu da conta, conteúdo e rodapé próprios. As páginas sob esse layout estão em `ROTAS`; algumas, como checkout e Estúdio, exigem sessão ou aplicam regras próprias de acesso. Minha Conta fica em `ROTAS_CONTA`, com seu próprio layout e guarda de login.
 - **Páginas públicas** (`views/publico/`): Home, Explorar, página de campanha e atualizações, perfil público do pesquisador, Como funciona, Sobre, Termos, notificações, criação de campanha, checkout e confirmação do apoio. As telas de campanha e perfil usam dados da API; a página do perfil permite seguir o pesquisador e mostra a contagem de seguidores.
 - **Apoiar e acompanhamento:** o "Apoiar" da campanha abre `ModalApoiar`, que cria a contribuição pela API; no Pix mostra o QR ali mesmo (`PainelPix`), no cartão e no boleto manda a pessoa para a página do Asaas; `ApoioConfirmado` (`/apoio-confirmado`) lê o apoio guardado na aba (`apoio-em-andamento.ts`) e consulta a situação. `/checkout` só redireciona links antigos. Fluxo completo: `DOCUMENTACAO_FINANCEIRO.md`, seção 2.4.
+- **Modal Apoiar** (`views/publico/modal-apoiar.tsx`, 16-11-2026): valor (R$ 50 já marcado), forma de pagamento em cartões (o que a pessoa não pode resolver some, como cartão e boleto na campanha Tudo ou Nada, que ganha a explicação; o que ela pode resolver, como entrar na conta, aparece apagado com o caminho), recompensas que o valor alcança, resumo com a tarifa e o total (também no botão), ciência do flexível e aceite dos Termos. O botão parece apagado enquanto falta algo, mas o clique leva até o que falta. Pix: o QR aparece no próprio modal (`painel-pix.tsx`, desenhado com a biblioteca `qrcode` quando o provedor não manda a imagem; no sandbox pode vir o QR de teste); cartão e boleto vão à página do Asaas. `apoio-em-andamento.ts` guarda o apoio na aba (sessionStorage) para `/apoio-confirmado`.
+- **Chave Pix** (`views/24-conta-recebimento/campos-chave-pix.tsx`): os campos de tipo e chave, com máscara por tipo (`services/24-conta-recebimento/util/chave-pix.util.ts`: CPF, CNPJ, telefone, e-mail e chave aleatória, as mesmas regras do Nest), usados na Minha Conta, no Cadastro como pesquisador e no "Quero ser pesquisador" (opcional nos dois últimos; `salvar-chave-pix.ts` salva depois de criar o perfil). O Estúdio avisa quem tem campanha e não tem chave confirmada.
 - **Estúdio do Pesquisador** (`/estudio-pesquisador/:secao`): área autenticada para contas com perfil de pesquisador. As seções Campanhas, Recompensas, Atualizações, Comentários e Contribuições têm URLs próprias; a rota base abre Campanhas. O menu usa links de rota, então endereço direto, voltar e recarregar preservam a seção.
 - **Rotas legadas de conta:** `/minhas-contribuicoes` e `/painel-doador` levam à aba Contribuições da Minha Conta; `/painel-pesquisador` e `/minhas-campanhas` levam ao Estúdio.
 
@@ -498,6 +500,8 @@ Em Repasses em Atenção e Reembolsos Manuais (lista e ficha), o "último motivo
 
 ## 14. Usabilidade e acessibilidade
 
+📌 **Auditoria Nielsen/WCAG da área pública (16-11-2026):** relatório em informacoes/AUDITORIA_AREA_PUBLICA_NIELSEN_WCAG_16-11-2026.md. Ficou valendo: cada página tem o próprio título na aba (`components/layout/titulo-da-pagina.tsx`, WCAG 2.4.2; a campanha usa o nome dela); o login volta para onde a pessoa estava (`voltarPara`, só caminho interno); a gaveta do menu no celular prende o foco; as abas da campanha trocam com as setas (padrão da W3C).
+
 📌 **Botão sempre clicável, erro embaixo do campo.** Com algo faltando, o botão continua funcionando; ao clicar, cada campo mostra o que falta e o cursor vai para o primeiro (`useErrosFormulario`). Ficam desabilitados só: Salvar sem alteração, Aprovar campanha que não está pronta (a lista ao lado diz o que falta), exclusões com confirmação digitada e o que está enviando. Os avisos que já aparecem enquanto se digita (meta abaixo do mínimo, e-mail inválido, senhas diferentes) continuam. Heurísticas de Nielsen 1, 5 e 9.
 
 📌 **Erro aparece uma vez só:** ao lado de onde se corrige (texto vermelho ou embaixo do campo, com a tela rolando até ele), sem repetir no aviso flutuante (`useErroToast({ mostraTexto: true })`). O aviso flutuante é para o que acontece fora de um formulário.
@@ -521,6 +525,7 @@ Em Repasses em Atenção e Reembolsos Manuais (lista e ficha), o "último motivo
 | Pacote | Por que está aqui |
 |---|---|
 | `react` + `react-dom` | o framework e o renderizador do navegador |
+| `qrcode` + `@types/qrcode` | desenha o QR do Pix a partir do "copia e cola", quando o provedor não manda a imagem (16-11-2026) |
 | `react-router` | rotas no navegador (ver seção 2 sobre `react-router-dom`) |
 | `tailwindcss` + `@tailwindcss/vite` | utilitários CSS, gerados no build |
 | `vite` + `@vitejs/plugin-react` | build, servidor de desenvolvimento e recarregamento rápido |

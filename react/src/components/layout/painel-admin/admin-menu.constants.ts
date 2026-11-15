@@ -101,13 +101,14 @@ export const GRUPOS_MENU_ADMIN: GrupoMenuAdmin[] = [
   ...(import.meta.env.DEV
     ? [
         {
-          // Telas administrativas para testar, pela interface (não só por Thunder Client), módulos
-          // que só fariam sentido testar pela área PÚBLICA do site (que ainda não existe em React).
+          // Ferramentas para testar pela interface (não só por Thunder Client): criar dados em nome de outros, simular
+          // o provedor de pagamento, ver a caixa de e-mails. Nasceram antes da área pública; continuam úteis para testar
+          // rápido o que, no site, exigiria várias contas e telas.
           // O que for criado aqui nunca aparece pro usuário final, é só ferramenta de teste interna.
           // `dica` (só este grupo tem) vira um Tooltip do lado direito do título em vez do ícone
           // normal de item (ver admin-sidebar.tsx).
           titulo: 'CAMPO DE TESTES',
-          dica: 'Este submenu é para testar campos que só seriam possíveis na área pública e para ferramentas de desenvolvimento, como o Guia de Estilo. Nada daqui aparece para o usuário final.',
+          dica: 'Ferramentas de desenvolvimento e de teste: criar dados em nome de outras contas, simular o provedor de pagamento, a caixa de e-mails e o Guia de Estilo. Nada daqui aparece para o usuário final.',
           itens: itensDoGrupo('CAMPO_TESTES'),
         },
       ]
