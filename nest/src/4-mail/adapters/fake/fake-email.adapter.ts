@@ -20,6 +20,11 @@ export class FakeEmailAdapter implements EnvioEmailPort {
   private readonly caixa: EmailCapturado[] = [];
   private contador = 0;
 
+  // Saúde: o provedor de teste vive dentro do Nest, sempre responde.
+  verificarConexao(): Promise<void> {
+    return Promise.resolve();
+  }
+
   enviar(mensagem: MensagemEmail): Promise<ResultadoEnvioEmail> {
     this.contador++;
     const idMensagem = `fake-${this.contador}`;

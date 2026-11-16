@@ -1026,9 +1026,11 @@ Somente leitura - a escrita em `log_auditoria` é feita por trigger genérica no
 
 📌 **A autorização é 100% RLS, como sempre.** `pol_log_auditoria_select` exige `tem_permissao('log_visualizar')`; sem ela a query volta **vazia**, não dá erro. O comentário registra a dependência: a policy foi ampliada para deixar qualquer usuário ver as próprias linhas - sem essa mudança aplicada no banco, `minha-atividade` volta vazia para quem não é admin, mesmo sendo autor das próprias linhas.
 
-### `29-dashboard` (4 arquivos, 1 endpoint)
+### `29-dashboard` (7 arquivos, 2 endpoints)
 
 **`GET /dashboard/resumo`** - uma única chamada a `SELECT * FROM contar_metricas_dashboard()` (bloco `[03-M]`). Inclui `campanhasParaRevisaoScore`: campanhas na fila de aprovação cujo pesquisador está abaixo do score mínimo, só um sinal para o admin.
+
+**`GET /dashboard/saude`** (16-11-2026) - a aba Saúde: confere NA HORA o provedor de pagamento (`CobrancaGatewayPort.verificarConexao()`; no Asaas, `GET /finance/balance`, que só lê o saldo) e o de e-mail (`EnvioEmailPort.verificarConexao()`; SMTP: `verify()` do nodemailer, o login sem enviar; Brevo: `GET /v3/account`), cada um com limite de 10 s, e lê de `evento_pagamento` o último aviso (webhook) recebido, os com erro e os em revisão manual. Exige `relatorio_visualizar` (conferida no serviço); a contagem dos avisos respeita a RLS (`evento_pagamento_visualizar`; sem ela, `visivel: false`). Nunca devolve chave nem senha: só a mensagem de erro do provedor. Diferente de `GET /health` (público, só o banco, para a plataforma de deploy).
 
 📌 **Por que uma função `SECURITY DEFINER` em vez de contar no Nest.** A função bypassa deliberadamente a RLS restritiva de `usuario`/`configuracoes`. Sem isso, o total mostrado **dependeria de quem está logado** - errado para um card que diz "total do sistema".
 
@@ -1245,7 +1247,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | POST | `/campo-testes/pagamento/repasses/:id/concluir` · `/campo-testes/pagamento/repasses/:id/falhar` · `/campo-testes/pagamento/tarefas/:tarefa` · `/campo-testes/pagamento/chave-pix` |
 | **Painel** | | |
 | AUTH | GET | `/log-auditoria` · `/log-auditoria/minha-atividade` |
-| AUTH | GET | `/dashboard/resumo` |
+| AUTH | GET | `/dashboard/resumo` · `/dashboard/saude` *(conecta no provedor de pagamento e no de e-mail; exige `relatorio_visualizar`)* |
 | AUTH | GET | `/notificacao` · `/notificacao/resumo` *(e-mails do sistema; exige `notificacao_processar`)* |
 | AUTH | POST | `/notificacao/:id/reenviar` · `/notificacao/:id/cancelar` *(RF-126; permissão e situação conferidas no banco)* |
 | AUTH | GET | `/notificacao-interna` · `/notificacao-interna/nao-lidas` *(o sino da própria conta)* |

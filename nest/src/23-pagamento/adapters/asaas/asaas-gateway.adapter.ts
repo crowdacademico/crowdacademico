@@ -61,6 +61,9 @@ export class AsaasGatewayAdapter
   consultarTarifas() {
     return this.cobranca.consultarTarifas();
   }
+  verificarConexao() {
+    return this.cobranca.verificarConexao();
+  }
 
   transferir(params: TransferirParams): Promise<ResultadoRepasse> {
     return this.repasse.transferir(params);

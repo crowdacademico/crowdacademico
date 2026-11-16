@@ -7,6 +7,8 @@ import {
 import type { Remetente } from '../remetente';
 
 const URL_BREVO = 'https://api.brevo.com/v3/smtp/email';
+// Saúde: os dados da conta (GET /v3/account) só leem, e provam que a chave vale.
+const URL_CONTA_BREVO = 'https://api.brevo.com/v3/account';
 const TIMEOUT_MS = 15_000;
 
 // Brevo pela API HTTP (porta 443, a mesma dos sites): não depende das portas do SMTP (587/465), que redes de escola e
@@ -20,6 +22,31 @@ export class BrevoEmailAdapter implements EnvioEmailPort {
     private readonly chaveApi: string,
     private readonly remetente: Remetente,
   ) {}
+
+  async verificarConexao(): Promise<void> {
+    const controle = new AbortController();
+    const relogio = setTimeout(() => controle.abort(), TIMEOUT_MS);
+    let resposta: Response;
+    try {
+      resposta = await fetch(URL_CONTA_BREVO, {
+        signal: controle.signal,
+        headers: { 'api-key': this.chaveApi, accept: 'application/json' },
+      });
+    } catch (erro) {
+      throw new ErroEnvioEmail(
+        `Sem resposta do Brevo: ${erro instanceof Error ? erro.message : String(erro)}`,
+        true,
+      );
+    } finally {
+      clearTimeout(relogio);
+    }
+    if (!resposta.ok) {
+      throw new ErroEnvioEmail(
+        `Brevo recusou (${resposta.status}): confira BREVO_API_KEY.`,
+        resposta.status >= 500,
+      );
+    }
+  }
 
   async enviar(mensagem: MensagemEmail): Promise<ResultadoEnvioEmail> {
     const controle = new AbortController();

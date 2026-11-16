@@ -9,6 +9,7 @@ import {
 import {
   type CobrancaGatewayPort,
   type CriarCobrancaParams,
+  type VerificacaoGateway,
 } from '../../ports/cobranca-gateway.port';
 import { AsaasHttpClient } from './asaas-http.client';
 import { type ConfiguracaoAsaas } from './asaas.config';
@@ -375,6 +376,19 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
           ? cartao.discountOneInstallmentPercentage
           : cartao.oneInstallmentPercentage,
       cartaoFixa: cartao.operationValue,
+    };
+  }
+
+  // Saúde: GET /finance/balance só lê o saldo (não cobra nem muda nada) e prova que a chave vale neste ambiente.
+  async verificarConexao(): Promise<VerificacaoGateway> {
+    const r = await this.http.requisitar<{ balance?: number } | null>(
+      'GET',
+      '/finance/balance',
+      { timeoutMs: 8_000 },
+    );
+    return {
+      ambiente: this.config.ambiente === 'production' ? 'producao' : 'sandbox',
+      saldo: typeof r?.balance === 'number' ? r.balance : null,
     };
   }
 

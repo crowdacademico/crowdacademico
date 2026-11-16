@@ -1,6 +1,6 @@
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
-import type { DashboardResponseSummary, HealthResponse } from '../type/dashboard.type';
+import type { DashboardResponseHealth, DashboardResponseSummary, HealthResponse } from '../type/dashboard.type';
 
 // GET /dashboard/resumo devolve TUDO que os cards/faixa de saúde/prévia de
 // log precisam numa resposta só (nest/src/29-dashboard) - de propósito,
@@ -13,4 +13,7 @@ export const dashboardApi = {
     authFetch('/dashboard/resumo').then(tratarResposta<DashboardResponseSummary>),
   verificarSaude: (authFetch: AuthFetch): Promise<HealthResponse> =>
     authFetch('/health').then(tratarResposta<HealthResponse>),
+  // Aba Saúde: confere na hora o provedor de pagamento, o de e-mail e os avisos do provedor (pode levar alguns segundos).
+  verificarServicos: (authFetch: AuthFetch): Promise<DashboardResponseHealth> =>
+    authFetch('/dashboard/saude').then(tratarResposta<DashboardResponseHealth>),
 };

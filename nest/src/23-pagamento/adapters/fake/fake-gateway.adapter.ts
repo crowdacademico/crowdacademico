@@ -277,6 +277,11 @@ export class FakeGatewayAdapter
     return Promise.resolve(null);
   }
 
+  // Saúde: o provedor de teste está sempre "conectado" (vive dentro do Nest).
+  verificarConexao(): Promise<{ ambiente: 'teste'; saldo: null }> {
+    return Promise.resolve({ ambiente: 'teste', saldo: null });
+  }
+
   cancelarCobranca(idCobranca: string): Promise<void> {
     const c = this.cobrancas.get(idCobranca);
     if (!c) {

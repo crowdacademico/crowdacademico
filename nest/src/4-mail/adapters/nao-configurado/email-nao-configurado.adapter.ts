@@ -11,6 +11,15 @@ export class EmailNaoConfiguradoAdapter implements EnvioEmailPort {
   readonly provedor = 'nao_configurado';
   readonly configurado = false;
 
+  verificarConexao(): Promise<void> {
+    return Promise.reject(
+      new ErroEnvioEmail(
+        'Nenhum provedor de e-mail configurado (EMAIL_PROVIDER).',
+        false,
+      ),
+    );
+  }
+
   enviar(): Promise<ResultadoEnvioEmail> {
     return Promise.reject(
       new ErroEnvioEmail('Nenhum provedor de e-mail configurado.', true),

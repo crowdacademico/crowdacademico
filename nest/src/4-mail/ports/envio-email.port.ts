@@ -21,6 +21,10 @@ export interface EnvioEmailPort {
   // false = nada configurado: o worker nem reserva e-mail da fila (eles esperam, sem gastar tentativa).
   readonly configurado: boolean;
   enviar(mensagem: MensagemEmail): Promise<ResultadoEnvioEmail>;
+  // Dashboard > Saúde (16-11-2026): confere o login no provedor SEM enviar nada. Falha = ErroEnvioEmail.
+  verificarConexao(): Promise<void>;
+  // true = trava de teste ligada: todo e-mail vai para EMAIL_REDIRECIONAR_PARA (adapter redirecionar).
+  readonly redirecionado?: boolean;
 }
 
 // Toda falha de envio sai como este erro. recuperavel = vale tentar de novo mais tarde (rede, provedor fora do ar,

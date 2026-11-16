@@ -1,54 +1,148 @@
+import type { ReactNode } from 'react';
+import { Link } from 'react-router';
+import { PontoStatusConexao } from './dashboard';
 import { Tooltip } from '../../components/layout/tooltip';
-import { PontoStatusConexao, TEXTO_TOOLTIP_SESSOES_ATIVAS } from './dashboard';
-import type { DashboardResponseSummary } from '../../services/29-dashboard/type/dashboard.type';
+import { dashboardApi } from '../../services/29-dashboard/api/dashboard.api';
+import type { DashboardResponseHealth, DashboardResponseSummary } from '../../services/29-dashboard/type/dashboard.type';
+import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
+import { useBuscar } from '../../services/constant/hook/use-buscar';
+import { formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
+import { MensagemErro } from '../../components/crud/mensagem-erro';
 
 interface DashboardSaudeProps {
+  auth: UseAuthReturn;
   bancoConectado: boolean | null;
   resumo: DashboardResponseSummary | null;
 }
 
-// Aba "Saúde": recebe o mesmo estado que a faixa de saúde da Visão Geral já calcula (não refaz a requisição).
-// Não mostra "última migration aplicada": o projeto não tem uma tabela de controle de migration (o histórico de
-// mudança de banco vive nos arquivos numerados 01-08 + `ATUALIZAR O SUPABASE.sql`). Mostrar um dado fabricado seria pior
-// que não mostrar nada; e o aviso que explicava isso na tela saiu (16-11-2026): só confundia quem não é do projeto.
-export function DashboardSaude({ bancoConectado, resumo }: DashboardSaudeProps) {
+// Nome do provedor para gente (o código vem do Nest: notificacao.provedor, contribuicao.provedor).
+const NOME_PROVEDOR: Record<string, string> = {
+  asaas: 'Asaas',
+  fake: 'Provedor de teste',
+  brevo: 'Brevo',
+  smtp: 'SMTP',
+  nao_configurado: 'Não configurado',
+};
+const nomeProvedor = (codigo: string) => NOME_PROVEDOR[codigo] ?? codigo;
+
+const NOME_AMBIENTE: Record<NonNullable<DashboardResponseHealth['pagamento']['ambiente']>, string> = {
+  sandbox: 'Sandbox',
+  producao: 'Produção',
+  teste: 'Teste',
+};
+
+// Situação com a bolinha: verde (ok), vermelha (falhou, com o motivo) ou cinza (verificando).
+function Situacao({ estado, falha, children }: { estado: boolean | null; falha?: string; children?: ReactNode }) {
   return (
-    <div className="space-y-4">
-      <div className="cartao-painel p-5">
-        <h2 className="subtitulo mb-3">Conexão com o banco</h2>
-        <div className="paragrafo flex items-center gap-2 texto-herdado">
-          <PontoStatusConexao valor={bancoConectado} />
-          <span className="texto-padrao enfase">
-            {bancoConectado === null
-              ? 'Verificando...'
-              : bancoConectado
-                ? 'Conectado (GET /health respondeu 200)'
-                : 'Sem conexão (GET /health falhou)'}
-          </span>
+    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <PontoStatusConexao valor={estado} />
+      <span className={'enfase ' + (estado === false ? 'texto-erro' : 'texto-padrao')}>
+        {estado === null ? 'Verificando…' : estado ? 'Conectado' : (falha ?? 'Sem conexão')}
+      </span>
+      {children}
+    </span>
+  );
+}
+
+// Uma linha do cartão: o serviço à esquerda (o tipo, e embaixo qual está em uso) e a situação à direita.
+function Linha({ rotulo, emUso, children }: { rotulo: string; emUso?: ReactNode; children: ReactNode }) {
+  return (
+    <div className="py-4 first:pt-0 last:pb-0 grid grid-cols-1 sm:grid-cols-[16rem_1fr] gap-x-6 gap-y-2">
+      <div>
+        <div className="rotulo-leitura">{rotulo}</div>
+        {emUso && <div className="paragrafo enfase texto-forte mt-0.5">{emUso}</div>}
+      </div>
+      <div className="paragrafo texto-herdado space-y-1">{children}</div>
+    </div>
+  );
+}
+
+// Aba "Saúde": um cartão só, com os serviços de que o sistema depende, conferidos na hora (16-11-2026). O banco vem da mesma
+// checagem da Visão Geral (GET /health); o provedor de pagamento, o de e-mail e os avisos do provedor vêm de
+// GET /dashboard/saude, que fala com cada um sem cobrar nem enviar nada. Não mostra "última migration aplicada": o projeto
+// não tem tabela de controle de migration, e um dado fabricado seria pior que nada.
+export function DashboardSaude({ auth, bancoConectado, resumo }: DashboardSaudeProps) {
+  const { dado: saude, carregando, erro, recarregar } = useBuscar(() => dashboardApi.verificarServicos(auth.authFetch), [], {
+    mostraTexto: true,
+  });
+  const pronto = !carregando && saude !== null;
+  const avisos = saude?.avisosPagamento;
+
+  return (
+    <div className="cartao-painel p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
+        <div>
+          <h2 className="subtitulo">Conexões</h2>
+          {pronto && <p className="legenda texto-fraco">Verificado em {formatarDataHora(saude.verificadoEm, true)}</p>}
         </div>
+        <button type="button" className="btn btn-secondary" onClick={recarregar} disabled={carregando}>
+          <i className="fa-solid fa-rotate" aria-hidden="true" /> Verificar de novo
+        </button>
       </div>
+      <MensagemErro texto={erro} className="crud-erro" />
 
-      <div className="cartao-painel p-5">
-        <h2 className="subtitulo mb-3">Contagens agregadas</h2>
-        {resumo ? (
-          <div className="paragrafo grid grid-cols-2 sm:grid-cols-3 gap-4 texto-herdado">
+      <div className="divide-y divide-[var(--cor-borda)]">
+        <Linha rotulo="Banco de dados">
+          <Situacao estado={bancoConectado} falha="Sem conexão (GET /health falhou)">
+            {bancoConectado && <span className="texto-fraco">(GET /health respondeu 200)</span>}
+          </Situacao>
+        </Linha>
+
+        <Linha
+          rotulo="Provedor de pagamento"
+          emUso={saude && `${nomeProvedor(saude.pagamento.provedor)}${saude.pagamento.ambiente ? ` · ${NOME_AMBIENTE[saude.pagamento.ambiente]}` : ''}`}
+        >
+          <Situacao estado={pronto ? saude.pagamento.ok : null} falha={saude?.pagamento.mensagem} />
+          {pronto && saude.pagamento.saldo !== null && (
             <p className="texto-fraco">
-              Contas ativas agora
-              <Tooltip texto={TEXTO_TOOLTIP_SESSOES_ATIVAS} />
-              <strong className="texto-forte block">{resumo.sessoesAtivas}</strong>
+              Saldo: <strong className="texto-forte">{formatarMoeda(saude.pagamento.saldo)}</strong>
             </p>
+          )}
+        </Linha>
+
+        <Linha
+          rotulo="Provedor de e-mail"
+          emUso={
+            saude && (
+              <>
+                {nomeProvedor(saude.email.provedor)}
+                {saude.email.redirecionado && (
+                  <span className="badge badge-neutro ml-2 align-middle">
+                    Modo de teste <Tooltip texto="Todos os e-mails do sistema estão indo para um único endereço de teste." />
+                  </span>
+                )}
+              </>
+            )
+          }
+        >
+          <Situacao estado={pronto ? saude.email.ok : null} falha={saude?.email.mensagem} />
+          {resumo && (
             <p className="texto-fraco">
-              Usuários <strong className="texto-forte block">{resumo.totalUsuarios}</strong>
+              <strong className="texto-forte">{resumo.notificacoesPendentes}</strong> na fila ·{' '}
+              <strong className={resumo.notificacoesComFalha > 0 ? 'texto-erro' : 'texto-forte'}>{resumo.notificacoesComFalha}</strong> com falha ·{' '}
+              <Link to="/admin/notificacoes" className="link-texto">
+                Ver notificações
+              </Link>
             </p>
+          )}
+        </Linha>
+
+        <Linha rotulo="Avisos de pagamento" emUso={avisos?.visivel && (avisos.ultimoRecebidoEm ? `Último em ${formatarDataHora(avisos.ultimoRecebidoEm, true)}` : 'Nenhum recebido')}>
+          {!avisos ? (
+            <span className="texto-fraco">Verificando…</span>
+          ) : !avisos.visivel ? (
+            <span className="texto-fraco">Sem permissão para ver os eventos de pagamento.</span>
+          ) : (
             <p className="texto-fraco">
-              Configurações <strong className="texto-forte block">{resumo.totalConfiguracoes}</strong>
+              <strong className={avisos.comErro > 0 ? 'texto-erro' : 'texto-forte'}>{avisos.comErro}</strong> com erro ·{' '}
+              <strong className={avisos.emRevisao > 0 ? 'texto-erro' : 'texto-forte'}>{avisos.emRevisao}</strong> em revisão manual ·{' '}
+              <Link to="/admin/eventos-pagamento" className="link-texto">
+                Ver eventos de pagamento
+              </Link>
             </p>
-          </div>
-        ) : (
-          <p className="paragrafo texto-fraco">Sem dados agregados carregados.</p>
-        )}
+          )}
+        </Linha>
       </div>
-
     </div>
   );
 }

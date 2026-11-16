@@ -11,12 +11,17 @@ import type {
 export class RedirecionarEmailAdapter implements EnvioEmailPort {
   readonly provedor: string;
   readonly configurado = true;
+  readonly redirecionado = true;
 
   constructor(
     private readonly real: EnvioEmailPort,
     private readonly destino: string,
   ) {
     this.provedor = real.provedor;
+  }
+
+  verificarConexao(): Promise<void> {
+    return this.real.verificarConexao();
   }
 
   enviar(mensagem: MensagemEmail): Promise<ResultadoEnvioEmail> {

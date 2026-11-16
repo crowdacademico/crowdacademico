@@ -46,6 +46,10 @@ export class GatewayNaoConfiguradoAdapter
     return Promise.reject(this.erro());
   }
 
+  verificarConexao(): Promise<never> {
+    return Promise.reject(this.erro());
+  }
+
   transferir(): Promise<ResultadoRepasse> {
     return Promise.reject(this.erro());
   }

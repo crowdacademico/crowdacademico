@@ -15,11 +15,10 @@ import { CaixaAviso } from '../../components/crud/caixa-aviso';
 import { useTarefasDesligadas } from '../../services/11-configuracoes/hook/use-tarefas-desligadas';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
-// Texto do tooltip de "contas ativas": exportado porque a aba Saúde (dashboard-saude.tsx) mostra a MESMA
-// métrica e precisa do MESMO texto. `contar_metricas_dashboard()` conta PESSOAS distintas com sessão não revogada
+// Texto do tooltip de "contas ativas" (Visão Geral). `contar_metricas_dashboard()` conta PESSOAS distintas com sessão não revogada
 // criada (login ou renovação do token) dentro de configuracoes.dashboard_sessao_ativa_minutos. O campo da API
 // continua `sessoesAtivas`.
-export const TEXTO_TOOLTIP_SESSOES_ATIVAS =
+const TEXTO_TOOLTIP_SESSOES_ATIVAS =
   'Pessoas com login ou renovação recente (a janela de tempo fica em Parâmetros do Sistema). Quem está em vários aparelhos conta uma vez só: uma aproximação de quem está usando o sistema agora.';
 
 // Abas: estrutura em abas em vez de empilhar seção atrás de seção (para o Dashboard não virar uma "tela onde
@@ -89,8 +88,7 @@ const campanhasCom = (status: StatusCampanha) =>
   `/admin/campanhas?status=${encodeURIComponent(ROTULO_STATUS_CAMPANHA[status])}`;
 
 // Bolinha de status de conexão: a Visão Geral (abaixo) e a aba Saúde (`dashboard-saude.tsx`) mostram a MESMA
-// bolinha, com a MESMA lógica de 3 estados: exportado daqui e importado lá, mesmo padrão de
-// `TEXTO_TOOLTIP_SESSOES_ATIVAS` acima. Cor vem de `.ponto-status--*` (1-cores.css), reaproveitando os mesmos
+// bolinha, com a MESMA lógica de 3 estados: exportado daqui e importado lá. Cor vem de `.ponto-status--*` (1-cores.css), reaproveitando os mesmos
 // tokens de status dos badges (se adapta ao tema escuro).
 export function PontoStatusConexao({ valor }: { valor: boolean | null }) {
   return (
@@ -258,7 +256,7 @@ export function Dashboard({ auth }: DashboardProps) {
       )}
 
       {abaAtiva === 'regras' && <DashboardRegrasNegocio auth={auth} />}
-      {abaAtiva === 'saude' && <DashboardSaude bancoConectado={bancoConectado} resumo={resumo} />}
+      {abaAtiva === 'saude' && <DashboardSaude auth={auth} bancoConectado={bancoConectado} resumo={resumo} />}
     </div>
   );
 }

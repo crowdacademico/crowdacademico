@@ -40,6 +40,18 @@ export class SmtpEmailAdapter implements EnvioEmailPort {
     });
   }
 
+  // Saúde: abre a conexão e faz o login no servidor (verify do nodemailer), sem mandar e-mail.
+  async verificarConexao(): Promise<void> {
+    try {
+      await this.transporte.verify();
+    } catch (erro) {
+      throw new ErroEnvioEmail(
+        `SMTP: ${erro instanceof Error ? erro.message : String(erro)}`,
+        true,
+      );
+    }
+  }
+
   async enviar(mensagem: MensagemEmail): Promise<ResultadoEnvioEmail> {
     try {
       const info = (await this.transporte.sendMail({

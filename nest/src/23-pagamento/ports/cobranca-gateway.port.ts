@@ -9,6 +9,13 @@ import type { TarifasProvedor } from '../dto/tarifas-provedor.dto';
 // Mesmo padrão de PG_POOL e ARMAZENAMENTO_SERVICE.
 export const COBRANCA_GATEWAY = 'COBRANCA_GATEWAY';
 
+// Resultado de verificarConexao (Dashboard > Saúde). ambiente 'teste' = o provedor de teste (nada sai do sistema).
+export interface VerificacaoGateway {
+  ambiente: 'sandbox' | 'producao' | 'teste';
+  // Saldo da conta no provedor, quando ele informa (o repasse depende dele); null no de teste.
+  saldo: number | null;
+}
+
 export interface DestinatarioSplit {
   // Identificador da carteira/conta de destino NO PROVEDOR.
   idCarteira: string;
@@ -61,4 +68,7 @@ export interface CobrancaGatewayPort {
   // As tarifas que o provedor cobra hoje desta conta (com o desconto, quando valendo), para o sistema mostrar o total
   // certo ANTES de a pessoa pagar (RF-063). null = o provedor não informa (o de teste: os parâmetros ficam como estão).
   consultarTarifas(): Promise<TarifasProvedor | null>;
+  // Dashboard > Saúde (16-11-2026): fala com o provedor SEM cobrar nada, para saber se a chave e a rede estão boas.
+  // Erro sai como GatewayPagamentoErro (NAO_CONFIGURADO = chave recusada; REDE = sem resposta).
+  verificarConexao(): Promise<VerificacaoGateway>;
 }

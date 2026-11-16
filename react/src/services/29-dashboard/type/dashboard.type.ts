@@ -25,3 +25,29 @@ export interface HealthResponse {
   status: 'ok' | 'erro';
   banco: 'conectado' | 'sem conexão';
 }
+
+// Espelha nest/src/29-dashboard/dto/response/dashboard.response-health.ts (GET /dashboard/saude, aba Saúde).
+export interface VerificacaoServicoExterno {
+  ok: boolean;
+  mensagem: string;
+  ms: number;
+}
+
+export interface DashboardResponseHealth {
+  pagamento: VerificacaoServicoExterno & {
+    provedor: string;
+    ambiente: 'sandbox' | 'producao' | 'teste' | null;
+    saldo: number | null;
+  };
+  email: VerificacaoServicoExterno & {
+    provedor: string;
+    redirecionado: boolean;
+  };
+  avisosPagamento: {
+    visivel: boolean;
+    ultimoRecebidoEm: string | null;
+    emRevisao: number;
+    comErro: number;
+  };
+  verificadoEm: string;
+}
