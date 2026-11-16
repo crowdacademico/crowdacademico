@@ -18,5 +18,5 @@ export const ROTULO_TIPO_TERMO: Record<TipoTermo, string> = {
 // Descrição curta de QUANDO cada termo é exibido a um usuário (card de Regras do Negócio e tela de publicar).
 export const DESCRICAO_TIPO_TERMO: Record<TipoTermo, string> = {
   cadastro: 'Aceito no cadastro da conta e confirmado a cada contribuição a uma campanha.',
-  upgrade_pesquisador: 'Aceito ao solicitar upgrade pra perfil de pesquisador.',
+  upgrade_pesquisador: 'Aceito ao solicitar upgrade para perfil de pesquisador.',
 };

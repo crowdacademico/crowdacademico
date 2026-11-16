@@ -2052,9 +2052,9 @@ EXECUTE FUNCTION public.fn_valida_limite_max_marco_cronograma();
 --             id_admin=<ele mesmo> e a campanha ia ao ar como se um Administrador tivesse aprovado. Transições liberadas (a
 --             primeira condição que bater libera; qualquer outra levanta 92001):
 --               1. Nenhum dos 3 campos sensíveis mudou: sai cedo.
---               2. aguardando_aprovacao -> ativo (com aprovado_em) por quem tem 'campanha_aprovar'.
+--               2. aguardando_aprovacao -> ativo (com aprovado_em) por quem tem 'campanha_aprovar', nunca o dono (92044).
 --               3. aguardando_aprovacao -> rejeitado por quem tem 'campanha_rejeitar'.
---               4. ativo -> encerrado por quem tem 'solicitacao_encerramento_decidir'.
+--               4. ativo -> encerrado por quem tem 'solicitacao_encerramento_decidir', se não for o dono.
 --               5. Encerramento por prazo vencido, AUTOVERIFICÁVEL (sem permissão nem usuário de sistema): só com
 --                  data_fim <= NOW() e o novo status batendo com valor_bruto_arrecadado vs meta_financeira (sucesso só se
 --                  atingiu a meta, nao_atingido só se não): impossível mentir o resultado.
@@ -2089,6 +2089,13 @@ BEGIN
     IF OLD.status = 'aguardando_aprovacao' AND NEW.status = 'ativo'
        AND NEW.aprovado_em IS NOT NULL
        AND public.tem_permissao('campanha_aprovar') THEN
+        -- Conflito de interesse (CT-11): quem aprova não pode ser o dono, nem um administrador que tenha a própria
+        -- campanha na fila. Outro administrador aprova. Só aqui, dentro de quem tem a permissão: o dono sem ela
+        -- continua caindo no 92001 do fim (as grades da suíte 8 não mudam).
+        IF NEW.id_usuario = public.id_usuario_atual() THEN
+            RAISE EXCEPTION 'Você não pode aprovar a sua própria campanha. Outro administrador precisa fazer a aprovação.'
+                USING ERRCODE = '92044';
+        END IF;
         RETURN NEW;
     END IF;
 
@@ -2098,8 +2105,11 @@ BEGIN
         RETURN NEW;
     END IF;
 
+    -- O dono não encerra a própria campanha por este caminho, mesmo tendo a permissão (decidir_solicitacao_encerramento
+    -- recusa antes com 92045); segue para as regras de baixo, onde só o encerramento sem contribuição (10) o libera.
     IF OLD.status = 'ativo' AND NEW.status = 'encerrado'
        AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_usuario IS DISTINCT FROM public.id_usuario_atual()
        AND public.tem_permissao('solicitacao_encerramento_decidir') THEN
         RETURN NEW;
     END IF;

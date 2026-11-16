@@ -159,7 +159,7 @@ export function ModalExcluirAreaConhecimento({ auth, area, aoFechar, aoExcluido 
           <CampoFicha rotulo="Grande área (pai)" valor={nomePaiExibido(area)} largura="cheia" />
         </>
       }
-      explicacao="Se esta área ainda estiver vinculada a alguma campanha (ou a outra área filha), a exclusão é bloqueada pelo próprio banco: desative-a em vez de excluir. Se não estiver em uso, some do catálogo pra sempre, sem exclusão lógica."
+      explicacao="Se esta área ainda estiver vinculada a alguma campanha (ou a outra área filha), a exclusão é bloqueada pelo próprio banco: desative-a em vez de excluir. Se não estiver em uso, some do catálogo para sempre, sem exclusão lógica."
       remover={() => areaConhecimentoApi.remover(auth.authFetch, area.idAreaConhecimento)}
       mensagemSucesso="Área de conhecimento excluída com sucesso."
       detalheSucesso={`ID: ${area.idAreaConhecimento} foi excluído`}

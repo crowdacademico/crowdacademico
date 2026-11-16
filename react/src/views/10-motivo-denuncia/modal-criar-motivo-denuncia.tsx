@@ -108,7 +108,7 @@ export function ModalCriarMotivoDenuncia({ auth, aoFechar, aoCriado }: ModalCria
         <Campo
           rotulo="Descrição"
           erro={erroDe('descricao') ?? errosCampo.descricao}
-          dica="Texto exibido pra quem for escolher este motivo na tela de denúncia, é o único identificador do motivo, então precisa ser claro por si só."
+          dica="Texto exibido para quem for escolher este motivo na tela de denúncia, é o único identificador do motivo, então precisa ser claro por si só."
           className="sm:col-span-2"
         >
           {({ atributos, classeErro }) => (

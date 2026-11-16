@@ -197,7 +197,11 @@ export function Transparencia() {
             </dl>
           </div>
           <ul className="legenda mt-6 texto-fraco list-disc pl-5 space-y-1">
-            <li>Estimativa. A tarifa do cartão e a do boleto são confirmadas pelo provedor no pagamento.</li>
+            {/* O boleto só é citado quando está ligado (boleto_habilitado). */}
+            <li>
+              Estimativa. {boletoHabilitado ? 'A tarifa do cartão e a do boleto são confirmadas' : 'A tarifa do cartão é confirmada'}{' '}
+              pelo provedor no pagamento.
+            </li>
             <li>
               O mínimo de {formatarMoeda(taxaMinimaRepasse)} vale para o repasse inteiro da campanha, não para cada
               apoio. Aqui, o simulador trata o seu apoio como se fosse o único da campanha.

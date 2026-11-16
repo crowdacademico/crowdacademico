@@ -2716,3 +2716,188 @@ $$;
 -- relatorio_visualizar por dentro; o PUBLIC não executa.
 REVOKE EXECUTE ON FUNCTION public.serie_metricas_dashboard(DATE, DATE, BOOLEAN) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.serie_metricas_dashboard(DATE, DATE, BOOLEAN) TO app_nestjs;
+
+-- ============================================================================
+-- GRUPO CZ (16-11-2026) - Quem aprova não pode ser o dono da campanha (CT-11 do TCC). IDEMPOTENTE (pode colar de novo).
+--
+-- O que muda:
+--   1. fn_valida_transicao_campanha (05): um administrador com a permissão de aprovar não aprova a própria campanha
+--      (92044); e o encerramento direto ativo -> encerrado por quem tem a permissão de decidir pedidos não vale para o
+--      dono (o encerramento sem contribuição, RF-068, continua).
+--   2. decidir_solicitacao_encerramento (03): o dono da campanha não decide o próprio pedido de encerramento (92045).
+-- Só troca o corpo das duas funções; a trigger e os grants continuam os mesmos. Não precisa parar o Nest.
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.fn_valida_transicao_campanha()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.status      IS NOT DISTINCT FROM OLD.status
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin    IS NOT DISTINCT FROM OLD.id_admin THEN
+        RETURN NEW;
+    END IF;
+
+    IF OLD.status = 'aguardando_aprovacao' AND NEW.status = 'ativo'
+       AND NEW.aprovado_em IS NOT NULL
+       AND public.tem_permissao('campanha_aprovar') THEN
+        -- Conflito de interesse (CT-11): quem aprova não pode ser o dono, nem um administrador que tenha a própria
+        -- campanha na fila. Outro administrador aprova. Só aqui, dentro de quem tem a permissão: o dono sem ela
+        -- continua caindo no 92001 do fim (as grades da suíte 8 não mudam).
+        IF NEW.id_usuario = public.id_usuario_atual() THEN
+            RAISE EXCEPTION 'Você não pode aprovar a sua própria campanha. Outro administrador precisa fazer a aprovação.'
+                USING ERRCODE = '92044';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    IF OLD.status = 'aguardando_aprovacao' AND NEW.status = 'rejeitado'
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND public.tem_permissao('campanha_rejeitar') THEN
+        RETURN NEW;
+    END IF;
+
+    -- O dono não encerra a própria campanha por este caminho, mesmo tendo a permissão (decidir_solicitacao_encerramento
+    -- recusa antes com 92045); segue para as regras de baixo, onde só o encerramento sem contribuição (10) o libera.
+    IF OLD.status = 'ativo' AND NEW.status = 'encerrado'
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_usuario IS DISTINCT FROM public.id_usuario_atual()
+       AND public.tem_permissao('solicitacao_encerramento_decidir') THEN
+        RETURN NEW;
+    END IF;
+
+    IF OLD.status = 'ativo'
+       AND OLD.data_fim IS NOT NULL AND OLD.data_fim <= NOW()
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin    IS NOT DISTINCT FROM OLD.id_admin
+       AND (
+            (NEW.status = 'sucesso'      AND NEW.valor_bruto_arrecadado >= NEW.meta_financeira)
+         OR (NEW.status = 'nao_atingido' AND NEW.valor_bruto_arrecadado <  NEW.meta_financeira)
+       )
+    THEN
+        RETURN NEW;
+    END IF;
+
+    -- Reenvio esgotado vale para QUALQUER perfil, inclusive quem tem campanha_editar.
+    IF OLD.status = 'rejeitado' AND NEW.status = 'aguardando_aprovacao'
+       AND public.fn_campanha_reenvios_esgotados(OLD.id_campanha) THEN
+        RAISE EXCEPTION 'Esta campanha já usou todos os reenvios permitidos e agora é somente leitura.'
+            USING ERRCODE = '91025';
+    END IF;
+
+    IF OLD.status IN ('rascunho', 'rejeitado') AND NEW.status = 'aguardando_aprovacao'
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin    IS NOT DISTINCT FROM OLD.id_admin
+       AND public.tem_permissao('campanha_editar') THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.id_usuario = public.id_usuario_atual()
+       AND OLD.status IN ('rejeitado', 'rascunho') AND NEW.status = 'aguardando_aprovacao'
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin    IS NOT DISTINCT FROM OLD.id_admin
+    THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM perfil_pesquisador pp
+            WHERE pp.id_usuario = public.id_usuario_atual() AND pp.status_pesquisador = 'ativo'
+        ) THEN
+            RAISE EXCEPTION 'Pesquisador suspenso não pode enviar campanha para aprovação.'
+                USING ERRCODE = '92009';
+        END IF;
+
+        IF OLD.status = 'rejeitado' THEN
+            IF (SELECT s.prazo_reenvio_ate FROM public.fn_campanha_situacao_reenvio(OLD.id_campanha) s) <= NOW()
+            THEN
+                RAISE EXCEPTION 'O prazo para reenviar esta campanha rejeitada já venceu.'
+                    USING ERRCODE = '91026';
+            END IF;
+        END IF;
+
+        RETURN NEW;
+    END IF;
+
+    IF NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin IS NOT DISTINCT FROM OLD.id_admin
+       AND (
+            (OLD.status = 'ativo'                AND NEW.status = 'encerrado_moderacao')
+         OR (OLD.status = 'aguardando_aprovacao' AND NEW.status = 'rejeitado')
+       )
+       AND EXISTS (
+           SELECT 1 FROM perfil_pesquisador pp
+           WHERE pp.id_usuario = NEW.id_usuario AND pp.status_pesquisador = 'suspenso'
+       )
+    THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin IS NOT DISTINCT FROM OLD.id_admin
+       AND OLD.status = 'ativo' AND NEW.status = 'encerrado_moderacao'
+       AND public.tem_permissao('campanha_encerrar_moderacao')
+    THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin IS NOT DISTINCT FROM OLD.id_admin
+       AND OLD.status = 'aguardando_aprovacao' AND NEW.status = 'rejeitado'
+       AND public.fn_usuario_excluido(NEW.id_usuario)
+    THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin IS NOT DISTINCT FROM OLD.id_admin
+       AND OLD.status = 'ativo' AND NEW.status = 'encerrado'
+       AND NEW.id_usuario = public.id_usuario_atual()
+       AND EXISTS (SELECT 1 FROM solicitacao_encerramento se WHERE se.id_campanha = OLD.id_campanha AND se.status = 'aprovado' AND se.id_admin IS NULL)
+    THEN
+        RETURN NEW;
+    END IF;
+
+    RAISE EXCEPTION 'Transição de status de campanha não autorizada (% -> %).', OLD.status, NEW.status
+        USING ERRCODE = '92001';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.decidir_solicitacao_encerramento(p_id_solicitacao INT, p_aprovar BOOLEAN, p_justificativa TEXT)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_id_campanha INT;
+    v_status      status_encerramento;
+BEGIN
+    IF NOT public.tem_permissao('solicitacao_encerramento_decidir') THEN
+        RAISE EXCEPTION 'Sem permissão para decidir pedidos de encerramento.' USING ERRCODE = '92032';
+    END IF;
+    SELECT id_campanha, status INTO v_id_campanha, v_status FROM solicitacao_encerramento WHERE id_solicitacao_encerramento = p_id_solicitacao;
+    IF v_status IS DISTINCT FROM 'pendente' THEN
+        RAISE EXCEPTION 'Só um pedido pendente pode ser decidido.' USING ERRCODE = '91041';
+    END IF;
+    -- Conflito de interesse: o dono da campanha não decide o próprio pedido, nem sendo administrador.
+    IF EXISTS (SELECT 1 FROM campanha WHERE id_campanha = v_id_campanha AND id_usuario = public.id_usuario_atual()) THEN
+        RAISE EXCEPTION 'Você não pode decidir o pedido de encerramento da sua própria campanha. Outro administrador precisa decidir.'
+            USING ERRCODE = '92045';
+    END IF;
+    IF NOT p_aprovar AND (p_justificativa IS NULL OR btrim(p_justificativa) = '') THEN
+        RAISE EXCEPTION 'Escreva por que o pedido foi rejeitado.' USING ERRCODE = '90029';
+    END IF;
+    IF p_aprovar AND NOT EXISTS (SELECT 1 FROM campanha WHERE id_campanha = v_id_campanha AND status = 'ativo') THEN
+        RAISE EXCEPTION 'A campanha já não está ativa: o pedido não pode ser aprovado.' USING ERRCODE = '91042';
+    END IF;
+
+    UPDATE solicitacao_encerramento
+    SET status = CASE WHEN p_aprovar THEN 'aprovado' ELSE 'rejeitado' END::status_encerramento,
+        id_admin = public.id_usuario_atual(),
+        justificativa_admin = NULLIF(btrim(COALESCE(p_justificativa, '')), ''),
+        avaliado_em = NOW()
+    WHERE id_solicitacao_encerramento = p_id_solicitacao;
+
+    IF p_aprovar THEN
+        UPDATE campanha SET status = 'encerrado' WHERE id_campanha = v_id_campanha;
+    END IF;
+    RETURN v_id_campanha;
+END;
+$$;

@@ -132,7 +132,7 @@ export function ModalCriarAreaConhecimento({ auth, aoFechar, aoCriado }: ModalCr
       <Campo
         rotulo="Grande área (pai)"
         erro={errosCampo.idPai}
-        dica="Deixe em branco pra cadastrar uma grande área nova; escolha uma existente pra cadastrar uma área filha dela (a hierarquia tem só 2 níveis)."
+        dica="Deixe em branco para cadastrar uma grande área nova; escolha uma existente para cadastrar uma área filha dela (a hierarquia tem só 2 níveis)."
       >
         {({ atributos, classeErro }) => (
           <select

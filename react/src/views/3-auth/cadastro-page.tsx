@@ -240,7 +240,8 @@ export function CadastroPage({ auth }: PropsPagina) {
           <p className="text-sm texto-fraco mb-6">
             Já tem conta? <Link to="/login" className="texto-marca font-bold hover:underline">Entrar</Link>
           </p>
-          <div className="flex items-center gap-2 mb-8" aria-label={`Etapa ${passo} de 2`}>
+          <p className="sr-only">Etapa {passo} de 2</p>
+          <div className="flex items-center gap-2 mb-8" aria-hidden="true">
             {[1, 2].map((numero) => (
               <span
                 key={numero}

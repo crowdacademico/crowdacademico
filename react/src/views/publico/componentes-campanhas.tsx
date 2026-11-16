@@ -8,7 +8,7 @@ import {
 } from '../../services/12-campanha/constants/status-campanha.constants';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
-import { diasRestantes, formatarData, percentualArrecadado } from './util-campanhas';
+import { diasAteInicio, diasRestantes, duracaoEmDias, formatarData, percentualArrecadado } from './util-campanhas';
 
 function iniciaisPesquisador(nome: string | null): string {
   if (!nome) {
@@ -39,7 +39,14 @@ export function CartaoCampanha({
   const diasAteFim = diasRestantes(campanha.dataFim);
   // Reta final: nos 3 últimos dias o prazo fica em vermelho (substitui a antiga seção "Últimos Dias" da Home).
   const reta = campanha.status === 'ativo' && diasAteFim !== null && diasAteFim <= 3;
-  const rotuloTempo = campanha.status === 'ativo'
+  // RF-061: antes de começar, "Começa em N dias" e a DURAÇÃO da captação ("restantes" não faz sentido para quem lê).
+  const diasParaComecar = aguardandoInicio ? diasAteInicio(campanha.dataInicio) : null;
+  const duracao = aguardandoInicio ? duracaoEmDias(campanha.dataInicio, campanha.dataFim) : null;
+  const rotuloTempo = aguardandoInicio
+    ? duracao === null
+      ? 'Duração não informada'
+      : `${duracao} dia${duracao === 1 ? '' : 's'} de captação`
+    : campanha.status === 'ativo'
     ? diasAteFim === null
       ? 'Prazo não informado'
       : `${diasAteFim} dia${diasAteFim === 1 ? '' : 's'} restante${diasAteFim === 1 ? '' : 's'}`
@@ -119,14 +126,17 @@ export function CartaoCampanha({
                 <i className="fa-regular fa-clock text-lg shrink-0" aria-hidden="true" />
                 <div>
                   <span className="font-bold text-sm block">
-                    {campanha.dataInicio
-                      ? `Início em ${formatarData(campanha.dataInicio)}`
+                    {diasParaComecar !== null
+                      ? `Começa em ${diasParaComecar} dia${diasParaComecar === 1 ? '' : 's'}`
                       : 'Início previsto'}
                   </span>
-                  <span className="paragrafo-denso">Meta: {formatarMoeda(campanha.metaFinanceira)}</span>
+                  <span className="paragrafo-denso texto-herdado block">
+                    {campanha.dataInicio ? `Início em ${formatarData(campanha.dataInicio)}` : 'Data de início não informada'}
+                  </span>
+                  <span className="paragrafo-denso texto-herdado">Meta: {formatarMoeda(campanha.metaFinanceira)}</span>
                 </div>
               </div>
-              <span className="fundo-realce px-2 py-1 rounded-md legenda mt-3 inline-block texto-fraco">
+              <span className="fundo-realce px-2 py-1 rounded-md legenda mt-3 inline-block texto-padrao">
                 <i className="fa-regular fa-clock mr-1" aria-hidden="true" />
                 {rotuloTempo}
               </span>
@@ -156,7 +166,7 @@ export function CartaoCampanha({
                   </div>
                 </div>
               )}
-              <div className="flex flex-nowrap justify-between items-center gap-2 legenda mt-3 texto-fraco">
+              <div className="flex flex-nowrap justify-between items-center gap-2 legenda mt-3 texto-padrao">
                 <span className="fundo-realce px-2 py-1 rounded-md">
                   Meta: {formatarMoeda(campanha.metaFinanceira)}
                 </span>

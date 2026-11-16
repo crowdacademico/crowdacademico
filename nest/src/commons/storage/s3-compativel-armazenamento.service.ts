@@ -99,7 +99,7 @@ export class S3CompativelArmazenamentoService implements ArmazenamentoService {
     const valor = this.config.get<string>(nome);
     if (!valor) {
       throw new Error(
-        `Variável de ambiente ${nome} não configurada - necessária pro ` +
+        `Variável de ambiente ${nome} não configurada - necessária para o ` +
           'módulo de armazenamento de arquivos (commons/storage). Ver ' +
           '.env.example.',
       );

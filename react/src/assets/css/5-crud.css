@@ -568,4 +568,103 @@
     cursor: not-allowed;
     background-color: transparent;
   }
+
+  /* DS-121. A tabela vira lista de cartões no celular (16-11-2026, RNF-01 e CT-15 do TCC). Abaixo de 640 px de JANELA
+     (o mesmo corte do celular desta folha; @media e não @container, para não mexer nas tabelas estreitas do computador),
+     cada linha vira um cartão e cada célula, uma linha do cartão com o nome da coluna à esquerda (data-rotulo, posto
+     pela GenericTable) e o valor à direita. As ações continuam as mesmas, no pé do cartão. Sem rolagem lateral: as
+     larguras medidas pela tabela (DS-104, estilo em linha) e as colunas presas deixam de valer. O cabeçalho some da
+     tela; ordenar continua pela barra de filtros e pela tela larga. */
+  @media (max-width: 640px) {
+    .crud-tabela__wrapper {
+      overflow-x: visible;
+    }
+
+    .crud-tabela,
+    .crud-tabela tbody,
+    .crud-tabela tr,
+    .crud-tabela td {
+      display: block;
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: none !important;
+    }
+
+    .crud-tabela thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .crud-tabela tbody tr {
+      background-color: var(--cor-fundo-cartao);
+      border: 1px solid var(--cor-borda);
+      border-radius: 0.75rem;
+      padding: 0.5rem 0.875rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .crud-tabela tbody tr.crud-tabela__linha-vazia {
+      display: none;
+    }
+
+    .crud-tabela td,
+    .crud-tabela td.crud-tabela__col--id,
+    .crud-tabela td.crud-tabela__col--nome,
+    .crud-tabela td.crud-tabela__col--acoes {
+      position: static;
+      height: auto;
+      padding: 0.4rem 0 !important;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      text-align: right;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      border: 0;
+      box-shadow: none;
+      background: transparent;
+    }
+
+    .crud-tabela tr > td + td {
+      border-top: 1px solid var(--cor-borda) !important;
+    }
+
+    .crud-tabela td[data-rotulo]::before {
+      content: attr(data-rotulo);
+      flex-shrink: 0;
+      max-width: 45%;
+      text-align: left;
+      font-weight: 600;
+      color: var(--cor-texto-fraco);
+    }
+
+    /* Nome e texto de uma linha só (DS-100) podem quebrar dentro do cartão: aqui a largura é a do celular. */
+    .crud-tabela td .crud-tabela__nome,
+    .crud-tabela td .crud-tabela__nome * {
+      white-space: normal;
+      text-align: right;
+    }
+
+    .crud-tabela td .crud-tabela__acoes {
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    /* Célula sem rótulo (as tabelas pequenas montadas à mão, dentro dos modais): o valor empilhado, à esquerda. */
+    .crud-tabela td:not([data-rotulo]) {
+      display: block;
+      text-align: left;
+    }
+
+    /* Linha de "nenhum registro" e carregando: sem rótulo, ocupa o cartão inteiro. */
+    .crud-tabela td[colspan] {
+      display: block;
+      text-align: center;
+    }
+  }
 }

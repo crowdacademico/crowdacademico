@@ -12,3 +12,8 @@
 # Cache do Windows PowerShell 5.1 (lista de módulos). Aparece aqui quando alguma ferramenta abre o PowerShell sem a
 # variável LOCALAPPDATA: em vez de ir para AppData, ele grava na pasta atual. Não é do projeto.
 /Microsoft/
+
+# Testes de ponta a ponta (testes-e2e/): dependências e o que cada rodada gera (banco descartável, fotos, relatório
+# HTML do Playwright). O relatório em markdown (testes-e2e/resultados/) vai para o git.
+/testes-e2e/node_modules
+/testes-e2e/.estado

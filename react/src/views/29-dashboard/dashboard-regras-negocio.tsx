@@ -94,7 +94,7 @@ const SECOES_MODAL_TERMO_USO = [
         (erro de português etc.), um administrador torna o rascunho vigente manualmente pelo
         botão &quot;Tornar vigente&quot;, dentro do Alterar. <strong>Alterar</strong> o
         conteúdo só é aceito enquanto NINGUÉM aceitou aquela versão ainda - assim que a 1ª
-        pessoa aceitar, ela trava pra sempre (o valor probatório do aceite se perderia se o
+        pessoa aceitar, ela trava para sempre (o valor probatório do aceite se perderia se o
         texto pudesse mudar depois). Veja o histórico completo (todos os tipos) em{' '}
         <Link to="/admin/termos-uso" className="link-texto">
           Termo de Uso

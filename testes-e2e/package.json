@@ -1,0 +1,21 @@
+{
+  "name": "testes-e2e-crowdacademico",
+  "private": true,
+  "type": "module",
+  "description": "Testes de ponta a ponta: interface (Playwright), acessibilidade (axe-core), desempenho e roteiros da API, com banco Postgres local descartável e provedores de pagamento e e-mail de teste.",
+  "scripts": {
+    "test": "playwright test",
+    "test:interface": "playwright test --project=interface",
+    "test:api": "playwright test --project=api",
+    "test:acessibilidade": "playwright test --project=acessibilidade",
+    "test:desempenho": "playwright test --project=desempenho",
+    "relatorio": "node relatorio.mjs",
+    "banco": "node ambiente/banco-local.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "axe-core": "4.13.0",
+    "embedded-postgres": "18.4.0-beta.17",
+    "pg": "8.23.0"
+  }
+}

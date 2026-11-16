@@ -339,7 +339,7 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
     <ModalFicha
       titulo="Apoiar esta pesquisa"
       subtitulo={campanha.titulo}
-      ajuda="Pix: o QR aparece aqui mesmo. Cartão e boleto: o pagamento é na página segura do Asaas, o intermediador de pagamento da plataforma."
+      ajuda={`Pix: o QR aparece aqui mesmo. ${boletoLigado ? 'Cartão e boleto' : 'Cartão'}: o pagamento é na página segura do Asaas, o intermediador de pagamento da plataforma.`}
       aoFechar={aoFechar}
       erro={erro}
       fecharAoClicarFora={false}
@@ -440,7 +440,7 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
         )}
         {algumaPedeConta && (
           <p className="legenda texto-fraco">
-            Cartão e boleto pedem uma conta, para a devolução e as recompensas chegarem a você.{' '}
+            {boletoLigado ? 'Cartão e boleto pedem' : 'O cartão pede'} uma conta, para a devolução e as recompensas chegarem a você.{' '}
             <Link to="/login" state={{ voltarPara: voltarAoApoio }} className="link-texto">
               Entrar
             </Link>

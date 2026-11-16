@@ -64,7 +64,7 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     oQueFaz:
       'Permite criar, editar e excluir os valores globais que controlam regras de negócio (prazos, limites, taxas).',
     porQueExiste:
-      'Essas configurações afetam o sistema inteiro de uma vez, mudar uma tem efeito imediato pra todo mundo.',
+      'Essas configurações afetam o sistema inteiro de uma vez, mudar uma tem efeito imediato para todo mundo.',
     impacto: 'alto',
   },
   tipolink_gerenciar: {
@@ -80,9 +80,9 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     nome: 'Gerenciar Áreas de Conhecimento',
     resumo: 'Cadastrar/editar as áreas de conhecimento do catálogo.',
     oQueFaz:
-      'Permite cadastrar/editar as áreas de conhecimento (ex.: Biologia, Engenharia) usadas pra classificar pesquisadores e campanhas.',
+      'Permite cadastrar/editar as áreas de conhecimento (ex.: Biologia, Engenharia) usadas para classificar pesquisadores e campanhas.',
     porQueExiste:
-      'Catálogo de apoio à busca e organização, sem ele, não dá pra filtrar campanhas por área.',
+      'Catálogo de apoio à busca e organização, sem ele, não dá para filtrar campanhas por área.',
     impacto: 'baixo',
   },
   motivo_denuncia_gerenciar: {
@@ -164,8 +164,8 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
   verificacao_email_reenviar: {
     nome: 'Reenviar Verificação de E-mail',
     resumo: 'Disparar de novo o e-mail de confirmação de conta.',
-    oQueFaz: 'Permite disparar de novo o e-mail de confirmação de conta pra um usuário que ainda não verificou.',
-    porQueExiste: 'Ação de suporte comum, e-mail que não chegou, foi pro spam, ou o link expirou.',
+    oQueFaz: 'Permite disparar de novo o e-mail de confirmação de conta para um usuário que ainda não verificou.',
+    porQueExiste: 'Ação de suporte comum, e-mail que não chegou, foi para o spam, ou o link expirou.',
     impacto: 'baixo',
   },
   notificacao_processar: {
@@ -180,7 +180,7 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     resumo: 'Criar a conta de outra pessoa pelo painel.',
     oQueFaz: 'Permite usar o "Criar usuário" do painel administrativo para abrir uma conta em nome de outra pessoa.',
     porQueExiste:
-      'Normalmente cada pessoa cria a própria conta no cadastro, aceitando o Termo de Uso; esta permissão existe só pra quando a administração precisa abrir uma conta.',
+      'Normalmente cada pessoa cria a própria conta no cadastro, aceitando o Termo de Uso; esta permissão existe só para quando a administração precisa abrir uma conta.',
     impacto: 'médio',
   },
   usuario_excluir: {
@@ -188,7 +188,7 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     resumo: 'Excluir (logicamente) a conta de outra pessoa.',
     oQueFaz: 'Permite excluir, de forma lógica (reversível só via banco), a conta de outra pessoa.',
     porQueExiste:
-      'Normalmente é autoatendimento, cada um exclui a própria conta; esta permissão existe só pra quando é preciso agir sobre a conta de outra pessoa.',
+      'Normalmente é autoatendimento, cada um exclui a própria conta; esta permissão existe só para quando é preciso agir sobre a conta de outra pessoa.',
     impacto: 'alto',
   },
   usuario_desbloquear: {
@@ -196,7 +196,7 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     resumo: 'Zerar o bloqueio de login por tentativas erradas.',
     oQueFaz: 'Permite zerar o bloqueio de login causado por excesso de tentativas erradas de senha.',
     porQueExiste:
-      'Ação de suporte recorrente, a pessoa errou demais a senha e precisa de alguém pra liberar o acesso de novo.',
+      'Ação de suporte recorrente, a pessoa errou demais a senha e precisa de alguém para liberar o acesso de novo.',
     impacto: 'médio',
   },
   usuario_visualizar_atendimento: {
@@ -213,7 +213,7 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     nome: 'Aprovar Campanha',
     resumo: 'Publicar oficialmente uma campanha submetida.',
     oQueFaz: 'Permite publicar oficialmente uma campanha de financiamento submetida por um pesquisador.',
-    porQueExiste: 'É o portão de qualidade antes de uma campanha aparecer pro público arrecadar dinheiro de verdade.',
+    porQueExiste: 'É o portão de qualidade antes de uma campanha aparecer para o público arrecadar dinheiro de verdade.',
     impacto: 'alto',
   },
   campanha_rejeitar: {
@@ -235,14 +235,14 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     resumo: 'Dar um veredito oficial a uma denúncia registrada.',
     oQueFaz: 'Permite dar um veredito/resposta oficial a uma denúncia registrada por outro usuário.',
     porQueExiste:
-      'Toda denúncia precisa de um desfecho visível, sem isso, viraria fila sem fim, sem retorno pra quem denunciou.',
+      'Toda denúncia precisa de um desfecho visível, sem isso, viraria fila sem fim, sem retorno para quem denunciou.',
     impacto: 'médio',
   },
   solicitacao_encerramento_decidir: {
     nome: 'Decidir Encerramento Antecipado',
     resumo: 'Aprovar/recusar pedido de encerrar campanha antes do prazo.',
     oQueFaz:
-      'Permite aprovar ou recusar o pedido de um pesquisador pra encerrar a própria campanha antes do prazo original.',
+      'Permite aprovar ou recusar o pedido de um pesquisador para encerrar a própria campanha antes do prazo original.',
     porQueExiste: 'Encerrar antes do prazo mexe com a expectativa de quem já contribuiu, não pode ser decisão unilateral do autor.',
     impacto: 'alto',
   },
@@ -258,13 +258,13 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     nome: 'Moderar Atualização',
     resumo: 'Ocultar/remover atualizações publicadas por um pesquisador.',
     oQueFaz: 'Permite ocultar/remover atualizações que um pesquisador publica sobre o andamento da campanha.',
-    porQueExiste: 'Mesma lógica de moderar comentário, mas pro conteúdo que o próprio autor da campanha publica.',
+    porQueExiste: 'Mesma lógica de moderar comentário, mas para o conteúdo que o próprio autor da campanha publica.',
     impacto: 'médio',
   },
   repasse_aprovar: {
     nome: 'Aprovar Repasse',
     resumo: 'Liberar a transferência do dinheiro arrecadado.',
-    oQueFaz: 'Permite liberar a transferência de dinheiro arrecadado pra conta do pesquisador.',
+    oQueFaz: 'Permite liberar a transferência de dinheiro arrecadado para a conta do pesquisador.',
     porQueExiste: 'É o ponto onde dinheiro de verdade sai do sistema, exige aprovação explícita, nunca automático.',
     impacto: 'alto',
   },

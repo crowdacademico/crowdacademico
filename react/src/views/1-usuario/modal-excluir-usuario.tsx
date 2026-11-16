@@ -70,7 +70,7 @@ export function ModalExcluirUsuario({ idUsuario, nome, email, emailVerificado, a
         <p>
           A conta é marcada como excluída (exclusão lógica), não apagada do banco: o login
           deixa de funcionar e o perfil some do público na hora, mas o registro continua
-          existindo pra auditoria e conformidade com a LGPD. Não existe um botão de
+          existindo para auditoria e conformidade com a LGPD. Não existe um botão de
           "restaurar" no painel - reverter isso hoje exige acesso direto ao banco.
         </p>
       </CaixaAviso>

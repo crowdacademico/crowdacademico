@@ -17,7 +17,9 @@ import type { PropsPagina } from '../../services/router/pagina.type';
 import { ModalDenunciar } from '../19-denuncia/modal-denunciar';
 import { CartaoCampanha } from './componentes-campanhas';
 import { ListaAtualizacoes } from './lista-atualizacoes';
-import { ordenarAtualizacoes } from './util-campanhas';
+import { formatarData, ordenarAtualizacoes } from './util-campanhas';
+import { LinkAcademicoExterno } from './links-academicos';
+import { useLinksAcademicos } from './use-links-academicos';
 
 interface DadosPagina {
   idUsuario: string;
@@ -67,6 +69,7 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
   const idVisualizador = auth.usuario?.idUsuario ?? null;
   const ehProprio = idVisualizador === id;
   const chaveSeguimento = `${id}:${idVisualizador ?? 0}`;
+  const links = useLinksAcademicos(auth.authFetch, perfil ? id : null);
   const dadosSeguimento = seguimento?.chave === chaveSeguimento ? seguimento : null;
 
   useEffect(() => {
@@ -260,7 +263,7 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
               // Sem foto: as iniciais no MESMO tamanho da foto. Não usar scale: ele só aumenta o desenho, sem ocupar espaço,
               // e o círculo ficava por cima do nome ao lado.
               <span
-                className="w-28 h-28 sm:w-44 sm:h-44 rounded-full flex items-center justify-center fundo-marca-sobre-escuro texto-sobre-escuro-forte text-4xl sm:text-5xl font-bold border-4 border-white/20 shadow-2xl select-none"
+                className="w-28 h-28 sm:w-44 sm:h-44 rounded-full flex items-center justify-center fundo-marca-forte texto-sobre-cor text-4xl sm:text-5xl font-bold border-4 border-white/20 shadow-2xl select-none"
                 aria-hidden="true"
               >
                 {iniciais(pesquisador?.nome)}
@@ -314,6 +317,25 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
             <aside className="order-first lg:order-none">
               <div className="pagina-publica__cartao cartao lg:sticky lg:top-24 space-y-5" id="perfil-pesquisador-cta">
                 <h2 className="subtitulo">Acompanhe a pesquisa</h2>
+                {/* RF-028: data de cadastro do perfil e links acadêmicos na ordem que o pesquisador definiu, com os rótulos. */}
+                {perfil?.ativadoEm && (
+                  <p className="paragrafo texto-fraco">
+                    <i className="fa-solid fa-calendar-check mr-2" aria-hidden="true" />
+                    Pesquisador na plataforma desde {formatarData(perfil.ativadoEm)}
+                  </p>
+                )}
+                {links && links.length > 0 && (
+                  <div>
+                    <h3 className="rotulo mb-2">Links acadêmicos</h3>
+                    <ul className="space-y-2">
+                      {links.map((link) => (
+                        <li key={link.idLinkAcademico} className="paragrafo">
+                          <LinkAcademicoExterno link={link} />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 {pontuacao !== null && (
                   <div>
                     <div className="flex items-baseline justify-between gap-3">

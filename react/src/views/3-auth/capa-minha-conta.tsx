@@ -61,11 +61,13 @@ export function CapaMinhaConta({ auth }: CapaMinhaContaProps) {
       {/* Só o degradê, sem a grade quadriculada: o mesmo topo da página do pesquisador. */}
       <div className="h-28 sm:h-32 rounded-t-2xl superficie-escura" aria-hidden="true" />
       <div className="px-6 sm:px-8 pb-6">
-        <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-12 sm:-mt-14">
-          <div className="p-1 rounded-full fundo-cartao shadow-lg w-fit shrink-0 relative">
+        {/* Só o avatar sobe sobre o degradê; nome e e-mail ficam abaixo dele, no fundo claro (antes a linha inteira subia
+            e o nome, escuro, caía em cima do degradê escuro). */}
+        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+          <div className="p-1 rounded-full fundo-cartao shadow-lg w-fit shrink-0 relative -mt-12 sm:-mt-14">
             <AvatarUsuario nome={usuario.nome} foto={usuario.avatarUrl} tamanho="xxl" forma="circulo" />
           </div>
-          <div className="min-w-0 flex-1 sm:pb-1">
+          <div className="min-w-0 flex-1 sm:pt-3">
             <p className="titulo-secao texto-forte break-words">{usuario.nome}</p>
             <div className="paragrafo flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-1 texto-fraco">
               <span className="break-all">{usuario.email}</span>
@@ -82,20 +84,20 @@ export function CapaMinhaConta({ auth }: CapaMinhaContaProps) {
           </div>
         </div>
 
-        <dl className={`grid grid-cols-2 gap-3 mt-6 ${ehPesquisador ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+        <ul aria-label="Resumo da conta" className={`grid grid-cols-2 gap-3 mt-6 ${ehPesquisador ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
           {tiles.map((tile) => (
             // No celular o ícone sai e o rótulo quebra em duas linhas: com reticências ("Apoios ...") ninguém sabia o que era.
-            <div key={tile.rotulo} className="flex items-center gap-3 rounded-xl border borda-padrao fundo-sutil px-3 sm:px-4 py-3 min-w-0">
+            <li key={tile.rotulo} className="flex items-center gap-3 rounded-xl border borda-padrao fundo-sutil px-3 sm:px-4 py-3 min-w-0">
               <span className="w-10 h-10 rounded-full fundo-cartao hidden sm:flex items-center justify-center texto-marca shrink-0" aria-hidden="true">
                 <i className={`fa-solid ${tile.icone}`} />
               </span>
               <div className="min-w-0 flex flex-col-reverse">
-                <dt className="legenda texto-fraco leading-tight">{tile.rotulo}</dt>
-                <dd className="numero text-xl font-bold texto-forte">{tile.valor}</dd>
+                <span className="legenda texto-fraco leading-tight">{tile.rotulo}</span>
+                <span className="numero text-xl font-bold texto-forte">{tile.valor}</span>
               </div>
-            </div>
+            </li>
           ))}
-        </dl>
+        </ul>
       </div>
     </div>
   );

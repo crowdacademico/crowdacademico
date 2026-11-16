@@ -94,7 +94,7 @@ const CLASSE_COLUNA_PROPRIA = CLASSE_CENTRALIZADA + ' crud-tabela__col--acao-pro
 // contrato acima (Endossar, o Salvar da edição na linha). Ações do contrato usam CelulaAcoes.
 export function CelulaAcoesLivre({ children }: { children: ReactNode }) {
   return (
-    <td className={CLASSE_COLUNA_ACOES}>
+    <td className={CLASSE_COLUNA_ACOES} data-rotulo="Ações">
       <div className="crud-tabela__acoes">{children}</div>
     </td>
   );
@@ -116,7 +116,7 @@ interface CelulaAcoesProps<T> {
 export function CelulaAcoes<T>({ acoes, linha, indisponivel, coluna, emColuna }: CelulaAcoesProps<T>) {
   const mostra = (acao: AcaoPadrao) => (coluna ? coluna.acoes.includes(acao) : !emColuna?.includes(acao));
   return (
-    <td className={coluna ? CLASSE_COLUNA_PROPRIA : CLASSE_COLUNA_ACOES}>
+    <td className={coluna ? CLASSE_COLUNA_PROPRIA : CLASSE_COLUNA_ACOES} data-rotulo={coluna?.rotulo ?? 'Ações'}>
       <div className="crud-tabela__acoes">
         {[...ACOES_SISTEMA, ...ACOES_PUBLICAS, ...ACOES_CAMPO_TESTES].filter(({ acao }) => mostra(acao)).map(({ acao, ...visual }) => {
           const aoClicar = acoes[acao];

@@ -44,6 +44,20 @@ export function diasRestantes(dataFim: string | null): number | null {
   return Math.max(0, Math.ceil((instanteFim - Date.now()) / 86_400_000));
 }
 
+// RF-061: dias inteiros até o início (arredonda para cima: começa amanhã às 9h = "1 dia").
+export function diasAteInicio(dataInicio: string | null): number | null {
+  return diasRestantes(dataInicio);
+}
+
+// Duração da captação, do início ao fim. Antes de começar, é ela que faz sentido mostrar, não "dias restantes".
+export function duracaoEmDias(dataInicio: string | null, dataFim: string | null): number | null {
+  if (!dataInicio || !dataFim) return null;
+  const inicio = Date.parse(dataInicio);
+  const fim = Date.parse(dataFim);
+  if (!Number.isFinite(inicio) || !Number.isFinite(fim)) return null;
+  return Math.max(0, Math.ceil((fim - inicio) / 86_400_000));
+}
+
 export function campanhaAceitaApoios(campanha: CampanhaResponse): boolean {
   const agora = Date.now();
   const inicio = campanha.dataInicio ? Date.parse(campanha.dataInicio) : null;

@@ -684,9 +684,9 @@ Cada trigger observa uma tabela que alimenta alguma dimensão e recalcula só qu
 Protege **quem** muda `status`, `aprovado_em` e `id_admin`. `pol_campanha_update` libera `UPDATE` ao dono, e o congelamento só protege a campanha depois de aprovada: sem esta trigger, o dono de uma campanha aguardando aprovação faria `status = 'ativo', aprovado_em = NOW(), id_admin = <ele mesmo>` e a campanha iria ao ar como se aprovada. Transições liberadas (a primeira que bater libera; qualquer outra levanta **92001**, com `origem -> destino` na mensagem):
 
 1. Nenhum dos três campos sensíveis mudou.
-2. `aguardando_aprovacao → ativo` por quem tem `campanha_aprovar`.
+2. `aguardando_aprovacao → ativo` por quem tem `campanha_aprovar`, **nunca o dono**: um administrador não aprova a própria campanha (**92044**, conflito de interesse, CT-11 do TCC; 16-11-2026). O dono sem a permissão continua no 92001.
 3. `aguardando_aprovacao → rejeitado` por quem tem `campanha_rejeitar`.
-4. `ativo → encerrado` por quem tem `solicitacao_encerramento_decidir`.
+4. `ativo → encerrado` por quem tem `solicitacao_encerramento_decidir`, se não for o dono (o dono só pela regra 10).
 5. Encerramento por prazo vencido, **autoverificável**: só com `data_fim <= NOW()` e o status novo batendo com arrecadado × meta (sucesso só se bateu, `nao_atingido` só se não). Impossível mentir o resultado, e não depende de permissão nem de "usuário de sistema".
 6. Envio para aprovação (`rascunho` ou `rejeitado` → `aguardando_aprovacao`) por quem tem `campanha_editar` ou pelo próprio dono, se for pesquisador ativo (92009) e, no reenvio, dentro do prazo (91026). Reenvio esgotado barra qualquer perfil, inclusive o admin (91025).
 7. Cascata da suspensão do pesquisador (RF-125), **autoverificável**: só se o dono está `'suspenso'` hoje, e só `ativo → encerrado_moderacao` ou `aguardando_aprovacao → rejeitado` ([03-P]).
@@ -814,7 +814,7 @@ Regras conferidas no PGlite com o banco inteiro, usando o papel real `app_nestjs
 **Em palavras simples:** sem dinheiro em jogo, o pesquisador cancela o projeto sozinho; com qualquer contribuição em jogo, pede ao administrador, porque o dinheiro precisa ser devolvido ou repassado.
 
 * **`encerrar_campanha_sem_contribuicao(p_id_campanha, p_justificativa)`** (`03`, `SECURITY DEFINER`), o "Cancelar o projeto": só o dono (92031), com justificativa (90028), campanha ativa (91038) e nenhuma contribuição pendente (de qualquer meio) nem confirmada (91043). Pix vencido, pagamento com erro e contribuição já devolvida não contam. Grava um pedido `aprovado` sem `id_admin` e encerra a campanha (ramo 10 da transição). Um pedido pendente da mesma campanha é cancelado na mesma operação. **Por quê:** o encerramento direto fica registrado no mesmo lugar dos outros (quem, quando, por quê), sem tabela nova.
-* **`decidir_solicitacao_encerramento(p_id_solicitacao, p_aprovar, p_justificativa)`** (`03`, `SECURITY DEFINER`): exige `solicitacao_encerramento_decidir` (92032), só pedido pendente (91041), rejeitar com justificativa (90029), aprovar só com a campanha ainda ativa (91042). Grava quem decidiu e quando; aprovar encerra a campanha na mesma operação, e o dinheiro segue `destino_dinheiro_campanha()`. Mudança direta de status para aprovado ou rejeitado é recusada (92033). O app só insere campanha e justificativa e só muda `status` para cancelar (`GRANT` por coluna). **Por quê:** pedido aprovado e campanha encerrada são uma coisa só; em dois passos, um poderia acontecer sem o outro.
+* **`decidir_solicitacao_encerramento(p_id_solicitacao, p_aprovar, p_justificativa)`** (`03`, `SECURITY DEFINER`): exige `solicitacao_encerramento_decidir` (92032), só pedido pendente (91041), o dono da campanha não decide o próprio pedido, nem sendo administrador (92045), rejeitar com justificativa (90029), aprovar só com a campanha ainda ativa (91042). Grava quem decidiu e quando; aprovar encerra a campanha na mesma operação, e o dinheiro segue `destino_dinheiro_campanha()`. Mudança direta de status para aprovado ou rejeitado é recusada (92033). O app só insere campanha e justificativa e só muda `status` para cancelar (`GRANT` por coluna). **Por quê:** pedido aprovado e campanha encerrada são uma coisa só; em dois passos, um poderia acontecer sem o outro.
 * **Um pendente por vez em cada campanha** (`uq_solicitacao_encerramento_pendente`); pedido decidido ou cancelado não muda mais (91041). Suíte 37 do PGlite.
 
 ### [05-K-2-J] Contestação da pontuação na própria denúncia (RF-034)
@@ -1249,7 +1249,7 @@ O raciocínio de arquitetura por trás de regras que valem para o banco inteiro.
 
 ## Como conferir este inventário
 
-**Contagem do inventário** (recontada nos `.sql` em 16-11-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **122 policies**, **125 triggers** no `05` (119 comuns e 6 `CONSTRAINT TRIGGER`), **199 funções** (158 no `05`, 39 no `03`, 1 no `08`, 1 no `01`), **69 índices** no `02` e **144 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (recontada nos `.sql` em 16-11-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **122 policies**, **125 triggers** no `05` (119 comuns e 6 `CONSTRAINT TRIGGER`), **199 funções** (158 no `05`, 39 no `03`, 1 no `08`, 1 no `01`), **69 índices** no `02` e **146 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
 
 Para recontar direto do banco (no SQL Editor do Supabase ou no banco local):
 

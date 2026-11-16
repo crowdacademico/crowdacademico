@@ -80,7 +80,7 @@ export function SeletorFotoPerfil({
       return;
     }
     if (arquivoEscolhido.size > TAMANHO_MAXIMO_BRUTO_BYTES) {
-      setErroLocal('Imagem muito grande pra processar.');
+      setErroLocal('Imagem muito grande para processar.');
       return;
     }
 

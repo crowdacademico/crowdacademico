@@ -162,7 +162,8 @@ function AbaApoiar() {
       </div>
 
       <h3 className="subtitulo mb-4">Tudo ou Nada e Flexível</h3>
-      <div className="pagina-publica__tabela overflow-x-auto">
+      {/* Rolável no celular: recebe o foco para a tabela rolar pelo teclado (WCAG 2.1.1; axe scrollable-region-focusable). */}
+      <div className="pagina-publica__tabela overflow-x-auto" tabIndex={0} role="region" aria-label="Comparação entre Tudo ou Nada e Flexível">
         <table className="w-full text-left">
           <thead>
             <tr>

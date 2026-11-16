@@ -90,7 +90,7 @@ async function adotar(pool: Pool): Promise<void> {
     console.log(`Marcado como já aplicado: ${nomeArquivo}`);
   }
   console.log(
-    '\nAdoção concluída - daqui pra frente, "npm run db:migrate" só aplica o que ' +
+    '\nAdoção concluída - daqui para frente, "npm run db:migrate" só aplica o que ' +
       'for realmente novo. Isto NÃO confere se o banco de verdade tem tudo que os ' +
       'arquivos descrevem - só estabelece a linha de base a partir de agora.',
   );
@@ -147,7 +147,7 @@ async function aplicar(pool: Pool): Promise<void> {
   }
 
   if (!algumPendente) {
-    console.log('\nNada novo pra aplicar - banco já está em dia.');
+    console.log('\nNada novo para aplicar - banco já está em dia.');
   }
 }
 

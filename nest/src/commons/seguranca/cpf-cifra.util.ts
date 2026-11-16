@@ -30,7 +30,7 @@ function chaveDeCifra(): Buffer {
   const segredo = process.env.CPF_ENCRYPTION_KEY;
   if (!segredo) {
     throw new Error(
-      'CPF_ENCRYPTION_KEY não definida no .env - obrigatória pra cifrar/decifrar CPF. Ver DOCUMENTACAO_BD.md, seção perfil_pesquisador.',
+      'CPF_ENCRYPTION_KEY não definida no .env - obrigatória para cifrar/decifrar CPF. Ver DOCUMENTACAO_BD.md, seção perfil_pesquisador.',
     );
   }
   return createHash('sha256').update(segredo).digest();
@@ -43,7 +43,7 @@ function chaveDeIndice(): string {
   const segredo = process.env.CPF_INDEX_KEY;
   if (!segredo) {
     throw new Error(
-      'CPF_INDEX_KEY não definida no .env - obrigatória pro índice cego (cpf_hash). Precisa ser DIFERENTE de CPF_ENCRYPTION_KEY (ver DOCUMENTACAO_BD.md sobre por quê).',
+      'CPF_INDEX_KEY não definida no .env - obrigatória para o índice cego (cpf_hash). Precisa ser DIFERENTE de CPF_ENCRYPTION_KEY (ver DOCUMENTACAO_BD.md sobre por quê).',
     );
   }
   return segredo;

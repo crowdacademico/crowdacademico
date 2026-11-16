@@ -188,6 +188,8 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92041 | `contribuicoes_recebidas_pesquisador` | `contribuicao` | Consulta das contribuições recebidas sem sessão (a rota do Nest já exige login; é a defesa do banco) |
 | 92042 | `desistir_contribuicao` | `contribuicao` | Desistir de um apoio sem sessão, ou de uma contribuição que não é de quem pede (a mensagem diz "não encontrada")
 | 92043 | `listar_ganhadores_recompensa` | `recompensa` | Ver quem ganhou uma recompensa sem ser o dono da campanha nem admin |
+| 92044 | `fn_valida_transicao_campanha` | `campanha` | Aprovar a própria campanha: quem tem a permissão de aprovar não aprova uma campanha da qual é dono (conflito de interesse, CT-11) |
+| 92045 | `decidir_solicitacao_encerramento` | `solicitacao_encerramento` | Decidir o pedido de encerramento antecipado da própria campanha (conflito de interesse) |
 
 ## 93xxx - Limite de taxa (429)
 

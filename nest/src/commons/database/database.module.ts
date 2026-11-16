@@ -74,7 +74,7 @@ export class DatabaseModule implements OnModuleInit {
     if (usuarioConectado !== 'app_nestjs') {
       throw new Error(
         `Backend conectou como "${usuarioConectado}", não como "app_nestjs" ` +
-          '- a Row Level Security do banco fica sem efeito nenhum pra esse ' +
+          '- a Row Level Security do banco fica sem efeito nenhum para esse ' +
           'usuário (RLS não se aplica a superusuário/dono de tabela). ' +
           'Confira DATABASE_URL no .env (.Tutorial-rodar-projeto.md, Parte 4).',
       );

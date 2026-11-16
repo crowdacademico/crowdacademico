@@ -31,7 +31,7 @@ export class AuthRequestRegister {
   // chega no corpo desta requisição - o backend sempre resolve a versão
   // ATIVA sozinho (GET /termos-uso/ativo é só pra exibir na tela).
   @Equals(true, {
-    message: 'É preciso aceitar o Termo de Uso pra criar a conta.',
+    message: 'É preciso aceitar o Termo de Uso para criar a conta.',
   })
   aceiteTermos: boolean;
 }

@@ -832,6 +832,11 @@ BEGIN
     IF v_status IS DISTINCT FROM 'pendente' THEN
         RAISE EXCEPTION 'Só um pedido pendente pode ser decidido.' USING ERRCODE = '91041';
     END IF;
+    -- Conflito de interesse: o dono da campanha não decide o próprio pedido, nem sendo administrador.
+    IF EXISTS (SELECT 1 FROM campanha WHERE id_campanha = v_id_campanha AND id_usuario = public.id_usuario_atual()) THEN
+        RAISE EXCEPTION 'Você não pode decidir o pedido de encerramento da sua própria campanha. Outro administrador precisa decidir.'
+            USING ERRCODE = '92045';
+    END IF;
     IF NOT p_aprovar AND (p_justificativa IS NULL OR btrim(p_justificativa) = '') THEN
         RAISE EXCEPTION 'Escreva por que o pedido foi rejeitado.' USING ERRCODE = '90029';
     END IF;

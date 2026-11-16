@@ -498,6 +498,15 @@ Em Repasses em Atenção e Reembolsos Manuais (lista e ficha), o "último motivo
 
 ---
 
+### Rodada de 16-11-2026: o sistema alcançar o TCC
+
+- **RF-015 em todo o site:** o `LayoutPublico` (área pública, Minha Conta e Estúdio) mostra a `TelaAceiteTermoUso` no lugar do conteúdo quando há sessão e termo pendente, como o `AdminLayout` já fazia no painel.
+- **Página da campanha:** link principal do pesquisador no cartão lateral (RF-027; `links-academicos.tsx` e `use-links-academicos.ts`, também no perfil público, RF-028, com a data de cadastro do perfil); orçamento como distribuição por categoria (`DistribuicaoOrcamento`, RF-047); vídeo do YouTube e do Vimeo incorporado (`services/12-campanha/util/video-incorporado.util.ts`, RF-057; o React é servido sem CSP, e o `helmet` do Nest só vale nas respostas da API); contagem regressiva da campanha "Em breve" (`contagem-regressiva.tsx`, RF-061), com "Começa em N dias" e a duração da captação nos cartões.
+- **Tabelas no celular:** abaixo de 640 px, a `GenericTable` vira lista de cartões com o nome da coluna (`data-rotulo`), DS-121.
+- **Acessibilidade conferida pelo axe-core** (`testes-e2e`): contraste das pílulas dos cartões de campanha e do avatar sem foto do perfil, tabela rolável do Como funciona com foco, indicador de etapas do Cadastro sem `aria-label` proibido, resumo da Minha Conta como lista (era um `dl` inválido).
+- **Textos:** "pra"/"pro" trocados por "para"/"para o" nos textos que o usuário vê (Nest e React); o boleto desligado não aparece mais nos textos do modal de apoio.
+- **Testes de ponta a ponta:** pasta `testes-e2e/` na raiz do repositório (README próprio).
+
 ## 14. Usabilidade e acessibilidade
 
 📌 **Auditoria Nielsen/WCAG da área pública (16-11-2026):** relatório em informacoes/AUDITORIA_AREA_PUBLICA_NIELSEN_WCAG_16-11-2026.md. Ficou valendo: cada página tem o próprio título na aba (`components/layout/titulo-da-pagina.tsx`, WCAG 2.4.2; a campanha usa o nome dela); o login volta para onde a pessoa estava (`voltarPara`, só caminho interno); a gaveta do menu no celular prende o foco; as abas da campanha trocam com as setas (padrão da W3C).

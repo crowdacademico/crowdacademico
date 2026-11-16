@@ -42,7 +42,7 @@ export function TabelaPapelPermissao({ papeis, permissoes, concedidos, celulaAlt
               {papeis.map((papel, indice) => {
                 const chave = chaveCelula(papel.idPapel, permissao.idPermissao);
                 const temPermissao = concedidos.has(chave);
-                const texto = temPermissao ? `Clique pra revogar de "${papel.nome}"` : `Clique pra conceder pra "${papel.nome}"`;
+                const texto = temPermissao ? `Clique para revogar de "${papel.nome}"` : `Clique para conceder a "${papel.nome}"`;
                 if (!editando) {
                   return (
                     <td key={papel.idPapel} className="text-center">

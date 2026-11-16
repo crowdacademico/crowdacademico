@@ -261,8 +261,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               <>
                 <CaixaAviso titulo="Exclusão normal indisponível">
                   <p>
-                    Só dá pra excluir campanhas em "rascunho" - esta já passou desse ponto
-                    (foi enviada pra aprovação ou aprovada).
+                    Só dá para excluir campanhas em "rascunho" - esta já passou desse ponto
+                    (foi enviada para aprovação ou aprovada).
                   </p>
                 </CaixaAviso>
 
@@ -288,9 +288,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                 <CaixaAviso titulo="O que acontece de verdade">
                   <p>
                     Diferente de excluir um usuário, isto é uma exclusão de VERDADE (`DELETE`), não
-                    lógica - a linha some do banco pra sempre, junto com orçamento, cronograma e tudo
+                    lógica - a linha some do banco para sempre, junto com orçamento, cronograma e tudo
                     que já foi ligado a ela (cascata). Só é permitido enquanto a campanha ainda é
-                    um "rascunho" - depois de enviada pra aprovação, o banco recusa.
+                    um "rascunho" - depois de enviada para aprovação, o banco recusa.
                   </p>
                 </CaixaAviso>
 
@@ -328,7 +328,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
         <CaixaBuscaSugestoes
           className="sm:col-span-2"
           rotulo="Dono da campanha"
-          dica="Precisa ser um pesquisador ativo: quem não tem perfil de pesquisador ou está suspenso aparece na lista, mas não dá pra escolher."
+          dica="Precisa ser um pesquisador ativo: quem não tem perfil de pesquisador ou está suspenso aparece na lista, mas não dá para escolher."
           placeholder="Digite o id ou o nome..."
           valor={buscaPesquisador}
           aoDigitar={(texto) => {

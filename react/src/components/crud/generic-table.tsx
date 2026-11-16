@@ -751,7 +751,7 @@ export function GenericTable<T extends Linha>({
                     {colunas.map((coluna) => {
                       const tipo = TIPOS_COLUNA[coluna.tipo];
                       return (
-                        <td key={coluna.chave} className={tipo.classe} style={estiloColuna(coluna)}>
+                        <td key={coluna.chave} className={tipo.classe} style={estiloColuna(coluna)} data-rotulo={coluna.rotulo}>
                           {coluna.renderizar ? (
                             coluna.renderizar(linha)
                           ) : coluna.umaLinha ? (

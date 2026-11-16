@@ -108,7 +108,7 @@ export function ModalAlterarMotivoDenuncia({ auth, motivo, aoFechar, aoAtualizad
         <Campo
           rotulo="Tipo"
           erro={errosCampo.tipo}
-          dica="Alterar isto muda em qual tela de denúncia este motivo aparece daqui pra frente, denúncias antigas que já usaram este motivo não são afetadas retroativamente."
+          dica="Alterar isto muda em qual tela de denúncia este motivo aparece daqui para frente, denúncias antigas que já usaram este motivo não são afetadas retroativamente."
           className="sm:col-span-2"
         >
           {({ atributos, classeErro }) => (
@@ -174,7 +174,7 @@ export function ModalExcluirMotivoDenuncia({ auth, motivo, aoFechar, aoExcluido 
           <CampoFicha rotulo="Tipo" valor={ROTULO_TIPO[motivo.tipo]} />
         </>
       }
-      explicacao="Se este motivo já tiver sido usado em alguma denúncia, a exclusão é bloqueada pelo próprio banco: desative-o em vez de excluir. Se não estiver em uso, some do catálogo pra sempre, sem exclusão lógica."
+      explicacao="Se este motivo já tiver sido usado em alguma denúncia, a exclusão é bloqueada pelo próprio banco: desative-o em vez de excluir. Se não estiver em uso, some do catálogo para sempre, sem exclusão lógica."
       remover={() => motivoDenunciaApi.remover(auth.authFetch, motivo.idMotivo)}
       mensagemSucesso="Motivo de denúncia excluído com sucesso."
       detalheSucesso={`ID: ${motivo.idMotivo} foi excluído`}

@@ -10,7 +10,7 @@ export const REGEX_CODIGO_TIPO_LINK = /^[A-Z0-9_]+$/;
 
 export const DICA_DOMINIOS_TIPO_LINK =
   'Mecanismo de validação principal: o host da URL precisa estar nesta lista. Um ou mais domínios separados ' +
-  'por vírgula. Deixe em branco pra aceitar qualquer domínio (ex.: "Outro").';
+  'por vírgula. Deixe em branco para aceitar qualquer domínio (ex.: "Outro").';
 
 export const DICA_REGEX_TIPO_LINK =
   'Complemento opcional aos domínios acima, use só quando o domínio sozinho não garante uma URL válida. ' +

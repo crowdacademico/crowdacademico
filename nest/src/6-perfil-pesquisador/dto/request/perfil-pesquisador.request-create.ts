@@ -61,7 +61,7 @@ export class PerfilPesquisadorRequestCreate {
   // (PerfilPesquisadorServiceCreate) e grava o aceite na MESMA transação da criação do perfil (ver comentário
   // lá).
   @Equals(true, {
-    message: 'É preciso aceitar o Termo de Uso pra fazer o upgrade de perfil.',
+    message: 'É preciso aceitar o Termo de Uso para fazer o upgrade de perfil.',
   })
   aceiteTermos: boolean;
 }

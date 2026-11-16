@@ -14,7 +14,7 @@ export function SecaoModeracao({ auth, idUsuario, aoMudar }: SecaoModeracaoProps
   return (
     <SecaoSuspensao
       titulo="Suspensão da conta"
-      explicacao="Suspender bloqueia o login desta conta pelo prazo escolhido, com motivo obrigatório (fica visível pra quem tentar entrar)."
+      explicacao="Suspender bloqueia o login desta conta pelo prazo escolhido, com motivo obrigatório (fica visível para quem tentar entrar)."
       rotuloSuspenso="Suspenso até"
       rotuloSuspender="Suspender usuário"
       mensagemSuspenso="Usuário suspenso com sucesso."

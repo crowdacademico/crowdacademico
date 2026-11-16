@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
@@ -28,6 +28,7 @@ import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import {
   campanhaAceitaApoios,
   diasRestantes,
+  duracaoEmDias,
   formatarData,
   ordenarAtualizacoes,
   percentualArrecadado,
@@ -37,6 +38,10 @@ import { ModalAtualizacoes } from './lista-atualizacoes';
 import { ModalApoiar } from './modal-apoiar';
 import { definirTituloDaPagina } from '../../components/layout/definir-titulo-pagina';
 import { CartaoEndosso } from './cartao-endosso';
+import { LinkAcademicoExterno } from './links-academicos';
+import { useLinksAcademicos } from './use-links-academicos';
+import { enderecoVideoIncorporado } from '../../services/12-campanha/util/video-incorporado.util';
+import { ContagemRegressiva } from './contagem-regressiva';
 import { recompensaApi } from '../../services/18-recompensa/api/recompensa.api';
 import { ROTULO_TIPO_RECOMPENSA } from '../../services/18-recompensa/constants/recompensa.constants';
 import type { RecompensaResponse } from '../../services/18-recompensa/type/recompensa.type';
@@ -71,6 +76,9 @@ export function Campanha({ auth }: PropsPagina) {
   const [carregando, setCarregando] = useState(idValido);
   const [aba, setAba] = useState<AbaCampanha>('sobre');
   const [vendoAtualizacoes, setVendoAtualizacoes] = useState(false);
+  // RF-061: a contagem regressiva chegou a zero; buscar a campanha de novo (passa a aceitar apoios).
+  const [recarga, setRecarga] = useState(0);
+  const recarregarCampanha = useCallback(() => setRecarga((total) => total + 1), []);
   // Modal Apoiar aberto pelo endereço (?apoiar=1&valor=50): os links antigos do /checkout e o "Apoiar de novo" chegam
   // com ele aberto.
   const [parametros, setParametros] = useSearchParams();
@@ -158,13 +166,16 @@ export function Campanha({ auth }: PropsPagina) {
     };
     // Os dados são recarregados quando a campanha da URL ou a sessão muda.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.authFetch, idCampanha, idValido]);
+  }, [auth.authFetch, idCampanha, idValido, recarga]);
 
   // A aba do navegador com o nome da campanha (TituloDaPagina põe só "Campanha").
   useEffect(() => {
     if (campanha) definirTituloDaPagina(campanha.titulo);
   }, [campanha]);
 
+  const videoIncorporado = enderecoVideoIncorporado(campanha?.videoApresentacaoUrl);
+  const linksPesquisador = useLinksAcademicos(auth.authFetch, campanha?.idUsuario);
+  const linkPrincipal = linksPesquisador?.[0] ?? null;
   const percentual = campanha ? percentualArrecadado(campanha) : null;
   const publicada = campanha ? STATUS_PUBLICADA.has(campanha.status) : false;
   const dias = campanha ? diasRestantes(campanha.dataFim) : null;
@@ -259,7 +270,19 @@ export function Campanha({ auth }: PropsPagina) {
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 )}
-                {campanha.videoApresentacaoUrl ? (
+                {videoIncorporado ? (
+                  // RF-057: YouTube e Vimeo tocam aqui mesmo, na proporção 16:9 da caixa (aspect-video).
+                  <iframe
+                    src={videoIncorporado}
+                    title={`Vídeo de apresentação: ${campanha.titulo}`}
+                    loading="lazy"
+                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                    allowFullScreen
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    className="absolute inset-0 w-full h-full border-0"
+                  />
+                ) : campanha.videoApresentacaoUrl ? (
+                  // Outro serviço de vídeo: o link para abrir em outra aba continua como alternativa.
                   <a
                     className="absolute inset-0 flex flex-col items-center justify-center gap-4 texto-sobre-escuro-forte bg-black/50 hover:bg-black/60 transition-colors group"
                     href={campanha.videoApresentacaoUrl}
@@ -437,7 +460,10 @@ export function Campanha({ auth }: PropsPagina) {
                       <p className="paragrafo texto-fraco">Nenhum item de orçamento está disponível para consulta.</p>
                     )}
                     {publicada && !orcamentos.erro && orcamentos.dados.length > 0 && (
-                      <ul className="flex flex-col divide-y divide-[var(--cor-borda)]">
+                      <DistribuicaoOrcamento itens={orcamentos.dados} meta={campanha.metaFinanceira} />
+                    )}
+                    {publicada && !orcamentos.erro && orcamentos.dados.length > 0 && (
+                      <ul className="flex flex-col divide-y divide-[var(--cor-borda)]" aria-label="Itens do orçamento">
                         {orcamentos.dados.map((item) => (
                           <li className="py-4 flex flex-wrap justify-between gap-3" key={item.idOrcamento}>
                             <div>
@@ -512,8 +538,11 @@ export function Campanha({ auth }: PropsPagina) {
                       <div className="microrrotulo texto-fraco">Atingido</div>
                     </div>
                     <div className="fundo-aviso rounded-xl px-1 py-3 sm:p-3 border borda-aviso text-center min-w-0">
-                      <div className="numero text-xl font-bold texto-aviso">{dias === null ? '—' : dias}</div>
-                      <div className="microrrotulo texto-aviso">Dias restantes</div>
+                      {/* RF-061: antes do início, a duração da captação; "restantes" só depois que ela começa. */}
+                      <div className="numero text-xl font-bold texto-aviso">
+                        {(emBreve(campanha) ? duracaoEmDias(campanha.dataInicio, campanha.dataFim) : dias) ?? '—'}
+                      </div>
+                      <div className="microrrotulo texto-aviso">{emBreve(campanha) ? 'Dias de captação' : 'Dias restantes'}</div>
                     </div>
                     <div className="fundo-marca-sutil rounded-xl px-1 py-3 sm:p-3 border borda-marca text-center min-w-0">
                       <div className="numero text-xl font-bold texto-marca">
@@ -537,11 +566,13 @@ export function Campanha({ auth }: PropsPagina) {
                       <i className="fa-solid fa-arrow-right" aria-hidden="true" />
                     </button>
                   ) : (
-                    <p className="paragrafo texto-fraco mb-6" role="status">
-                      {emBreve(campanha)
-                        ? 'A captação ainda não começou.'
-                        : 'Esta campanha não está aceitando apoios no momento.'}
-                    </p>
+                    emBreve(campanha) && campanha.dataInicio ? (
+                      <ContagemRegressiva inicio={campanha.dataInicio} aoComecar={recarregarCampanha} />
+                    ) : (
+                      <p className="paragrafo texto-fraco mb-6" role="status">
+                        Esta campanha não está aceitando apoios no momento.
+                      </p>
+                    )
                   )}
                   <details className="rounded-xl border borda-padrao fundo-sutil p-4 text-sm texto-padrao">
                     <summary className="font-semibold texto-forte cursor-pointer select-none">
@@ -569,6 +600,12 @@ export function Campanha({ auth }: PropsPagina) {
                       )}
                     </div>
                   </Link>
+                  {/* RF-027/RF-072: o link principal (o primeiro da lista do perfil); sem link, nada aparece. */}
+                  {linkPrincipal && (
+                    <p className="paragrafo mb-5">
+                      <LinkAcademicoExterno link={linkPrincipal} />
+                    </p>
+                  )}
                   <Link
                     className="w-full inline-flex justify-center items-center gap-2 border-2 borda-padrao texto-padrao hover-borda-forte hover-fundo-sutil text-sm font-bold py-3 rounded-xl transition-all"
                     to={`/pesquisador/${campanha.idUsuario}`}
@@ -602,5 +639,42 @@ export function Campanha({ auth }: PropsPagina) {
         </>
       )}
     </main>
+  );
+}
+
+// RF-047: o orçamento como distribuição por categoria. Soma os itens da mesma categoria (o pesquisador pode repetir a
+// categoria em itens diferentes) e desenha uma barra horizontal por categoria, da maior para a menor, numa cor só (a da
+// marca) sobre o trilho neutro: o tamanho da barra é o que compara, e o valor e o percentual da meta ficam ESCRITOS ao
+// lado (quem não enxerga a barra, ou usa leitor de tela, lê os números). A lista de itens embaixo dá o detalhe.
+function DistribuicaoOrcamento({ itens, meta }: { itens: OrcamentoCampanhaResponse[]; meta: number }) {
+  const porCategoria = new Map<string, number>();
+  for (const item of itens) {
+    const chave = item.categoria.trim();
+    porCategoria.set(chave, (porCategoria.get(chave) ?? 0) + item.valor);
+  }
+  const categorias = [...porCategoria.entries()].sort((a, b) => b[1] - a[1]);
+  const base = meta > 0 ? meta : categorias.reduce((total, [, valor]) => total + valor, 0);
+  const percentual = (valor: number) => (base > 0 ? (valor / base) * 100 : 0);
+  const PERCENTUAL = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 });
+
+  return (
+    <figure className="mb-8">
+      <figcaption className="rotulo mb-4">Distribuição por categoria (percentual da meta)</figcaption>
+      <ul className="flex flex-col gap-4">
+        {categorias.map(([categoria, valor]) => (
+          <li key={categoria}>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 mb-1.5">
+              <span className="paragrafo enfase texto-forte">{categoria}</span>
+              <span className="paragrafo texto-padrao numero">
+                {formatarMoeda(valor)} <span className="texto-fraco">({PERCENTUAL.format(percentual(valor))}%)</span>
+              </span>
+            </div>
+            <div className="h-3 rounded-full fundo-realce overflow-hidden" aria-hidden="true">
+              <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, percentual(valor))}%` }} />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </figure>
   );
 }

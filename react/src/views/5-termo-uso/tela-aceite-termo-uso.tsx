@@ -11,7 +11,8 @@ interface TelaAceiteTermoUsoProps {
 
 // RF-015: publicada uma versão nova do Termo de Uso (ou, para pesquisador, do termo de pesquisador), quem já tem
 // conta lê e aceita antes de continuar; com os dois pendentes, um depois do outro. Toma o lugar
-// do painel inteiro (AdminLayout) enquanto houver pendência, no mesmo modal de termo do Criar conta; o backend também recusa as outras rotas com 403
+// do painel inteiro (AdminLayout) e do conteúdo da área pública, da Minha Conta e do Estúdio (LayoutPublico)
+// enquanto houver pendência, no mesmo modal de termo do Criar conta; o backend também recusa as outras rotas com 403
 // TERMO_PENDENTE, então esconder a tela não basta para pular o aceite. Aceitar renova a sessão, e o token novo
 // já vem sem a pendência.
 export function TelaAceiteTermoUso({ auth }: TelaAceiteTermoUsoProps) {

@@ -250,7 +250,7 @@ export function ModalExcluirTipoLink({ auth, tipo, aoFechar, aoExcluido }: Modal
           <CampoFicha rotulo="Nome" valor={tipo.nome} largura="cheia" />
         </>
       }
-      explicacao="Se este tipo ainda estiver em uso em algum perfil, atualização de campanha ou recompensa, a exclusão é bloqueada pelo próprio banco: desative-o em vez de excluir. Se não estiver em uso, some do catálogo pra sempre, sem exclusão lógica."
+      explicacao="Se este tipo ainda estiver em uso em algum perfil, atualização de campanha ou recompensa, a exclusão é bloqueada pelo próprio banco: desative-o em vez de excluir. Se não estiver em uso, some do catálogo para sempre, sem exclusão lógica."
       remover={() => tipoLinkApi.remover(auth.authFetch, tipo.idTipolink)}
       mensagemSucesso="Tipo de link excluído com sucesso."
       detalheSucesso={`ID: ${tipo.idTipolink} foi excluído`}
