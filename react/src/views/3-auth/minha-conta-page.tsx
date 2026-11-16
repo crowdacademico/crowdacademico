@@ -708,8 +708,8 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
         <div>
           <p className="paragrafo enfase texto-padrao">Exportar meus dados</p>
           <p className="legenda texto-fraco">
-            Direito de portabilidade (LGPD Art. 18): baixa um arquivo com os dados da sua conta. Uma vez por
-            hora.
+            Baixe um arquivo com todos os dados da sua conta. É um direito seu pela LGPD (art. 18). Pode ser feito uma
+            vez por hora.
           </p>
           <MensagemErro texto={erroExportar} className="legenda enfase erro-campo" />
         </div>
@@ -721,13 +721,12 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
       <div className="rounded-lg border borda-forte fundo-erro p-4">
         <p className="paragrafo enfase texto-erro mb-2">Excluir minha conta</p>
         <p className="legenda texto-erro mb-3">
-          Marca sua conta como excluída (exclusão lógica), o login para de funcionar na hora.
-          Não existe desfazer pelo painel.
+          Depois de excluir, você não consegue mais entrar com esta conta. Não é possível desfazer.
         </p>
         <MensagemErro texto={erro} className="legenda enfase texto-erro mb-2" />
         <div className="mb-3">
           <ConfirmacaoDigitada
-            oQue="o e-mail"
+            oQue="seu e-mail"
             esperado={auth.usuario?.email ?? ''}
             valor={confirmacao}
             aoMudar={setConfirmacao}

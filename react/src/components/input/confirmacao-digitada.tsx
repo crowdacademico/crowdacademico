@@ -13,10 +13,18 @@ interface ConfirmacaoDigitadaProps {
 
 // Campo da confirmação por digitação antes de uma ação sem volta (regra em confirmacao-confere.ts).
 export function ConfirmacaoDigitada({ oQue, esperado, valor, aoMudar, classeRotulo }: ConfirmacaoDigitadaProps) {
-  const texto = `Digite ${oQue} "${esperado}" para confirmar`;
   return (
     // overflow-wrap: anywhere: um e-mail longo é uma "palavra" só e vazava da caixa no celular (Alexia, 16-11-2026).
-    <Campo rotulo={<span className={`[overflow-wrap:anywhere] ${classeRotulo ?? ''}`}>{texto}</span>}>
+    // O valor a digitar sai em caixa normal (o rótulo é em maiúsculas, e um e-mail em maiúsculas parece outro e-mail).
+    <Campo
+      rotulo={
+        <span className={classeRotulo}>
+          {/* nowrap: o hífen de "e-mail" é ponto de quebra para o navegador, e a linha ficava "E-" / "MAIL:". */}
+          Para confirmar, digite <span className="whitespace-nowrap">{oQue}:</span>
+          <span className="block normal-case [overflow-wrap:anywhere]">{esperado}</span>
+        </span>
+      }
+    >
       {({ atributos }) => (
         <input
           {...atributos}
