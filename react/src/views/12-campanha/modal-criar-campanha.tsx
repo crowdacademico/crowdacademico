@@ -6,6 +6,7 @@ import { useFecharComAviso } from '../../components/crud/use-alteracao-nao-salva
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { IndicadorEtapas } from '../../components/crud/indicador-etapas';
 import { Campo } from '../../components/input/campo';
+import { LegendaObrigatorio } from '../../components/input/legenda-obrigatorio';
 import { SeletorImagemCapaCampanha } from '../../components/input/seletor-imagem-capa-campanha';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -379,8 +380,9 @@ export function ModalCriarCampanha({
           <>
             {camposExtras}
             {erroDe('extras') && <p className="legenda enfase texto-erro -mt-2 mb-3">{erroDe('extras')}</p>}
+            <LegendaObrigatorio className="mb-3" />
             <SecaoFicha titulo="Dados">
-              <Campo rotulo="Título" className="sm:col-span-2" erro={erroDe('titulo')}>
+              <Campo obrigatorio rotulo="Título" className="sm:col-span-2" erro={erroDe('titulo')}>
                 {({ atributos, classeErro }) => (
                   <input
                     {...atributos}
@@ -391,7 +393,7 @@ export function ModalCriarCampanha({
                   />
                 )}
               </Campo>
-              <Campo rotulo="Área do conhecimento" erro={erroDe('area')}>
+              <Campo obrigatorio rotulo="Área do conhecimento" erro={erroDe('area')}>
                 {({ atributos, classeErro }) => (
                   <select
                     {...atributos}
@@ -409,6 +411,7 @@ export function ModalCriarCampanha({
                 )}
               </Campo>
               <Campo
+                obrigatorio
                 rotulo="Meta (R$)"
                 dica={`Meta mínima: ${formatarMoeda(regras.metaMinima)}.`}
                 erro={erroDe('meta') ?? (metaAbaixoDoMinimo && textoMetaMinima)}
@@ -429,6 +432,7 @@ export function ModalCriarCampanha({
                   </>
                 }
                 className="sm:col-span-2"
+                obrigatorio
               >
                 {({ atributos }) => (
                   <select
@@ -459,7 +463,7 @@ export function ModalCriarCampanha({
                   </>
                 )}
               </Campo>
-              <Campo rotulo="Início" erro={erroDe('inicio')}>
+              <Campo obrigatorio rotulo="Início" erro={erroDe('inicio')}>
                 {({ atributos, classeErro }) => (
                   <input
                     {...atributos}
@@ -480,7 +484,7 @@ export function ModalCriarCampanha({
               {/* O aviso de prazo vale para as duas datas e ocupa a linha inteira abaixo delas, por isso fica fora do
                   Campo e é ligado ao campo "Fim" à mão; fica vermelho também quando o fim está vazio e já houve uma
                   tentativa de avançar. */}
-              <Campo rotulo="Fim">
+              <Campo obrigatorio rotulo="Fim">
                 {({ atributos }) => (
                   <input
                     {...atributos}

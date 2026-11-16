@@ -11,14 +11,16 @@ interface CampoCpfProps {
   // Botão "Gerar CPF válido": ausente por padrão; só o T1 do Campo de Testes passa isso (via
   // ModalUpgradePesquisador). Nunca faz sentido num formulário de verdade.
   gerarCpfDeTeste?: () => string;
+  // O "*" de obrigatório (Campo): só nos formulários que usam a legenda <LegendaObrigatorio />.
+  obrigatorio?: boolean;
 }
 
 // Campo de CPF + botão "Gerar CPF válido", compartilhado pelo card "Criar Perfil Pesquisador" de
 // ModalAlterarUsuario e por ModalUpgradePesquisador (idêntico byte a byte nos dois: um bug/ajuste num só
 // corrigiria o que alguém lembrasse de mexer).
-export function CampoCpf({ valor, onChange, erro, gerarCpfDeTeste }: CampoCpfProps) {
+export function CampoCpf({ valor, onChange, erro, gerarCpfDeTeste, obrigatorio }: CampoCpfProps) {
   return (
-    <Campo rotulo="CPF" erro={erro}>
+    <Campo rotulo="CPF" erro={erro} obrigatorio={obrigatorio}>
       {({ atributos, classeErro }) => (
         <div className="flex gap-2">
           <input

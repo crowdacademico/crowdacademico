@@ -21,6 +21,8 @@ interface CamposVinculoPerfilProps {
   // Quando o vínculo não é institucional, o campo fica no lugar, invisível, em vez de sumir: o título acadêmico não
   // pula para o lado (Alterar Usuário, grade de 3 colunas).
   reservarVinculoInstitucional?: boolean;
+  // O "*" de obrigatório nos três campos (Campo): só nos formulários que usam a legenda <LegendaObrigatorio />.
+  marcarObrigatorios?: boolean;
 }
 
 // Os 3 campos abaixo (tipo de vínculo, vínculo institucional condicional, título acadêmico) são idênticos em 3
@@ -38,11 +40,12 @@ export function CamposVinculoPerfil({
   aoAlterarTituloAcademico,
   erroVinculoInstitucional,
   reservarVinculoInstitucional = false,
+  marcarObrigatorios = false,
 }: CamposVinculoPerfilProps) {
   const institucional = tipoVinculo === 'institucional';
   return (
     <>
-      <Campo rotulo="Tipo de vínculo">
+      <Campo rotulo="Tipo de vínculo" obrigatorio={marcarObrigatorios}>
         {({ atributos }) => (
           <select
             {...atributos}
@@ -63,7 +66,7 @@ export function CamposVinculoPerfil({
 
       {(institucional || reservarVinculoInstitucional) && (
         <div className={institucional ? undefined : 'invisible'} inert={!institucional} aria-hidden={!institucional || undefined}>
-          <Campo rotulo={rotuloVinculoInstitucional} erro={erroVinculoInstitucional}>
+          <Campo rotulo={rotuloVinculoInstitucional} erro={erroVinculoInstitucional} obrigatorio={marcarObrigatorios}>
             {({ atributos, classeErro }) => (
               <input
                 {...atributos}
@@ -77,7 +80,7 @@ export function CamposVinculoPerfil({
         </div>
       )}
 
-      <Campo rotulo="Título acadêmico">
+      <Campo rotulo="Título acadêmico" obrigatorio={marcarObrigatorios}>
         {({ atributos }) => (
           <select
             {...atributos}
