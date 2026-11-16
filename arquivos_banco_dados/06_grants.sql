@@ -517,6 +517,11 @@ GRANT EXECUTE ON FUNCTION public.fn_precisa_revisao_score(INT)      TO app_nestj
 -- /dashboard/resumo.
 GRANT EXECUTE ON FUNCTION public.contar_metricas_dashboard() TO app_nestjs;
 
+-- serie_metricas_dashboard(DATE, DATE, BOOLEAN) ([03-M-2]): os gráficos do Dashboard (GET /dashboard/serie). Confere
+-- relatorio_visualizar por dentro; o PUBLIC não executa.
+REVOKE EXECUTE ON FUNCTION public.serie_metricas_dashboard(DATE, DATE, BOOLEAN) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.serie_metricas_dashboard(DATE, DATE, BOOLEAN) TO app_nestjs;
+
 -- NOTA: o GRANT EXECUTE de atribuir_papel_padrao() fica junto da
 -- própria função em 08_trigger_signup_usuario.sql, não aqui - esse
 -- arquivo roda ANTES do 08 (ver ordem de dependência no cabeçalho),

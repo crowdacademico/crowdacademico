@@ -48,6 +48,16 @@ export class DashboardServiceSummary {
              count(*) FILTER (WHERE status = 'falhou')::int AS falhas
       FROM notificacao
     `.execute(db);
+    // O que espera uma pessoa (lista "Precisa da sua atenção" do Dashboard, 16-11-2026). Contado na sessão de quem
+    // consulta: a RLS mostra só o que o papel dela pode ver (sem a permissão, 0).
+    const atencao = await sql<{
+      eventos_em_revisao: number;
+      encerramentos_pendentes: number;
+    }>`
+      SELECT (SELECT count(*)::int FROM evento_pagamento
+               WHERE revisao_manual_em IS NOT NULL AND resolvido_em IS NULL) AS eventos_em_revisao,
+             (SELECT count(*)::int FROM solicitacao_encerramento WHERE status = 'pendente') AS encerramentos_pendentes
+    `.execute(db);
 
     return {
       totalUsuarios: metricas.total_usuarios,
@@ -67,6 +77,8 @@ export class DashboardServiceSummary {
       valorTotalArrecadado: Number(metricas.valor_total_arrecadado),
       denunciasPendentes: metricas.denuncias_pendentes,
       campanhasParaRevisaoScore: metricas.campanhas_para_revisao_score,
+      eventosPagamentoEmRevisao: atencao.rows[0].eventos_em_revisao,
+      encerramentosPendentes: atencao.rows[0].encerramentos_pendentes,
     };
   }
 }

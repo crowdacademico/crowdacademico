@@ -17,6 +17,8 @@ export interface DashboardResponseSummary {
   valorTotalArrecadado: number;
   denunciasPendentes: number;
   campanhasParaRevisaoScore: number;
+  eventosPagamentoEmRevisao: number;
+  encerramentosPendentes: number;
 }
 
 // Espelha nest/src/app/health.controller.ts (sem DTO formal - objeto
@@ -43,11 +45,29 @@ export interface DashboardResponseHealth {
     provedor: string;
     redirecionado: boolean;
   };
-  avisosPagamento: {
-    visivel: boolean;
-    ultimoRecebidoEm: string | null;
-    emRevisao: number;
-    comErro: number;
-  };
   verificadoEm: string;
+}
+
+// Espelha nest/src/29-dashboard/dto/response/dashboard.response-series.ts (GET /dashboard/serie, os gráficos).
+// Pedido do gráfico: as datas (AAAA-MM-DD) e se agrupa por dia ou por mês.
+export type AgruparSerieDashboard = 'dia' | 'mes';
+
+export interface FiltroSerieDashboard {
+  inicio: string;
+  fim: string;
+  agrupar: AgruparSerieDashboard;
+}
+
+export interface PontoSerieDashboard {
+  // Primeiro dia do dia/mês, AAAA-MM-DD (fuso de Brasília).
+  inicio: string;
+  arrecadado: number;
+  apoios: number;
+  cadastros: number;
+}
+
+export interface DashboardResponseSeries {
+  agrupar: AgruparSerieDashboard;
+  pontos: PontoSerieDashboard[];
+  anterior: { arrecadado: number; apoios: number; cadastros: number };
 }

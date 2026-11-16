@@ -19,13 +19,5 @@ export interface DashboardResponseHealth {
     // Trava de teste: todo e-mail vai para um endereço só (EMAIL_REDIRECIONAR_PARA).
     redirecionado: boolean;
   };
-  // Os avisos (webhooks) do provedor de pagamento, lidos do banco (evento_pagamento). visivel = false: quem consulta
-  // não tem permissão de ver os eventos de pagamento (os números vêm zerados).
-  avisosPagamento: {
-    visivel: boolean;
-    ultimoRecebidoEm: string | null;
-    emRevisao: number;
-    comErro: number;
-  };
   verificadoEm: string;
 }

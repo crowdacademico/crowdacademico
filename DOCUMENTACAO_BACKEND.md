@@ -1026,11 +1026,13 @@ Somente leitura - a escrita em `log_auditoria` é feita por trigger genérica no
 
 📌 **A autorização é 100% RLS, como sempre.** `pol_log_auditoria_select` exige `tem_permissao('log_visualizar')`; sem ela a query volta **vazia**, não dá erro. O comentário registra a dependência: a policy foi ampliada para deixar qualquer usuário ver as próprias linhas - sem essa mudança aplicada no banco, `minha-atividade` volta vazia para quem não é admin, mesmo sendo autor das próprias linhas.
 
-### `29-dashboard` (7 arquivos, 2 endpoints)
+### `29-dashboard` (11 arquivos, 3 endpoints)
 
 **`GET /dashboard/resumo`** - uma única chamada a `SELECT * FROM contar_metricas_dashboard()` (bloco `[03-M]`). Inclui `campanhasParaRevisaoScore`: campanhas na fila de aprovação cujo pesquisador está abaixo do score mínimo, só um sinal para o admin.
 
-**`GET /dashboard/saude`** (16-11-2026) - a aba Saúde: confere NA HORA o provedor de pagamento (`CobrancaGatewayPort.verificarConexao()`; no Asaas, `GET /finance/balance`, que só lê o saldo) e o de e-mail (`EnvioEmailPort.verificarConexao()`; SMTP: `verify()` do nodemailer, o login sem enviar; Brevo: `GET /v3/account`), cada um com limite de 10 s, e lê de `evento_pagamento` o último aviso (webhook) recebido, os com erro e os em revisão manual. Exige `relatorio_visualizar` (conferida no serviço); a contagem dos avisos respeita a RLS (`evento_pagamento_visualizar`; sem ela, `visivel: false`). Nunca devolve chave nem senha: só a mensagem de erro do provedor. Diferente de `GET /health` (público, só o banco, para a plataforma de deploy).
+**`GET /dashboard/saude`** (16-11-2026) - a aba Saúde: confere NA HORA o provedor de pagamento (`CobrancaGatewayPort.verificarConexao()`; no Asaas, a consulta de saldo `/finance/balance`, que só lê) e o de e-mail (`EnvioEmailPort.verificarConexao()`; SMTP: `verify()` do nodemailer, o login sem enviar; Brevo: os dados da conta, `/v3/account`), cada um com limite de 10 s. Exige `relatorio_visualizar` (conferida no serviço). Nunca devolve chave nem senha: só a mensagem de erro do provedor. Diferente de `GET /health` (público, só o banco, para a plataforma de deploy).
+
+**`GET /dashboard/serie?inicio=AAAA-MM-DD&fim=AAAA-MM-DD&agrupar=dia|mes`** (16-11-2026) - os gráficos da Visão Geral: arrecadação (apoios pagos), quantidade de apoios e cadastros, de `inicio` a `fim` (atalhos de 7 dias, 30 dias e 12 meses na tela, ou as datas que o admin escolhe), um ponto por dia ou por mês, e os totais do mesmo tanto de tempo antes (para a comparação "+48% em relação aos 30 dias anteriores"). Sem datas, os últimos 30 dias. Data inexistente ou período acima do teto (2 anos dia a dia, 10 anos mês a mês): 400 com a explicação. Uma chamada a `serie_metricas_dashboard()` (`[03-M-2]`), que confere `relatorio_visualizar` (92011, 403) e devolve todo dia/mês, mesmo zerado; o Nest só separa o período atual do anterior.
 
 📌 **Por que uma função `SECURITY DEFINER` em vez de contar no Nest.** A função bypassa deliberadamente a RLS restritiva de `usuario`/`configuracoes`. Sem isso, o total mostrado **dependeria de quem está logado** - errado para um card que diz "total do sistema".
 
@@ -1247,7 +1249,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | POST | `/campo-testes/pagamento/repasses/:id/concluir` · `/campo-testes/pagamento/repasses/:id/falhar` · `/campo-testes/pagamento/tarefas/:tarefa` · `/campo-testes/pagamento/chave-pix` |
 | **Painel** | | |
 | AUTH | GET | `/log-auditoria` · `/log-auditoria/minha-atividade` |
-| AUTH | GET | `/dashboard/resumo` · `/dashboard/saude` *(conecta no provedor de pagamento e no de e-mail; exige `relatorio_visualizar`)* |
+| AUTH | GET | `/dashboard/resumo` · `/dashboard/serie` · `/dashboard/saude` *(conecta no provedor de pagamento e no de e-mail; exige `relatorio_visualizar`)* |
 | AUTH | GET | `/notificacao` · `/notificacao/resumo` *(e-mails do sistema; exige `notificacao_processar`)* |
 | AUTH | POST | `/notificacao/:id/reenviar` · `/notificacao/:id/cancelar` *(RF-126; permissão e situação conferidas no banco)* |
 | AUTH | GET | `/notificacao-interna` · `/notificacao-interna/nao-lidas` *(o sino da própria conta)* |

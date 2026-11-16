@@ -51,7 +51,7 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Para achar tudo sobre
 | **J** | Segurança & Contexto de Sessão (`id_usuario_atual()`) | `03-J` |
 | **K** | Regras de Negócio Transversais (validações que cruzam mais de um domínio) | `05-K-1` a `05-K-3` |
 | **L** | LOG DE AUDITORIA (quem alterou o quê e quando, `log_auditoria`) | `01-L`, `02-L`, `04-L`, `05-L`, `06-L`, `07-L` (retenção) |
-| **M** | DASHBOARD ADMIN (métricas agregadas da tela inicial do painel) | `03-M` (`contar_metricas_dashboard()`) |
+| **M** | DASHBOARD ADMIN (métricas agregadas da tela inicial do painel) | `03-M` (`contar_metricas_dashboard()`, `serie_metricas_dashboard()`) |
 | **N** | MODERAÇÃO SOBRE CONTA (suspensão de usuário e de papel) | `01-D`/`01-B` (colunas), `03-N` |
 | **O** | OPERAÇÕES DE AUTENTICAÇÃO (confirmação de e-mail, bloqueio por tentativas, exclusão de conta) | `03-O` |
 | **P** | MODERAÇÃO E FERRAMENTAS SOBRE PESQUISADOR | `03-P` (suspensão em cascata, RF-125), `03-P-1` (`corrigir_cpf_pesquisador`), `03-P-2` (`criar_perfil_pesquisador_para_outro`), `03-P-3` (`alterar_perfil_pesquisador_de_outro`) |
@@ -460,6 +460,7 @@ Três funções `SECURITY DEFINER` para agir sobre o perfil de **outra** pessoa,
 * **Contas ativas = pessoas, não sessões:** `sessoes_ativas` conta pessoas distintas (`count(DISTINCT id_usuario)`) com login ou renovação dentro de `configuracoes.dashboard_sessao_ativa_minutos` (30): a mesma pessoa em dois aparelhos conta uma vez. O nome da coluna ficou `sessoes_ativas` para não mudar o campo que o React lê.
 * **Campanhas na fila com pesquisador de score baixo** (`campanhas_para_revisao_score`, parte do RF-033): campanha `aguardando_aprovacao` cujo pesquisador está abaixo de `score_minimo_campanha` (`fn_precisa_revisao_score`, [05-I-1]). Só um sinal para o admin revisar com mais cuidado; nunca bloqueia. A função é **plpgsql** porque `fn_precisa_revisao_score` mora no `05`, que roda depois, e o plpgsql só confere o corpo na primeira chamada.
 * **Uma função devolvendo `TABLE`:** o Nest pede todos os números juntos, numa ida só ao banco. Mudar o tipo de retorno exige `DROP FUNCTION` antes.
+* **[03-M-2] `serie_metricas_dashboard(p_inicio, p_fim, p_mensal)`** (16-11-2026, grupos CX e CY): os gráficos da Visão Geral. Soma os apoios pagos (`confirmado` e `repassado`), conta os apoios e os cadastros de `p_inicio` a `p_fim` (as datas que o admin escolhe; trocadas são desinvertidas), por dia ou por mês (meses inteiros), com teto de 2 anos dia a dia e 10 anos mês a mês (o Nest recusa antes, com mensagem), e devolve também o mesmo tanto de período anterior (`periodo_anterior = TRUE`), para a comparação. Todo dia/mês aparece, mesmo zerado (`generate_series`), para o gráfico não pular buracos. O dia do apoio é o da criação da contribuição (o Pix se paga na hora). Fuso de Brasília, fixo na função: a plataforma é brasileira, e "hoje" no gráfico é o de quem usa (o mesmo do seed). Mesmo desenho de segurança de `contar_metricas_dashboard`: `SECURITY DEFINER`, `STABLE`, exige `relatorio_visualizar` (92011); o `PUBLIC` não executa (06).
 
 ---
 
@@ -1248,7 +1249,7 @@ O raciocínio de arquitetura por trás de regras que valem para o banco inteiro.
 
 ## Como conferir este inventário
 
-**Contagem do inventário** (recontada nos `.sql` em 16-11-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **122 policies**, **125 triggers** no `05` (119 comuns e 6 `CONSTRAINT TRIGGER`), **198 funções** (158 no `05`, 38 no `03`, 1 no `08`, 1 no `01`), **69 índices** no `02` e **144 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (recontada nos `.sql` em 16-11-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **122 policies**, **125 triggers** no `05` (119 comuns e 6 `CONSTRAINT TRIGGER`), **199 funções** (158 no `05`, 39 no `03`, 1 no `08`, 1 no `01`), **69 índices** no `02` e **144 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
 
 Para recontar direto do banco (no SQL Editor do Supabase ou no banco local):
 

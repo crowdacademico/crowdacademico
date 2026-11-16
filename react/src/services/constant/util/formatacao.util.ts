@@ -22,6 +22,22 @@ export function formatarReaisSemSimbolo(valor: string | number | null): string {
   return formatadorReaisSemSimbolo.format(Number(valor));
 }
 
+// Compacto, para número grande em espaço pequeno (Dashboard): 78520 -> "78,5 mil", 1250000 -> "1,3 mi". O valor exato
+// vai junto em outro lugar (detalhe ou dica), nunca só o compacto.
+const formatadorCompacto = new Intl.NumberFormat('pt-BR', { notation: 'compact', maximumFractionDigits: 1 });
+
+export function formatarNumeroCompacto(valor: string | number | null): string {
+  return formatadorCompacto.format(Number(valor));
+}
+
+// Data curta para eixo de gráfico: "16/11" (dia) ou "nov/26" (mês). `iso` = AAAA-MM-DD.
+export function formatarDataEixo(iso: string, mensal: boolean): string {
+  const data = paraData(iso);
+  return mensal
+    ? data.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('. de ', '/').replace('.', '')
+    : data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+
 // Só a MECÂNICA de formatar mora aqui: sempre 'pt-BR', sempre a mesma chamada de `Intl`. Qual das três
 // granularidades usar em qual tela continua decisão de cada view (varia de propósito: auditoria quer hora
 // exata, "membro desde" quer só mês/ano): cada call site escolhe a função certa para o próprio contexto.

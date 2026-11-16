@@ -44,8 +44,8 @@ async function medir<T>(acao: () => Promise<T>): Promise<Medido<T>> {
 }
 
 // Aba Saúde do Dashboard (16-11-2026, pedido do Lucas): além do banco (GET /health), confere AGORA o provedor de
-// pagamento e o de e-mail, pelas portas (cada adapter sabe como falar com o seu, sem cobrar nem enviar nada), e lê do
-// banco quando chegou o último aviso do provedor de pagamento. Permissão: relatorio_visualizar (a mesma do Dashboard).
+// pagamento e o de e-mail, pelas portas (cada adapter sabe como falar com o seu, sem cobrar nem enviar nada).
+// Permissão: relatorio_visualizar (a mesma do Dashboard).
 @Injectable()
 export class DashboardServiceHealth {
   constructor(
@@ -70,21 +70,6 @@ export class DashboardServiceHealth {
       medir(() => this.email.verificarConexao()),
     ]);
 
-    // RLS de evento_pagamento: sem evento_pagamento_visualizar, a contagem viria zerada e enganaria; por isso `visivel`.
-    const avisos = await sql<{
-      visivel: boolean;
-      ultimo: Date | null;
-      em_revisao: number;
-      com_erro: number;
-    }>`
-      SELECT public.tem_permissao('evento_pagamento_visualizar') AS visivel,
-             max(recebido_em) AS ultimo,
-             count(*) FILTER (WHERE revisao_manual_em IS NOT NULL AND resolvido_em IS NULL)::int AS em_revisao,
-             count(*) FILTER (WHERE processado_em IS NULL AND revisao_manual_em IS NULL AND erro_processamento IS NOT NULL)::int AS com_erro
-      FROM evento_pagamento
-    `.execute(db);
-    const linha = avisos.rows[0];
-
     // A tela escreve o "Conectado"; a mensagem só carrega texto quando falha (o motivo que o provedor deu).
     const comoServico = (m: Medido<unknown>): VerificacaoServicoExterno =>
       m.ok
@@ -102,15 +87,6 @@ export class DashboardServiceHealth {
         ...comoServico(email),
         provedor: this.email.provedor,
         redirecionado: this.email.redirecionado === true,
-      },
-      avisosPagamento: {
-        // Agregado sem GROUP BY: sempre volta exatamente uma linha.
-        visivel: linha.visivel,
-        ultimoRecebidoEm: linha.ultimo
-          ? new Date(linha.ultimo).toISOString()
-          : null,
-        emRevisao: linha.em_revisao,
-        comErro: linha.com_erro,
       },
       verificadoEm: new Date().toISOString(),
     };

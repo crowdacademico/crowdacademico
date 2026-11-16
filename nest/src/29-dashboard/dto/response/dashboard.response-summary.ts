@@ -26,4 +26,7 @@ export interface DashboardResponseSummary {
   valorTotalArrecadado: number;
   denunciasPendentes: number;
   campanhasParaRevisaoScore: number;
+  // Eventos de pagamento em revisão manual e pedidos de encerramento esperando decisão (RLS: 0 sem a permissão).
+  eventosPagamentoEmRevisao: number;
+  encerramentosPendentes: number;
 }

@@ -1258,6 +1258,94 @@ BEGIN
 END;
 $$;
 
+-- ============================================================
+-- Função:     serie_metricas_dashboard
+-- Assinatura: (p_inicio DATE, p_fim DATE, p_mensal BOOLEAN) -> TABLE(periodo_inicio DATE, periodo_anterior BOOLEAN,
+--             valor_arrecadado DECIMAL, total_apoios INT, total_cadastros INT)
+-- Bloco:      [03-M-2]
+-- Regra:      Os gráficos do Dashboard (16-11-2026): quanto entrou em apoios pagos (status confirmado ou repassado), quantos
+--             apoios e quantas contas foram criadas, de p_inicio a p_fim (as datas que o admin escolhe), dia a dia
+--             (p_mensal = FALSE) ou mês a mês (TRUE, em meses inteiros), e o MESMO tanto de tempo logo antes
+--             (periodo_anterior = TRUE), para a tela comparar com o período anterior. Todo dia ou mês aparece, mesmo
+--             zerado (o gráfico não pula buracos). Datas trocadas são desinvertidas; o período tem teto (2 anos dia a dia,
+--             10 anos mês a mês: o Nest recusa antes, com mensagem), para uma chamada não varrer o banco inteiro. O dia do
+--             apoio é o da criação da contribuição (o Pix se paga na hora; o cartão, em segundos). Fuso de Brasília: a
+--             plataforma é brasileira, e "hoje" no gráfico é o hoje de quem usa (o mesmo fuso do seed). SECURITY DEFINER
+--             pelo mesmo motivo de contar_metricas_dashboard: a RLS de contribuicao e usuario daria números diferentes
+--             conforme quem está logado. Exige relatorio_visualizar (ERRCODE 92011).
+CREATE OR REPLACE FUNCTION public.serie_metricas_dashboard(p_inicio DATE, p_fim DATE, p_mensal BOOLEAN)
+RETURNS TABLE (
+    periodo_inicio    DATE,
+    periodo_anterior  BOOLEAN,
+    valor_arrecadado  DECIMAL(14,2),
+    total_apoios      INT,
+    total_cadastros   INT
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_fuso   CONSTANT TEXT := 'America/Sao_Paulo';
+    v_mensal BOOLEAN := COALESCE(p_mensal, FALSE);
+    v_hoje   DATE := (now() AT TIME ZONE v_fuso)::DATE;
+    v_inicio DATE := LEAST(COALESCE(p_inicio, v_hoje - 29), COALESCE(p_fim, v_hoje));
+    v_fim    DATE := GREATEST(COALESCE(p_inicio, v_hoje - 29), COALESCE(p_fim, v_hoje));
+    v_antes  DATE;   -- primeiro dia (ou mês) do período anterior
+    v_passo  INTERVAL;
+BEGIN
+    IF NOT public.tem_permissao('relatorio_visualizar') THEN
+        RAISE EXCEPTION 'Sem permissão para ver as métricas do painel.' USING ERRCODE = '92011';
+    END IF;
+
+    IF v_mensal THEN
+        v_inicio := date_trunc('month', v_inicio)::DATE;
+        v_fim    := date_trunc('month', v_fim)::DATE;
+        v_inicio := GREATEST(v_inicio, (v_fim - INTERVAL '119 months')::DATE);   -- teto: 10 anos
+        v_antes  := (v_inicio - ((EXTRACT(YEAR FROM age(v_fim, v_inicio)) * 12 + EXTRACT(MONTH FROM age(v_fim, v_inicio)) + 1)
+                                  * INTERVAL '1 month'))::DATE;
+        v_passo  := INTERVAL '1 month';
+    ELSE
+        v_inicio := GREATEST(v_inicio, v_fim - 730);                            -- teto: 2 anos
+        v_antes  := v_inicio - (v_fim - v_inicio + 1);
+        v_passo  := INTERVAL '1 day';
+    END IF;
+
+    RETURN QUERY
+    WITH baldes AS (
+        SELECT g::DATE AS dia
+        FROM generate_series(v_antes::TIMESTAMP, v_fim::TIMESTAMP, v_passo) AS g
+    ),
+    apoios AS (
+        SELECT CASE WHEN v_mensal THEN date_trunc('month', c.criado_em AT TIME ZONE v_fuso)::DATE
+                    ELSE (c.criado_em AT TIME ZONE v_fuso)::DATE END AS dia,
+               sum(c.valor) AS soma, count(*) AS qtd
+        FROM contribuicao c
+        WHERE c.status IN ('confirmado', 'repassado')
+          AND c.criado_em >= (v_antes::TIMESTAMP AT TIME ZONE v_fuso)
+        GROUP BY 1
+    ),
+    cadastros AS (
+        SELECT CASE WHEN v_mensal THEN date_trunc('month', u.criado_em AT TIME ZONE v_fuso)::DATE
+                    ELSE (u.criado_em AT TIME ZONE v_fuso)::DATE END AS dia,
+               count(*) AS qtd
+        FROM usuario u
+        WHERE u.criado_em >= (v_antes::TIMESTAMP AT TIME ZONE v_fuso)
+        GROUP BY 1
+    )
+    SELECT b.dia,
+           b.dia < v_inicio,
+           COALESCE(a.soma, 0)::DECIMAL(14,2),
+           COALESCE(a.qtd, 0)::INT,
+           COALESCE(k.qtd, 0)::INT
+    FROM baldes b
+    LEFT JOIN apoios a ON a.dia = b.dia
+    LEFT JOIN cadastros k ON k.dia = b.dia
+    ORDER BY b.dia;
+END;
+$$;
+
 -- [03-P-3] alterar_perfil_pesquisador_de_outro: o modal de Alterar Usuário (React) chama PATCH
 -- /perfil-pesquisador/:id para salvar tipo de vínculo/vínculo institucional/título acadêmico de QUEM está
 -- sendo editado, mas pol_perfil_update (04) só libera UPDATE de perfil_pesquisador para o PRÓPRIO dono: um

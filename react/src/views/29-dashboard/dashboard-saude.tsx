@@ -57,16 +57,16 @@ function Linha({ rotulo, emUso, children }: { rotulo: string; emUso?: ReactNode;
   );
 }
 
-// Aba "Saúde": um cartão só, com os serviços de que o sistema depende, conferidos na hora (16-11-2026). O banco vem da mesma
-// checagem da Visão Geral (GET /health); o provedor de pagamento, o de e-mail e os avisos do provedor vêm de
-// GET /dashboard/saude, que fala com cada um sem cobrar nem enviar nada. Não mostra "última migration aplicada": o projeto
+// Aba "Saúde": um cartão só, com os três serviços de que o sistema depende, conferidos na hora (16-11-2026). O banco vem da
+// mesma checagem da Visão Geral (GET /health); o provedor de pagamento e o de e-mail vêm de GET /dashboard/saude, que fala
+// com cada um sem cobrar nem enviar nada. Os avisos (webhooks) do provedor saíram (Lucas): o que pede ação já está em
+// "Precisa da sua atenção" (eventos de pagamento em revisão). Não mostra "última migration aplicada": o projeto
 // não tem tabela de controle de migration, e um dado fabricado seria pior que nada.
 export function DashboardSaude({ auth, bancoConectado, resumo }: DashboardSaudeProps) {
   const { dado: saude, carregando, erro, recarregar } = useBuscar(() => dashboardApi.verificarServicos(auth.authFetch), [], {
     mostraTexto: true,
   });
   const pronto = !carregando && saude !== null;
-  const avisos = saude?.avisosPagamento;
 
   return (
     <div className="cartao-painel p-5">
@@ -122,22 +122,6 @@ export function DashboardSaude({ auth, bancoConectado, resumo }: DashboardSaudeP
               <strong className={resumo.notificacoesComFalha > 0 ? 'texto-erro' : 'texto-forte'}>{resumo.notificacoesComFalha}</strong> com falha ·{' '}
               <Link to="/admin/notificacoes" className="link-texto">
                 Ver notificações
-              </Link>
-            </p>
-          )}
-        </Linha>
-
-        <Linha rotulo="Avisos de pagamento" emUso={avisos?.visivel && (avisos.ultimoRecebidoEm ? `Último em ${formatarDataHora(avisos.ultimoRecebidoEm, true)}` : 'Nenhum recebido')}>
-          {!avisos ? (
-            <span className="texto-fraco">Verificando…</span>
-          ) : !avisos.visivel ? (
-            <span className="texto-fraco">Sem permissão para ver os eventos de pagamento.</span>
-          ) : (
-            <p className="texto-fraco">
-              <strong className={avisos.comErro > 0 ? 'texto-erro' : 'texto-forte'}>{avisos.comErro}</strong> com erro ·{' '}
-              <strong className={avisos.emRevisao > 0 ? 'texto-erro' : 'texto-forte'}>{avisos.emRevisao}</strong> em revisão manual ·{' '}
-              <Link to="/admin/eventos-pagamento" className="link-texto">
-                Ver eventos de pagamento
               </Link>
             </p>
           )}
