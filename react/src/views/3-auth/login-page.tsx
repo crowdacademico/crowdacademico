@@ -9,7 +9,8 @@ import { ErroHttp } from '../../services/constant/api/http.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { emailValido } from '../../services/constant/util/validacao.util';
-import type { PropsPagina } from '../../services/router/pagina.type';
+import type { PropsPagina } from '../../services/router/pagina.type';
+import { LogoMarca } from '../../components/layout/logo-marca';
 
 // Cópia fiel de telas/login/login.html do Projeto de Interface real, com uma mudança deliberada em relação ao
 // original, não só estética:
@@ -93,9 +94,8 @@ export function LoginPage({ auth }: PropsPagina) {
         <aside className="auth-login__painel relative overflow-hidden hidden lg:flex flex-col justify-between p-10">
           <div className="absolute inset-0 grade-medicao" aria-hidden="true" />
           <div className="relative z-10">
-            <span className="header-publico__marca mb-8 text-2xl" aria-hidden="true">
-              <i className="fa-solid fa-flask" />
-            </span>
+            {/* A marca oficial, a mesma do cabeçalho e do rodapé (antes: o quadrado com o frasco, provisório de antes da logo). */}
+            <LogoMarca className="h-14 mb-8" />
             <h2 className="titulo-secao texto-sobre-escuro-forte mb-4">
               Ciência financiada por quem acredita nela.
             </h2>
@@ -111,9 +111,7 @@ export function LoginPage({ auth }: PropsPagina) {
 
         <section className="auth-login__formulario">
           <header className="auth-login__mobile-cabecalho p-8 text-center border-b borda-padrao fundo-sutil lg:hidden">
-            <span className="header-publico__marca mx-auto mb-5 text-2xl" aria-hidden="true">
-              <i className="fa-solid fa-flask" />
-            </span>
+            <LogoMarca className="h-14 mx-auto mb-5" />
             <h1 className="titulo-pagina texto-forte mb-2">Bem-vindo(a)</h1>
             <p className="text-sm texto-fraco font-medium">Acesse sua conta para apoiar a ciência brasileira.</p>
           </header>

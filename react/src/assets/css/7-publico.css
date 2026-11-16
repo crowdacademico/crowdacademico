@@ -23,20 +23,6 @@
     padding-block: 3rem;
   }
 
-  .header-publico__marca {
-    display: flex;
-    width: 2.5rem;
-    height: 2.5rem;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-lg);
-    background: var(--cor-fundo-marca-forte);
-    color: var(--cor-texto-sobre-cor);
-    font-weight: 700;
-    box-shadow: inset 0 1px 2px rgb(0 0 0 / 16%);
-  }
-
   .perfil-vitrine {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
