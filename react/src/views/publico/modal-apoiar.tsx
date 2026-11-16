@@ -17,7 +17,7 @@ import type { MeioApoioPublico } from '../../services/22-contribuicao/type/contr
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import { ErroHttp } from '../../services/constant/api/http.util';
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
-import { guardarApoio, useSituacaoApoio, type ApoioEmAndamento } from './apoio-em-andamento';
+import { guardarApoio, lerApoio, useSituacaoApoio, type ApoioEmAndamento } from './apoio-em-andamento';
 import { PainelPix } from './painel-pix';
 
 const VALORES_SUGERIDOS = [25, 50, 100, 150, 200];
@@ -136,6 +136,32 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
   // Pix gerado: o modal passa a mostrar o QR e a situação.
   const [apoioPix, setApoioPix] = useState<ApoioEmAndamento | null>(null);
   const situacao = useSituacaoApoio(auth.authFetch, apoioPix);
+  // Pix desta campanha gerado antes, nesta aba, e ainda no prazo (16-11-2026, Lucas): a pessoa fechou o modal sem querer e
+  // clicou em Apoiar de novo. O modal oferece o mesmo QR antes do formulário. Só aparece depois de o servidor confirmar que
+  // ele segue aguardando (pode ter sido pago ou vencido enquanto isso). Novo apoio não cancela o antigo: o Pix não pago vence
+  // sozinho (pix_validade_horas) e nunca entra no arrecadado.
+  const [pixPendente, setPixPendente] = useState<ApoioEmAndamento | null>(null);
+  useEffect(() => {
+    const guardado = lerApoio();
+    if (
+      !guardado?.pix ||
+      guardado.idCampanha !== campanha.idCampanha ||
+      guardado.meioPagamento !== 'pix' ||
+      !(Date.parse(guardado.pix.expiraEm) > Date.now())
+    ) {
+      return;
+    }
+    let ativo = true;
+    contribuicaoPublicaApi
+      .buscar(auth.authFetch, guardado.idContribuicao, guardado.tokenSessao)
+      .then((resultado) => {
+        if (ativo && resultado.status === 'pendente') setPixPendente(guardado);
+      })
+      .catch(() => undefined);
+    return () => {
+      ativo = false;
+    };
+  }, [auth.authFetch, campanha.idCampanha]);
 
   // Voltar da página do Asaas (cartão, boleto): o navegador pode restaurar esta página da memória (cache de voltar/avançar),
   // com o modal parado em "Gerando a cobrança..." e o endereço já trocado para /apoio-confirmado. Recarrega.
@@ -334,6 +360,20 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
         />
       }
     >
+      {pixPendente && (
+        <div className="mb-5">
+          <CaixaAviso titulo="Você tem um Pix aguardando pagamento" tom="info" icone="fa-qrcode">
+            <p>
+              Pix de {formatarMoeda(pixPendente.valorCobrado)} gerado em{' '}
+              {new Date(pixPendente.criadoEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}.{' '}
+              <button type="button" onClick={() => setApoioPix(pixPendente)} className="link-texto link-texto--cor-herdada">
+                Ver o QR e pagar
+              </button>
+            </p>
+            <p className="mt-1">Prefere outro valor? Faça um novo apoio abaixo; o Pix anterior vence sozinho, sem cobrança.</p>
+          </CaixaAviso>
+        </div>
+      )}
       <SecaoFicha titulo="Valor do apoio" colunas={1}>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2" role="group" aria-label="Valores sugeridos">
           {VALORES_SUGERIDOS.map((sugestao) => (

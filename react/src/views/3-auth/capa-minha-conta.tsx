@@ -84,12 +84,13 @@ export function CapaMinhaConta({ auth }: CapaMinhaContaProps) {
 
         <dl className={`grid grid-cols-2 gap-3 mt-6 ${ehPesquisador ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
           {tiles.map((tile) => (
-            <div key={tile.rotulo} className="flex items-center gap-3 rounded-xl border borda-padrao fundo-sutil px-4 py-3 min-w-0">
-              <span className="w-10 h-10 rounded-full fundo-cartao flex items-center justify-center texto-marca shrink-0" aria-hidden="true">
+            // No celular o ícone sai e o rótulo quebra em duas linhas: com reticências ("Apoios ...") ninguém sabia o que era.
+            <div key={tile.rotulo} className="flex items-center gap-3 rounded-xl border borda-padrao fundo-sutil px-3 sm:px-4 py-3 min-w-0">
+              <span className="w-10 h-10 rounded-full fundo-cartao hidden sm:flex items-center justify-center texto-marca shrink-0" aria-hidden="true">
                 <i className={`fa-solid ${tile.icone}`} />
               </span>
               <div className="min-w-0 flex flex-col-reverse">
-                <dt className="legenda texto-fraco truncate">{tile.rotulo}</dt>
+                <dt className="legenda texto-fraco leading-tight">{tile.rotulo}</dt>
                 <dd className="numero text-xl font-bold texto-forte">{tile.valor}</dd>
               </div>
             </div>

@@ -82,14 +82,6 @@ export function PainelPix({ pix, linkPagamento }: PainelPixProps) {
 
   return (
     <div className="flex flex-col items-center gap-4 text-center">
-      {pix.simulado && (
-        <CaixaAviso titulo="QR de teste (sandbox)" tom="info">
-          <p>
-            O Asaas sandbox não gerou o QR desta cobrança, então este é só ilustrativo. Para testar o pagamento, abra a cobrança
-            no painel do Asaas e use <strong>Confirmar pagamento</strong>. Em produção aparece o QR de verdade.
-          </p>
-        </CaixaAviso>
-      )}
       <div className="w-60 h-60 border borda-padrao rounded-xl p-2 fundo-cartao flex items-center justify-center">
         {imagem ? (
           <img src={imagem} alt="QR Code do Pix" className="w-full h-full" />
@@ -97,7 +89,13 @@ export function PainelPix({ pix, linkPagamento }: PainelPixProps) {
           <i className="fa-brands fa-pix text-5xl texto-marca opacity-40" aria-hidden="true" />
         )}
       </div>
-      <p className="paragrafo texto-padrao">Abra o app do seu banco, escolha pagar com Pix e escaneie o QR, ou use o código abaixo.</p>
+      {/* Passos numerados, como nos guias dos bancos e nos checkouts com Pix (16-11-2026): os dois caminhos ("QR Code" e
+          "Pix Copia e Cola", nomes obrigatórios do Banco Central) no mesmo passo, e a conferência antes de confirmar. */}
+      <ol className="paragrafo texto-padrao text-left list-decimal pl-5 space-y-1">
+        <li>Abra o app do seu banco e entre na área Pix.</li>
+        <li>Escaneie o QR Code ou cole o código do Pix Copia e Cola.</li>
+        <li>Confira o valor e confirme o pagamento.</li>
+      </ol>
       <div className="w-full text-left">
         <label htmlFor="pix-copia-cola" className="rotulo-campo">
           Pix Copia e Cola

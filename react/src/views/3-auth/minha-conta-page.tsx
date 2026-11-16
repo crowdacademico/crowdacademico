@@ -703,7 +703,8 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
 
   return (
     <div className="px-6 sm:px-8 py-8 space-y-6">
-      <div className="flex items-center justify-between gap-3 rounded-lg border borda-padrao p-4">
+      {/* No celular, o botão desce para baixo do texto (ao lado, o texto ficava espremido em 3 palavras por linha). */}
+      <div className="flex flex-col items-start sm:flex-row sm:items-center justify-between gap-3 rounded-lg border borda-padrao p-4">
         <div>
           <p className="paragrafo enfase texto-padrao">Exportar meus dados</p>
           <p className="legenda texto-fraco">

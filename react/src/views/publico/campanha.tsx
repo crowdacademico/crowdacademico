@@ -506,16 +506,16 @@ export function Campanha({ auth }: PropsPagina) {
                       </>
                     )}
                   </div>
-                  <div className="grid grid-cols-3 gap-3 mb-8">
-                    <div className="fundo-destaque rounded-xl p-3 border borda-padrao text-center">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-8">
+                    <div className="fundo-destaque rounded-xl px-1 py-3 sm:p-3 border borda-padrao text-center min-w-0">
                       <div className="numero text-xl font-bold texto-forte">{percentual === null ? '—' : `${percentual}%`}</div>
                       <div className="microrrotulo texto-fraco">Atingido</div>
                     </div>
-                    <div className="fundo-aviso rounded-xl p-3 border borda-aviso text-center">
+                    <div className="fundo-aviso rounded-xl px-1 py-3 sm:p-3 border borda-aviso text-center min-w-0">
                       <div className="numero text-xl font-bold texto-aviso">{dias === null ? '—' : dias}</div>
                       <div className="microrrotulo texto-aviso">Dias restantes</div>
                     </div>
-                    <div className="fundo-marca-sutil rounded-xl p-3 border borda-marca text-center">
+                    <div className="fundo-marca-sutil rounded-xl px-1 py-3 sm:p-3 border borda-marca text-center min-w-0">
                       <div className="numero text-xl font-bold texto-marca">
                         {apoiosPagos ?? (apoiosCarregando ? '…' : '—')}
                       </div>

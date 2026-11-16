@@ -15,7 +15,8 @@ interface ConfirmacaoDigitadaProps {
 export function ConfirmacaoDigitada({ oQue, esperado, valor, aoMudar, classeRotulo }: ConfirmacaoDigitadaProps) {
   const texto = `Digite ${oQue} "${esperado}" para confirmar`;
   return (
-    <Campo rotulo={classeRotulo ? <span className={classeRotulo}>{texto}</span> : texto}>
+    // overflow-wrap: anywhere: um e-mail longo é uma "palavra" só e vazava da caixa no celular (Alexia, 16-11-2026).
+    <Campo rotulo={<span className={`[overflow-wrap:anywhere] ${classeRotulo ?? ''}`}>{texto}</span>}>
       {({ atributos }) => (
         <input
           {...atributos}

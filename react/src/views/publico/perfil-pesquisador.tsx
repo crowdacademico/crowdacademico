@@ -247,19 +247,20 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
     <div id="view-perfil-pesquisador" className="pagina-publica view-section flex-grow fundo-pagina min-h-screen pb-16">
       {/* Sem overflow-hidden e numa camada acima (z-10): o menu do Seguir abre por cima do conteúdo, não por trás. */}
       <header id="perfil-pesquisador-capa" className="superficie-escura relative z-10 mb-10 py-14">
-        <div className="mx-auto max-w-5xl px-4 flex flex-col sm:flex-row sm:items-center gap-8">
+        {/* No celular, tudo centrado e a foto menor (16-11-2026, Alexia): alinhado à esquerda sobrava um vazio à direita. */}
+        <div className="mx-auto max-w-5xl px-4 flex flex-col items-center text-center sm:flex-row sm:text-left gap-6 sm:gap-8">
           <div className="shrink-0">
             {pesquisador?.avatarUrl ? (
               <img
                 src={pesquisador.avatarUrl}
                 alt={`Foto de ${nome}`}
-                className="w-36 h-36 sm:w-44 sm:h-44 rounded-full object-cover border-4 border-white/20 shadow-2xl"
+                className="w-28 h-28 sm:w-44 sm:h-44 rounded-full object-cover border-4 border-white/20 shadow-2xl"
               />
             ) : (
               // Sem foto: as iniciais no MESMO tamanho da foto. Não usar scale: ele só aumenta o desenho, sem ocupar espaço,
               // e o círculo ficava por cima do nome ao lado.
               <span
-                className="w-36 h-36 sm:w-44 sm:h-44 rounded-full flex items-center justify-center fundo-marca-sobre-escuro texto-sobre-escuro-forte text-5xl font-bold border-4 border-white/20 shadow-2xl select-none"
+                className="w-28 h-28 sm:w-44 sm:h-44 rounded-full flex items-center justify-center fundo-marca-sobre-escuro texto-sobre-escuro-forte text-4xl sm:text-5xl font-bold border-4 border-white/20 shadow-2xl select-none"
                 aria-hidden="true"
               >
                 {iniciais(pesquisador?.nome)}
@@ -270,7 +271,7 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
             <p className="microrrotulo texto-marca-sobre-escuro mb-3">Perfil de pesquisador</p>
             <h1 className="titulo-pagina texto-sobre-escuro-forte">{nome}</h1>
             {perfil && (
-              <ul className="flex flex-wrap gap-2 mt-4" aria-label="Formação e vínculo">
+              <ul className="flex flex-wrap justify-center sm:justify-start gap-2 mt-4" aria-label="Formação e vínculo">
                 <li className="veu-claro texto-sobre-escuro-forte microrrotulo px-3 py-1.5 rounded-full inline-flex items-center gap-2">
                   <i className="fa-solid fa-graduation-cap" aria-hidden="true" />
                   {ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico]}
@@ -286,7 +287,7 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
             {naoEncontrado && (
               <p className="paragrafo texto-sobre-escuro mt-4">Não encontramos um perfil público de pesquisador neste endereço.</p>
             )}
-            {!naoEncontrado && <div className="mt-6">{botaoSeguir}</div>}
+            {!naoEncontrado && <div className="mt-6 flex justify-center sm:justify-start">{botaoSeguir}</div>}
           </div>
         </div>
       </header>
@@ -309,8 +310,9 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
               </section>
             </div>
 
-            <aside>
-              <div className="pagina-publica__cartao cartao sticky top-24 space-y-5" id="perfil-pesquisador-cta">
+            {/* No celular, o resumo (pontuação, seguidores, campanhas) vem antes das campanhas, não depois de tudo (Alexia). */}
+            <aside className="order-first lg:order-none">
+              <div className="pagina-publica__cartao cartao lg:sticky lg:top-24 space-y-5" id="perfil-pesquisador-cta">
                 <h2 className="subtitulo">Acompanhe a pesquisa</h2>
                 {pontuacao !== null && (
                   <div>
