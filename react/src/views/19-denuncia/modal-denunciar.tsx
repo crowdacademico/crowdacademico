@@ -75,7 +75,7 @@ export function ModalDenunciar({ authFetch, alvo, nomeAlvo, relatoInicial = '', 
       }
     >
       <SecaoFicha titulo="Denúncia" colunas={1}>
-        <Campo rotulo="Motivo" erro={erros.erroDe('motivo')}>
+        <Campo obrigatorio rotulo="Motivo" erro={erros.erroDe('motivo')}>
           {({ atributos, classeErro }) => (
             <select {...atributos} value={idMotivo} onChange={(evento) => setIdMotivo(evento.target.value)} className={'input-padrao' + classeErro}>
               <option value="">Escolha um motivo...</option>

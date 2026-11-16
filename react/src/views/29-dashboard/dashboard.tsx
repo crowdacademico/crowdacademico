@@ -7,7 +7,6 @@ import { dashboardApi } from '../../services/29-dashboard/api/dashboard.api';
 import { ROTULO_STATUS_CAMPANHA, type StatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { formatarReaisSemSimbolo } from '../../services/constant/util/formatacao.util';
-import { DashboardIdentidadeVisual } from './dashboard-identidade-visual';
 import { DashboardRegrasNegocio } from './dashboard-regras-negocio';
 import { DashboardSaude } from './dashboard-saude';
 import { lerAcessadosRecentemente } from '../../services/router/acessados-recentemente';
@@ -25,13 +24,13 @@ export const TEXTO_TOOLTIP_SESSOES_ATIVAS =
 
 // Abas: estrutura em abas em vez de empilhar seção atrás de seção (para o Dashboard não virar uma "tela onde
 // tudo cabe"). "Visão Geral" tem os cards + o resumo dos e-mails (a lista inteira é a tela Notificações); as outras (Regras
-// do Negócio, Identidade Visual, Saúde) são visões do painel global.
-type AbaChave = 'visao-geral' | 'regras' | 'identidade' | 'saude';
+// do Negócio, Saúde) são visões do painel global. A aba "Identidade Visual" saiu em 16-11-2026 (Lucas): era só um espaço
+// reservado, e não havia tempo de fazer e testar a troca de logo e cores pelo painel.
+type AbaChave = 'visao-geral' | 'regras' | 'saude';
 
 const ABAS: { chave: AbaChave; rotulo: string; icone: string }[] = [
   { chave: 'visao-geral', rotulo: 'Visão Geral', icone: 'fa-gauge' },
   { chave: 'regras', rotulo: 'Regras do Negócio', icone: 'fa-sliders' },
-  { chave: 'identidade', rotulo: 'Identidade Visual', icone: 'fa-image' },
   { chave: 'saude', rotulo: 'Saúde', icone: 'fa-heart-pulse' },
 ];
 
@@ -259,7 +258,6 @@ export function Dashboard({ auth }: DashboardProps) {
       )}
 
       {abaAtiva === 'regras' && <DashboardRegrasNegocio auth={auth} />}
-      {abaAtiva === 'identidade' && <DashboardIdentidadeVisual />}
       {abaAtiva === 'saude' && <DashboardSaude bancoConectado={bancoConectado} resumo={resumo} />}
     </div>
   );

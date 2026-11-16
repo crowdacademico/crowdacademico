@@ -8,9 +8,9 @@ interface DashboardSaudeProps {
 }
 
 // Aba "Saúde": recebe o mesmo estado que a faixa de saúde da Visão Geral já calcula (não refaz a requisição).
-// Não mostra "última migration aplicada": o projeto não tem uma tabela de controle de migration em uso (o
-// histórico de mudança de schema vive nos arquivos numerados 01-08 + `ATUALIZAR O SUPABASE.sql`). Mostrar um
-// dado fabricado seria pior que não mostrar nada.
+// Não mostra "última migration aplicada": o projeto não tem uma tabela de controle de migration (o histórico de
+// mudança de banco vive nos arquivos numerados 01-08 + `ATUALIZAR O SUPABASE.sql`). Mostrar um dado fabricado seria pior
+// que não mostrar nada; e o aviso que explicava isso na tela saiu (16-11-2026): só confundia quem não é do projeto.
 export function DashboardSaude({ bancoConectado, resumo }: DashboardSaudeProps) {
   return (
     <div className="space-y-4">
@@ -49,15 +49,6 @@ export function DashboardSaude({ bancoConectado, resumo }: DashboardSaudeProps) 
         )}
       </div>
 
-      <div className="rounded-lg border borda-padrao fundo-sutil p-4">
-        <p className="legenda texto-fraco">
-          <i className="fa-solid fa-circle-info mr-1" aria-hidden="true"></i>
-          Rastreamento de versão de schema (última migration aplicada, divergência de hash)
-          ainda não existe neste projeto, o histórico de mudança de banco vive nos arquivos
-          numerados (01-08) e em "ATUALIZAR O SUPABASE.sql", não numa tabela de controle
-          formal.
-        </p>
-      </div>
     </div>
   );
 }

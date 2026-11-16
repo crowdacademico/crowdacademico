@@ -133,7 +133,7 @@ export function ModalRecompensa({ auth, idCampanha, recompensa, campanhasParaEsc
     >
       <SecaoFicha titulo="Recompensa">
         {!recompensa && campanhasParaEscolher && campanhasParaEscolher.length > 0 && (
-          <Campo rotulo="Campanha" className="sm:col-span-2">
+          <Campo obrigatorio rotulo="Campanha" className="sm:col-span-2">
             {({ atributos }) => (
               <select
                 {...atributos}
@@ -159,7 +159,7 @@ export function ModalRecompensa({ auth, idCampanha, recompensa, campanhasParaEsc
             </span>
           </label>
         )}
-        <Campo rotulo="Título" erro={erroDe('titulo')}>
+        <Campo obrigatorio rotulo="Título" erro={erroDe('titulo')}>
           {({ atributos, classeErro }) => (
             <input
               {...atributos}
@@ -172,6 +172,7 @@ export function ModalRecompensa({ auth, idCampanha, recompensa, campanhasParaEsc
           )}
         </Campo>
         <Campo
+          obrigatorio
           rotulo="A partir de"
           erro={erroDe('valorMinimo')}
           dica={travada ? `Já escolhida em ${recompensa?.escolhidas} contribuição(ões): o valor e o tipo não mudam mais.` : undefined}
@@ -180,7 +181,7 @@ export function ModalRecompensa({ auth, idCampanha, recompensa, campanhasParaEsc
             <InputDinheiro {...atributos} valor={valorMinimo} aoMudar={setValorMinimo} disabled={travada} className={'input-padrao' + classeErro} />
           )}
         </Campo>
-        <Campo rotulo="Tipo" dica={EXEMPLO_TIPO_RECOMPENSA[tipo]} className="sm:col-span-2">
+        <Campo obrigatorio rotulo="Tipo" dica={EXEMPLO_TIPO_RECOMPENSA[tipo]} className="sm:col-span-2">
           {({ atributos }) => (
             <select
               {...atributos}
@@ -210,7 +211,7 @@ export function ModalRecompensa({ auth, idCampanha, recompensa, campanhasParaEsc
             <p className="legenda enfase texto-erro sm:col-span-2">Nenhum tipo de link liberado para recompensa. O admin libera em Tipos de Link.</p>
           ) : (
             <>
-              <Campo rotulo="Tipo do link" erro={erroDe('idTipoLink')}>
+              <Campo obrigatorio rotulo="Tipo do link" erro={erroDe('idTipoLink')}>
                 {({ atributos, classeErro }) => (
                   <select
                     {...atributos}
@@ -231,6 +232,7 @@ export function ModalRecompensa({ auth, idCampanha, recompensa, campanhasParaEsc
                 )}
               </Campo>
               <Campo
+                obrigatorio
                 rotulo={
                   <>
                     Endereço do link {exemploLink && <Tooltip texto={`Exemplo: ${exemploLink}`} />}

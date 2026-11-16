@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import type { ReactNode } from 'react';
-import { MarcaObrigatorio } from './legenda-obrigatorio';
+import { MarcaObrigatorio } from './marca-obrigatorio';
 
 // Bloco de formulário que se repetia em toda tela: rótulo + campo + (mensagem de erro OU dica) + borda vermelha
 // + aria-invalid/aria-describedby ligando o campo à mensagem. O erro pode ser local (ex.: código com minúscula)
@@ -21,7 +21,7 @@ interface CampoProps {
   erro?: ReactNode;
   className?: string;
   // Campo obrigatório num formulário que também tem campos opcionais: o "*" depois do rótulo (escondido do leitor de
-  // tela, que ouve "obrigatório" pelo aria-required do campo) e a legenda <LegendaObrigatorio /> no topo do formulário.
+  // tela, que ouve "obrigatório" pelo aria-required do campo). Sem legenda "* indica campo obrigatório" (16-11-2026, Lucas).
   // Formulário em que TUDO é obrigatório (login, trocar senha) não marca: o asterisco em todos só polui (16-11-2026).
   obrigatorio?: boolean;
   children: (campo: CampoRenderizado) => ReactNode;

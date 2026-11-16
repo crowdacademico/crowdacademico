@@ -21,7 +21,7 @@ interface CamposVinculoPerfilProps {
   // Quando o vínculo não é institucional, o campo fica no lugar, invisível, em vez de sumir: o título acadêmico não
   // pula para o lado (Alterar Usuário, grade de 3 colunas).
   reservarVinculoInstitucional?: boolean;
-  // O "*" de obrigatório nos três campos (Campo): só nos formulários que usam a legenda <LegendaObrigatorio />.
+  // O "*" de obrigatório nos três campos (Campo): só nos formulários que marcam os obrigatórios.
   marcarObrigatorios?: boolean;
 }
 

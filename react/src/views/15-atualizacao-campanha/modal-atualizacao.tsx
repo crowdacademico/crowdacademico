@@ -154,7 +154,7 @@ export function ModalAtualizacao({ auth, idCampanha, atualizacao, campanhasParaE
     >
       <SecaoFicha titulo="Atualização">
         {!atualizacao && campanhasParaEscolher && campanhasParaEscolher.length > 0 && (
-          <Campo rotulo="Campanha" className="sm:col-span-2">
+          <Campo obrigatorio rotulo="Campanha" className="sm:col-span-2">
             {({ atributos }) => (
               <select
                 {...atributos}
@@ -171,7 +171,7 @@ export function ModalAtualizacao({ auth, idCampanha, atualizacao, campanhasParaE
             )}
           </Campo>
         )}
-        <Campo rotulo="Título" erro={erroDe('titulo')} className="sm:col-span-2">
+        <Campo obrigatorio rotulo="Título" erro={erroDe('titulo')} className="sm:col-span-2">
           {({ atributos, classeErro }) => (
             <input
               {...atributos}
@@ -183,7 +183,7 @@ export function ModalAtualizacao({ auth, idCampanha, atualizacao, campanhasParaE
             />
           )}
         </Campo>
-        <Campo rotulo="Conteúdo" erro={erroDe('conteudo')} className="sm:col-span-2">
+        <Campo obrigatorio rotulo="Conteúdo" erro={erroDe('conteudo')} className="sm:col-span-2">
           {({ atributos, classeErro }) => (
             <>
               <textarea
@@ -197,7 +197,7 @@ export function ModalAtualizacao({ auth, idCampanha, atualizacao, campanhasParaE
             </>
           )}
         </Campo>
-        <Campo rotulo="Fase do projeto">
+        <Campo obrigatorio rotulo="Fase do projeto">
           {({ atributos }) => (
             <select {...atributos} value={fase} onChange={(evento) => setFase(evento.target.value as FaseAtualizacao)} className="input-padrao">
               {ORDEM_FASE_ATUALIZACAO.map((opcao) => (

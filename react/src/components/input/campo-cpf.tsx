@@ -11,7 +11,7 @@ interface CampoCpfProps {
   // Botão "Gerar CPF válido": ausente por padrão; só o T1 do Campo de Testes passa isso (via
   // ModalUpgradePesquisador). Nunca faz sentido num formulário de verdade.
   gerarCpfDeTeste?: () => string;
-  // O "*" de obrigatório (Campo): só nos formulários que usam a legenda <LegendaObrigatorio />.
+  // O "*" de obrigatório (Campo): só nos formulários que marcam os obrigatórios.
   obrigatorio?: boolean;
 }
 

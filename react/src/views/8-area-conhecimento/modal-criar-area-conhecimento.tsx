@@ -87,6 +87,7 @@ export function ModalCriarAreaConhecimento({ auth, aoFechar, aoCriado }: ModalCr
       erro={erro}
     >
       <Campo
+        obrigatorio
         rotulo="Código CNPq"
         erro={
           codigoInvalido
@@ -111,7 +112,7 @@ export function ModalCriarAreaConhecimento({ auth, aoFechar, aoCriado }: ModalCr
         )}
       </Campo>
 
-      <Campo rotulo="Nome" erro={erroDe('nome') ?? errosCampo.nome}>
+      <Campo obrigatorio rotulo="Nome" erro={erroDe('nome') ?? errosCampo.nome}>
         {({ atributos, classeErro }) => (
           <input
             {...atributos}

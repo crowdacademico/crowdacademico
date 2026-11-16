@@ -108,7 +108,7 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
     >
       <CampoSomenteLeitura rotulo="id" valor={papel.idPapel} />
 
-      <Campo rotulo="Nome" erro={erroDe('nome') ?? errosCampo.nome}>
+      <Campo obrigatorio rotulo="Nome" erro={erroDe('nome') ?? errosCampo.nome}>
         {({ atributos }) => (
           <input
             {...atributos}

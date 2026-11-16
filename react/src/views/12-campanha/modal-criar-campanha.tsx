@@ -6,7 +6,6 @@ import { useFecharComAviso } from '../../components/crud/use-alteracao-nao-salva
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { IndicadorEtapas } from '../../components/crud/indicador-etapas';
 import { Campo } from '../../components/input/campo';
-import { LegendaObrigatorio } from '../../components/input/legenda-obrigatorio';
 import { SeletorImagemCapaCampanha } from '../../components/input/seletor-imagem-capa-campanha';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -380,7 +379,6 @@ export function ModalCriarCampanha({
           <>
             {camposExtras}
             {erroDe('extras') && <p className="legenda enfase texto-erro -mt-2 mb-3">{erroDe('extras')}</p>}
-            <LegendaObrigatorio className="mb-3" />
             <SecaoFicha titulo="Dados">
               <Campo obrigatorio rotulo="Título" className="sm:col-span-2" erro={erroDe('titulo')}>
                 {({ atributos, classeErro }) => (

@@ -155,7 +155,7 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
       </SecaoFicha>
 
       <SecaoFicha titulo="Editar">
-        <Campo rotulo="Nome" erro={erroDe('nome') ?? errosCampo.nome} className="sm:col-span-2">
+        <Campo obrigatorio rotulo="Nome" erro={erroDe('nome') ?? errosCampo.nome} className="sm:col-span-2">
           {({ atributos, classeErro }) => (
             <input
               {...atributos}

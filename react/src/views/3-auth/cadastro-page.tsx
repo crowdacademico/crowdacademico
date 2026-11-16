@@ -6,7 +6,6 @@ import { ModalTermo } from '../../components/crud/modal-termo';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Campo } from '../../components/input/campo';
-import { LegendaObrigatorio } from '../../components/input/legenda-obrigatorio';
 import { CampoCpf } from '../../components/input/campo-cpf';
 import { BotaoMostrarSenha } from '../../components/input/botao-mostrar-senha';
 import { MedidorSenha } from '../../components/input/medidor-senha';
@@ -316,7 +315,6 @@ export function CadastroPage({ auth }: PropsPagina) {
                   ? 'Informe seus dados de acesso e os dados necessários para criar seu perfil acadêmico.'
                   : 'Informe seus dados para criar sua conta de apoiador.'}
               </p>
-              <LegendaObrigatorio className="-mt-2" />
 
           <Campo obrigatorio rotulo="Nome" erro={erroDe('nome') ?? (tocado.nome && nome.trim().length < NOME_MINIMO_CARACTERES && MENSAGEM_NOME_CURTO)}>
             {({ atributos, classeErro }) => (

@@ -252,7 +252,7 @@ export function ModalAlterarCampanha({
     });
   };
 
-  const campoTexto = (campo: CampoTextoCampanha, rotulo: string, largura = 'sm:col-span-2', tipo = 'text') =>
+  const campoTexto = (campo: CampoTextoCampanha, rotulo: string, largura = 'sm:col-span-2', tipo = 'text', obrigatorio = false) =>
     form &&
     (travado(campo) ? (
       <CampoFicha
@@ -261,7 +261,7 @@ export function ModalAlterarCampanha({
         largura={largura ? 'cheia' : undefined}
       />
     ) : (
-      <Campo rotulo={rotulo} className={largura}>
+      <Campo rotulo={rotulo} className={largura} obrigatorio={obrigatorio}>
         {({ atributos }) =>
           tipo === 'number' ? (
             <InputDinheiro
@@ -418,12 +418,12 @@ export function ModalAlterarCampanha({
                 {/* Duas colunas: Título e Início na primeira linha, Área e Fim na segunda; Descrição e Vídeo na largura
                     toda. As datas ficam aqui, não numa seção "Período" à parte. */}
                 <SecaoFicha titulo="Informações da campanha">
-                  {campoTexto('titulo', 'Título', '')}
-                  {campoTexto('dataInicio', 'Início', '', 'date')}
+                  {campoTexto('titulo', 'Título', '', 'text', true)}
+                  {campoTexto('dataInicio', 'Início', '', 'date', true)}
                   {travado('idAreaConhecimento') ? (
                     <CampoFicha rotulo="Área do conhecimento" valor={areas.find((area) => String(area.idAreaConhecimento) === form.idAreaConhecimento)?.nome ?? campanha.nomeArea} />
                   ) : (
-                    <Campo rotulo="Área do conhecimento">
+                    <Campo obrigatorio rotulo="Área do conhecimento">
                       {({ atributos }) => (
                         <select
                           {...atributos}
@@ -441,7 +441,7 @@ export function ModalAlterarCampanha({
                       )}
                     </Campo>
                   )}
-                  {campoTexto('dataFim', 'Fim (previsto)', '', 'date')}
+                  {campoTexto('dataFim', 'Fim (previsto)', '', 'date', true)}
                   {/* O modelo só vira campo antes do envio e depois de uma rejeição; nos outros casos fica só o selo do topo. */}
                   {modeloEditavel && (
                     <Campo
@@ -451,6 +451,7 @@ export function ModalAlterarCampanha({
                         </>
                       }
                       className="sm:col-span-2"
+                      obrigatorio
                     >
                       {({ atributos }) => (
                         <select
@@ -471,7 +472,7 @@ export function ModalAlterarCampanha({
                   {travado('descricao') ? (
                     <CampoFicha rotulo="Descrição" valor={form.descricao} largura="cheia" />
                   ) : (
-                    <Campo rotulo="Descrição" className="sm:col-span-2">
+                    <Campo rotulo="Descrição (opcional)" className="sm:col-span-2">
                       {({ atributos }) => (
                         <>
                           <textarea
@@ -555,7 +556,7 @@ export function ModalAlterarCampanha({
                 <SecaoFinanceiroCampanha
                   campanha={campanha}
                   meta={Number(form.metaFinanceira)}
-                  campoMeta={campoTexto('metaFinanceira', 'Meta', '', 'number')}
+                  campoMeta={campoTexto('metaFinanceira', 'Meta', '', 'number', true)}
                   resumoContribuicoes={resumoContribuicoes}
                 />
               </div>

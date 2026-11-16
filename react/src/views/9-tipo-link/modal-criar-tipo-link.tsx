@@ -96,6 +96,7 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
       erro={erro}
     >
       <Campo
+        obrigatorio
         rotulo="Código"
         erro={
           codigoInvalido
@@ -121,7 +122,7 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
         )}
       </Campo>
 
-      <Campo rotulo="Nome" erro={erroDe('nome') ?? errosCampo.nome}>
+      <Campo obrigatorio rotulo="Nome" erro={erroDe('nome') ?? errosCampo.nome}>
         {({ atributos, classeErro }) => (
           <input
             {...atributos}
