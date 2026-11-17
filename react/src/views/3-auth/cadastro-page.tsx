@@ -4,7 +4,7 @@ import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { ModalTermo } from '../../components/crud/modal-termo';
 import type { FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, Navigate, useNavigate } from 'react-router';
 import { Campo } from '../../components/input/campo';
 import { CampoCpf } from '../../components/input/campo-cpf';
 import { BotaoMostrarSenha } from '../../components/input/botao-mostrar-senha';
@@ -97,6 +97,9 @@ export function CadastroPage({ auth }: PropsPagina) {
   const idErroTermos = useId();
   const idErroTermosPesquisador = useId();
   const [carregandoTermo, setCarregandoTermo] = useState(false);
+  // A sessão abre no meio do cadastro (antes do perfil de pesquisador e da chave Pix): quem se cadastrou AQUI continua
+  // na tela; quem já chegou logado é levado embora (abaixo, antes do return).
+  const [cadastrouAqui, setCadastrouAqui] = useState(false);
 
   const abrirTermos = (tipo: TipoTermoCadastro) => {
     setModalTermoAberto(true);
@@ -112,7 +115,7 @@ export function CadastroPage({ auth }: PropsPagina) {
 
   const emailEhValido = emailValido(email);
   const senhasIguais = senha.length > 0 && senha === confirmarSenha;
-  const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
+  const { erroDe, tentarEnviar, limpar: esquecerTentativa } = useErrosFormulario(() => ({
     nome: nome.trim().length < NOME_MINIMO_CARACTERES && MENSAGEM_NOME_CURTO,
     email: email.trim() === '' ? 'Informe o e-mail.' : !emailEhValido && 'E-mail inválido.',
     senha: senha.length < SENHA_MINIMO_CARACTERES && `A senha precisa ter pelo menos ${SENHA_MINIMO_CARACTERES} caracteres.`,
@@ -158,9 +161,15 @@ export function CadastroPage({ auth }: PropsPagina) {
     void navigate('/');
   };
 
+  // Voltar ao passo 1 (para trocar entre apoiador e pesquisador) esquece a tentativa de envio: o que foi digitado fica,
+  // mas o vermelho dos campos só volta numa tentativa nova (16-11-2026: os erros ficavam pintados ao voltar).
   const retornarAoPassoUm = () => {
     setPasso(1);
     setErroTipoConta('');
+    esquecerTentativa();
+    setTocado({ nome: false, email: false, senha: false, confirmar: false });
+    setErroEmailDuplicado(false);
+    limparErro();
   };
 
   const aoCadastrar = async (evento: FormEvent<HTMLFormElement>) => {
@@ -205,6 +214,7 @@ export function CadastroPage({ auth }: PropsPagina) {
         const termoPesquisador = await termoUsoApi.buscarAtivo('upgrade_pesquisador');
         setTermos((atuais) => ({ ...atuais, upgrade_pesquisador: termoPesquisador }));
       }
+      setCadastrouAqui(true);
       const resultado = await auth.cadastrar(nome, email, senha, aceiteTermos);
       setTokenVerificacaoEmailDev(resultado.tokenVerificacaoEmailDev);
       if (tipoConta === 'pesquisador') {
@@ -231,6 +241,11 @@ export function CadastroPage({ auth }: PropsPagina) {
       setEnviando(false);
     }
   };
+
+  // Quem já chega com a sessão aberta não cria outra conta por cima da sua (16-11-2026): vai para a página inicial.
+  if (!auth.carregando && auth.usuario && !cadastrouAqui) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="pagina-centralizada auth-cadastro">

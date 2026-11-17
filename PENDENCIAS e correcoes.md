@@ -14,7 +14,7 @@
 
 - **Botão "Continuar com Google" no login:** é um `alert()` de protótipo, e nenhum requisito do V13 fala em login com Google. Recomendação: tirar o botão até existir o login de verdade (um botão falso na frente da banca pesa mais do que a falta dele).
 - **Boleto desligado (`boleto_habilitado = false`):** conferido pelo Playwright (`testes-e2e`, "boleto desligado..."): não aparece em Taxas e transparência nem no modal de apoio. O modal citava "Cartão e boleto" em dois textos mesmo desligado; os dois passaram a depender do interruptor. **Termo de Uso do seed:** a citação do boleto saiu (decisão do Lucas, 16-11-2026); vale quando o banco for recriado do zero.
-- **RF-105:** o requisito diz "a recompensa escolhida pelo doador", mas o sistema dá todas as recompensas que o valor alcança (decisão do Lucas, 04-11-2026). O sistema não foi mudado.
+- **RF-105:** resolvido em 17-11-2026: o texto do requisito (no TCC e no `REQUISITOS_V13.md`) passou a dizer "as recompensas cujo valor mínimo ela alcança", que é o que o sistema faz.
 - **Dados pessoais do titular na página de pagamento do Asaas:** é configuração da conta no painel do Asaas, não código. Conferir antes de alguém de fora testar o apoio.
 - **RF-028 também estava incompleto** (o V13 não apontava): o perfil público não mostrava os links acadêmicos nem a data de cadastro do perfil. Feito junto com o RF-027.
 - **Usabilidade com pessoas de fora (Quadro 16 do TCC):** o TCC cita sessões de usabilidade e de aceitação; vale fazer algumas com 2 ou 3 colegas antes da banca.

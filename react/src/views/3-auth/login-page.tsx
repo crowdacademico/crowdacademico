@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import type { FormEvent } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { IconeGoogle } from '../../components/auth/icone-google';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { Campo } from '../../components/input/campo';
@@ -9,7 +9,7 @@ import { ErroHttp } from '../../services/constant/api/http.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { emailValido } from '../../services/constant/util/validacao.util';
-import type { PropsPagina } from '../../services/router/pagina.type';
+import type { PropsPagina } from '../../services/router/pagina.type';
 import { LogoMarca } from '../../components/layout/logo-marca';
 
 // Cópia fiel de telas/login/login.html do Projeto de Interface real, com uma mudança deliberada em relação ao
@@ -87,6 +87,11 @@ export function LoginPage({ auth }: PropsPagina) {
       void navigate(destinoDepoisDoLogin(local.state), { replace: true });
     });
   };
+
+  // Já com a sessão aberta, não há o que fazer aqui (16-11-2026): vai para onde iria depois de entrar.
+  if (!auth.carregando && auth.usuario) {
+    return <Navigate to={destinoDepoisDoLogin(local.state)} replace />;
+  }
 
   return (
     <div className="pagina-centralizada auth-login">

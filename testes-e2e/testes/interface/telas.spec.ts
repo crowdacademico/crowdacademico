@@ -165,6 +165,34 @@ test.describe('Conta', () => {
     expect((await sql(`select 1 from usuario where email = '${email}'`)).length).toBe(1);
   });
 
+  test('quem já está logado não abre o Criar conta nem o Login (bug de 16-11-2026)', async ({ page }) => {
+    await entrarPelaTela(page, CONTAS.fernanda);
+    await page.goto('/cadastro');
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole('heading', { name: 'Criar conta' })).toHaveCount(0);
+    await page.goto('/login');
+    await expect(page).not.toHaveURL(/\/login/);
+  });
+
+  test('cadastro: o vermelho dos campos não fica ao voltar e trocar o tipo de conta (bug de 16-11-2026)', async ({ page }) => {
+    await page.goto('/cadastro');
+    await page.getByRole('button', { name: /Quero apoiar/ }).click();
+    await page.getByRole('button', { name: 'Continuar' }).click();
+    await page.getByRole('button', { name: 'Criar conta' }).click();
+    await expect(page.getByText('Informe o e-mail.')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Voltar' }).click();
+    await page.getByRole('button', { name: /Sou pesquisador/ }).click();
+    await page.getByRole('button', { name: 'Continuar' }).click();
+    await expect(page.getByLabel('Nome')).toBeVisible();
+    await expect(page.getByText('Informe o e-mail.')).toHaveCount(0);
+    await expect(page.locator('[aria-invalid="true"]')).toHaveCount(0);
+
+    // Uma tentativa nova volta a marcar os erros.
+    await page.getByRole('button', { name: 'Criar conta' }).click();
+    await expect(page.getByText('Informe o e-mail.')).toBeVisible();
+  });
+
   test('recuperação de senha: pedido aceito com aviso que não revela se a conta existe', async ({ page }) => {
     await page.goto('/esqueci-senha');
     await page.getByLabel('E-mail').fill(emailUnico('recupera'));
