@@ -665,7 +665,7 @@ export interface ContribuicaoRecompensaTable {
 }
 
 // Satélites de atualizacao_campanha/recompensa (01-F/01-G), dobrados dentro dos módulos
-// 15-atualizacao-campanha/18-recompensa (decisão registrada em PROXIMOS_MODULOS.md: nenhuma das 4 tem pasta
+// 15-atualizacao-campanha/18-recompensa (decisão registrada em HISTORICO_PROXIMOS_MODULOS.md, em informacoes/HISTORICO: nenhuma das 4 tem pasta
 // numerada própria, o roteiro não as lista como módulo individual).
 export interface LinkAtualizacaoTable {
   id_link_atualizacao: Generated<number>;

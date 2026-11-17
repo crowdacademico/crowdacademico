@@ -142,7 +142,7 @@ crowdacademico/                          (repo único na Organization)
         │       (cada um dos numerados com api/, constants/, hook/, type/ - igual ao modelo)
         ├── views/
         │   ├── 1-usuario/ … 25-pagamento-revisao/
-        │   ├── 22-contribuicao/      (checkout, reservada)
+        │   ├── 22-contribuicao/      (histórico de contribuições da Minha Conta e o Consultar)
         │   └── 29-dashboard/         (dashboard do admin; doador/ e pesquisador/ reservadas)
         └── 30-campo-testes/          (só em desenvolvimento; sempre o último número)
 ```

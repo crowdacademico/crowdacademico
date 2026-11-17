@@ -3,9 +3,10 @@ import { Link, useLocation } from 'react-router';
 import { AvatarUsuario } from '../avatar-usuario';
 import { useFecharAoClicarFora } from '../../../services/constant/hook/use-fechar-ao-clicar-fora';
 import type { UseAuthReturn } from '../../../services/3-auth/hook/use-auth';
+import { primeiraTelaDoPainel } from '../../../services/router/rotas.constants';
 
 interface MenuUsuarioProps {
-  auth: Pick<UseAuthReturn, 'carregando' | 'autenticado' | 'usuario' | 'podeAcessarPainelAdmin' | 'logout'>;
+  auth: Pick<UseAuthReturn, 'carregando' | 'autenticado' | 'usuario' | 'podeAcessarPainelAdmin' | 'permissoes' | 'logout'>;
 }
 
 // Dropdown do cabeçalho: avatar NÃO substitui os controles soltos (fonte, tema, sino), só guarda
@@ -103,7 +104,7 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
                 <>
                   <div className="border-t borda-padrao"></div>
                   <Link
-                    to="/admin/dashboard"
+                    to={primeiraTelaDoPainel(auth.permissoes)}
                     onClick={() => setAberto(false)}
                     className="paragrafo enfase flex items-center gap-3 px-4 py-2.5 texto-marca hover-fundo-sutil transition-colors"
                   >

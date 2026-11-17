@@ -77,6 +77,11 @@ export interface Rota {
   grupoMenu?: string | null;
   icone?: string;
   paiCaminho?: string;
+  // Telas do painel (17-11-2026): as permissões que liberam a tela; basta ter QUALQUER uma. Sem o campo, a tela vale para
+  // toda conta que entra no painel (o Campo de Testes, por exemplo). Serve só para o menu, a busca (Ctrl+K) e a rota
+  // esconderem o que a conta não consegue usar: quem protege os dados continua sendo o banco (RLS), a cada consulta.
+  // Cada lista segue a regra de leitura da tela no banco (a policy ou a função que a tela chama).
+  permissoes?: readonly string[];
 }
 
 export const ROTAS: Rota[] = [
@@ -118,6 +123,7 @@ export const ROTAS_CONTA: Rota[] = [
 export const ROTAS_ADMIN: Rota[] = [
   {
     caminho: '/admin/dashboard',
+    permissoes: ['relatorio_visualizar'],
     caminhoRelativo: 'dashboard',
     elemento: Dashboard,
     rotuloMenu: 'Dashboard',
@@ -129,6 +135,7 @@ export const ROTAS_ADMIN: Rota[] = [
   },
   {
     caminho: '/admin/usuarios',
+    permissoes: ['usuario_visualizar_sensivel', 'usuario_visualizar_atendimento'],
     caminhoRelativo: 'usuarios',
     elemento: ListarUsuarios,
     rotuloMenu: 'Usuários',
@@ -141,6 +148,7 @@ export const ROTAS_ADMIN: Rota[] = [
   // perfil a mais, não uma entidade separada.
   {
     caminho: '/admin/pesquisadores',
+    permissoes: ['usuario_visualizar_sensivel', 'perfil_pesquisador_visualizar_sensivel', 'perfil_pesquisador_alterar_de_outro', 'usuario_suspender'],
     caminhoRelativo: 'pesquisadores',
     elemento: ListarPesquisadores,
     rotuloMenu: 'Pesquisadores',
@@ -150,6 +158,7 @@ export const ROTAS_ADMIN: Rota[] = [
   },
   {
     caminho: '/admin/papeis',
+    permissoes: ['papel_gerenciar', 'papel_atribuir'],
     caminhoRelativo: 'papeis',
     elemento: ListarPapeis,
     rotuloMenu: 'Papéis & Permissões',
@@ -163,6 +172,7 @@ export const ROTAS_ADMIN: Rota[] = [
   // deste array, então a posição aqui decide a posição no menu.
   {
     caminho: '/admin/termos-uso',
+    permissoes: ['termos_uso_gerenciar'],
     caminhoRelativo: 'termos-uso',
     elemento: ListarTermosUso,
     rotuloMenu: 'Termo de Uso',
@@ -178,6 +188,7 @@ export const ROTAS_ADMIN: Rota[] = [
   // redireciona (App.tsx).
   {
     caminho: '/admin/parametros-sistema',
+    permissoes: ['configuracao_gerenciar'],
     caminhoRelativo: 'parametros-sistema',
     elemento: ListarConfiguracoes,
     rotuloMenu: 'Parâmetros do Sistema',
@@ -188,6 +199,7 @@ export const ROTAS_ADMIN: Rota[] = [
   // Pontuação (Score): pesos das dimensões e faixas de reputação (tabelas score_config e score_rotulo).
   {
     caminho: '/admin/pontuacao',
+    permissoes: ['score_editar'],
     caminhoRelativo: 'pontuacao',
     elemento: PontuacaoScore,
     rotuloMenu: 'Pontuação (Score)',
@@ -198,6 +210,7 @@ export const ROTAS_ADMIN: Rota[] = [
   // Notificações: o que o sistema mandou e para quem, por e-mail e pelo sino (tabela notificacao).
   {
     caminho: '/admin/notificacoes',
+    permissoes: ['notificacao_processar', 'usuario_visualizar_sensivel'],
     caminhoRelativo: 'notificacoes',
     elemento: ListarNotificacoes,
     rotuloMenu: 'Notificações',
@@ -208,6 +221,7 @@ export const ROTAS_ADMIN: Rota[] = [
   // Mensagens: o texto de cada aviso (e-mail e sino), por evento e canal (tabela modelo_mensagem).
   {
     caminho: '/admin/mensagens',
+    permissoes: ['configuracao_gerenciar'],
     caminhoRelativo: 'mensagens',
     elemento: ListarModelosMensagem,
     rotuloMenu: 'Mensagens',
@@ -218,6 +232,7 @@ export const ROTAS_ADMIN: Rota[] = [
 
   {
     caminho: '/admin/areas-conhecimento',
+    permissoes: ['area_conhecimento_gerenciar'],
     caminhoRelativo: 'areas-conhecimento',
     elemento: ListarAreasConhecimento,
     rotuloMenu: 'Áreas do Conhecimento',
@@ -230,6 +245,7 @@ export const ROTAS_ADMIN: Rota[] = [
   // Conhecimento logo acima, mesmo grupo.
   {
     caminho: '/admin/tipos-link',
+    permissoes: ['tipolink_gerenciar'],
     caminhoRelativo: 'tipos-link',
     elemento: ListarTiposLink,
     rotuloMenu: 'Tipos de Link',
@@ -239,6 +255,7 @@ export const ROTAS_ADMIN: Rota[] = [
   },
   {
     caminho: '/admin/motivos-denuncia',
+    permissoes: ['motivo_denuncia_gerenciar'],
     caminhoRelativo: 'motivos-denuncia',
     elemento: ListarMotivosDenuncia,
     rotuloMenu: 'Motivos de Denúncia',
@@ -254,6 +271,7 @@ export const ROTAS_ADMIN: Rota[] = [
   // campanhas antes de moderar.
   {
     caminho: '/admin/campanhas',
+    permissoes: ['relatorio_visualizar', 'campanha_editar', 'campanha_aprovar', 'campanha_rejeitar', 'campanha_encerrar_moderacao', 'denuncia_responder'],
     caminhoRelativo: 'campanhas',
     elemento: ListarCampanhas,
     rotuloMenu: 'Campanhas',
@@ -264,6 +282,7 @@ export const ROTAS_ADMIN: Rota[] = [
   // As atualizações de todas as campanhas, com os anexos: a moderação oculta e mostra de novo (atualizacao_moderar).
   {
     caminho: '/admin/atualizacoes',
+    permissoes: ['atualizacao_moderar'],
     caminhoRelativo: 'atualizacoes',
     elemento: ListarAtualizacoes,
     rotuloMenu: 'Atualizações',
@@ -275,6 +294,7 @@ export const ROTAS_ADMIN: Rota[] = [
   // Fila de aprovação: item do grupo MODERAÇÃO.
   {
     caminho: '/admin/aprovar-campanhas',
+    permissoes: ['campanha_aprovar', 'campanha_rejeitar'],
     caminhoRelativo: 'aprovar-campanhas',
     elemento: AprovarCampanhas,
     rotuloMenu: 'Aprovar Campanhas',
@@ -284,6 +304,7 @@ export const ROTAS_ADMIN: Rota[] = [
   },
   {
     caminho: '/admin/denuncias',
+    permissoes: ['denuncia_responder'],
     caminhoRelativo: 'denuncias',
     elemento: ListarDenuncias,
     rotuloMenu: 'Denúncias',
@@ -293,6 +314,7 @@ export const ROTAS_ADMIN: Rota[] = [
   },
   {
     caminho: '/admin/pedidos-encerramento',
+    permissoes: ['solicitacao_encerramento_decidir'],
     caminhoRelativo: 'pedidos-encerramento',
     elemento: ListarEncerramentos,
     rotuloMenu: 'Pedido de Encerramento',
@@ -307,6 +329,7 @@ export const ROTAS_ADMIN: Rota[] = [
   // quem age é decidido pelo banco, por permissão (evento_pagamento_visualizar para ver, pagamento_revisao_resolver para agir).
   {
     caminho: '/admin/eventos-pagamento',
+    permissoes: ['evento_pagamento_visualizar'],
     caminhoRelativo: 'eventos-pagamento',
     elemento: ListarRevisoesPagamento,
     rotuloMenu: 'Eventos de Pagamento',
@@ -316,6 +339,7 @@ export const ROTAS_ADMIN: Rota[] = [
   },
   {
     caminho: '/admin/reembolsos-manuais',
+    permissoes: ['evento_pagamento_visualizar'],
     caminhoRelativo: 'reembolsos-manuais',
     elemento: ListarReembolsosManuais,
     rotuloMenu: 'Reembolsos Manuais',
@@ -325,6 +349,7 @@ export const ROTAS_ADMIN: Rota[] = [
   },
   {
     caminho: '/admin/repasses-atencao',
+    permissoes: ['evento_pagamento_visualizar'],
     caminhoRelativo: 'repasses-atencao',
     elemento: ListarRepassesAtencao,
     rotuloMenu: 'Repasses em Atenção',
@@ -335,6 +360,7 @@ export const ROTAS_ADMIN: Rota[] = [
   // Só leitura: todas as contribuições, com a situação do repasse (contribuicao_visualizar_sensivel: admin).
   {
     caminho: '/admin/contribuicoes',
+    permissoes: ['contribuicao_visualizar_sensivel'],
     caminhoRelativo: 'contribuicoes',
     elemento: ListarContribuicoes,
     rotuloMenu: 'Contribuições',
@@ -345,6 +371,7 @@ export const ROTAS_ADMIN: Rota[] = [
   // Só leitura: todos os repasses ao pesquisador (repasse_aprovar: admin).
   {
     caminho: '/admin/repasses',
+    permissoes: ['repasse_aprovar'],
     caminhoRelativo: 'repasses',
     elemento: ListarRepasses,
     rotuloMenu: 'Repasses',
@@ -355,6 +382,7 @@ export const ROTAS_ADMIN: Rota[] = [
   // Só leitura: cada mudança de dinheiro com quem fez (auditoria_financeira_visualizar: admin e revisor).
   {
     caminho: '/admin/auditoria-financeira',
+    permissoes: ['auditoria_financeira_visualizar'],
     caminhoRelativo: 'auditoria-financeira',
     elemento: ListarAuditoriaFinanceira,
     rotuloMenu: 'Auditoria Financeira',
@@ -371,3 +399,13 @@ export const ROTAS_ADMIN: Rota[] = [
   // Campo de Testes: só em desenvolvimento e só se a pasta existir (ver campo-testes-opcional.ts).
   ...(campoTestes?.ROTAS_CAMPO_TESTES ?? []),
 ];
+// Pode abrir esta tela do painel? Basta uma das permissões da tela; tela sem `permissoes` vale para todo o painel.
+export function podeVerRota(rota: Pick<Rota, 'permissoes'>, permissoesDaConta: readonly string[]): boolean {
+  return !rota.permissoes || rota.permissoes.some((permissao) => permissoesDaConta.includes(permissao));
+}
+
+// A primeira tela do painel que a conta consegue usar, na ordem do menu (o Dashboard, para quem tem). Usada pelo link
+// "Painel Admin" do menu da conta e pela tela de "sem acesso".
+export function primeiraTelaDoPainel(permissoesDaConta: readonly string[]): string {
+  return ROTAS_ADMIN.find((rota) => rota.rotuloMenu !== undefined && podeVerRota(rota, permissoesDaConta))?.caminho ?? '/minha-conta/perfil';
+}

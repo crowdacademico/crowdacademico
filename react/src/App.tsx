@@ -1,7 +1,8 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router';
 import { Layout } from './components/layout/layout';
 import { useAuth } from './services/3-auth/hook/use-auth';
-import { ROTAS, ROTAS_ADMIN, ROTAS_CONTA } from './services/router/rotas.constants';
+import { podeVerRota, ROTAS, ROTAS_ADMIN, ROTAS_CONTA } from './services/router/rotas.constants';
+import { SemAcesso } from './components/layout/painel-admin/sem-acesso';
 import { AdminLayout } from './components/layout/painel-admin/admin-layout';
 import { campoTestes } from './services/router/campo-testes-opcional';
 import { LayoutPublico } from './components/layout/layout-publico';
@@ -51,13 +52,17 @@ function App() {
           <Route path="configuracoes" element={<Navigate to="/admin/parametros-sistema" replace />} />
           <Route path="encerramentos" element={<Navigate to="/admin/pedidos-encerramento" replace />} />
 
-          {ROTAS_ADMIN.map(({ caminhoRelativo, elemento: Elemento }) => (
-            <Route
-              key={caminhoRelativo}
-              path={caminhoRelativo}
-              element={<Elemento auth={auth} />}
-            />
-          ))}
+          {/* Tela que as permissões da conta não liberam (Rota.permissoes): o aviso no lugar da tela vazia (17-11-2026). */}
+          {ROTAS_ADMIN.map((rota) => {
+            const { caminhoRelativo, elemento: Elemento } = rota;
+            return (
+              <Route
+                key={caminhoRelativo}
+                path={caminhoRelativo}
+                element={podeVerRota(rota, auth.permissoes) ? <Elemento auth={auth} /> : <SemAcesso permissoes={auth.permissoes} />}
+              />
+            );
+          })}
         </Route>
       </Route>
     </Routes>

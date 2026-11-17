@@ -12,6 +12,9 @@ export interface UseAuthReturn {
   accessToken: string | null;
   usuario: UsuarioResponse | null;
   papeis: string[];
+  // As permissões da conta (vêm do login e da renovação): o painel esconde do menu, da busca e da rota a tela que a
+  // conta não consegue usar (17-11-2026). Não é segurança: o banco recusa os dados de qualquer jeito.
+  permissoes: string[];
   ehAdmin: boolean;
   podeAcessarPainelAdmin: boolean;
   // RF-015: a conta ainda não aceitou a versão vigente do Termo de Uso (AdminLayout mostra o aceite no lugar do
@@ -47,6 +50,7 @@ export function useAuth(): UseAuthReturn {
   // verdade, só decide o que aparece na UI; toda ação real continua validada pelo backend/RLS a cada
   // requisição.
   const [papeis, setPapeis] = useState<string[]>([]);
+  const [permissoes, setPermissoes] = useState<string[]>([]);
   const [aceitePendente, setAceitePendente] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const refreshTokenRef = useRef<string | null>(localStorage.getItem(CHAVE_REFRESH_TOKEN));
@@ -66,6 +70,7 @@ export function useAuth(): UseAuthReturn {
     localStorage.setItem(CHAVE_REFRESH_TOKEN, resultado.refreshToken);
     setUsuario(resultado.usuario);
     setPapeis(resultado.papeis);
+    setPermissoes(resultado.permissoes);
     setAceitePendente(resultado.aceitePendente);
   }, []);
 
@@ -74,6 +79,7 @@ export function useAuth(): UseAuthReturn {
     accessTokenRef.current = null;
     setUsuario(null);
     setPapeis([]);
+    setPermissoes([]);
     setAceitePendente(false);
     refreshTokenRef.current = null;
     localStorage.removeItem(CHAVE_REFRESH_TOKEN);
@@ -268,6 +274,7 @@ export function useAuth(): UseAuthReturn {
     accessToken,
     usuario,
     papeis,
+    permissoes,
     ehAdmin: papeis.includes('admin'),
     podeAcessarPainelAdmin: papeis.some((papel) => papel !== 'usuario' && papel !== 'pesquisador'),
     aceitePendente,

@@ -132,6 +132,33 @@ AS $$
     ORDER BY p.codigo;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Função:     listar_permissoes_usuario
+-- Assinatura: (p_id_usuario INT) -> SETOF TEXT
+-- Bloco:      [03-B]
+-- Regra:      Irmã de listar_papeis_usuario (17-11-2026): o NOME das permissões que os papéis do usuário dão, sem
+--             repetição, para login/refresh (03-auth) devolverem à tela. O painel usa a lista só para esconder do menu
+--             e da rota a tela que a conta não consegue usar; quem protege os dados continua sendo a RLS
+--             (tem_permissao, a cada consulta). Mesma regra de tem_permissao: papel com suspenso_ate no futuro não
+--             concede nada. SECURITY DEFINER pelo mesmo motivo de listar_papeis_usuario: roda dentro do login, com
+--             id_usuario_atual() ainda NULL.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.listar_permissoes_usuario(p_id_usuario INT)
+RETURNS SETOF TEXT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT DISTINCT pm.nome
+    FROM usuario_papel up
+    JOIN papel_permissao pp ON pp.id_papel = up.id_papel
+    JOIN permissao pm ON pm.id_permissao = pp.id_permissao
+    WHERE up.id_usuario = p_id_usuario
+      AND (up.suspenso_ate IS NULL OR up.suspenso_ate <= now())
+    ORDER BY pm.nome;
+$$;
+
 -- ============================================================
 -- Função:     usuario_visivel
 -- Assinatura: (p_id INT) -> BOOLEAN

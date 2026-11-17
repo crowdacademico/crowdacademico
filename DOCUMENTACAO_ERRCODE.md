@@ -137,7 +137,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91055 | `reenviar_notificacao` | `notificacao` | A conta do e-mail foi excluída: não há para onde reenviar |
 | 91056 | `fn_valida_contestacao_pendente` | `denuncia` | Decidida a contestação, a situação da denúncia não muda mais (RF-115) |
 | 91057 | `fn_valida_link_recompensa` | `recompensa`, `link_recompensa` | Recompensa ativa de acesso antecipado ou entrega digital sem o link especial (RF-103) |
-| 91058 | `fn_congela_regras_campanha` (via `fn_campanha_erro_congelamento`) | `campanha` | Imagem de capa alterada depois da aprovação da campanha (o mesmo congelamento do título e do vídeo) |
+| 91058 | `fn_congela_regras_campanha` (via `fn_campanha_erro_congelamento`) | `campanha` | Imagem de capa alterada numa campanha **rejeitada sem reenvios** (só leitura). Desde 14-11-2026 (Grupo CQ) a capa não congela na aprovação, então o código só aparece nesse caso; a mensagem continua na tabela de `fn_campanha_erro_congelamento` |
 | 91059 | `desistir_contribuicao` | `contribuicao` | Desistir de uma contribuição que não está paga (pendente, vencida, já devolvida ou repassada)
 | 91060 | `desistir_contribuicao` | `contribuicao` | Desistir depois do prazo (`desistencia_prazo_dias`, 7 por padrão, contados da contribuição)
 | 91061 | `desistir_contribuicao` | `contribuicao` | Desistir quando o repasse da campanha já saiu de `pendente` (transferência em andamento ou feita)

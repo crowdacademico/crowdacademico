@@ -24,7 +24,7 @@ import { LinkAtualizacaoServiceRemove } from './service/link-atualizacao.service
 import { LinkAtualizacaoServiceUpdate } from './service/link-atualizacao.service.update';
 
 // Um só @Module cobrindo 3 tabelas (atualizacao_campanha + os satélites link_atualizacao/arquivo_atualizacao):
-// nenhuma das duas tem pasta numerada própria em PROXIMOS_MODULOS.md, então entram dentro do módulo-pai em vez
+// nenhuma das duas tem pasta numerada própria (HISTORICO_PROXIMOS_MODULOS.md, em informacoes/HISTORICO), então entram dentro do módulo-pai em vez
 // de ganhar uma pasta nova sem numeração.
 @Module({
   controllers: [

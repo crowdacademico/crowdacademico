@@ -12,6 +12,10 @@ export class AuthResponseLogin {
   // cabeçalho, nunca para checar permissão de verdade (isso continua sendo decidido pelo backend/RLS a cada
   // requisição).
   papeis: string[];
+  // Nomes das permissões que os papéis dão (listar_permissoes_usuario, 03; papel suspenso não conta). O painel usa só
+  // para esconder do menu e da rota a tela que a conta não consegue usar (17-11-2026); quem protege os dados continua
+  // sendo a RLS, a cada requisição.
+  permissoes: string[];
   // RF-015: a conta ainda não aceitou a versão vigente do Termo de Uso; a tela mostra o aceite antes de tudo.
   aceitePendente: boolean;
 }

@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { NavLink } from 'react-router';
 import { abrirBuscaGlobal } from '../cabecalho/busca-global-evento';
 import { Dica, Tooltip } from '../tooltip';
-import { GRUPOS_MENU_ADMIN } from './admin-menu.constants';
+import { gruposMenuDaConta } from './admin-menu.constants';
 import { useFocoPreso } from '../../../services/constant/hook/use-foco-preso';
 
 // Menu lateral: coluna fixa a partir de 1377px (grid em .admin-shell, 6-admin-shell.css), gaveta (drawer) por
@@ -24,10 +24,12 @@ import { useFocoPreso } from '../../../services/constant/hook/use-foco-preso';
 // fundo opaco e está na frente.
 interface AdminSidebarProps {
   aberto: boolean;
+  // As permissões da conta: o menu mostra só as telas que ela consegue usar (17-11-2026).
+  permissoes: readonly string[];
   aoFechar: () => void;
 }
 
-export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
+export function AdminSidebar({ aberto, aoFechar, permissoes }: AdminSidebarProps) {
   // Aberta como gaveta (só existe abaixo de 1377px, pelo botão "Menu"): é uma janela por cima da página,
   // anunciada como diálogo, com o foco preso nela e Esc para fechar. Fechada nessa largura, fica invisível
   // (`invisible`), senão os links fora da tela continuariam recebendo o Tab.
@@ -79,7 +81,7 @@ export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
 
         <hr className="admin-sidebar__separador" />
 
-        {GRUPOS_MENU_ADMIN.map((grupo) => (
+        {gruposMenuDaConta(permissoes).map((grupo) => (
           <div key={grupo.titulo ?? 'sem-titulo'}>
             {/* Dashboard é um grupo sem título (item solo, não uma seção de cadastro): só ganha a linha
                 divisória embaixo (divisorApos), não o rótulo maiúsculo de grupo. */}

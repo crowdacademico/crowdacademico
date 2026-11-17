@@ -1,34 +1,33 @@
-# Pendências e correções
+# Pendências
 
-> Só o que ainda NÃO foi feito, organizado por grupo. O que já está pronto ou fechado mora em `informacoes/HISTORICO/HISTORICO_PENDENCIAS_E_CORRECOES.md` (duas limpezas: 26-09-2026 e 27-09-2026), com o texto original. Citações de outros documentos a um item ou parte deste arquivo ("item 7", "parte 10", "Onda 1 das ideias do sistema Atlas") que não estejam aqui estão lá.
+Só o que ainda falta **fazer ou decidir**. O que fica pronto sai daqui (atualizado em 17-11-2026).
 
-> 📌 **Numeração de RF (24-10-2026):** os requisitos vigentes têm 125 RFs, na numeração da `MATRIZ-RASTREABILIDADE-RF.md`. Citações de RF por número neste documento foram escritas em datas diferentes e podem estar em qualquer numeração anterior (a numeração mudou várias vezes, a última em 24-10-2026). A `MATRIZ-RASTREABILIDADE-RF.md` está inteira na numeração vigente e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
-
-**Grupos:** 0. Para a Alexia ler · 1. Levar para a revisão externa (Requisitos) · 2. Dependem de outro módulo · 3. No dia do deploy · 4. Fim do projeto · 5. Decisões em aberto, sem pressa · 6. Registros que não são pendência.
+**Grupos:** 1. Antes da banca · 2. Pagamento · 3. E-mail de verdade · 4. No dia do deploy · 5. Decisões em aberto, sem pressa · 6. Ideias para depois
 
 ---
 
-## ⭐ Para discutir (anotado em 18-10-2026, no topo de propósito)
+## 1. Antes da banca
 
-### Rodada de 16-11-2026: o sistema alcançar o TCC (só o Lucas decide; nada disto foi mudado)
+- **Teste com pessoas de fora (Quadro 16 do TCC):** 3 a 5 pessoas (não o Lucas nem a Alexia) usando o sistema sozinhas, e alguém anotando quem conseguiu cada tarefa sem ajuda e onde travou. O TCC cita as sessões de usabilidade e de aceitação.
+- **Login com Google:** hoje o botão "Continuar com Google" do Login é um `alert()` de protótipo. **Decisão do Lucas (16-11-2026): implementar**, quando ele tiver a chave do Google Cloud. Nenhum requisito do V13 fala em login com Google: ou ele entra também no TCC, ou o botão sai.
+- 🔴 **Dados pessoais do titular na página de pagamento do Asaas (16-11-2026, urgente).** O topo da página de pagamento do Asaas (para onde o modal Apoiar manda quem apoia) mostra o titular da conta: nome, CPF, e-mail, cidade e final do telefone. No sandbox de hoje é a conta pessoal do Lucas, então qualquer pessoa que testar o apoio vê esses dados; a frase do rodapé ("cobrança de responsabilidade única e exclusiva de <titular>, CPF...") também é do Asaas. **Caminhos:** (1) em produção, a conta Asaas no nome da plataforma (CNPJ, ou o responsável oficial definido com o orientador), nunca uma conta pessoal; (2) já no sandbox, ver no painel do Asaas (Minha Conta > Informações / Personalização da fatura) o que dá para esconder ou trocar (nome fantasia, e-mail e telefone de contato da plataforma); (3) se o CPF do titular não puder ser escondido, abrir uma conta sandbox nova em nome da plataforma para os testes com outras pessoas. Até lá: só testar o apoio com quem já conhece esses dados.
 
-- **Botão "Continuar com Google" no login:** é um `alert()` de protótipo, e nenhum requisito do V13 fala em login com Google. Recomendação: tirar o botão até existir o login de verdade (um botão falso na frente da banca pesa mais do que a falta dele).
-- **Boleto desligado (`boleto_habilitado = false`):** conferido pelo Playwright (`testes-e2e`, "boleto desligado..."): não aparece em Taxas e transparência nem no modal de apoio. O modal citava "Cartão e boleto" em dois textos mesmo desligado; os dois passaram a depender do interruptor. **Termo de Uso do seed:** a citação do boleto saiu (decisão do Lucas, 16-11-2026); vale quando o banco for recriado do zero.
-- **RF-105:** resolvido em 17-11-2026: o texto do requisito (no TCC e no `REQUISITOS_V13.md`) passou a dizer "as recompensas cujo valor mínimo ela alcança", que é o que o sistema faz.
-- **Dados pessoais do titular na página de pagamento do Asaas:** é configuração da conta no painel do Asaas, não código. Conferir antes de alguém de fora testar o apoio.
-- **RF-028 também estava incompleto** (o V13 não apontava): o perfil público não mostrava os links acadêmicos nem a data de cadastro do perfil. Feito junto com o RF-027.
-- **Usabilidade com pessoas de fora (Quadro 16 do TCC):** o TCC cita sessões de usabilidade e de aceitação; vale fazer algumas com 2 ou 3 colegas antes da banca.
+---
 
-### O que o orientador falou (anotado em 05-11-2026, com as palavras do Lucas; ele mesmo vai escrever as soluções)
+## 2. Pagamento (visão completa em `DOCUMENTACAO_FINANCEIRO.md`)
 
-- **Custo, lucro e monetização da plataforma:** pensar no custo da plataforma, nos lucros e na monetização. Por exemplo, se a plataforma tiver 100 ou 1000 campanhas tudo-ou-nada que não derem certo, a plataforma não fica com nada. Pensar em formas de minimizar os prejuízos. O Lucas comentou a "monetização por rendimento enquanto o dinheiro está parado"; o professor disse para pensar mais em outras coisas.
-- **Nos termos:** o item acima precisa estar nos termos.
-- **Prazo de aprovação da campanha:** estar nos termos e planejar quanto tempo a plataforma leva para aprovar uma campanha. Demorar pode frustrar os pesquisadores e levá-los a procurar outra plataforma. Ter em mente um limite máximo, e trabalhar isso na documentação.
-- **Futuro:** uma curadoria com IA para agilizar o trabalho do curador.
+### Testes no sandbox que faltam
 
-- **Reorganizar o `DESIGN_SYSTEM.md` (18-10-2026, para o futuro, não agora):** as regras principais (core), como linha e coluna das tabelas (DS-100, DS-104, DS-105), passam para os números de destaque, para serem achadas primeiro. Junto da reorganização numérica de pastas e arquivos (seção de Pagamento).
+- **Modal Apoiar (16-11-2026):** apoiar com Pix (o QR aparece no modal) e confirmar pelo botão "Confirmar pagamento" do painel do Asaas, com o túnel ligado: o modal deve virar "Obrigado pelo apoio!". Depois, cartão (campanha flexível, logado), pela página do Asaas.
+- **Cartão** numa campanha flexível (cartão de teste 4444 4444 4444 4444 aprova; 5184019740373151 recusa), até o repasse da parte liberada.
+- **Boleto:** ligar `boleto_habilitado` em Parâmetros; gerar, pagar ("Confirmar pagamento" no sandbox), repasse, e a devolução por link num cancelamento (vai para reembolso manual com o link).
+- **Tela "Registrar a devolução"** (Reembolsos Manuais) com as contribuições 56, 59, 60, 61 e 63 do Supabase, que chegam ao reembolso manual sozinhas depois das 8 tentativas (o banco simulado recusa devolver Pix de pagador fictício). Desde 21-10-2026 o valor é fixo (o inteiro da contribuição, só leitura) e o banco recusa outro (já no Supabase, recriado; conferido em 24-10-2026).
+- **Revisão manual da caixa de avisos:** os avisos parados de 17 e 18-10-2026 devem aparecer na tela de revisões do pagamento 24 horas depois de chegar, com o motivo.
 
-**Financeiro comparado com o mercado (19-10-2026).** Feitos no mesmo dia: a contestação de cartão vai para revisão manual, e o repasse espera a carência de `repasse_carencia_dias` (15). Fica para decidir:
+### Decisões do financeiro (comparado com o mercado em 19-10-2026)
+
+Feitos no mesmo dia: a contestação de cartão vai para revisão manual, e o repasse espera a carência de `repasse_carencia_dias` (15). Fica para decidir:
+
 - **Quem ressarce o dinheiro que volta depois do repasse.** Contestação de cartão e devolução por fraude do Pix (MED, até 80 dias) podem chegar depois da carência. O Catarse põe no termo que o criador ressarce, desconta do saldo dele e, se ele já sacou, cobra em 10 dias com multa de 10% (Termos de Uso, itens 7.9 e 7.10). Aqui: escrever a cláusula no Termo do Pesquisador (Lucas e Alexia) e decidir se o sistema registra a dívida e desconta do próximo repasse.
   - **Rascunho para estudar (25-10-2026, sem pressa; Lucas e Alexia reescrevem).** Base: Termos de Uso do Catarse, itens 7.9 e 7.10 (atualizados em 31-05-2026, https://crowdfunding.catarse.com.br/legal/termos-de-uso). Texto sugerido para o Termo do Pesquisador:
     - *Ressarcimento de valores contestados.* É responsabilidade do Pesquisador ressarcir à plataforma o valor de qualquer contribuição que, depois de repassada, seja contestada por quem pagou (contestação de cartão) ou devolvida pelo Mecanismo Especial de Devolução do Pix (MED), junto com as tarifas que o provedor de pagamento cobrar por essa contestação.
@@ -38,140 +37,26 @@
   - **O que decidir no estudo:** (1) multa e juros no atraso (o Catarse cobra 10% de multa, 1% de juros ao mês e correção pelo IPCA; num TCC gratuito talvez não faça sentido); (2) se o sistema registra a dívida e desconta sozinho do próximo repasse ou se fica só a cláusula; (3) a última frase (aviso e defesa) não está no Catarse, é sugestão para não cobrar sem explicar.
 - **Devolução que ninguém consegue receber** (boleto sem conta cadastrada, contribuição sem conta): fica em reembolso manual para sempre. O Catarse, depois de 120 dias sem dados bancários válidos, transfere o crédito para a plataforma (Termos de Uso, item 7.19). Decidir o prazo e escrever no Termo de Uso.
   - **Estudo de 25-10-2026 (mais complicado do que parecia, sem pressa).** O Catarse (Termos de Uso, 7.19, atualizados em 31-05-2026) dá a quem apoiou 120 dias para cadastrar os dados de recebimento; depois o valor passa à plataforma (o 7.16 fala em 15 dias para o mesmo caso: o termo deles se contradiz). Aqui faltam quatro peças: (1) o e-mail "precisamos dos seus dados" (só existem "a devolução começou" e "foi concluída"); (2) um lugar para quem apoiou informar uma chave Pix (hoje só o pesquisador cadastra chave); (3) contribuição sem conta (visitante ou conta excluída) não guarda e-mail, então não há como avisar; (4) repetir o estorno depois do prazo do Pix (90 dias) não adianta, o provedor recusa sempre: o que funciona é transferir para a chave nova, como o repasse. O limite precisa existir: sem ele o dinheiro fica para sempre como dinheiro de terceiros.
-  - **Opções:** (A) só o prazo, e o admin encerra como "não reclamado"; (B) igual ao Catarse: e-mail, a pessoa informa a chave em Minha Conta, o sistema transfere sozinho com novas tentativas, lembretes e prazo; (C) a (B) sem a transferência automática: o admin devolve pelo painel do provedor e usa o "Registrar a devolução" que já existe. Recomendação: (C) agora e (B) se houver volume, porque transferir sozinho para uma chave recém-informada abre a porta para quem invadiu a conta (a chave do pesquisador passa por verificação de titularidade por esse motivo). O visitante sem conta fica só com o prazo até o checkout da área pública guardar o e-mail. Decidir também o prazo (120 dias, como o Catarse, ou outro) e confirmar o escopo antes.
+  - **Opções:** (A) só o prazo, e o admin encerra como "não reclamado"; (B) igual ao Catarse: e-mail, a pessoa informa a chave em Minha Conta, o sistema transfere sozinho com novas tentativas, lembretes e prazo; (C) a (B) sem a transferência automática: o admin devolve pelo painel do provedor e usa o "Registrar a devolução" que já existe. Recomendação: (C) agora e (B) se houver volume, porque transferir sozinho para uma chave recém-informada abre a porta para quem invadiu a conta (a chave do pesquisador passa por verificação de titularidade por esse motivo). O visitante sem conta fica só com o prazo até o apoio da área pública guardar o e-mail. Decidir também o prazo (120 dias, como o Catarse, ou outro) e confirmar o escopo antes.
 - **Conciliação de saldo** (conferir o saldo da conta no provedor com o que o sistema diz que deveria estar lá). Opções: (A) mostrar no painel, lado a lado, o saldo do provedor e o "dinheiro de terceiros" que a conta tem de ter (pago e ainda não repassado, a devolver, em reembolso manual), sem alerta; (B) o mesmo, conferido por uma tarefa diária que avisa quando o saldo fica abaixo do dinheiro de terceiros; (C) conciliação completa, linha a linha, do extrato do provedor com os eventos do sistema. Recomendada: (B), que pega dinheiro saindo sem aviso sem precisar contabilizar a receita da plataforma; a (C) é a das empresas grandes e pesada para o TCC.
 
+### Textos dos Termos (quem escreve é o Administrador, numa versão nova pelo painel)
+
+- **Prazo de aprovação da campanha (pedido do orientador, 05-11-2026):** o TCC (Seção 2.4.3) diz que a análise sugere publicar um prazo de avaliação de cinco dias úteis; nenhum dos dois Termos fala em prazo (o item 4.1 do Termo de Uso diz só que toda campanha passa por aprovação). Escrever o prazo no Termo de Pesquisador. Já combina com o sistema: a fila de aprovação fica amarela a partir de 7 dias (`espera_atencao_dias`), mais ou menos os 5 dias úteis.
+- **Desistência do apoio:** o Termo de Uso precisa falar do "Desistir do apoio" (CDC, art. 49; 7 dias da contribuição; devolve só o valor, a tarifa fica com o provedor).
+- **Chave Pix (RF-026):** o requisito pede que o Termo de Pesquisador diga, de forma explícita, que a correção da chave Pix cadastrada é responsabilidade do pesquisador. O termo vigente não fala da chave. Antes, estudar e fazer uma pesquisa de mercado, sem pressa. O e-mail do repasse previsto, a outra parte do RF-026, já foi feito.
+- **Boleto no Termo de Uso do Supabase:** o Termo vigente no Supabase ainda cita o boleto ("Pix, cartão ou boleto"). O seed já foi corrigido (17-11-2026) e vale quando o banco for recriado; sem recriar, publicar uma versão nova pelo painel.
+
 ---
 
-## 1. Levar para a revisão externa
-
-Os requisitos são atualizados com a revisão externa; aqui fica só o que precisa ir no próximo pedido. O pedido de 01-11-2026 foi todo respondido nos requisitos de 02-11-2026.
-
-- **RF-053, fase e formato da atualização (anotado em 04-11-2026; assunto para bem mais à frente):** o Lucas não gostou deste requisito, acha estranho. Texto atual: "Cada atualização de progresso deve registrar a fase do projeto a que se refere (andamento, resultado preliminar ou resultado final) e o formato do conteúdo publicado (texto, imagem, PDF ou link externo), podendo ter arquivos e links externos anexados." Como o sistema faz hoje: a fase é escolhida pelo pesquisador; o formato não é mais perguntado, sai dos anexos (PDF, imagem, link ou só texto), porque escolhido à mão dava para marcar "PDF" sem anexar nada.
-- **RF-105, recompensa automática (anotado em 04-11-2026; já feito no sistema):** o requisito diz "a recompensa escolhida pelo doador", mas o Lucas decidiu que ninguém escolhe: quem contribui ganha automaticamente todas as recompensas ativas cujo valor mínimo a contribuição alcança (com R$ 151, as de R$ 50, R$ 100 e R$ 150). Pedir que o texto do RF-105 passe a dizer isso (o RF-104 continua valendo: abaixo do mínimo, não ganha).
-- **Como queremos o próximo pedido escrito:** "pegar no pé" da revisão externa, pedir que olhe sistemas de referência e traga ideias próprias, não só responda a lista.
----
-
-## 2. Dependem de outro módulo ou de outra coisa existir
-
-> **Nota (27-09-2026):** 18, 19, 20 e 26 podem ganhar tela na área administrativa (nem que seja na área de testes) antes da página pública existir. Não é para fazer agora, mas o lado Nest desses módulos não depende da página pública.
-
-### Fluxos públicos ainda pendentes (a área pública já existe)
-
-- ✅ **Links acadêmicos no formulário do upgrade (RF-022):** o upgrade agora coleta até o limite configurado antes de criar o perfil e grava os links pela API existente. Se algum link falhar, ele permanece na tela para correção ou nova tentativa. Implementado em 14-11-2026.
-- ✅ **Seguir pesquisador (RF-029):** perfil público permite seguir e deixar de seguir, e mostra a contagem de seguidores. A API é `/seguir-pesquisador` e `/seguir-pesquisador/:id/seguidores`.
-- ✅ **Apoiar (antigo checkout), 16-11-2026:** virou o modal Apoiar na página da campanha, e o pagamento é na página do Asaas (Pix e cartão). Mostra as recompensas que o valor alcança (RF-105), a ciência do modelo flexível, gravada pela API (RF-041), o aceite dos Termos (RF-086) e o total com a tarifa antes de pagar. Detalhes: `DOCUMENTACAO_FINANCEIRO.md`, seção 2.4.
-  - Depois, no mesmo dia: o QR do Pix voltou para o modal (com a contagem do RF-085), e as formas de pagamento seguem as heurísticas de Nielsen: na Tudo ou Nada só o Pix, com a explicação; desligada pela plataforma some; sem conta aparece apagada com o link para entrar. No sandbox, se o Asaas não gerar o QR, aparece um QR de teste (ver `DOCUMENTACAO_FINANCEIRO.md`, seção 2.4).
-  - **Testar no sandbox:** apoiar com Pix (o QR aparece no modal) e confirmar pelo botão "Confirmar pagamento" do painel do Asaas, com o túnel ligado: o modal deve virar "Obrigado pelo apoio!". Depois, cartão (campanha flexível, logado), pela página do Asaas.
-- **Painel "Projetos Criados" do pesquisador (RF-090, RF-091):** a lista com as métricas e o líquido estimado (o `GET /campanha/:id` já devolve `valorLiquidoEstimado`).
-- **Painel de quem apoia (RF-089):** o histórico já existe na Minha Conta, aba Contribuições; na área pública vira o painel do doador.
-- **Desistir do apoio (decidido em 24-10-2026: regra do Catarse, com o art. 49 do CDC como fundamento):** o botão na área de quem apoia. As condições, as fontes e o ponto a validar com o orientador (o CDC nos 7 dias depois de contribuir) estão no `DOCUMENTACAO_FINANCEIRO.md`. Antes do botão: o texto no Termo de Uso (Administrador) e o parâmetro do prazo.
-  - **Sem o orientador (25-10-2026):** não dá para contar com o orientador nesta pergunta (CDC × Catarse), nem na cláusula de ressarcimento e na da chave Pix. A decisão sai do estudo feito aqui, bem documentado, com as fontes.
-
-### E-mail: o que ainda é decisão (19-10-2026; o módulo está pronto e testado no modo de teste)
+## 3. E-mail de verdade (o módulo está pronto e testado no modo de teste)
 
 - **Serviço de envio de verdade:** recomendação Brevo pela API, com um domínio `.com.br` (cerca de R$ 40 por ano). Sem domínio, só o Gmail com senha de app. Passo a passo e comparação dos planos em `.Tutorial-email.md`. Fica para o fim, como o gateway.
 - **Saber se o e-mail chegou (21-10-2026):** "Enviado" quer dizer que o provedor aceitou, não que chegou na caixa da pessoa. Falta o webhook de entrega do Brevo (entregue, devolvido, marcado como spam), o equivalente ao do Asaas; o Gmail por SMTP nem oferece. Só dá para fazer junto com o serviço de envio de verdade. Explicação em `.Tutorial-email.md`, Parte 0.
 
-### Pagamento (feito em 17 e 18-10-2026; visão completa em `DOCUMENTACAO_FINANCEIRO.md`)
-
-#### 🟡 Testes no sandbox que faltam (próximos dias)
-
-- **Cartão** numa campanha flexível (cartão de teste 4444 4444 4444 4444 aprova; 5184019740373151 recusa), até o repasse da parte liberada.
-- **Boleto:** ligar `boleto_habilitado` em Parâmetros; gerar, pagar ("Confirmar pagamento" no sandbox), repasse, e a devolução por link num cancelamento (vai para reembolso manual com o link).
-- **Tela "Registrar a devolução"** (Reembolsos Manuais) com as contribuições 56, 59, 60, 61 e 63 do Supabase, que chegam ao reembolso manual sozinhas depois das 8 tentativas (o banco simulado recusa devolver Pix de pagador fictício). Desde 21-10-2026 o valor é fixo (o inteiro da contribuição, só leitura) e o banco recusa outro (já no Supabase, recriado; conferido em 24-10-2026).
-- **Revisão manual da caixa de avisos:** os avisos parados de 17 e 18-10-2026 devem aparecer na tela de revisões do pagamento 24 horas depois de chegar, com o motivo.
-
-#### 🟡 Ainda aberto no pagamento
-
-- 🔴 **URGENTE: dados pessoais do dono da conta Asaas na página de pagamento (16-11-2026, pedido do Lucas: resolver o quanto antes).** O topo da página de pagamento do Asaas (para onde o modal Apoiar manda quem apoia) mostra o titular da conta: nome, CPF, e-mail, cidade e final do telefone. No sandbox de hoje é a conta pessoal do Lucas, então qualquer pessoa que testar o apoio vê esses dados. A frase do rodapé ("cobrança de responsabilidade única e exclusiva de <titular>, CPF...") também é do Asaas. **Caminhos:** (1) em produção, a conta Asaas no nome da plataforma (CNPJ, ou o responsável oficial definido com o orientador), nunca uma conta pessoal; (2) já no sandbox, ver no painel do Asaas (Minha Conta > Informações / Personalização da fatura) o que dá para esconder ou trocar (nome fantasia, e-mail e telefone de contato da plataforma); (3) se o CPF do titular não puder ser escondido, abrir uma conta sandbox nova em nome da plataforma para os testes com outras pessoas. Até lá: só testar o apoio com quem já conhece esses dados.
-- **Apoio público:** feito em 16-11-2026 (modal Apoiar + página do Asaas, ver acima). O boleto aparece apagado enquanto `boleto_habilitado` estiver desligado (RF-081).
-- **Painel de quem apoia (RF-089):** o histórico já existe na Minha Conta, aba Contribuições; falta uma área própria para o apoiador fora do painel administrativo.
-
-### Pendências da página pública da campanha
-
-- ✅ **Recompensas (16-11-2026, conversa do Lucas com a Alexia):** só quem apoia com conta ganha (já era regra do banco); a recompensa só vale com a contribuição paga e não devolvida, e no Tudo ou Nada só quando a campanha bate a meta (`recompensa_liberada`, 03); o link especial obedece isso (corrigiu um furo: Pix gerado e não pago já mostrava o link); anônimo não ganha o reconhecimento; o pesquisador vê "Quem ganhou" no Consultar da recompensa, no Estúdio (só o nome); quem ganha recebe e-mail e aviso no sino (`recompensa_liberada`). Grupo CT do ATUALIZAR; suíte 64 dos testes de banco. **Atenção no merge da branch `alteracoes01` da Alexia:** ela moveu as perguntas frequentes para `use-duvidas-frequentes`; o texto novo da pergunta "O que são as recompensas?" (em `perguntas-frequentes.tsx`) precisa ir para lá.
-- 🟡 **Sincronizar as tarifas com o Asaas (investigado em 16-11-2026):** o Asaas tem `GET /v3/myAccount/fees`, que devolve as tarifas exatas da conta (no sandbox de hoje: Pix R$ 1,99, com desconto R$ 0,99 até 17-01-2027; cartão à vista 2,99% + R$ 0,49, com desconto 1,99% até 17-01-2027; boleto R$ 1,99, com desconto R$ 0,99; transferência Pix R$ 2,00, 30 grátis por mês). Hoje o Pix e o boleto se corrigem sozinhos depois da primeira cobrança (`ajustar_tarifa_pagamento`), mas o cartão não, e quando o desconto vencer em 17-01-2027 as telas vão mostrar a tarifa velha até a primeira cobrança. **Proposta:** uma tarefa automática diária (e um botão "Sincronizar com o Asaas" em Parâmetros) que lê esse endpoint e atualiza `taxa_pagamento_pix`, `taxa_cartao_percentual`, `taxa_cartao_fixa` e `taxa_pagamento_boleto` (valor com desconto enquanto ele valer), com o registro no log de auditoria. O provedor de teste devolve os próprios parâmetros. Esforço: pequeno a médio (um método novo no adaptador, uma função no banco, a tarefa).
-- **Auditoria Nielsen/WCAG da área pública (16-11-2026):** relatório completo em `informacoes/AUDITORIA_AREA_PUBLICA_NIELSEN_WCAG_16-11-2026.md` (14 correções pequenas já feitas). Ficaram:
-  - 🟡 **Carrossel da Home anda sozinho a cada 5 s, sem botão de pausar.** Falha de nível A (WCAG 2.2.2). Recomendação: tirar o avanço automático e manter as setas.
-  - 🟡 **"Continuar com Google" no Login é falso** (mostra um alerta de protótipo). **Decisão do Lucas: implementar o login com Google (anotado em 16-11-2026, "hoje, depois").**
-  - 🟡 **Dois ícones diferentes para "Seguir":** coração nos cartões, sino na página da campanha. Recomendação: o mesmo ícone nos dois (o sino combina com "receber novidades").
-  - ✅ **Abas da campanha** (16-11-2026): as setas, Home e End trocam de aba (padrão da W3C), e "Atualizações" saiu da fila de abas: virou um botão separado, com ícone, que abre a janela.
-  - ✅ **"Score mínimo" no Explorar** (16-11-2026, Lucas): filtro removido (palavra técnica sem explicação para o público).
-- ✅ **Prévia do link ao compartilhar (Open Graph):** já existe desde 14-11-2026 (`GET /compartilhar/campanha/:id`, `campanha.controller.share.ts`; os botões de compartilhar da campanha usam esse endereço). Só aparece de verdade com o site no ar: o robô do WhatsApp não alcança o `localhost`. Conferido em 16-11-2026.
-- **Painel de projetos do pesquisador (RF-090/091):** o Estúdio já lista e permite gerenciar campanhas; faltam as métricas previstas e o valor líquido estimado nessa área.
-
-
-
-### Arquivos
-
-- **Recompensa com arquivo (07-11-2026, aguardando a Alexia):** o Lucas perguntou à Alexia se a recompensa entrega também por arquivo (imagem ou PDF) ou só por link. Já foi feito e testado, e desfeito no mesmo dia para esperar a resposta; as versões com o recurso estão guardadas fora do repositório, e o Grupo CF do ATUALIZAR ficou comentado, marcado "NÃO COLE".
-
-
-#### 🟡 Especificação registrada (13-09-2026): tela de administração pra `arquivo` (espaço ocupado, órfãos, maiores consumidores) - NÃO construída de propósito
-
-Ideia detalhada e registrada aqui pra não se perder. **Decisão: não construir agora**: poucos arquivos no sistema hoje (todos de teste), a tela mostraria números perto de zero e não responderia pergunta nenhuma de verdade. Momento certo: depois de `18-recompensa`/`15-atualizacao-campanha` estarem em uso real, quando anexos tiverem volume e órfãos aparecerem sozinhos.
-
-**Por que é possível sem nenhum módulo novo**: `arquivo` já guarda `tamanho_bytes` (do arquivo JÁ PROCESSADO, depois da redução - não o que o navegador declarou), `id_usuario_upload`, `tipo_mime`, `criado_em`, `ativo`/`desativado_em`. Com essas 5 colunas dá pra montar o painel inteiro sem consultar o provedor de armazenamento.
-
-**O que a tela mostraria:**
-- **Resumo no topo** (4 números): espaço total ocupado (soma de `tamanho_bytes` dos ativos, com % do limite do plano gratuito ao lado); quantidade de arquivos ativos; espaço ocupado por arquivos **desativados** (`ativo = false` - espaço pago sem uso, ninguém saberia que existe sem a tela); quantidade de arquivos **órfãos** (`LEFT JOIN` contra as 3 formas de vínculo que existem - `usuario.id_imagem_perfil`, `arquivo_atualizacao`, `arquivo_recompensa` - filtrando quem não aparece em nenhuma; é o número mais útil, órfão é espaço desperdiçado por definição).
-- **Distribuição por tipo** - tabelinha `tipo_mime` × quantidade × espaço somado (responde se o consumo vem de imagem ou PDF).
-- **Maiores consumidores** - os 10 usuários com mais espaço ocupado (nome, quantidade, total) - acha abuso antes da cota de 50MB/conta ser atingida.
-- **Listagem completa** - `GenericTable` já existente, colunas nome original/tipo/tamanho/quem enviou/data/situação, filtro facetado por tipo e situação.
-
-**As ações, e uma que precisa de cuidado real:** ver arquivo (URL pública, trivial); desativar (soft delete que o esquema já prevê); **excluir órfão de verdade** - esta é delicada porque excluir a LINHA no banco não apaga o OBJETO no armazenamento (uma exclusão pela metade cria um objeto que ninguém mais enxerga). Precisa: remover do armazenamento primeiro, DEPOIS do banco, nessa ordem, registrando em auditoria; se a remoção do armazenamento falhar, a linha do banco não pode ser removida (senão perde o rastro). **Só pra arquivo comprovadamente órfão, nunca vinculado** - arquivo vinculado se remove removendo o vínculo, no módulo dono dele.
-
-**Onde moraria**: backend, `26-arquivo` (módulo já existe, dono natural) - 2 endpoints novos (resumo com agregados, listagem paginada com filtro), ambos protegidos por permissão de administrador. Frontend, uma tela de listagem no padrão já repetido há meses.
-
-
-
-### Documentação da integração da área pública (anotado em 14-11-2026; fica para depois, a pedido do Lucas)
-
-> **16-11-2026:** atualizados a `MATRIZ-RASTREABILIDADE-RF.md` (RFs da área pública), o inventário de rotas do `DOCUMENTACAO_BACKEND.md` (seção 13), a `DOCUMENTACAO_BD.md` (recompensas, avisos, correção de comentar/seguir) e a `DOCUMENTACAO_FRONTEND.md` (modal Apoiar, chave Pix, cabeçalho único, acessibilidade). O que segue abaixo e não foi citado aqui continua por fazer.
-
-A Alexia trouxe a área pública para dentro do sistema (branch `tentativadeintegracao`, continuada na `area-publica`). O código e o banco estão sendo consertados; a documentação fica para o fim:
-
-- ✅ **`DOCUMENTACAO_BD.md`:** coluna `campanha.id_imagem_capa`, funções novas, posse da capa, faxina de órfãos e o `[07-B-4]` marcado como removido (feito em 14-11-2026 e conferido contra o SQL).
-- **`DOCUMENTACAO_BACKEND.md`:** as rotas novas `GET /contribuicao/recebidas` e `GET /contribuicao/campanha/:id/apoios` (pública) e os campos novos da resposta da campanha (`idImagemCapa`, `imagemCapaUrl`, `instituicaoPesquisador`).
-- ✅ **`DOCUMENTACAO_FRONTEND.md`:** layout público, `views/publico/`, Minha Conta fora do painel, Estúdio com seção na URL e `podeAcessarPainelAdmin` (feito em 14-11-2026 e conferido contra o código).
-- **`informacoes/ESTUDO_PERMISSOES_PESQUISADOR_NO_PAINEL.md`:** cita o `[07-B-4]` como regra em vigor.
-- **`MATRIZ-RASTREABILIDADE-RF.md`:** os RFs que a área pública passou a atender.
-- Já feito: `DOCUMENTACAO_ERRCODE.md` (códigos 91058 e 92041, e a capa nos códigos 90022, 91029 e 92025).
-- **Acrescentado em 14-11-2026 (segunda rodada), ainda sem documentar:**
-  - `DOCUMENTACAO_BD.md`: coluna `contribuicao.ciencia_modelo_em` (RF-041, Grupo CM). A regra mora no Nest, não numa trigger, porque o seed e os scripts de `informacoes/testes-banco` inserem contribuições flexíveis direto no banco.
-  - `DOCUMENTACAO_BACKEND.md`: o `POST /contribuicao` recebe `cienteModeloFlexivel` e recusa campanha flexível sem ele (422).
-  - `DOCUMENTACAO_FRONTEND.md`: o modal de criar campanha unificado (a cópia pública saiu); no checkout, as recompensas pelo valor (RF-105) e a ciência do modelo (RF-041); a contagem do Pix em `apoio-confirmado` (RF-085); `views/publico/acoes-campanha.tsx` (seguir com contagem, compartilhar, denunciar e comentar); as métricas do Estúdio (RF-090/091); o status das campanhas seguidas (RF-089); a página `/transparencia` (RF-063).
-  - `MATRIZ-RASTREABILIDADE-RF.md`: RF-041, RF-063, RF-085, RF-089, RF-090, RF-091, RF-096 e RF-105 na área pública.
-- **Terceira rodada (14-11-2026), ainda sem documentar:**
-  - Desistir do apoio (CDC, art. 49; decisão do Lucas: segue o CDC e a plataforma nunca arca com nada): `desistir_contribuicao()` (05), parâmetro `desistencia_prazo_dias` (7), Grupo CN, rota `POST /contribuicao/:id/desistir`, ação "Desistir do apoio" em Minha Conta > Financeiro. Devolve só o valor (a tarifa fica com o provedor); a campanha não muda de status; o repasse pendente desconta sozinho (`reservar_proximo_repasse`). Atualizar o `DOCUMENTACAO_FINANCEIRO.md` 7.2 (a regra do Catarse saiu: vale só o prazo do CDC), o BD, o BACKEND e o FRONTEND. Os códigos 91059, 91060, 91061 e 92042 já estão no `DOCUMENTACAO_ERRCODE.md`.
-  - **Texto do Termo de Uso sobre a desistência:** quem escreve é o Administrador, pelo painel. Falta escrever.
-  - Prévia do link (Open Graph): `GET /compartilhar/campanha/:id` no Nest (12-campanha, `campanha.controller.share.ts`), e os botões de compartilhar apontam para ela. Documentar no BACKEND e no FRONTEND.
-  - CSS: a área pública deixou de sobrescrever as cores, fontes, raios e sombras da restrita (`7-publico.css`, bloco `.layout-publico`). Ainda sobram as paletas do protótipo (cianotipo, verde, ipê...) em `1b-tokens-prototipo.css`, usadas por peças que só existem na pública.
-- **Quarta rodada (14-11-2026), ainda sem documentar:**
-  - Moderação de comentário (Grupo CO): `denuncia.id_comentario` + cópia do comentário; o banco preenche o autor como alvo; denúncia feita pelo dono da campanha tira o comentário do ar na hora; procedente tira o comentário e o endosso. UK_DENUNCIA_USUARIO_PESQUISADOR_ALVO virou índice parcial (+ UK_DENUNCIA_USUARIO_COMENTARIO). Códigos 90040 e 90041 já no ERRCODE. BD, BACKEND, FRONTEND.
-  - `criar_campanha_para_outro` com `p_id_imagem_capa` (Grupo CP).
-  - Imagem de capa editável depois da aprovação (Grupo CQ, `fn_campanha_campos_bloqueados`): o 91058 deixa de ocorrer; o vídeo continua congelado. Atualizar BD e ERRCODE (91058).
-  - Exceção à "restrita manda": degradê cianotipo (`--gradiente-hero`) e cores sobre fundo escuro voltaram, em :root no `7-publico.css`.
-  - `campanha.capa_no_banner` (Grupo CR, padrão TRUE): a capa também de fundo no banner da página da campanha; caixinha nos modais de criar/alterar. Perfil de pesquisador (GET /perfil-pesquisador e /:id) passou a devolver `nome` e `avatarUrl` (GET /usuario/:id exige login: visitante via sem nome e sem foto no Explorar e na página do pesquisador). BD, BACKEND, FRONTEND.
-  - Comentários listados com `fotoPesquisador` (GET /comentario).
-  - Telas: página da campanha (capa no lugar do vídeo, Endosso com foto, aba Comentar, Atualizações em modal), perfil do pesquisador refeito, Home sem "Últimos Dias" (prazo em vermelho nos 3 últimos dias), `/perguntas-frequentes` (saiu de Como funciona), notificação abre modal, rodapé único (`footer-publico.tsx` apagado), denúncias recebidas em Minhas atividades, Termo de Uso v2 reescrito no seed.
-
 ---
 
-### Imagens geradas por IA para dar vida ao site (anotado em 14-11-2026, sugestão do Claude aprovada pelo Lucas)
-
-Mesmo processo dos cards do Como funciona: prompt base com a paleta escura (#041722 a #082e48, degradê até #0a4a3c) e verde (#0f9b58, #5fc796), sem texto na imagem; originais em `informacoes/Imagens`, convertidas para WebP (qualidade 80) em `react/public/imagens/`. Em ordem de impacto:
-
-1. **Capas padrão das campanhas sem imagem:** uma ilustração por grande área do CNPq (Exatas e da Terra, Biológicas, Engenharias, Saúde, Agrárias, Sociais Aplicadas, Humanas, Linguística/Letras/Artes, Multidisciplinar) = 9 imagens 16:9 (1200x675). Hoje o card mostra só um ícone de frasco. Aparece na Home, no Explorar, no perfil do pesquisador e no banner da campanha.
-2. **Painel lateral do Login e do Cadastro:** ilustração de boas-vindas, retrato 3:4 (~900x1200). Hoje é só o degradê com a grade.
-3. **Confirmação do apoio (`/apoio-confirmado`):** ilustração de celebração, quadrada (800x800).
-4. **Estados vazios (15 telas, `EstadoVazio`):** 2 ou 3 ilustrações pequenas reaproveitáveis ("nada por aqui ainda", "comece a seguir", "sem resultados"), quadradas (400x400), fundo transparente.
-5. **Página de erro / não encontrada:** ilustração leve e bem-humorada, 16:9.
-
----
-
-## 3. No dia do deploy
+## 4. No dia do deploy
 
 - **Prazo de guarda das notificações (auditoria de 01-11-2026):** a tabela `notificacao` (e-mails e avisos do sino) cresce para sempre; o `log_auditoria` tem prazo de guarda, ela não. Decidir no deploy se ganha um parâmetro de guarda como o do log.
 - **Banco de produção:** rodar o `07_seed_dados.sql` só até o marcador `[07-DEMONSTRACAO]` e promover a primeira conta a admin uma vez (ver `.Tutorial-rodar-projeto.md`).
@@ -182,40 +67,16 @@ Mesmo processo dos cards do Como funciona: prompt base com a paleta escura (#041
 - **`trust proxy` no Nest:** atrás de um proxy (servidor de hospedagem), o Nest precisa confiar nele para ler o IP real de quem contribui (gravado no aceite do Termo, `aceite_termo_contribuicao.ip_aceite`) e de quem faz login. Sem isso, todo IP gravado seria o do proxy.
 - **Docker** do Nest e do React (F2 do roteiro do Atlas, com o `docker/` deles como referência).
 - **`react/.gitignore` não cobre `.env`:** inofensivo hoje (o `.env` só tem a URL da API); só volta à tona se o conteúdo do `.env` mudar ou no deploy.
-- **CORS por lista de endereços** (ver grupo 5, segurança): se não for feito antes, entra aqui.
+- **CORS por lista de endereços:** a API aceita chamadas de qualquer site (`app.enableCors()` sem opções, `nest/src/main.ts`). Correção pequena: aceitar só os endereços de uma lista no `.env`, como o sistema Atlas faz. É pré-requisito do refresh token em cookie (grupo 5).
 - **Sessões sem regra de acesso por dono (anotado em 30-09-2026, decidido em 24-10-2026: só no deploy, junto do cookie e do CORS).** `sessao` tem regra de acesso aberta (`USING (true)`) de propósito: login e renovação acontecem antes de haver alguém logado. Quem decide de quem é a sessão é o Nest (confere o segredo do token e o dono). Na simulação, qualquer papel encerra a sessão de qualquer conta direto no banco. Não é brecha pela API hoje; é defesa em profundidade.
-
----
-
-## 4. Fim do projeto (só quando todos os módulos estiverem prontos)
-
-#### 🟡 Ideia para o fim do projeto: Autenticação em duas etapas (2FA), sem RF (decisão do V8: avançado demais para o escopo do TCC agora)
-
-Toda banca de TCC de sistema hoje em dia costuma perguntar sobre segurança logo de cara, e 2FA é um dos primeiros itens que costuma vir à tona nessa conversa. Hoje o CrowdAcademico não tem nenhuma camada de 2FA (só e-mail+senha, com bloqueio por tentativas). Quando for implementar, também vai precisar de um RF novo na Etapa 3 descrevendo o requisito (não existe nenhum hoje cobrindo isso).
-
-**Só voltar a levantar este item quando todos os módulos do backend já estiverem prontos** - não é prioridade agora, é o tipo de reforço que faz mais sentido numa reta final, depois que o núcleo (campanha, contribuição, pagamento) já estiver de pé.
-
-#### 🟡 Ideia para o fim do projeto: auditoria de acessibilidade WCAG
-
-**Em palavras simples:** a WCAG é o guia internacional de acessibilidade para sites (o padrão que órgãos públicos e boas empresas seguem). O sistema já segue partes dela: contraste das cores conferido por teste (`npm run contraste`), nomes acessíveis nos botões, e, desde 13-10-2026, a regra 2.2.1 (tempo ajustável): o aviso que some sozinho pausa com o mouse em cima ou com o foco do teclado dentro.
-
-**A ideia:** com o sistema pronto, fazer uma auditoria inteira pelos critérios da WCAG 2.2 (nível AA), tela por tela: tempo e movimento (2.2.1 e 2.2.2), navegação só pelo teclado, ordem do foco, textos alternativos, mensagens de erro ligadas ao campo, zoom de 200% e tela de celular. Ferramenta: o axe (já usado em rodadas anteriores) mais conferência manual, porque a ferramenta automática pega só parte dos problemas. **Só começar quando todos os módulos estiverem prontos**, como os testes com Playwright abaixo. Já anotados para ela (24-10-2026): tabela vazia que rola de lado no celular não recebe foco do teclado (axe, `scrollable-region-focusable`; o padrão da `caixa-tabela`, região com `tabIndex=0`, resolve), e o cabeçalho de coluna que ordena a tabela responde ao clique, mas não ao teclado.
-
-#### 🔴 Pendência aberta: testes automatizados com Playwright no React
-
-O `react/` não tem nenhum teste automatizado hoje (só `build`+`lint`). Um projeto de referência da disciplina (`COCAO_HOTEL_DDL_DML_CRUD_ppw2-main`) tem uma estrutura de testes Playwright organizada em 7 categorias (E2E completo, aceitação/requisito funcional, integração HTTP, API pura, *data-driven*, *snapshot* visual/acessibilidade, interceptação de erro) que pode servir de referência de estrutura, não de conteúdo (os testes deles são específicos do sistema de hotel).
-
-**Vamos usar eventualmente, mas ainda é cedo.** Só voltar a levantar este item quando o sistema estiver completo (todos os módulos prontos) - implementar teste agora, com o backend ainda mudando bastante módulo a módulo, geraria mais retrabalho de manutenção de teste do que benefício.
-
-> Até lá existem os roteiros avulsos de navegador em informacoes/testes-banco/resultados/scripts (g1 a g20, mais o `rotas-sem-login.mjs`, que chama todas as rotas sem login, 185 em 24-10-2026, e compara com a gravação anterior).
 
 ---
 
 ## 5. Decisões em aberto, sem pressa
 
-### Segurança
+### Segurança e conta
 
-#### 🟡 Conta excluída prende o e-mail (anotado em 01-11-2026; o Lucas quer fazer, mas por último)
+#### Conta excluída prende o e-mail (anotado em 01-11-2026; o Lucas quer fazer, mas por último)
 
 **Ideia do Lucas (01-11-2026):** quem excluiu a conta e se arrependeu volta com o mesmo e-mail, e o que estava ligado a ela (contribuições e o resto) volta a aparecer, uma "reativação" por baixo dos panos, sem RF. Alguns sistemas fazem assim. Antes de fazer: estudar o que a exclusão apaga de verdade (a exclusão anonimiza parte dos dados, pela LGPD) e o que dá para devolver.
 
@@ -225,7 +86,7 @@ O `react/` não tem nenhum teste automatizado hoje (só `build`+`lint`). Um proj
 
 **Cuidado ao fazer:** o login, o "Esqueci minha senha" e qualquer busca por e-mail passam a poder achar duas linhas com o mesmo endereço (uma excluída), e precisam ignorar a excluída. Mexe no 01/02 e pede grupo no ATUALIZAR. O "Reenviar" das Notificações não é afetado: a conta nova tem outro id, e a recusa (91055) vale só para os e-mails da conta excluída.
 
-#### 🟡 Login sem e-mail confirmado (anotado em 01-11-2026)
+#### Login sem e-mail confirmado (anotado em 01-11-2026)
 
 **Em palavras simples:** hoje quem cria conta entra e usa tudo **mesmo sem confirmar o e-mail**. O "E-mail não verificado" é só um selo amarelo em Minha Conta e no Alterar Usuário. O RF-003 pede só que a conta nasça "não verificada" e que o sistema guarde esse estado; não manda bloquear o login.
 
@@ -237,75 +98,33 @@ O `react/` não tem nenhum teste automatizado hoje (só `build`+`lint`). Um proj
 
 **Já pronto para isso:** o aviso vermelho de Configurações > Mensagens ("Se desativado, quem cria conta não recebe o link para confirmar o e-mail. A conta é criada, mas o e-mail fica sem confirmação.") foi escrito para continuar certo se o login passar a exigir e-mail confirmado. As contas da demonstração já nascem confirmadas ([07-D-8]).
 
-#### 🟡 Cláusula da chave Pix no Termo de Pesquisador (RF-026, 24-10-2026)
+#### Refresh token em cookie `HttpOnly`, em vez de `localStorage`
 
-O requisito pede que o Termo de Pesquisador diga, de forma explícita, que a correção da chave Pix cadastrada é responsabilidade do pesquisador. O termo vigente não fala da chave. Quem escreve é o Administrador, numa versão nova do termo pelo painel (o re-aceite já funciona); antes, queremos estudar e fazer uma pesquisa de mercado, sem pressa. O e-mail do repasse previsto, a outra parte do RF-026, já foi feito.
+Hoje o refresh token fica no `localStorage` do navegador (`use-auth.ts`), para não precisar logar de novo a cada F5. Um cookie `HttpOnly` com `SameSite=Strict` faz o mesmo papel com uma vantagem real de segurança: o JavaScript da página nunca lê o cookie, então um ataque de XSS (injeção de script) não consegue roubar o token; com `localStorage`, qualquer script que rode na página consegue. Trocar mexe em como o `authFetch`/`use-auth.ts` renovam a sessão e em como o Nest define e lê o cookie, e depende do CORS por lista (grupo 4); o sistema Atlas usa `SESSION_LIFETIME`, `SESSION_SECURE_COOKIE` e `SESSION_SAME_SITE` no `.env` e serve de referência. **O estudo foi feito em 24-10-2026** (o que muda, o risco e o padrão de mercado); a decisão continua aberta.
 
-#### 🔴 Pendência aberta: refresh token em cookie `HttpOnly`, em vez de `localStorage`
+### Requisitos
 
-Achado revisando um projeto de referência da disciplina (04-09-2026): hoje o CrowdAcademico guarda o refresh token no `localStorage` do navegador (`use-auth.js`, decisão já documentada - "pra não precisar logar de novo a cada F5"). Um cookie `HttpOnly` com `SameSite=Strict` faz o mesmo papel, mas com uma vantagem real de segurança: o JavaScript da página nunca consegue ler o valor do cookie, então um ataque de XSS (injeção de script malicioso) não consegue roubar o refresh token, mesmo que consiga rodar código na página - com `localStorage`, qualquer script que rode na página consegue ler o token.
+- **RF-053, fase e formato da atualização (anotado em 04-11-2026; assunto para bem mais à frente):** o Lucas não gostou deste requisito, acha estranho. Texto atual: "Cada atualização de progresso deve registrar a fase do projeto a que se refere (andamento, resultado preliminar ou resultado final) e o formato do conteúdo publicado (texto, imagem, PDF ou link externo), podendo ter arquivos e links externos anexados." Como o sistema faz hoje: a fase é escolhida pelo pesquisador; o formato não é mais perguntado, sai dos anexos (PDF, imagem, link ou só texto), porque escolhido à mão dava para marcar "PDF" sem anexar nada.
+- **Recompensa com arquivo (07-11-2026, aguardando a Alexia):** o Lucas perguntou à Alexia se a recompensa entrega também por arquivo (imagem ou PDF) ou só por link. Já foi feito e testado, e desfeito no mesmo dia para esperar a resposta; as versões com o recurso estão guardadas fora do repositório, e o Grupo CF do ATUALIZAR ficou comentado, marcado "NÃO COLE".
+- **Tipos de link para atualização e recompensa (04-11-2026):** hoje o único tipo liberado para atualização e recompensa é o GitHub, e a regra dele só aceita endereço de perfil (`github.com/nome`), não de repositório. Artigo (DOI), vídeo ou pasta de arquivos precisam de um tipo novo, criado pelo admin na tela Tipos de Link (sem código). Decidir quais tipos entram no seed.
 
-**Não é decisão óbvia, nem copy-paste** - trocar exigiria mexer em como o `authFetch`/`use-auth.js` renovam sessão (hoje leem o token direto do `localStorage`; um cookie `HttpOnly` é enviado automaticamente pelo navegador em toda requisição, sem o JavaScript precisar ler nem anexar nada - muda o formato da chamada) e como o backend define/lê esse cookie. Vale uma análise mais aprofundada antes de decidir - não é pra implementar agora, só registrado pra não esquecer que a opção existe. **O estudo foi feito em 24-10-2026** (o que muda no `use-auth` e no Nest, o risco, a dependência do CORS e o padrão de mercado); a decisão continua aberta.
-
-#### 🟡 Anotado para pensar com calma (27-09-2026): 3 ideias vindas do `.env` do sistema Atlas
-
-Decidimos depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/todas as auditorias/ROTEIRO_INCORPORACAO_ATLAS.md`.
-
-- **Lista de origens permitidas (CORS):** a API do Atlas só aceita chamadas dos endereços de uma lista no `.env`. A nossa aceita chamadas de qualquer site (`app.enableCors()` sem opções, `nest/src/main.ts`). Correção pequena e pré-requisito da pendência do cookie HttpOnly (cookie com credencial exige origem explícita).
-- **Configuração da sessão em cookie:** o Atlas usa cookie HttpOnly com tempo de vida e regras de envio (`SESSION_LIFETIME`, `SESSION_SECURE_COOKIE`, `SESSION_SAME_SITE`) no `.env`. Referência pronta para a pendência "refresh token em cookie HttpOnly".
-
-- **Permissão por rota no painel:** a guarda do `/admin/*` só exige login, não confere o papel (quem vê o quê continua decidido pelo backend). "Fica para perto do fim".
-
-#### 🟡 O que sobrou da auditoria dos status (01-11-2026)
-
-A regra do pesquisador suspenso e a matriz no RF-115 foram feitas em 01-11-2026; reabrir denúncia julgada continua permitido, com aviso e justificativa. Os 4 RFs com texto atrás do sistema foram respondidos nos requisitos de 02-11-2026.
-
-### Visual e marca
-
+### Visual
 
 - **Modais menores, sem barra de rolagem quando der (01-11-2026, estudar antes).** Alguns modais poderiam ser menores sem perder conteúdo: texto de explicação vira tooltip (regra de 10-10-2026). Exemplo do Lucas, no Julgar Denúncia: o bloco "O que cada decisão faz" ("Aceitar torna esta denúncia improcedente...") caberia num tooltip. A meta é evitar a rolagem só nos modais em que der; o de denúncia é um deles. Estudar modal por modal antes de mexer.
-- **Coluna VALOR de Parâmetros: respondido em 01-11-2026.** Com a tabela apertada (DS-120), o e-mail quebra no "@" (não vira "ler tudo"), e a tabela não rola mais. Custo: as linhas em que a chave ou o e-mail quebram ficam com 53 ou 54 px, e não 51 (DS-100). Se incomodar, a alternativa é o "ler tudo" nessas duas colunas.
-
-- **Outros lugares que podem ganhar as mudanças do Consultar Campanha (25-10-2026), olhar tela por tela antes:** (1) **linhas alinhadas entre seções vizinhas** (`FichaLadoALado`, DS-115) no Consultar e no Alterar Usuário ("Dados da conta" ao lado de Auditoria e Papéis) e no Revisar Campanha: só vale onde os dois lados são campos pareados; (2) **data com hora sem os segundos** (`formatarDataHora(iso, true)`) onde a data fica em meia coluna e quebra: Julgar Denúncia, Decidir Encerramento, Consultar Contribuição, Consultar Notificação, Resolver Revisão; (3) **linha de números de ponta a ponta** (`SecaoFicha centralizada`, DS-116): a Consultar Contribuição (valor, taxa, total) é candidata. Já feitos em 25-10-2026: a barra colada no número no Alterar Campanha e na Consultar Contribuição, e o "Enviar" com cara de indisponível no Alterar Campanha.
+- **Outros lugares que podem ganhar as mudanças do Consultar Campanha (25-10-2026), olhar tela por tela antes:** (1) **linhas alinhadas entre seções vizinhas** (`FichaLadoALado`, DS-115) no Consultar e no Alterar Usuário ("Dados da conta" ao lado de Auditoria e Papéis) e no Revisar Campanha: só vale onde os dois lados são campos pareados; (2) **data com hora sem os segundos** (`formatarDataHora(iso, true)`) onde a data fica em meia coluna e quebra: Julgar Denúncia, Decidir Encerramento, Consultar Contribuição, Consultar Notificação, Resolver Revisão; (3) **linha de números de ponta a ponta** (`SecaoFicha centralizada`, DS-116): a Consultar Contribuição (valor, taxa, total) é candidata.
 - **Branch `feat/novas-telas-teste` (02-10-2026):** tem o Dashboard em seções ("Precisa de você") e os links acadêmicos em cartões no celular, feitos antes das regras visuais novas. Decidir se entram no main, refeitos com as regras do `DESIGN_SYSTEM.md`, ou se a branch é descartada. **Contexto (Lucas, 01-11-2026):** o propósito era só deixar a área restrita mais bonita, por isso ficou separada. Para usar, seria preciso atualizar a branch com o main e ver o que dá para aproveitar.
-
-- **Troca do logo e do ícone pelo painel** (aba Identidade Visual do Dashboard, hoje um espaço reservado). Desde 25-10-2026 a marca padrão está no projeto (`DOCUMENTACAO_FRONTEND.md`, seção 12); o envio pelo painel substitui a padrão, e o admin do futuro troca sem mexer no código nem no banco. A análise, os 4 problemas e as duas decisões em aberto estão no topo do `ACHADOS_PARA_DISCUTIR.md`. O envio passa pelo Storage pessoal do Lucas: nos testes, só ele envia.
-
-### Estrutura e ferramentas
-
-#### 🟡 Tipos de link para atualização e recompensa (04-11-2026)
-
-Hoje o único tipo liberado para atualização e recompensa é o GitHub, e a regra dele só aceita endereço de perfil (`github.com/nome`), não de repositório. Artigo (DOI), vídeo ou pasta de arquivos precisam de um tipo novo, criado pelo admin na tela Tipos de Link (sem código). Decidir quais tipos entram no seed.
-
-#### 🟡 Auditoria de coisas inúteis (anotado em 04-11-2026; para o futuro)
-
-Procurar no sistema inteiro campo, coluna, tela ou mecanismo que só existe por existir: gravado ou mostrado, mas que nenhuma parte do sistema usa, ou que repete o que outra coisa já mostra. Exemplo que motivou: o formato da atualização (RF-053), que nada usa e repete o ícone dos anexos; saiu da tela em 04-11-2026, mas continua gravado. Para cada achado: tirar da tela, tirar do banco ou levar à revisão externa.
-
-#### 🟡 Auditoria do Tailwind que anula o CSS: falta a versão com navegador
-
-A versão sem navegador foi feita em 01-11-2026 (`informacoes/testes-banco/ferramentas/tailwind-x-css.mjs`), e os achados foram corrigidos. Falta a versão com navegador, que prova quais candidatos quebram de verdade: junto da auditoria WCAG ou dos testes com Playwright do fim do projeto (grupo 4).
-
-#### 🟡 Para o futuro (29-09-2026): super auditoria de padrões de mercado
-
-Ideia: comparar o sistema inteiro com o que os sistemas de referência fazem (login e sessão, termos, moderação, campanha, pagamento, mensagens de erro, telas), para cada diferença dizer qual é o padrão de mercado, o que o projeto faz e se vale mudar. Motivo: citar o padrão de mercado ajuda muito a decidir. Fica para bem no futuro.
-
-#### 🟡 Anotado (29-09-2026): dispatcher de triggers
-
-Hoje `campanha` tem 23 triggers (17 funções; algumas são pares INSERT e UPDATE) e `comentario` tem 9 (contagem de 24-10-2026). Quando várias rodam no mesmo momento, o Postgres escolhe a ordem pela ordem alfabética do nome; o dispatcher seria uma trigger só por momento, chamando as regras numa ordem escrita. Ganho: ordem explícita e mensagem de erro previsível quando duas regras falhariam juntas. Custo: mexer nas regras mais críticas (aprovação, congelamento, prazo), com risco de regressão; as suítes de caracterização (1.050 casos) são a rede de proteção. Recomendação atual: não fazer. **O estudo completo foi feito em 24-10-2026** (como funciona a ordem hoje, o que mudaria, exemplos com as triggers reais); a decisão continua aberta.
-
-
-### Protótipo estático (sessão própria)
-
-- Reputação em 4 faixas, seguir campanha e recompensas não têm presença visual no protótipo. Levantar como decisão, não encaixar numa rodada de "embelezar".
-- **Tela de Transparência do protótipo:** tirar a divisão "88/7/5", que não vem de requisito nenhum, e mostrar a taxa da plataforma, a tarifa de cada meio e o simulador do RF-064 (requisitos de 24-10-2026).
-- **Cadastro do protótipo simula uma verificação do Lattes que o sistema não faz (anotado em 05-10-2026).** Onde ver: painel "Telas do protótipo" > "10. Cadastro" > escolher "Sou pesquisador" > avançar até o passo 3. O botão "Validar" do ID Lattes mostra "Vínculo encontrado no Lattes" e bloqueia o avanço até essa validação. O RF-022 diz outra coisa: o pesquisador escolhe o tipo de link (Lattes, ORCID, ResearchGate, LinkedIn ou GitHub) e cola o endereço, o sistema só confere se o endereço é do site certo, e os links são opcionais (até 5). Sugestão: trocar o botão por tipo + endereço, conferido enquanto a pessoa digita e sem bloquear o avanço. Diferença anotada, sem mudar agora: pelo RF-022 quem vira pesquisador é um usuário já cadastrado, que pede o upgrade depois; o protótipo faz isso no próprio cadastro.
+- **Troca do logo e do ícone pelo painel** (aba Identidade Visual do Dashboard, hoje um espaço reservado). Desde 25-10-2026 a marca padrão está no projeto (`DOCUMENTACAO_FRONTEND.md`, seção 12); o envio pelo painel substitui a padrão, e o admin do futuro troca sem mexer no código nem no banco. A análise, os 4 problemas e as duas decisões em aberto estão no `ACHADOS_PARA_DISCUTIR.md`. O envio passa pelo Storage pessoal do Lucas: nos testes, só ele envia.
 
 ---
 
-## 6. Registros que não são pendência (para não se perderem)
+## 6. Ideias para depois
 
-
-- **Descartados de propósito do roteiro do Atlas** (escopo enxuto): Next.js, Tailwind no JSX, i18n, gerador de módulo, versão na URL, e a maiúscula automática nos nomes (ficou só a limpeza de espaços).
-- **Tela do painel não prova RF do usuário:** o React de hoje é só o painel administrativo; tela do painel nunca prova que um RF do usuário ou do pesquisador está cumprido ou descumprido. Os RFs que ficam 🟡 na matriz dependem da área pública (grupo 2) ou da cláusula do Termo de Pesquisador.
-- **Documentação contra o código:** as suítes PGlite 7 e 10 conferem a cada rodada; ficam verdes a cada módulo novo.
-- **Roteiro completo do Atlas:** `informacoes/todas as auditorias/ROTEIRO_INCORPORACAO_ATLAS.md` (Ondas 1 e 2 feitas).
+- **Autenticação em duas etapas (2FA), sem RF (decisão do V8: avançado demais para o escopo do TCC agora).** Bancas costumam perguntar sobre segurança, e 2FA é um dos primeiros itens. Hoje o sistema tem só e-mail e senha, com bloqueio por tentativas. Para fazer, precisa de um RF novo.
+- **Auditoria de acessibilidade manual (WCAG 2.2, nível AA).** A parte automática foi feita em 16-11-2026: o axe-core zerou nas 22 telas, nos dois temas, no computador e no celular (`testes-e2e/`), e a auditoria Nielsen/WCAG da área pública corrigiu 14 itens (`informacoes/AUDITORIA_AREA_PUBLICA_NIELSEN_WCAG_16-11-2026.md`). Falta a conferência manual, que a ferramenta automática não pega: navegação só pelo teclado, ordem do foco, zoom de 200%. Já anotado: o cabeçalho de coluna que ordena a tabela responde ao clique, mas não ao teclado.
+- **Imagens geradas por IA para dar vida ao site (14-11-2026, sugestão do Claude aprovada pelo Lucas).** Mesmo processo dos cards do Como funciona: prompt base com a paleta escura (#041722 a #082e48, degradê até #0a4a3c) e verde (#0f9b58, #5fc796), sem texto na imagem; originais em `informacoes/Imagens`, convertidas para WebP (qualidade 80) em `react/public/imagens/`. Em ordem de impacto: (1) capas padrão das campanhas sem imagem, uma por grande área do CNPq (9 imagens 16:9, 1200x675; hoje o cartão mostra só um ícone de frasco); (2) painel lateral do Login e do Cadastro (retrato 3:4, ~900x1200); (3) confirmação do apoio (`/apoio-confirmado`, quadrada 800x800); (4) estados vazios (2 ou 3 ilustrações reaproveitáveis, 400x400, fundo transparente); (5) página de erro ou não encontrada (16:9).
+- **Tela de administração dos arquivos (especificada em 13-09-2026, não construída de propósito).** Espaço ocupado (com % do limite do plano gratuito), arquivos desativados, órfãos (sem vínculo com foto de perfil, atualização ou recompensa), distribuição por tipo, os 10 maiores consumidores e a listagem completa. Tudo sai das colunas que `arquivo` já tem, sem módulo novo (2 rotas no `26-arquivo` e uma tela de listagem). Cuidado na ação "excluir órfão": apagar do armazenamento primeiro, depois do banco, registrando em auditoria; se o armazenamento falhar, a linha fica. Momento certo: quando anexos tiverem volume de verdade.
+- **Auditoria de coisas inúteis (04-11-2026).** Procurar campo, coluna, tela ou mecanismo que só existe por existir (gravado ou mostrado, mas que nada usa, ou que repete outra coisa). Exemplo que motivou: o formato da atualização (RF-053), que nada usa; saiu da tela em 04-11-2026, mas continua gravado. Para cada achado: tirar da tela, tirar do banco ou levar à revisão externa.
+- **Auditoria do Tailwind que anula o CSS, versão com navegador.** A versão sem navegador foi feita em 01-11-2026 (`informacoes/testes-banco/ferramentas/tailwind-x-css.mjs`) e os achados foram corrigidos. Falta a versão com navegador, que prova quais candidatos quebram de verdade; agora dá para fazer com o Playwright do `testes-e2e/`.
+- **Super auditoria de padrões de mercado (29-09-2026).** Comparar o sistema inteiro com os sistemas de referência (login e sessão, termos, moderação, campanha, pagamento, mensagens de erro, telas): para cada diferença, qual é o padrão, o que o projeto faz e se vale mudar.
+- **Dispatcher de triggers (29-09-2026).** Hoje `campanha` tem 23 triggers e `comentario` 9; quando várias rodam no mesmo momento, o Postgres segue a ordem alfabética do nome. O dispatcher seria uma trigger só por momento, chamando as regras numa ordem escrita: ordem explícita e erro previsível, mas mexe nas regras mais críticas (as suítes de caracterização, 1.050 casos, são a rede de proteção). Recomendação: não fazer. Estudo completo de 24-10-2026; decisão aberta.
+- **Reorganizar o `DESIGN_SYSTEM.md` (18-10-2026).** As regras principais (como linha e coluna das tabelas, DS-100, DS-104 e DS-105) passam para os números de destaque, para serem achadas primeiro.

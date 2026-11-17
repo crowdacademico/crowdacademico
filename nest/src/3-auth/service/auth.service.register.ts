@@ -56,12 +56,16 @@ export class AuthServiceRegister {
         'login',
       );
     const papeis = await this.authServiceLogin.listarPapeis(usuario.idUsuario);
+    const permissoes = await this.authServiceLogin.listarPermissoes(
+      usuario.idUsuario,
+    );
 
     return {
       accessToken,
       refreshToken,
       usuario,
       papeis,
+      permissoes,
       aceitePendente,
       tokenVerificacaoEmailDev:
         process.env.NODE_ENV === 'production' ? null : token,

@@ -113,7 +113,17 @@ export class AuthServiceRefresh {
       sessao.id_usuario,
     );
     const papeis = await this.authServiceLogin.listarPapeis(sessao.id_usuario);
+    const permissoes = await this.authServiceLogin.listarPermissoes(
+      sessao.id_usuario,
+    );
 
-    return { accessToken, refreshToken, usuario, papeis, aceitePendente };
+    return {
+      accessToken,
+      refreshToken,
+      usuario,
+      papeis,
+      permissoes,
+      aceitePendente,
+    };
   }
 }

@@ -15,6 +15,9 @@ export interface AuthResponseLogin {
   refreshToken: string;
   usuario: UsuarioResponse;
   papeis: string[];
+  // As permissões que os papéis dão (17-11-2026): só para o painel esconder o que a conta não usa; quem protege os
+  // dados é o banco.
+  permissoes: string[];
   aceitePendente: boolean;
 }
 

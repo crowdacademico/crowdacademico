@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
-import { ROTAS_ADMIN } from '../../../services/router/rotas.constants';
+import { podeVerRota, ROTAS_ADMIN } from '../../../services/router/rotas.constants';
 import { usuarioApi } from '../../../services/1-usuario/api/usuario.api';
 import { papelApi, permissaoApi } from '../../../services/2-papel-permissao/api/papel-permissao.api';
 import { configuracoesApi } from '../../../services/11-configuracoes/api/configuracoes.api';
@@ -33,11 +33,13 @@ interface DadosCatalogos {
 // ROTAS_ADMIN/GRUPOS_MENU_ADMIN já resolveram para o menu lateral). Só entram rotas com rótulo de menu: as de
 // detalhe (Minha Conta, Publicar Termo de Uso) não têm nome e apareceriam como itens só com bolinha. O ícone é
 // o MESMO do menu lateral (rota.icone).
-const NAVEGACAO: ResultadoBusca[] = ROTAS_ADMIN.filter((rota) => rota.rotuloMenu !== undefined).map((rota) => ({
+// Cada item leva as permissões da tela: a busca mostra só as telas que a conta consegue usar, como o menu (17-11-2026).
+const NAVEGACAO: (ResultadoBusca & { permissoes?: readonly string[] })[] = ROTAS_ADMIN.filter((rota) => rota.rotuloMenu !== undefined).map((rota) => ({
   categoria: 'Navegação',
   rotulo: rota.rotuloMenu,
   caminho: rota.caminho,
   icone: rota.icone,
+  permissoes: rota.permissoes,
 }));
 
 // Catálogos pequenos hoje (dezenas de linhas) - busca 100% no navegador,
@@ -48,7 +50,7 @@ const NAVEGACAO: ResultadoBusca[] = ROTAS_ADMIN.filter((rota) => rota.rotuloMenu
 const LIMITE_POR_CATEGORIA = 5;
 
 interface BuscaGlobalProps {
-  auth: Pick<UseAuthReturn, 'authFetch'>;
+  auth: Pick<UseAuthReturn, 'authFetch' | 'permissoes'>;
 }
 
 // Busca global (Ctrl+K/Cmd+K): um modal só que busca por nome/e-mail/chave em
@@ -121,12 +123,13 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
 
   const resultados = useMemo(() => {
     const termoBusca = normalizarBusca(termo);
+    const navegacao = NAVEGACAO.filter((item) => podeVerRota(item, auth.permissoes));
 
     if (!termoBusca) {
-      return NAVEGACAO;
+      return navegacao;
     }
 
-    const lista = NAVEGACAO.filter((item) => contemTermo(item.rotulo, termoBusca));
+    const lista: ResultadoBusca[] = navegacao.filter((item) => contemTermo(item.rotulo, termoBusca));
 
     if (dados) {
       lista.push(
@@ -175,7 +178,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
     }
 
     return lista;
-  }, [termo, dados]);
+  }, [termo, dados, auth.permissoes]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setIndiceSelecionado(0), [resultados.length, termo]);

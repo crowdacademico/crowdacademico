@@ -71,7 +71,7 @@ export function AdminLayout({ auth }: AdminLayoutProps) {
           </button>
         </div>
 
-        <AdminSidebar aberto={menuAberto} aoFechar={() => setMenuAberto(false)} />
+        <AdminSidebar aberto={menuAberto} aoFechar={() => setMenuAberto(false)} permissoes={auth.permissoes} />
 
         <div className="admin-content-area">
           <div className="admin-content-area__inner outline-none" data-conteudo-principal tabIndex={-1}>

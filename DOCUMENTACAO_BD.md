@@ -103,6 +103,7 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Para achar tudo sobre
 * **Curador:** faz a curadoria das campanhas e cuida dos catálogos que classificam o conteúdo.
   * Aprova e rejeita campanhas enviadas para aprovação.
   * Gerencia as áreas do conhecimento, os tipos de link acadêmico e os motivos de denúncia.
+  * Vê a tela Pesquisadores, com o CPF (`perfil_pesquisador_visualizar_sensivel`), e a lista e a ficha das contas (`usuario_visualizar_atendimento`, a mesma leitura do Suporte), para conhecer quem pede a campanha (17-11-2026). Só leitura, e sem `usuario_visualizar_sensivel`, que abre a fila de e-mails com os links de nova senha.
 * **Moderador:** cuida do conteúdo publicado.
   * Julga denúncias e decide as contestações da pontuação das denúncias julgadas por outra pessoa.
   * Oculta comentários e atualizações de campanha.
@@ -200,6 +201,7 @@ A pontuação dos pesquisadores é pública: todo papel a vê, sem permissão pr
   * **Sugestão de 30 dias** (RF-073): `configuracoes.prazo_sugerido_campanha_dias` (30, pública), lida só pela tela para preencher a data de fim. É sugestão, não regra: a regra continua sendo o mínimo e o máximo. Não entra no par mínimo/máximo; uma sugestão fora do intervalo aparece em vermelho no aviso de prazo, e o banco recusa no envio.
   * **`video_apresentacao_url`** (`VARCHAR(500)`, opcional): vídeo de apresentação em destaque (YouTube, Vimeo). Só a URL; o vídeo não é armazenado. Congela na aprovação, como o título.
   * **`id_imagem_capa`** (`INT`, opcional, FK para `arquivo(id_arquivo)`): imagem de capa em destaque da campanha, enviada pelo pesquisador (contexto `campanha`). Mutuamente exclusiva com o vídeo (`CK_CAMPANHA_VIDEO_OU_IMAGEM_CAPA`: vídeo ou imagem de capa, nunca ambos). Congela na aprovação da campanha (`fn_campanha_campos_bloqueados`, código 91058). Posse e uso exclusivo validados por trigger (`trg_valida_posse_imagem_capa_campanha`, [05-G]), e exclusão protegida na rotina de arquivos órfãos.
+  * **`capa_no_banner`** (`BOOLEAN NOT NULL DEFAULT TRUE`, 14-11-2026, Grupo CR): a imagem de capa também aparece de fundo, escurecida, no banner do topo da página da campanha. Desmarcada, a capa fica só no lugar do vídeo. É só apresentação: não congela na aprovação.
 * **`atualizacao_campanha`:** postagens de acompanhamento do projeto. `ativo` permite ocultar sem perder o histórico; `ocultada_moderacao` diz quem tirou do ar (TRUE = a moderação excluiu mantendo o registro, a situação "Excluída"; FALSE = o próprio dono ocultou), e só a trigger `trg_atualizacao_ocultacao` grava nela. Limite técnico de 20.000 caracteres (`CK_ATUALIZACAO_CAMPANHA_CONTEUDO_TAMANHO`) e de negócio de 5.000 (`configuracoes.limite_caracteres_conteudo_atualizacao`).
 * **`orcamento_campanha` e `marco_cronograma`:** orçamento estruturado (itens com categoria e valor, que viram gráfico) e cronograma estruturado (marcos com título, descrição e data prevista), inspirados no Experiment.com. **Os dois são obrigatórios** para aprovar uma campanha.
   * **Regras (em [05-K-2]):** o orçamento congela na aprovação (sem exceção nem para o admin); o cronograma congela quando a campanha começa de fato; a data de um marco não pode ser anterior a `data_inicio` (pode passar de `data_fim`); a soma de `orcamento_campanha.valor` precisa bater **exatamente** com `campanha.meta_financeira` na aprovação.
@@ -215,6 +217,7 @@ A pontuação dos pesquisadores é pública: todo papel a vê, sem permissão pr
   * **`relato`** (opcional): o denunciante detalha o caso além do motivo. Limite técnico de 5.000 e de negócio de 1.000 (`limite_caracteres_relato_denuncia`): campo de formulário sem limite vira vetor de abuso.
   * **`CK_DENUNCIA_ALVO_XOR`:** exatamente um alvo preenchido (`id_campanha_alvo` ou `id_pesquisador_alvo`). Trabalha junto com `trg_denuncia_valida_tipo_motivo` ([05-K-1]), que confere se o motivo bate com o alvo.
   * **FKs dos alvos com `ON DELETE RESTRICT`:** uma denúncia é registro de moderação; o alvo sumir e a denúncia ficar apontando para nada destruiria o rastro.
+  * **Denúncia de comentário** (14-11-2026, Grupo CO): `id_comentario` (FK `FK_DENUNCIA_COMENTARIO`, `ON DELETE SET NULL`) e a cópia do comentário no momento da denúncia (`comentario_conteudo`, `comentario_endossado`, `comentario_id_campanha`): o comentário pode ser apagado depois, e a denúncia continua com o que foi denunciado. O alvo é o perfil do autor (`id_pesquisador_alvo`), preenchido pelo banco ([05-K-2-G]). Uma denúncia por perfil continua valendo, mas cada comentário do mesmo autor pode ser denunciado à parte: `UK_DENUNCIA_USUARIO_PESQUISADOR_ALVO` virou índice único **parcial** (`WHERE id_comentario IS NULL`), mais `UK_DENUNCIA_USUARIO_COMENTARIO` (`WHERE id_comentario IS NOT NULL`), ambos no `02`.
 * **`solicitacao_encerramento`:** pedidos de encerramento antes do prazo. Tem a justificativa de quem pede (`justificativa_pesquisador`) e a de quem decide (`justificativa_admin`, obrigatória para rejeitar: negar sem registrar o motivo seria indefensável numa contestação). Limite técnico de 10.000 em cada e de negócio de 2.000 (`limite_caracteres_justificativa_encerramento`, compartilhado). Ver [05-K-2-H].
 * **`historico_rejeicao`:** uma linha por rejeição de campanha (`id_campanha`, `id_usuario_dono`, `titulo_campanha`, `id_admin`, `justificativa`, `rejeitado_em`). Dono e título são gravados no instante da rejeição e **não há FK para `campanha`**: o histórico sobrevive à exclusão da campanha (que é excluída sozinha quando o prazo de reenvio vence). `id_campanha` fica só como referência, indexada. Imutável (sem policy nem GRANT de UPDATE). A `justificativa` tem limite de negócio em `limite_caracteres_justificativa_rejeicao` (10.000, [05-K-1]). Ver [05-K-2-B].
 * **`recompensa`:** recompensas **simbólicas** oferecidas pelos pesquisadores: `tipo_recompensa` só tem `digital`, `reconhecimento` e `acesso_antecipado`, sem `DEFAULT` (a aplicação escolhe). `valor_minimo > 0`; `quantidade_disponivel` existe e aceita `NULL` (ilimitada), mas o sistema não controla estoque. Limite técnico de 10.000 na descrição e de negócio de 2.000 (`limite_caracteres_descricao_recompensa`).
@@ -241,6 +244,7 @@ A pontuação dos pesquisadores é pública: todo papel a vê, sem permissão pr
 
 * **`contribuicao`:** os apoios financeiros.
   * **Valor mínimo:** `CK_CONTRIBUICAO_VALOR_MINIMO` é só limite técnico (`valor > 0`); o mínimo de negócio (R$ 5,00, configurável) vem de `configuracoes.valor_minimo_contribuicao` ([05-K-2]), o mesmo padrão do prazo e da meta.
+  * **`ciencia_modelo_em`** (`TIMESTAMPTZ`, opcional, 14-11-2026, Grupo CM, RF-041): quando quem apoiou confirmou que entendeu o modelo flexível (o valor vai para o pesquisador mesmo sem a meta). O `POST /contribuicao` recusa campanha flexível sem a ciência (422) e grava `NOW()` aqui. **Por que a regra mora no Nest e não numa trigger:** o seed e os scripts de `informacoes/testes-banco` inserem contribuições flexíveis direto no banco, sem a tela; as contribuições antigas continuam valendo com a coluna vazia.
   * **`token_sessao`:** UUID gerado sozinho (`gen_random_uuid()`), para rastrear a contribuição sem conta sem expor um número sequencial adivinhável.
   * **Sem `UPDATE` direto:** não há policy nem `GRANT` de `UPDATE`; a situação só muda por `atualizar_status_contribuicao()` ([05-K-2]), que valida a transição e grava a auditoria.
   * **O dono pode contribuir na própria campanha:** nenhuma trava contra `contribuicao.id_usuario` igual ao dono; a contribuição segue todas as regras de qualquer outra, e a taxa da plataforma vale igual. **Por quê:** é comum o próprio autor completar o que falta. **Caso-limite:** no tudo-ou-nada, o próprio pesquisador pode completar a meta.
@@ -391,6 +395,7 @@ As funções deste arquivo são a ponte entre a sessão do NestJS e a RLS do Pos
 
 Duas ferramentas do Campo de Testes (`nest/src/30-campo-testes`, só fora de produção):
 * **`criar_campanha_para_outro`:** `pol_campanha_insert` exige `id_usuario = id_usuario_atual()` e pesquisador ativo; esta função cria em nome de um pesquisador escolhido, exigindo `campanha_criar_para_outro`. Continua exigindo pesquisador ATIVO (conferido aqui, em vez da RLS). Prazo, meta e limite de campanhas simultâneas não são repetidos: as triggers do `05` rodam igual por baixo.
+  * **Com imagem de capa** (14-11-2026, Grupo CP): o parâmetro `p_id_imagem_capa` leva junto a capa enviada por quem cria (o admin); `fn_valida_posse_imagem_capa_campanha` (05) confere que foi a conta atual que a enviou.
 * **`forcar_exclusao_campanha`:** exclui uma campanha em qualquer status, exigindo `campanha_excluir_forcado` (nunca `campanha_editar`: um papel com permissão de editar não ganha este poder destrutivo de brinde). O `DELETE` normal (`pol_campanha_delete`) continua liberando só `rascunho`, a proteção certa para campanha real.
 * No banco de produção, o bloco "modo produção" tira essas permissões do admin ([07-B]).
 
@@ -449,6 +454,7 @@ Três funções `SECURITY DEFINER` para agir sobre o perfil de **outra** pessoa,
 * **Papel suspenso não conta:** um vínculo `usuario_papel` com `suspenso_ate` no futuro não concede nenhuma permissão dele ([03-N]).
 * **Anônimo:** com `id_usuario_atual()` em `NULL`, a função devolve `FALSE`.
 * **`listar_papeis_usuario(p_id_usuario)`** (`SECURITY DEFINER`, `SETOF TEXT`): os **códigos** (`papel.codigo`) dos papéis de uma conta. O login e a renovação precisam deles na mesma requisição que cria a sessão, quando `id_usuario_atual()` ainda é `NULL` e a policy de `usuario_papel` barraria até o dono. Código, e não nome, porque o nome é renomeável.
+* **`listar_permissoes_usuario(p_id_usuario)`** (`SECURITY DEFINER`, `SETOF TEXT`, 17-11-2026, Grupo DA): o **nome** das permissões que os papéis da conta dão, sem repetição, com a mesma regra de `tem_permissao` (papel suspenso não conta). O login e a renovação devolvem a lista à tela, que esconde do menu e da rota do painel o que a conta não consegue usar. É só para a tela: quem protege os dados continua sendo a RLS, com `tem_permissao` a cada consulta. Suíte 68 do PGlite.
 
 ---
 
@@ -782,7 +788,7 @@ Regras conferidas no PGlite com o banco inteiro, usando o papel real `app_nestjs
 
 ### [05-K-2-D] Campanha: campos bloqueados numa função só
 
-* **`fn_campanha_campos_bloqueados(campanha) RETURNS TEXT[]`:** os campos que o congelamento trava naquele momento. Aprovada em diante: `meta_financeira`, `modelo`, `taxa_plataforma`, `titulo`, `descricao`, `video_apresentacao_url` e `id_area_conhecimento`, mais `data_fim` e `data_inicio` depois que a campanha começa de verdade. Rejeitada esgotada: todos os campos de conteúdo. Nos outros estados: lista vazia. A ordem da lista decide qual mensagem aparece quando dois campos mudam juntos.
+* **`fn_campanha_campos_bloqueados(campanha) RETURNS TEXT[]`:** os campos que o congelamento trava naquele momento. Aprovada em diante: `meta_financeira`, `modelo`, `taxa_plataforma`, `titulo`, `descricao`, `video_apresentacao_url` e `id_area_conhecimento`, mais `data_fim` e `data_inicio` depois que a campanha começa de verdade. Rejeitada esgotada: todos os campos de conteúdo. Nos outros estados: lista vazia. **A imagem de capa não congela na aprovação** (14-11-2026, Grupo CQ): é só apresentação e não muda nada do que quem apoiou aceitou (meta, modelo, taxa, prazo); só trava na rejeitada esgotada. O vídeo continua congelado, e como a campanha tem vídeo **ou** capa (`CK_CAMPANHA_VIDEO_OU_IMAGEM_CAPA`), a aprovada com vídeo continua sem capa. O 91058 deixou de ocorrer. A ordem da lista decide qual mensagem aparece quando dois campos mudam juntos.
 * **`fn_campanha_erro_congelamento(campo, rejeitada)`:** o código e a mensagem de cada campo (91004 a 91010, 91023, 91024; 91027 para a esgotada).
 * **`fn_congela_regras_campanha()`** percorre a lista e compara `to_jsonb(NEW) -> campo` com `to_jsonb(OLD) -> campo` (`IS DISTINCT FROM`, que trata `NULL` certo). Campo novo em `campanha` só fica editável depois da aprovação se alguém o tirar da lista: esquecer um `IF` não é possível.
 * **`GET /campanha/:id`** devolve `camposBloqueados` (com os nomes do DTO) pela mesma função: a tela trava exatamente o que o banco vai recusar. Suítes 8, 9 e 14 do PGlite.
@@ -806,6 +812,7 @@ Regras conferidas no PGlite com o banco inteiro, usando o papel real `app_nestjs
 * **Sem "em análise":** a denúncia vai direto de pendente para `resolvida` (procedente) ou `improcedente`. `CK_DENUNCIA_SEM_EM_ANALISE` recusa `'em_analise'`, que continua no tipo, fora de uso (tirar um valor de um tipo obrigaria a recriar as triggers e policies que usam a coluna). **Por quê:** "em análise" não guardava quem estava analisando, então não dizia nada além de "pendente". O RF-115 também não tem mais o "em análise".
 * **Quem julga muda só a situação e a justificativa** (`UPDATE` por coluna: `status`, `justificativa_moderacao`; limite em `limite_caracteres_justificativa_denuncia`). Motivo, alvo, relato e autor ficam como o denunciante registrou. `julgado_em` e `id_julgador` são gravados por `trg_denuncia_registra_julgador`.
 * **Ninguém julga a própria denúncia** (`trg_denuncia_sem_autojulgamento`, 92006): o mesmo conflito de interesse do autoendosso.
+* **Denúncia de comentário** (14-11-2026, Grupo CO): quem denuncia manda só `id_comentario`. `trg_denuncia_a_comentario` (`fn_denuncia_comentario_preenche`, `BEFORE INSERT`) preenche o alvo (o autor) e guarda a cópia do comentário; roda como quem denuncia, então só dá para denunciar um comentário que a pessoa consegue ver. O "a_" no nome é de propósito: triggers `BEFORE` rodam em ordem alfabética, e esta precisa vir antes das que conferem o alvo. Códigos: 90040 (comentário não encontrado), 90041 (autor sem conta). `trg_denuncia_comentario_oculta` (`fn_denuncia_comentario_oculta`) tira o comentário do ar (`ativo = FALSE`, sem endosso) **na hora**, quando quem denuncia é o dono da campanha, e **no julgamento**, quando a moderação julga procedente. Quem endossou um comentário julgado ofensivo pode ser punido pelo caminho normal: a tela do julgamento mostra se ele estava endossado.
 * **Limite de frequência** (`trg_denuncia_limite_taxa`, 93001): no máximo `limite_denuncias_24h` denúncias por pessoa dentro de `janela_denuncias_horas` (RF-114).
 * **Encerrar a campanha sai de uma denúncia procedente:** `encerrar_campanha_por_denuncia(p_id_denuncia, p_justificativa)` (`03`, `SECURITY DEFINER`): exige `denuncia_responder` e `campanha_encerrar_moderacao` (92030), justificativa (90027), denúncia de campanha (91036) e campanha ativa (91037); a denúncia vira `resolvida` e a campanha `encerrado_moderacao`, juntas, e o dinheiro segue para devolução. **Por quê:** `pol_campanha_update` não abre a campanha ao moderador; ele encerra só por esse caminho, sempre com uma denúncia procedente e uma justificativa (RF-118). **Caso-limite:** as outras denúncias pendentes da mesma campanha continuam pendentes. Suíte 36 do PGlite.
 
@@ -837,6 +844,16 @@ Regras conferidas no PGlite com o banco inteiro, usando o papel real `app_nestjs
 * **Toda tela com a coluna "esperando" põe primeiro o que ainda espera uma pessoa, o mais antigo no topo**, e depois o que já foi resolvido, o mais novo primeiro: Aprovar Campanhas, Denúncias, Pedidos de Encerramento, Eventos de Pagamento e Notificações. A espera é pintada por cor: verde até `espera_atencao_dias` (7), laranja até `espera_critica_dias` (30), vermelho acima. É o mesmo cálculo em toda tela (`ordenarFilaSla`, `react/src/services/constant/util/fila-sla.util.ts`; regra DS-49). **Por quê:** é a ordem de atendimento de qualquer fila com prazo (SLA, o acordo de quanto tempo cada pedido pode esperar): quem espera há mais tempo é atendido primeiro.
 
 ---
+
+### [05-K-2-L] Desistir do apoio (direito de arrependimento, CDC art. 49)
+
+**Em palavras simples:** quem apoiou com conta pode desistir da contribuição paga em até 7 dias, e recebe o valor de volta. A tarifa do meio de pagamento fica com o provedor: a plataforma nunca arca com nada.
+
+* **`desistir_contribuicao(p_id_contribuicao)`** (`05`, `SECURITY DEFINER`, 14-11-2026, Grupo CN): a autorização é a conferência de `id_usuario` contra `id_usuario_atual()`. Prazo em `configuracoes.desistencia_prazo_dias` (7), contado da contribuição. Vale em qualquer momento da campanha, inclusive depois do fim: **a campanha não muda de status** (bem-sucedida continua bem-sucedida).
+* **O caminho é o de sempre:** `confirmado` → `a_devolver`; o worker de estorno devolve o **valor**, e `reservar_proximo_repasse()` já tira do repasse pendente o que deixou de estar confirmado. Como a carência do repasse (15 dias) é maior que o prazo de desistência, o dinheiro ainda não saiu.
+* **Quem desiste perde as recompensas** que a contribuição deu (decisão do Lucas, 14-11-2026). Na devolução do tudo-ou-nada que não bateu a meta elas ficam, porque a pessoa não desistiu.
+* **Códigos:** 92042 (sem sessão, ou contribuição que não é de quem pede; a mensagem diz "não encontrada"), 91059 (não está paga), 91060 (o prazo passou), 91061 (o repasse já está em transferência). Rota: `POST /contribuicao/:id/desistir`; tela: "Desistir do apoio" na Minha Conta, aba Financeiro.
+* **Por quê:** o CDC (art. 49) dá 7 dias de arrependimento na compra fora do estabelecimento; a regra antiga, copiada do Catarse, saiu (decisão do Lucas, 14-11-2026).
 
 ### [05-K-3] Regras Transversais - Comunidade, Engajamento e RBAC
 
@@ -1006,7 +1023,7 @@ Concede à role `app_nestjs` (criada no `01`) exatamente os privilégios que a R
 ### [06-E] CAMPANHA
 
 * **`campanha`:** `INSERT` e `UPDATE` por coluna (sem `valor_bruto_arrecadado`, `taxa_plataforma`, `encerrado_em`, `enviado_aprovacao_em`, e sem `modelo` e `id_usuario` no `UPDATE`; [05-K-2-C]) e `DELETE` (a policy só libera `rascunho`).
-* **`atualizacao_campanha`, `comentario`, `recompensa`:** `INSERT`, `UPDATE`; `comentario` também `DELETE` (o autor apaga o próprio) e `atualizacao_campanha` também `DELETE` (só a moderação, pela policy).
+* **`atualizacao_campanha`, `comentario`, `recompensa`:** `INSERT`, `UPDATE`; `comentario` também `DELETE` (o autor apaga o próprio), `atualizacao_campanha` também `DELETE` (só a moderação, pela policy) e `recompensa` também `DELETE` (14-11-2026, Grupo CS: o dono exclui a recompensa que ninguém ganhou ainda, `pol_recompensa_delete`; a já concedida continua presa pela FK, `RESTRICT`, e se desativa no Alterar; o link e os arquivos dela saem junto, `CASCADE`).
 * **`denuncia`:** `INSERT` por coluna (autor, alvo, motivo, relato) e `UPDATE` por coluna (`status`, `justificativa_moderacao`): ninguém cria uma denúncia já julgada ou já contestada ([05-K-2-J]).
 * **`solicitacao_encerramento`:** `INSERT` (campanha e justificativa) e `UPDATE (status)`, só para cancelar ([05-K-2-H]).
 * **`historico_rejeicao`:** só `INSERT` (imutável).
@@ -1249,7 +1266,7 @@ O raciocínio de arquitetura por trás de regras que valem para o banco inteiro.
 
 ## Como conferir este inventário
 
-**Contagem do inventário** (recontada nos `.sql` em 16-11-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **122 policies**, **125 triggers** no `05` (119 comuns e 6 `CONSTRAINT TRIGGER`), **199 funções** (158 no `05`, 39 no `03`, 1 no `08`, 1 no `01`), **69 índices** no `02` e **146 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (recontada nos `.sql` em 16-11-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **122 policies**, **125 triggers** no `05` (119 comuns e 6 `CONSTRAINT TRIGGER`), **200 funções** (158 no `05`, 40 no `03`, 1 no `08`, 1 no `01`), **69 índices** no `02` e **146 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
 
 Para recontar direto do banco (no SQL Editor do Supabase ou no banco local):
 

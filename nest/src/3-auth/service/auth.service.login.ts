@@ -106,12 +106,14 @@ export class AuthServiceLogin {
       usuario.id_usuario,
     );
     const papeis = await this.listarPapeis(usuario.id_usuario);
+    const permissoes = await this.listarPermissoes(usuario.id_usuario);
 
     return {
       accessToken,
       refreshToken,
       usuario: usuarioResponse,
       papeis,
+      permissoes,
       aceitePendente,
     };
   }
@@ -142,6 +144,16 @@ export class AuthServiceLogin {
       this.database.getDb(),
     );
     return resultado.rows.map((linha) => linha.listar_papeis_usuario);
+  }
+
+  // Irmã de listarPapeis (17-11-2026): as permissões que os papéis dão, para o painel esconder o que a conta não usa.
+  async listarPermissoes(idUsuario: number): Promise<string[]> {
+    const resultado = await sql<{
+      listar_permissoes_usuario: string;
+    }>`SELECT * FROM listar_permissoes_usuario(${idUsuario})`.execute(
+      this.database.getDb(),
+    );
+    return resultado.rows.map((linha) => linha.listar_permissoes_usuario);
   }
 
   // RF-015: a conta ainda não aceitou a versão vigente do Termo de Uso. Um erro aqui sobe: a pessoa nunca pula o

@@ -117,7 +117,7 @@ nest/src/
 └── 30-campo-testes/           ← rotas que só o Campo de Testes do painel usa, só fora de produção (7.4)
 ```
 
-📌 **A numeração das pastas é a mesma ordem de dependência de produto usada em `PROXIMOS_MODULOS.md`** - `1-usuario` antes de `3-auth` porque autenticação precisa de conta; `12-campanha` antes de `15-atualizacao-campanha` porque atualização pendura numa campanha. **Ela não é ordem de importância nem de execução**: `26-arquivo` (número alto) é usado por `1-usuario` (número baixo).
+📌 **A numeração das pastas é a mesma ordem de dependência de produto usada no antigo `PROXIMOS_MODULOS.md` (arquivado em 17-11-2026 em `informacoes/HISTORICO/HISTORICO_PROXIMOS_MODULOS.md`, com todos os módulos prontos)** - `1-usuario` antes de `3-auth` porque autenticação precisa de conta; `12-campanha` antes de `15-atualizacao-campanha` porque atualização pendura numa campanha. **Ela não é ordem de importância nem de execução**: `26-arquivo` (número alto) é usado por `1-usuario` (número baixo).
 
 📌 **Por que `commons/` e não `shared/`/`core/`.** O critério que separa `commons/` de uma pasta numerada é: *tem tabela própria?* `26-arquivo` tem (`arquivo`), então é módulo numerado. `commons/storage` não tem - é só o adaptador que fala com o bucket. Mesma lógica de `commons/database` (não tem tabela; tem a conexão) e `commons/seguranca` (não tem tabela; tem a cifra usada por `6-perfil-pesquisador`).
 
@@ -282,7 +282,7 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 3. `bloqueado_ate` no futuro → 401 com a data formatada (bloqueio **automático**, por senha errada demais).
 4. Suspensão de **moderação** (`suspenso_ate`, manual, com motivo) → **403**, não 401: a pessoa não errou credencial nenhuma, a conta é que está impedida, e precisa saber por quê. (Um erro na consulta barra o login: a regra falha fechada, ver §2.4.)
 5. `bcrypt.compare`. Falhou → `SELECT public.registrar_falha_login(...)` (função `SECURITY DEFINER`, porque roda antes de existir sessão) e 401.
-6. Passou → `SELECT public.registrar_login_sucesso(...)`, emite o par de tokens com `origem = 'login'`, e devolve `{ accessToken, refreshToken, usuario, papeis }`.
+6. Passou → `SELECT public.registrar_login_sucesso(...)`, emite o par de tokens com `origem = 'login'`, e devolve `{ accessToken, refreshToken, usuario, papeis, permissoes, aceitePendente }`. As `permissoes` (17-11-2026, `listar_permissoes_usuario`, 03) servem só para a tela esconder o que a conta não usa; a renovação e o cadastro devolvem o mesmo.
 
 📌 **Data formatada dentro da mensagem de erro.** As duas mensagens de bloqueio/suspensão são as **únicas** do projeto que embutem data no texto do `throw` (todo o resto formata no React). `formatarDataHoraBr()` usa `timeZone: 'America/Sao_Paulo'` explícito, não o fuso do processo Node - o servidor pode rodar em UTC mesmo com público brasileiro. O motivo está registrado no comentário: `toISOString()` cru ("...T00:28:27.382Z") não significa nada para quem não programa.
 
@@ -732,6 +732,17 @@ Módulos exportam services quando outro precisa reaproveitar a regra em vez de d
 
 ---
 
+### 7.6 O que a área pública mudou nas respostas e nas rotas (14 a 16-11-2026)
+
+**Em palavras simples:** a área pública (página inicial, Explorar, página da campanha, perfil do pesquisador, apoio, Minha Conta e Estúdio) usa as mesmas rotas do painel. O que mudou foi o que algumas respostas devolvem e duas regras novas no apoio.
+
+- **Campanha (`GET /campanha`, `GET /campanha/:id`):** a resposta ganhou `idImagemCapa` e `imagemCapaUrl` (a capa, que ocupa o lugar do vídeo quando não há vídeo), `capaNoBanner` (a capa também de fundo no banner, Grupo CR), `nomePesquisador` e `instituicaoPesquisador` (o cartão do pesquisador, sem precisar de `GET /usuario/:id`, que exige login). `camposBloqueados` continua vindo de `fn_campanha_campos_bloqueados`; desde o Grupo CQ, a capa não está mais na lista depois da aprovação.
+- **Perfil de pesquisador (`GET /perfil-pesquisador` e `GET /perfil-pesquisador/:id`):** devolve `nome` e `avatarUrl`. Antes, a tela pedia ao `GET /usuario/:id`, que exige login e permissão: o visitante via o Explorar e o perfil sem nome e sem foto.
+- **Comentários (`GET /comentario`):** cada comentário vem com `fotoPesquisador`, para o cartão de endosso da página da campanha.
+- **Apoio (`POST /contribuicao`):** recebe `cienteModeloFlexivel`. Em campanha flexível, sem a ciência a API recusa com **422** e, com ela, grava a hora em `contribuicao.ciencia_modelo_em` (RF-041, Grupo CM). A regra mora no Nest, não numa trigger: o seed e os scripts de teste inserem contribuições direto no banco.
+- **Desistir do apoio (`POST /contribuicao/:id/desistir`):** chama `desistir_contribuicao()` (Grupo CN, `DOCUMENTACAO_BD.md` [05-K-2-L]). Devolve só o valor (a tarifa fica com o provedor), a campanha não muda de status, e o repasse pendente desconta sozinho (`reservar_proximo_repasse`). Os códigos 92042, 91059, 91060 e 91061 caem no `PostgresExceptionFilter` como sempre.
+- **Prévia do link ao compartilhar (`GET /compartilhar/campanha/:id`, pública, `campanha.controller.share.ts`):** o site é React puro, e o robô do WhatsApp, do LinkedIn, do Facebook e do X lê só o HTML inicial. Esta rota devolve um HTML pequeno com as tags `og:` (título e capa) e manda a pessoa para a página de verdade (`PAINEL_URL/campanha/:id`) por `meta refresh`, sem script, porque o `helmet` bloqueia script inline. A visibilidade é a de sempre: campanha que o público não vê dá 404, sem vazar título nem capa. Só funciona de verdade com o site no ar.
+
 ## 8. Armazenamento e upload de arquivo (`commons/storage` + `26-arquivo`)
 
 > ⚠️ Vários números deste módulo são parâmetros: confira as constantes e `configuracoes` antes de citar um número daqui em outro lugar.
@@ -970,6 +981,7 @@ Módulos pequenos, mas reais e em uso pelo painel administrativo.
 **Em palavras simples:** qualquer conta logada denuncia uma campanha ativa ou o perfil de um pesquisador; a moderação (admin e moderador, permissão `denuncia_responder`) lista, julga e, se a denúncia de campanha procede, encerra a campanha. As regras estão no banco; o Nest só monta as consultas.
 
 - **`POST /denuncia`** - cria em nome de quem está logado, sempre `pendente`. Exatamente um alvo (`idCampanhaAlvo` ou `idPesquisadorAlvo`), `idMotivo` e `relato` opcional. O banco recusa: campanha que não está ativa (91035), perfil que não é de pesquisador (90026), a própria campanha ou o próprio perfil (92029), motivo do tipo errado (90005/90006), denúncia repetida (23505) e o limite por janela (93001).
+- **Denúncia de comentário** (14-11-2026, Grupo CO): o `POST /denuncia` aceita `idComentario` no lugar do alvo. O banco preenche o alvo (o perfil do autor), guarda a cópia do comentário e o tira do ar na hora quando quem denuncia é o dono da campanha; no julgamento procedente, o comentário e o endosso saem do ar. Códigos 90040 (comentário não encontrado) e 90041 (autor sem conta). Ver `DOCUMENTACAO_BD.md` [05-K-2-G].
 - **`GET /denuncia`** - filtros `tipo` (campanha ou perfil), `status`, `idCampanha`, `idPesquisador`. Traz junto o motivo, quem denunciou (nome e e-mail), o título e o status da campanha ou o nome do pesquisador (RF-117, RF-121). Quem tem `denuncia_responder` vê todas; os outros, só as próprias (`pol_denuncia_select`).
 - **`PATCH /denuncia/:id`** - julga (RF-115): `status` e, ao decidir (procedente ou improcedente), a `justificativa` obrigatória. Quem denunciou não julga a própria (92006, RF-116). O banco só deixa mudar essas duas colunas.
 - **`POST /denuncia/:id/encerrar-campanha`** - chama `encerrar_campanha_por_denuncia()` (03): a denúncia vira procedente com a justificativa e a campanha vira `encerrado_moderacao`, juntas (RF-118). A campanha some da página pública pela própria RLS. Quem decidiu, quando e por quê ficam no log de auditoria (RF-119).
@@ -1270,7 +1282,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 Nenhuma pasta de módulo está vazia. O repasse vive em `23-pagamento`, `24-conta-recebimento` e `25-pagamento-revisao`; a auditoria financeira é gravada pelo banco.
 
 
-📌 **Este documento descreve o que EXISTE.** O que falta, a ordem sugerida e o porquê de cada adiamento estão em **`PROXIMOS_MODULOS.md`**, que é o dono desse assunto e está atualizado. Não duplicar aqui.
+📌 **Este documento descreve o que EXISTE.** O que ainda falta está em **`PENDENCIAS e correcoes.md`**. A ordem em que os módulos foram construídos e o porquê de cada adiamento ficaram em `informacoes/HISTORICO/HISTORICO_PROXIMOS_MODULOS.md` (arquivado em 17-11-2026: todos os módulos estão prontos).
 
 O que ficou registrado sobre o que faltava:
 
@@ -1442,7 +1454,6 @@ console.log('total de rotas:', out.length);
 | `DOCUMENTACAO_BD.md` | O banco: schema, RLS, triggers, funções - e o log histórico das decisões |
 | `DOCUMENTACAO_ERRCODE.md` | Tabela completa código → função → mensagem dos `RAISE EXCEPTION` com ERRCODE customizado |
 | `PENDENCIAS e correcoes.md` | Decisões em aberto |
-| `PROXIMOS_MODULOS.md` | O que falta construir, em ordem sugerida |
 | `ARQUIVO - Dica de Arquitetura.md` (em `informacoes/arquivo morto/`) | O "doc de arquitetura" citado nos comentários de `commons/storage` e `26-arquivo`; a substância está na seção 8 deste documento |
 | `nest/.env.example` | Todas as variáveis do `.env` do Nest, com o passo a passo do bucket do Supabase (`STORAGE_*`) |
 | `.Tutorial-rodar-projeto.md` | Instalação, incluindo o `ALTER ROLE app_nestjs LOGIN PASSWORD` obrigatório |

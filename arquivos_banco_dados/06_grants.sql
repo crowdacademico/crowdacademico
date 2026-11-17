@@ -62,6 +62,7 @@ GRANT UPDATE (nome, descricao) ON papel TO app_nestjs;
 -- listar_papeis_usuario (03, [03-B]): usada por login/refresh (03-auth) para saber se mostra "Painel Admin"
 -- no dropdown do cabeçalho.
 GRANT EXECUTE ON FUNCTION public.listar_papeis_usuario(INT) TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.listar_permissoes_usuario(INT) TO app_nestjs;
 
 -- ============================================================================
 --  [06-C] CONFIG

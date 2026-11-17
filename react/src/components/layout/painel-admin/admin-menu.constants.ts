@@ -1,4 +1,4 @@
-import { ROTAS_ADMIN } from '../../../services/router/rotas.constants';
+import { podeVerRota, ROTAS_ADMIN } from '../../../services/router/rotas.constants';
 
 // Discriminado por `desabilitado`: item real (de ROTAS_ADMIN, via
 // itensDoGrupo) sempre tem `caminho`; placeholder (escrito à mão abaixo,
@@ -8,6 +8,8 @@ interface ItemMenuAdminReal {
   caminho: string;
   rotulo?: string;
   icone?: string;
+  // As permissões que liberam a tela (`Rota.permissoes`); o menu esconde a tela que a conta não consegue usar.
+  permissoes?: readonly string[];
   desabilitado?: false;
 }
 
@@ -30,6 +32,7 @@ function itensDoGrupo(grupoMenu: string | null): ItemMenuAdminReal[] {
     caminho: rota.caminho,
     rotulo: rota.rotuloMenu,
     icone: rota.icone,
+    permissoes: rota.permissoes,
   }));
 }
 
@@ -114,3 +117,12 @@ export const GRUPOS_MENU_ADMIN: GrupoMenuAdmin[] = [
       ]
     : []),
 ];
+
+// O menu desta conta (17-11-2026): só as telas que as permissões dela liberam, e só os grupos que sobram com alguma
+// tela. Quem protege os dados continua sendo o banco; aqui é só para não oferecer a tela que viria vazia.
+export function gruposMenuDaConta(permissoesDaConta: readonly string[]): GrupoMenuAdmin[] {
+  return GRUPOS_MENU_ADMIN.map((grupo) => ({
+    ...grupo,
+    itens: grupo.itens.filter((item) => item.desabilitado || podeVerRota(item, permissoesDaConta)),
+  })).filter((grupo) => grupo.itens.some((item) => !item.desabilitado));
+}
