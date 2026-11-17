@@ -1,8 +1,10 @@
 import { ARMAZENAMENTO_SERVICE } from '../../commons/storage/storage.constants';
 import type { ArmazenamentoService } from '../../commons/storage/storage.service.interface';
 import { Inject, Injectable } from '@nestjs/common';
-import { sql } from 'kysely';
-import { decifrarCpf } from '../../commons/seguranca/cpf-cifra.util';
+import {
+  cpfParaResposta,
+  nivelAcessoCpf,
+} from '../util/perfil-pesquisador.util.acesso-cpf';
 import { DatabaseService } from '../../commons/database/database.service';
 import {
   ResultadoPaginado,
@@ -73,16 +75,17 @@ export class PerfilPesquisadorServiceFindAll {
       pagina: filtro.pagina,
       tamanho: filtro.tamanho,
     });
-    const temPermissaoSensivel = await this.temPermissaoSensivel();
+    // CPF: completo, mascarado ou oculto conforme a conta logada (util/perfil-pesquisador.util.acesso-cpf.ts).
+    const nivelCpf = await nivelAcessoCpf(this.database.getDb());
 
     return {
       ...resultado,
       dados: resultado.dados.map((linha) => {
-        const podeVer =
-          temPermissaoSensivel || linha.id_usuario === idUsuarioAutenticado;
-        const cpfDecifrado = podeVer
-          ? decifrarCpf(linha.cpf_criptografado)
-          : null;
+        const cpfDecifrado = cpfParaResposta(
+          nivelCpf,
+          linha.id_usuario === idUsuarioAutenticado,
+          linha.cpf_criptografado,
+        );
         return PerfilPesquisadorConverter.paraResponseDto(
           linha,
           cpfDecifrado,
@@ -93,14 +96,5 @@ export class PerfilPesquisadorServiceFindAll {
         );
       }),
     };
-  }
-
-  private async temPermissaoSensivel(): Promise<boolean> {
-    const resultado = await sql<{
-      tem_permissao: boolean;
-    }>`SELECT public.tem_permissao('perfil_pesquisador_visualizar_sensivel') AS tem_permissao`.execute(
-      this.database.getDb(),
-    );
-    return resultado.rows[0]?.tem_permissao ?? false;
   }
 }

@@ -253,10 +253,10 @@ WHERE (p.nome, perm.nome) IN (
     ('curador', 'tipolink_gerenciar'),
     ('curador', 'area_conhecimento_gerenciar'),
     ('curador', 'motivo_denuncia_gerenciar'),
-    -- Quem aprova precisa conhecer quem pede (17-11-2026, decisão do Lucas): a tela Pesquisadores, com o CPF, e a
-    -- ficha da conta, as mesmas leituras do Suporte. Só leitura: alterar perfil ou conta continua com o admin. A
-    -- usuario_visualizar_sensivel fica de fora de propósito: ela abre a fila de e-mails, com os links de nova senha.
-    ('curador', 'perfil_pesquisador_visualizar_sensivel'),
+    -- Quem aprova precisa conhecer quem pede (17-11-2026, decisão do Lucas): a tela Pesquisadores e a ficha da conta,
+    -- a mesma leitura do Suporte, com o CPF mascarado (***.456.789-**). Só leitura. O CPF inteiro
+    -- (perfil_pesquisador_visualizar_sensivel) é só do admin, e a usuario_visualizar_sensivel fica de fora de propósito:
+    -- ela abre a fila de e-mails, com os links de nova senha.
     ('curador', 'usuario_visualizar_atendimento')
 )
 ON CONFLICT DO NOTHING;

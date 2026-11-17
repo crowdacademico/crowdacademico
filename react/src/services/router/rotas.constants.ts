@@ -148,7 +148,7 @@ export const ROTAS_ADMIN: Rota[] = [
   // perfil a mais, não uma entidade separada.
   {
     caminho: '/admin/pesquisadores',
-    permissoes: ['usuario_visualizar_sensivel', 'perfil_pesquisador_visualizar_sensivel', 'perfil_pesquisador_alterar_de_outro', 'usuario_suspender'],
+    permissoes: ['usuario_visualizar_sensivel', 'usuario_visualizar_atendimento', 'perfil_pesquisador_visualizar_sensivel', 'perfil_pesquisador_alterar_de_outro', 'usuario_suspender'],
     caminhoRelativo: 'pesquisadores',
     elemento: ListarPesquisadores,
     rotuloMenu: 'Pesquisadores',

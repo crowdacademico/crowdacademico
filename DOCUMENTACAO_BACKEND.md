@@ -949,7 +949,9 @@ De `nest/.env.example` (bloco `STORAGE_*`):
 
 Este é o único dado do sistema que é **cifrado** (não apenas hasheado). O raciocínio completo - por que Node e não `pgcrypto`, por que duas chaves, o que é um "índice cego" - está em `DOCUMENTACAO_BD.md`, seção `[01-D]`. Aqui fica só o que o backend implementa.
 
-`commons/seguranca/cpf-cifra.util.ts` expõe quatro funções:
+📌 **Quem vê o CPF, em três níveis** (17-11-2026, `6-perfil-pesquisador/util/perfil-pesquisador.util.acesso-cpf.ts`). As rotas de perfil são públicas (o perfil público usa as mesmas), então: **inteiro** para o próprio pesquisador e para quem tem `perfil_pesquisador_visualizar_sensivel` ("Ver Dados Sensíveis do Pesquisador (CPF)", o admin); **mascarado**, `***.456.789-**` (`mascararCpf`, o padrão do mercado, o mesmo do Asaas), para quem trabalha com contas (`usuario_visualizar_atendimento` ou `usuario_visualizar_sensivel`: o Curador e o Suporte); e `cpf: null` para todo o resto, inclusive o visitante. A máscara é feita no Nest: o número inteiro nunca chega à tela de quem não pode vê-lo. Testado em `testes-e2e/testes/interface/permissoes-painel.spec.ts`.
+
+`commons/seguranca/cpf-cifra.util.ts` expõe quatro funções, mais `mascararCpf`:
 
 | Função | O que faz |
 |---|---|

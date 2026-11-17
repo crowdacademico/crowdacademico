@@ -85,4 +85,17 @@ test('o curador abre Pesquisadores com os nomes de verdade e consulta a ficha (1
   await linha.locator('[aria-label="Consultar"]').click();
   await expect(page.getByRole('dialog')).toContainText('Ana Beatriz Santos');
   await expect(page.getByRole('dialog').getByText(/sem permissão/i)).toHaveCount(0);
+  // CPF mascarado no padrão do mercado: o Curador confere a pessoa sem ver o número inteiro.
+  await expect(page.getByRole('dialog')).toContainText(/\*\*\*\.\d{3}\.\d{3}-\*\*/);
+});
+
+test('o CPF: o admin vê inteiro, e o visitante não recebe nada pela API pública', async ({ page, request }) => {
+  const publico = await request.get(`${URL_API}/perfil-pesquisador/8`, { headers: { 'X-Forwarded-For': ipNovo() } });
+  expect(publico.ok()).toBe(true);
+  expect(((await publico.json()) as { cpf: string | null }).cpf).toBeNull();
+
+  await entrarPelaTela(page, CONTAS.admin);
+  await page.goto('/admin/pesquisadores');
+  await page.locator('tr', { hasText: 'Ana Beatriz Santos' }).locator('[aria-label="Consultar"]').click();
+  await expect(page.getByRole('dialog')).toContainText(/\d{3}\.\d{3}\.\d{3}-\d{2}/);
 });

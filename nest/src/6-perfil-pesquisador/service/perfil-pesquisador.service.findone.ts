@@ -1,8 +1,10 @@
 import { ARMAZENAMENTO_SERVICE } from '../../commons/storage/storage.constants';
 import type { ArmazenamentoService } from '../../commons/storage/storage.service.interface';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { sql } from 'kysely';
-import { decifrarCpf } from '../../commons/seguranca/cpf-cifra.util';
+import {
+  cpfParaResposta,
+  nivelAcessoCpf,
+} from '../util/perfil-pesquisador.util.acesso-cpf';
 import { DatabaseService } from '../../commons/database/database.service';
 import { PERFIL_PESQUISADOR_COLUNAS_SELECT_QUALIFICADAS } from '../constants/perfil-pesquisador.constants';
 import { PerfilPesquisadorConverter } from '../dto/converter/perfil-pesquisador.converter';
@@ -51,13 +53,12 @@ export class PerfilPesquisadorServiceFindOne {
       throw new NotFoundException('Perfil de pesquisador não encontrado.');
     }
 
-    const podeVerCpf = await this.podeVerCpfSensivel(
-      idUsuarioAlvo,
-      idUsuarioAutenticado,
+    // CPF: completo (dono ou admin), mascarado (quem trabalha com contas) ou oculto (util/perfil-pesquisador.util.acesso-cpf.ts).
+    const cpfDecifrado = cpfParaResposta(
+      await nivelAcessoCpf(this.database.getDb()),
+      idUsuarioAutenticado !== null && idUsuarioAutenticado === idUsuarioAlvo,
+      linha.cpf_criptografado,
     );
-    const cpfDecifrado = podeVerCpf
-      ? decifrarCpf(linha.cpf_criptografado)
-      : null;
 
     return PerfilPesquisadorConverter.paraResponseDto(
       linha,
@@ -67,28 +68,5 @@ export class PerfilPesquisadorServiceFindOne {
         ? this.armazenamento.montarUrlPublica(linha.foto_chave)
         : null,
     );
-  }
-
-  private async podeVerCpfSensivel(
-    idUsuarioAlvo: number,
-    idUsuarioAutenticado: number | null,
-  ): Promise<boolean> {
-    if (
-      idUsuarioAutenticado !== null &&
-      idUsuarioAutenticado === idUsuarioAlvo
-    ) {
-      return true;
-    }
-    // tem_permissao() é EXECUTE-ável por app_nestjs sem GRANT explícito
-    // (default do Postgres pra função nova, nunca revogado - ver comentário
-    // em 06_grants.sql perto de contar_seguidores_pesquisador). Lê
-    // id_usuario_atual() do próprio contexto de sessão (SET LOCAL já feito
-    // pelo GlobalDbInterceptor), não precisa receber o id como parâmetro.
-    const resultado = await sql<{
-      tem_permissao: boolean;
-    }>`SELECT public.tem_permissao('perfil_pesquisador_visualizar_sensivel') AS tem_permissao`.execute(
-      this.database.getDb(),
-    );
-    return resultado.rows[0]?.tem_permissao ?? false;
   }
 }

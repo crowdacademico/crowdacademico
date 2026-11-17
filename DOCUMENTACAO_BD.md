@@ -103,7 +103,7 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Para achar tudo sobre
 * **Curador:** faz a curadoria das campanhas e cuida dos catálogos que classificam o conteúdo.
   * Aprova e rejeita campanhas enviadas para aprovação.
   * Gerencia as áreas do conhecimento, os tipos de link acadêmico e os motivos de denúncia.
-  * Vê a tela Pesquisadores, com o CPF (`perfil_pesquisador_visualizar_sensivel`), e a lista e a ficha das contas (`usuario_visualizar_atendimento`, a mesma leitura do Suporte), para conhecer quem pede a campanha (17-11-2026). Só leitura, e sem `usuario_visualizar_sensivel`, que abre a fila de e-mails com os links de nova senha.
+  * Vê a tela Pesquisadores e a lista e a ficha das contas (`usuario_visualizar_atendimento`, a mesma leitura do Suporte), para conhecer quem pede a campanha (17-11-2026), com o CPF **mascarado** (`***.456.789-**`). Só leitura. O CPF inteiro (`perfil_pesquisador_visualizar_sensivel`, "Ver Dados Sensíveis do Pesquisador (CPF)") é só do admin, e a `usuario_visualizar_sensivel` fica de fora porque abre a fila de e-mails com os links de nova senha.
 * **Moderador:** cuida do conteúdo publicado.
   * Julga denúncias e decide as contestações da pontuação das denúncias julgadas por outra pessoa.
   * Oculta comentários e atualizações de campanha.

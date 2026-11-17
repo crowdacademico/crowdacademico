@@ -99,6 +99,15 @@ export function decifrarCpf(valorSalvo: string): string {
   return decifrado.toString('utf8');
 }
 
+// CPF mascarado no padrão do mercado (17-11-2026): só os 6 dígitos do meio, "***.456.789-**", o mesmo formato que o Asaas
+// devolve. Identifica o bastante para conferir uma pessoa sem expor o número inteiro. Recebe o CPF já decifrado
+// (11 dígitos); a máscara é feita aqui no Nest, então o número inteiro nunca chega à tela de quem não pode vê-lo.
+export function mascararCpf(cpf: string): string {
+  const digitos = cpf.replace(/\D/g, '');
+  if (digitos.length !== 11) return '***.***.***-**';
+  return `***.${digitos.slice(3, 6)}.${digitos.slice(6, 9)}-**`;
+}
+
 // Índice cego - HMAC-SHA256, nunca sha256() puro: CPF tem só 10^9
 // combinações válidas possíveis (os 2 últimos dígitos são calculados a
 // partir dos 9 primeiros), espaço pequeno o bastante pra pré-calcular o hash

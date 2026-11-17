@@ -121,11 +121,11 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     impacto: 'alto',
   },
   perfil_pesquisador_visualizar_sensivel: {
-    nome: 'Ver Dados Sensíveis do Pesquisador',
-    resumo: 'Ver dados sensíveis do perfil acadêmico de um pesquisador.',
-    oQueFaz: 'Mesma ideia da permissão anterior, mas para dados sensíveis do perfil acadêmico de um pesquisador.',
+    nome: 'Ver Dados Sensíveis do Pesquisador (CPF)',
+    resumo: 'Ver o CPF completo de um pesquisador.',
+    oQueFaz: 'Mostra o CPF inteiro dos pesquisadores. Sem ela, quem trabalha com contas (Ver Contas para Atendimento) vê o CPF mascarado, no padrão ***.456.789-**, e os outros não veem nada.',
     porQueExiste:
-      'O perfil de pesquisador tem campos que não deveriam ser públicos por padrão, só quem investiga precisa ver.',
+      'O CPF é o dado mais sensível do sistema (LGPD): o número inteiro fica só com quem precisa dele, e conferir uma pessoa basta com a máscara.',
     impacto: 'alto',
   },
   perfil_pesquisador_corrigir_cpf: {
