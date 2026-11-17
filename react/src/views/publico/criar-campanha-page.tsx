@@ -26,14 +26,14 @@ export function CriarCampanhaPage({ auth }: PropsPagina) {
   }
   if (situacaoPesquisador !== 'ativo') {
     return (
-      <main className="largura-site mx-auto w-full max-w-3xl px-4 py-8">
+      <div className="largura-site mx-auto w-full max-w-3xl px-4 py-8">
         <h1 className="titulo-pagina texto-forte mb-5">Submeter pesquisa</h1>
         <AvisoSoPesquisador
           situacao={situacaoPesquisador}
           fazem="com perfil ativo podem submeter campanhas"
           fazer="submeter campanhas"
         />
-      </main>
+      </div>
     );
   }
 

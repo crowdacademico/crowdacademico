@@ -34,7 +34,7 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
 
   if (!apoio) {
     return (
-      <main id="view-apoio-confirmado" className="view-section flex-grow fundo-sutil py-16">
+      <div id="view-apoio-confirmado" className="view-section flex-grow fundo-sutil py-16">
         <div className="max-w-xl mx-auto px-4">
           <div className="cartao cartao--grande fundo-cartao rounded-2xl border borda-padrao p-8 text-center">
             <h1 className="titulo-secao mb-2">Nenhum apoio em andamento</h1>
@@ -55,7 +55,7 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
             </div>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -64,7 +64,7 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
   const data = Date.parse(apoio.criadoEm);
 
   return (
-    <main id="view-apoio-confirmado" className="view-section flex-grow fundo-sutil">
+    <div id="view-apoio-confirmado" className="view-section flex-grow fundo-sutil">
       <div className="max-w-xl mx-auto px-4 py-16">
         <div className="cartao cartao--grande fundo-cartao rounded-2xl border borda-padrao shadow-xl p-8 text-center">
           <div
@@ -159,6 +159,6 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

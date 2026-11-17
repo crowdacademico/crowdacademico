@@ -247,7 +247,7 @@ export function Home({ auth }: PropsPagina) {
   };
 
   return (
-    <main id="view-home" className="view-section active flex-grow pagina-publica">
+    <div id="view-home" className="view-section active flex-grow pagina-publica">
       <section className="superficie-escura py-32 relative overflow-hidden">
         <div className="absolute inset-0 grade-medicao" aria-hidden="true" />
         <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
@@ -479,6 +479,6 @@ export function Home({ auth }: PropsPagina) {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

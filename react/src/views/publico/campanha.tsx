@@ -209,7 +209,7 @@ export function Campanha({ auth }: PropsPagina) {
   };
 
   return (
-    <main id="view-campanha" className="view-section flex-grow pagina-publica campanha-detalhe">
+    <div id="view-campanha" className="view-section flex-grow pagina-publica campanha-detalhe">
       {!idValido && <div className="max-w-7xl mx-auto px-4 py-10"><MensagemErro texto="O endereço da campanha é inválido." /></div>}
       {carregando && <div className="max-w-7xl mx-auto px-4 py-10"><Carregando /></div>}
       {!carregando && erro && <div className="max-w-7xl mx-auto px-4 py-10"><MensagemErro texto={erro} /></div>}
@@ -638,7 +638,7 @@ export function Campanha({ auth }: PropsPagina) {
           )}
         </>
       )}
-    </main>
+    </div>
   );
 }
 

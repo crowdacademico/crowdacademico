@@ -76,14 +76,14 @@ export function EstudioPesquisador({ auth }: PropsPagina) {
   if (!auth.usuario) return <Navigate to="/login" replace state={{ voltarPara: '/estudio-pesquisador' }} />;
   if (!auth.usuario.ehPesquisador) {
     return (
-      <main className="largura-site w-full max-w-3xl mx-auto px-4 py-8">
+      <div className="largura-site w-full max-w-3xl mx-auto px-4 py-8">
         <h1 className="titulo-pagina texto-forte mb-5">Estúdio do pesquisador</h1>
         <AvisoSoPesquisador
           situacao="sem-perfil"
           fazem="com perfil de pesquisador têm acesso ao estúdio"
           fazer="acessar o estúdio"
         />
-      </main>
+      </div>
     );
   }
   if (secao === undefined || !ehSecaoEstudio(secao)) {

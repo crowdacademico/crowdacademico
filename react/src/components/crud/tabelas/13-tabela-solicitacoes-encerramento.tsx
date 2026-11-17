@@ -31,16 +31,16 @@ export function TabelaSolicitacoesEncerramento({ solicitacoes }: { solicitacoes:
         <tbody>
           {solicitacoes.map((item) => (
             <tr key={item.idSolicitacao}>
-              <td className="crud-tabela__col--id">{item.idSolicitacao}</td>
-              <td className="crud-tabela__col--curta">{formatarData(item.solicitadoEm)}</td>
-              <td>
+              <td data-rotulo="id" className="crud-tabela__col--id">{item.idSolicitacao}</td>
+              <td data-rotulo="Data" className="crud-tabela__col--curta">{formatarData(item.solicitadoEm)}</td>
+              <td data-rotulo="Justificativa">
                 <TextoResumido texto={item.justificativaPesquisador} />
               </td>
-              <td>
+              <td data-rotulo="Situação">
                 <BadgeStatusEncerramento status={item.status} />
               </td>
-              <td className="crud-tabela__col--texto">{quemDecidiu(item)}</td>
-              <td>
+              <td data-rotulo="Decidido por" className="crud-tabela__col--texto">{quemDecidiu(item)}</td>
+              <td data-rotulo="Decisão">
                 <TextoResumido texto={item.justificativaAdmin} />
               </td>
             </tr>

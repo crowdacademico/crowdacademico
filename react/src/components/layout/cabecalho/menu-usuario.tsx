@@ -77,7 +77,7 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
                   Estúdio do pesquisador
                 </Link>
               ) : (
-                <div className="px-4 py-2.5" aria-label="Estúdio do pesquisador indisponível">
+                <div className="px-4 py-2.5">
                   <button
                     type="button"
                     disabled

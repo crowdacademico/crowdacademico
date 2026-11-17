@@ -26,17 +26,17 @@ export function TabelaDenuncias({ denuncias }: { denuncias: DenunciaResponse[] }
         <tbody>
           {denuncias.map((item) => (
             <tr key={item.idDenuncia}>
-              <td className="crud-tabela__col--id">{item.idDenuncia}</td>
-              <td className="crud-tabela__col--curta">{formatarData(item.criadoEm)}</td>
-              <td className="crud-tabela__col--texto">{item.nomeDenunciante ?? `#${item.idUsuario}`}</td>
-              <td className="crud-tabela__col--texto">{item.motivo}</td>
-              <td>
+              <td data-rotulo="id" className="crud-tabela__col--id">{item.idDenuncia}</td>
+              <td data-rotulo="Data" className="crud-tabela__col--curta">{formatarData(item.criadoEm)}</td>
+              <td data-rotulo="Denunciante" className="crud-tabela__col--texto">{item.nomeDenunciante ?? `#${item.idUsuario}`}</td>
+              <td data-rotulo="Motivo" className="crud-tabela__col--texto">{item.motivo}</td>
+              <td data-rotulo="Detalhes adicionais">
                 <TextoResumido texto={item.relato} />
               </td>
-              <td>
+              <td data-rotulo="Situação">
                 <BadgeStatusDenuncia status={situacaoDenuncia(item)} />
               </td>
-              <td>
+              <td data-rotulo="Decisão">
                 <TextoResumido texto={item.justificativaModeracao} />
               </td>
             </tr>

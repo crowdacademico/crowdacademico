@@ -13,12 +13,10 @@
 ### Rodada de 16-11-2026: o sistema alcançar o TCC (só o Lucas decide; nada disto foi mudado)
 
 - **Botão "Continuar com Google" no login:** é um `alert()` de protótipo, e nenhum requisito do V13 fala em login com Google. Recomendação: tirar o botão até existir o login de verdade (um botão falso na frente da banca pesa mais do que a falta dele).
-- **Boleto desligado (`boleto_habilitado = false`):** conferido pelo Playwright (`testes-e2e`, "boleto desligado..."): não aparece em Taxas e transparência nem no modal de apoio. O modal citava "Cartão e boleto" em dois textos mesmo desligado; os dois passaram a depender do interruptor. **Ainda cita o boleto:** o Termo de Uso vigente do seed (`v2-2026-10-03`), duas vezes ("Pix, cartão ou boleto"). É texto do Termo; decidir se sai.
+- **Boleto desligado (`boleto_habilitado = false`):** conferido pelo Playwright (`testes-e2e`, "boleto desligado..."): não aparece em Taxas e transparência nem no modal de apoio. O modal citava "Cartão e boleto" em dois textos mesmo desligado; os dois passaram a depender do interruptor. **Termo de Uso do seed:** a citação do boleto saiu (decisão do Lucas, 16-11-2026); vale quando o banco for recriado do zero.
 - **RF-105:** o requisito diz "a recompensa escolhida pelo doador", mas o sistema dá todas as recompensas que o valor alcança (decisão do Lucas, 04-11-2026). O sistema não foi mudado.
 - **Dados pessoais do titular na página de pagamento do Asaas:** é configuração da conta no painel do Asaas, não código. Conferir antes de alguém de fora testar o apoio.
 - **RF-028 também estava incompleto** (o V13 não apontava): o perfil público não mostrava os links acadêmicos nem a data de cadastro do perfil. Feito junto com o RF-027.
-- **Acessibilidade que sobrou (axe-core, só "moderate"):** as páginas da área pública não têm `<main>` (`landmark-one-main`), e há dois cabeçalhos (`banner`) na mesma página em algumas telas (`landmark-no-duplicate-banner`, `landmark-unique`). Nenhuma falha "critical" ou "serious" sobrou; a lista completa por tela está no relatório de `testes-e2e/resultados/`.
-- **Tabelas montadas à mão com `crud-tabela`** (as pequenas dos modais: atualizações, denúncias, pedidos de encerramento, recompensas, papel e permissão): no celular viram cartão sem o nome da coluna (DS-121). Dá para pôr `data-rotulo` em cada `td` delas quando houver tempo.
 - **Usabilidade com pessoas de fora (Quadro 16 do TCC):** o TCC cita sessões de usabilidade e de aceitação; vale fazer algumas com 2 ou 3 colegas antes da banca.
 
 ### O que o orientador falou (anotado em 05-11-2026, com as palavras do Lucas; ele mesmo vai escrever as soluções)

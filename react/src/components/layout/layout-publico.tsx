@@ -42,7 +42,10 @@ export function LayoutPublico({ auth }: LayoutPublicoProps) {
       <PularParaConteudoPublico />
       <BarraCarregamento />
       <Header auth={auth} variante="publico" />
-      <div
+      {/* O <main> mora aqui, uma vez só, para toda página da área pública (16-11-2026, axe-core): o atalho "ir para o
+          conteúdo principal" do leitor de tela funciona, e os <header> de dentro das páginas deixam de contar como
+          cabeçalho do site. As páginas não têm <main> próprio. */}
+      <main
         id="conteudo-publico"
         data-conteudo-principal
         tabIndex={-1}
@@ -51,7 +54,7 @@ export function LayoutPublico({ auth }: LayoutPublicoProps) {
         <LimiteErro>
           {aceitePendente ? <TelaAceiteTermoUso auth={auth} /> : <Outlet />}
         </LimiteErro>
-      </div>
+      </main>
       <Footer />
     </div>
   );

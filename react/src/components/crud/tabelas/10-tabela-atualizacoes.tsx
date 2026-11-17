@@ -36,13 +36,13 @@ export function TabelaAtualizacoes({ atualizacoes, aoAlterar, aoExcluir }: Tabel
         <tbody>
           {atualizacoes.map((item) => (
             <tr key={item.idAtualizacao}>
-              <td>{item.titulo}</td>
-              <td className="crud-tabela__col--curta">{ROTULO_FASE_ATUALIZACAO[item.fase]}</td>
-              <td>
+              <td data-rotulo="Título">{item.titulo}</td>
+              <td data-rotulo="Fase" className="crud-tabela__col--curta">{ROTULO_FASE_ATUALIZACAO[item.fase]}</td>
+              <td data-rotulo="Anexos">
                 <ListaAnexos anexos={item.anexos} />
               </td>
-              <td className="crud-tabela__col--curta">{formatarData(item.publicadoEm)}</td>
-              <td className="crud-tabela__col--curta">
+              <td data-rotulo="Publicada em" className="crud-tabela__col--curta">{formatarData(item.publicadoEm)}</td>
+              <td data-rotulo="Situação" className="crud-tabela__col--curta">
                 <span className={'badge ' + (item.ativo ? 'badge-sucesso' : item.ocultadaModeracao ? 'badge-erro' : 'badge-neutro')}>
                   {rotuloSituacaoAtualizacao(item, doDono)}
                 </span>

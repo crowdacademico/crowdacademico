@@ -38,20 +38,20 @@ export function TabelaPapelPermissao({ papeis, permissoes, concedidos, celulaAlt
               {/* title com o código cru: a matriz é estreita demais para uma coluna "chave" própria; o hover
                   revela o valor literal. ÚNICO `title` nativo do sistema: `<td>` não é interativo nem focável,
                   e o propósito é revelar um valor cru, não nomear um controle (o resto usa `.dica`/`<Dica>`). */}
-              <td title={permissao.nome}>{nomeAmigavelPermissao(permissao.nome)}</td>
+              <td data-rotulo="Permissão" title={permissao.nome}>{nomeAmigavelPermissao(permissao.nome)}</td>
               {papeis.map((papel, indice) => {
                 const chave = chaveCelula(papel.idPapel, permissao.idPermissao);
                 const temPermissao = concedidos.has(chave);
                 const texto = temPermissao ? `Clique para revogar de "${papel.nome}"` : `Clique para conceder a "${papel.nome}"`;
                 if (!editando) {
                   return (
-                    <td key={papel.idPapel} className="text-center">
+                    <td data-rotulo={papel.nome} key={papel.idPapel} className="text-center">
                       <span className={'enfase ' + (temPermissao ? 'texto-sucesso' : 'texto-fraco opacity-50')}>{temPermissao ? '✓' : '-'}</span>
                     </td>
                   );
                 }
                 return (
-                  <td key={papel.idPapel} className="text-center">
+                  <td data-rotulo={papel.nome} key={papel.idPapel} className="text-center">
                     <button
                       type="button"
                       onClick={() => aoAlternar(papel, permissao, temPermissao)}

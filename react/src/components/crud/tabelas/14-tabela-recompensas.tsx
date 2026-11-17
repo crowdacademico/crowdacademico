@@ -33,12 +33,12 @@ export function TabelaRecompensas({ recompensas, aoAlterar, aoAlternarAtivo }: T
         <tbody>
           {recompensas.map((item) => (
             <tr key={item.idRecompensa}>
-              <td>{item.titulo}</td>
-              <td className="crud-tabela__col--curta">{ROTULO_TIPO_RECOMPENSA[item.tipo]}</td>
-              <td className="crud-tabela__col--curta">{formatarMoeda(item.valorMinimo)}</td>
-              {doDono && <td className="crud-tabela__col--curta">{item.escolhidas}</td>}
+              <td data-rotulo="Título">{item.titulo}</td>
+              <td data-rotulo="Tipo" className="crud-tabela__col--curta">{ROTULO_TIPO_RECOMPENSA[item.tipo]}</td>
+              <td data-rotulo="A partir de" className="crud-tabela__col--curta">{formatarMoeda(item.valorMinimo)}</td>
+              {doDono && <td data-rotulo="Escolhida" className="crud-tabela__col--curta">{item.escolhidas}</td>}
               {doDono && (
-                <td className="crud-tabela__col--curta">
+                <td data-rotulo="Link" className="crud-tabela__col--curta">
                   {item.links[0] ? (
                     <a href={item.links[0].url} target="_blank" rel="noreferrer" className="link-texto">
                       <i className="fa-solid fa-link" aria-hidden="true"></i> Abrir
@@ -49,7 +49,7 @@ export function TabelaRecompensas({ recompensas, aoAlterar, aoAlternarAtivo }: T
                 </td>
               )}
               {doDono && (
-                <td className="crud-tabela__col--curta">
+                <td data-rotulo="Situação" className="crud-tabela__col--curta">
                   <span className={'badge ' + (item.ativo ? 'badge-sucesso' : 'badge-neutro')}>{item.ativo ? 'Ativa' : 'Desativada'}</span>
                 </td>
               )}

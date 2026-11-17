@@ -171,7 +171,7 @@ export function Explorar({ auth }: PropsPagina) {
   }
 
   return (
-    <main className="fundo-pagina py-10 min-h-full">
+    <div className="fundo-pagina py-10 min-h-full">
       <div className="w-full max-w-7xl mx-auto px-4">
         <CabecalhoPagina
           className="mb-8 border-b borda-padrao pb-5"
@@ -457,6 +457,6 @@ export function Explorar({ auth }: PropsPagina) {
         </section>
         )}
       </div>
-    </main>
+    </div>
   );
 }
