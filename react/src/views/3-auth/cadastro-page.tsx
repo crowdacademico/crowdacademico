@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
-import { BotaoGoogle, LOGIN_GOOGLE_DISPONIVEL } from '../../components/auth/botao-google';
+import { BotaoGoogle } from '../../components/auth/botao-google';
+import { LOGIN_GOOGLE_DISPONIVEL } from '../../services/3-auth/util/google-identity.util';
 import { MENSAGEM_NOME_CURTO, NOME_MINIMO_CARACTERES } from '../../services/constant/constants/minimos.constants';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';

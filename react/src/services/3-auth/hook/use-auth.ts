@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { esquecerEscolhaGoogle } from '../util/google-identity.util';
 import type { Dispatch, SetStateAction } from 'react';
 import { API_BASE_URL } from '../../constant/constants/api.constants';
 import * as authApi from '../api/auth.api';
@@ -184,6 +185,7 @@ export function useAuth(): UseAuthReturn {
   const logout = useCallback(async (): Promise<void> => {
     const tokenAtual = refreshTokenRef.current;
     limparSessao();
+    esquecerEscolhaGoogle();
     if (tokenAtual) {
       await authApi.logout(tokenAtual).catch(() => {
         // Já limpamos localmente - sessão do lado do backend pode ficar
