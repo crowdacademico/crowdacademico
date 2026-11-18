@@ -4,23 +4,28 @@ import { InputDinheiro } from '../../input/input-dinheiro';
 import { formatarMoeda } from '../../../services/constant/util/formatacao.util';
 import type { OrcamentoCampanhaResponse } from '../../../services/13-orcamento-campanha/type/orcamento-campanha.type';
 
-// Itens de orçamento de uma campanha (categoria e valor), com edição na linha. Usada pelo painel de Orçamento e
-// Cronograma (views/12-campanha/painel-orcamento-cronograma.tsx), que busca e salva.
+// Itens de orçamento de uma campanha (categoria, descrição opcional e valor, RF-042), com edição na linha. Usada pelo
+// painel de Orçamento e Cronograma (views/12-campanha/painel-orcamento-cronograma.tsx), que busca e salva.
 
 export interface DadosItemOrcamento {
   categoria: string;
+  descricao?: string;
   valor: number;
 }
 
 interface FormItem {
   categoria: string;
+  descricao: string;
   valor: string;
 }
 
-const FORM_VAZIO: FormItem = { categoria: '', valor: '' };
+const FORM_VAZIO: FormItem = { categoria: '', descricao: '', valor: '' };
 
+// Descrição vazia vai como ausente: o Nest grava NULL (e, ao editar, apaga a descrição antiga).
 const paraDados = (form: FormItem): DadosItemOrcamento | null =>
-  form.categoria && form.valor ? { categoria: form.categoria, valor: Number(form.valor) } : null;
+  form.categoria && form.valor
+    ? { categoria: form.categoria, descricao: form.descricao.trim() || undefined, valor: Number(form.valor) }
+    : null;
 
 const COLUNAS: ColunaEditavel<OrcamentoCampanhaResponse, FormItem>[] = [
   {
@@ -28,6 +33,13 @@ const COLUNAS: ColunaEditavel<OrcamentoCampanhaResponse, FormItem>[] = [
     exibir: (item) => item.categoria,
     campo: (form, mudar) => (
       <input type="text" aria-label="Categoria do item" placeholder="Categoria" value={form.categoria} onChange={(evento) => mudar({ categoria: evento.target.value })} className="input-padrao" />
+    ),
+  },
+  {
+    rotulo: 'Descrição (opcional)',
+    exibir: (item) => item.descricao ?? '',
+    campo: (form, mudar) => (
+      <input type="text" aria-label="Descrição do item (opcional)" placeholder="Descrição (opcional)" value={form.descricao} onChange={(evento) => mudar({ descricao: evento.target.value })} className="input-padrao" />
     ),
   },
   {
@@ -55,7 +67,7 @@ export function TabelaItensOrcamento({ itens, podeEditar, aoAdicionar, aoSalvar,
         chave={(item) => item.idOrcamento}
         colunas={COLUNAS}
         formVazio={FORM_VAZIO}
-        paraForm={(item) => ({ categoria: item.categoria, valor: String(item.valor) })}
+        paraForm={(item) => ({ categoria: item.categoria, descricao: item.descricao ?? '', valor: String(item.valor) })}
         podeEditar={podeEditar}
         aoAdicionar={(form) => {
           const dados = paraDados(form);

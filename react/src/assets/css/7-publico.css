@@ -888,6 +888,86 @@
       height: 100%;
     }
 
+    /* Orçamento da campanha em rosca (RF-047). As 8 cores de série foram conferidas com o validador de paleta
+       (daltonismo e distância entre vizinhas) no fundo claro e no escuro; a cor nunca vai sozinha, a legenda escreve
+       nome, valor e percentual. O texto usa as cores de texto, nunca a da série. */
+    .orcamento-rosca {
+      --serie-1: #2a78d6; --serie-2: #eb6834; --serie-3: #1baf7a; --serie-4: #eda100;
+      --serie-5: #e87ba4; --serie-6: #008300; --serie-7: #6250d6; --serie-8: #e34948;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1.5rem 2rem;
+    }
+
+    :root[data-tema-efetivo='escuro'] .orcamento-rosca {
+      --serie-1: #3987e5; --serie-2: #d95926; --serie-3: #199e70; --serie-4: #c98500;
+      --serie-5: #d55181; --serie-6: #0ca30c; --serie-7: #9085e9; --serie-8: #e66767;
+    }
+
+    .orcamento-rosca__grafico {
+      position: relative;
+      width: 11rem;
+      height: 11rem;
+      flex: 0 0 11rem;
+      margin-inline: auto;
+    }
+
+    .orcamento-rosca__grafico svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .orcamento-rosca__fatia {
+      transition: opacity 0.15s;
+    }
+
+    .orcamento-rosca__grafico svg:hover .orcamento-rosca__fatia:not(:hover) {
+      opacity: 0.45;
+    }
+
+    .orcamento-rosca__centro {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .orcamento-rosca__legenda {
+      display: flex;
+      flex: 1 1 18rem;
+      flex-direction: column;
+      gap: 0.875rem;
+      min-width: 0;
+    }
+
+    .orcamento-rosca__linha {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .orcamento-rosca__amostra {
+      width: 0.75rem;
+      height: 0.75rem;
+      margin-top: 0.4rem;
+      flex: 0 0 0.75rem;
+      border-radius: 3px;
+    }
+
+    .orcamento-rosca__serie-1 { stroke: var(--serie-1); background: var(--serie-1); }
+    .orcamento-rosca__serie-2 { stroke: var(--serie-2); background: var(--serie-2); }
+    .orcamento-rosca__serie-3 { stroke: var(--serie-3); background: var(--serie-3); }
+    .orcamento-rosca__serie-4 { stroke: var(--serie-4); background: var(--serie-4); }
+    .orcamento-rosca__serie-5 { stroke: var(--serie-5); background: var(--serie-5); }
+    .orcamento-rosca__serie-6 { stroke: var(--serie-6); background: var(--serie-6); }
+    .orcamento-rosca__serie-7 { stroke: var(--serie-7); background: var(--serie-7); }
+    .orcamento-rosca__serie-8 { stroke: var(--serie-8); background: var(--serie-8); }
+
     /* Cronograma da campanha (RF-047): cada marco é uma bolinha na cor da marca, e um traço liga uma à seguinte.
        O traço sai do pseudo-elemento ::after de cada marco e para no último. */
     .linha-do-tempo {

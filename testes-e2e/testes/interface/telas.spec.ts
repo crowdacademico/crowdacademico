@@ -45,7 +45,7 @@ test.describe('Área pública', () => {
     await expect(link).toHaveAttribute('rel', /noopener/);
     // RF-047: distribuição por categoria, com o percentual escrito.
     await page.getByRole('tab', { name: 'Orçamento' }).click();
-    const grafico = page.locator('figure', { hasText: 'Distribuição por categoria' });
+    const grafico = page.locator('figure', { hasText: 'Como a meta se divide' });
     await expect(grafico).toBeVisible();
     await expect(grafico).toContainText('%');
     await expect(page.getByRole('list', { name: 'Itens do orçamento' })).toBeVisible();
