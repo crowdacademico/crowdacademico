@@ -13,6 +13,7 @@ import { InputDinheiro } from '../../components/input/input-dinheiro';
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { configuracoesApi } from '../../services/11-configuracoes/api/configuracoes.api';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
+import { erroForaDaFaixa } from '../../services/11-configuracoes/constants/configuracoes-faixas.constants';
 import { parMinMaxDaConfiguracao } from '../../services/11-configuracoes/constants/configuracoes-pares-min-max.constants';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
@@ -109,7 +110,10 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
   // O valor precisa combinar com o tipo; a vírgula dos centavos vira ponto, que é o que o banco guarda.
   const regexValor = REGEX_VALOR[configuracao.tipo];
   const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
-    valor: regexValor !== undefined && !regexValor.test(valor.trim()) && (DICA_TIPO_CONFIGURACAO[configuracao.tipo] ?? ''),
+    valor:
+      (regexValor !== undefined && !regexValor.test(valor.trim()) && (DICA_TIPO_CONFIGURACAO[configuracao.tipo] ?? '')) ||
+      // Faixa fixada por requisito (o banco recusa fora dela, erro 90043).
+      (erroForaDaFaixa(configuracao.chave, valor) ?? false),
   }));
 
   const aoSalvar = async () => {

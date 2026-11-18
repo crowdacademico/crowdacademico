@@ -59,5 +59,9 @@ export const CHAVE_CONFIG_VERIFICACAO_EMAIL_HORAS_VALIDADE =
 // Validade do link de "Esqueci minha senha" (minutos): DEFAULT, mesmo tratamento de
 // VERIFICACAO_EMAIL_HORAS_VALIDADE_PADRAO acima. Curta de propósito: o link troca a senha da conta.
 export const RECUPERACAO_SENHA_MINUTOS_VALIDADE_PADRAO = 30;
+// Faixa do RF-007 (no máximo 1 hora). O banco já recusa gravar fora dela (trg_configuracoes_faixa, 90043); o Nest
+// limita de novo ao ler, para um valor antigo ou gravado sem o gatilho nunca gerar link mais longo.
+export const RECUPERACAO_SENHA_MINUTOS_VALIDADE_MINIMO = 1;
+export const RECUPERACAO_SENHA_MINUTOS_VALIDADE_MAXIMO = 60;
 export const CHAVE_CONFIG_RECUPERACAO_SENHA_MINUTOS_VALIDADE =
   'recuperacao_senha_minutos_validade';

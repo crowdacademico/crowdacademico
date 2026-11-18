@@ -3243,3 +3243,46 @@ $$;
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
 (NULL, 'sessao_painel_horas_validade', '12', 'inteiro',  'Contas com acesso ao painel (admin, curador, moderador, suporte, revisor): por quantas horas sem uso a sessão continua válida, mesmo com "Manter conectado" (0 = vale o prazo comum de refresh_token_dias_validade)', TRUE, FALSE)
 ON CONFLICT (chave) DO NOTHING;
+
+-- ============================================================================
+-- GRUPO DE (18-11-2026) - Teto de 60 minutos do link de redefinição de senha (RF-007). IDEMPOTENTE.
+-- Não precisa parar o Nest. O Nest novo também limita a 60 sozinho; o antigo continua funcionando.
+--
+-- O que muda:
+--   1. Gatilho trg_configuracoes_faixa: recuperacao_senha_minutos_validade só aceita inteiro de 1 a 60. Fora
+--      disso o painel recebe o erro 90043 com a mensagem. Código novo: 90043.
+--   2. Se o valor gravado hoje passar de 60, ele desce para 60 (o padrão continua 30).
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.fn_valida_faixa_configuracoes()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    -- chave, mínimo, máximo, motivo (vai na mensagem)
+    v_faixas TEXT[][] := ARRAY[
+        ['recuperacao_senha_minutos_validade', '1', '60', 'o link de redefinição de senha vale no máximo 1 hora']
+    ];
+    v_faixa TEXT[];
+BEGIN
+    FOREACH v_faixa SLICE 1 IN ARRAY v_faixas LOOP
+        IF NEW.chave = v_faixa[1] THEN
+            IF NEW.valor IS NULL OR NEW.valor !~ '^\s*\d+\s*$'
+               OR btrim(NEW.valor)::NUMERIC NOT BETWEEN v_faixa[2]::NUMERIC AND v_faixa[3]::NUMERIC THEN
+                RAISE EXCEPTION 'O valor de "%" precisa ser um número inteiro entre % e %: %.',
+                    v_faixa[1], v_faixa[2], v_faixa[3], v_faixa[4]
+                    USING ERRCODE = '90043',
+                          DETAIL = json_build_object('chave', v_faixa[1], 'minimo', v_faixa[2]::INT,
+                                                     'maximo', v_faixa[3]::INT)::text;
+            END IF;
+        END IF;
+    END LOOP;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_configuracoes_faixa ON configuracoes;
+CREATE TRIGGER trg_configuracoes_faixa
+    BEFORE INSERT OR UPDATE OF chave, valor ON configuracoes
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_faixa_configuracoes();
+
+UPDATE configuracoes SET valor = '60'
+WHERE chave = 'recuperacao_senha_minutos_validade' AND valor ~ '^\s*\d+\s*$' AND btrim(valor)::NUMERIC > 60;

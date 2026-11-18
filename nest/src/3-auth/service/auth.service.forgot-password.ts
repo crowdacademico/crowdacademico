@@ -5,6 +5,8 @@ import { TIPO_NOTIFICACAO } from '../../27-notificacao/constants/notificacao.con
 import { NotificacaoServiceEnqueue } from '../../27-notificacao/service/notificacao.service.enqueue';
 import {
   CHAVE_CONFIG_RECUPERACAO_SENHA_MINUTOS_VALIDADE,
+  RECUPERACAO_SENHA_MINUTOS_VALIDADE_MAXIMO,
+  RECUPERACAO_SENHA_MINUTOS_VALIDADE_MINIMO,
   RECUPERACAO_SENHA_MINUTOS_VALIDADE_PADRAO,
 } from '../constants/auth.constants';
 import { gerarTokenVerificacaoEmail } from '../util/auth.util.email-verification-token';
@@ -43,9 +45,14 @@ export class AuthServiceForgotPassword {
       .execute();
 
     const { token, hash } = gerarTokenVerificacaoEmail();
-    const minutos = await this.configuracaoValor.buscarNumero(
+    const minutosConfigurados = await this.configuracaoValor.buscarNumero(
       CHAVE_CONFIG_RECUPERACAO_SENHA_MINUTOS_VALIDADE,
       RECUPERACAO_SENHA_MINUTOS_VALIDADE_PADRAO,
+    );
+    // RF-007: no máximo 1 hora, mesmo que o valor gravado fuja da faixa.
+    const minutos = Math.min(
+      Math.max(minutosConfigurados, RECUPERACAO_SENHA_MINUTOS_VALIDADE_MINIMO),
+      RECUPERACAO_SENHA_MINUTOS_VALIDADE_MAXIMO,
     );
     await db
       .insertInto('recuperacao_senha')

@@ -911,6 +911,41 @@ CREATE CONSTRAINT TRIGGER trg_configuracoes_pares_min_max
     FOR EACH ROW
     EXECUTE FUNCTION public.fn_valida_pares_min_max_configuracoes();
 
+-- Faixa permitida de um parâmetro (ERRCODE 90043, 18-11-2026). Para os parâmetros cujo requisito fixa um teto, o painel
+-- não pode gravar valor fora dele. Hoje: recuperacao_senha_minutos_validade entre 1 e 60 (RF-007: o link de
+-- redefinição vale no máximo 1 hora; 0 faria o link nascer vencido). Chave nova com teto entra na lista v_faixas e no
+-- espelho do React (configuracoes-faixas.constants.ts). DOCUMENTACAO_BD.md [05-K-2-C].
+CREATE OR REPLACE FUNCTION public.fn_valida_faixa_configuracoes()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    -- chave, mínimo, máximo, motivo (vai na mensagem)
+    v_faixas TEXT[][] := ARRAY[
+        ['recuperacao_senha_minutos_validade', '1', '60', 'o link de redefinição de senha vale no máximo 1 hora']
+    ];
+    v_faixa TEXT[];
+BEGIN
+    FOREACH v_faixa SLICE 1 IN ARRAY v_faixas LOOP
+        IF NEW.chave = v_faixa[1] THEN
+            IF NEW.valor IS NULL OR NEW.valor !~ '^\s*\d+\s*$'
+               OR btrim(NEW.valor)::NUMERIC NOT BETWEEN v_faixa[2]::NUMERIC AND v_faixa[3]::NUMERIC THEN
+                RAISE EXCEPTION 'O valor de "%" precisa ser um número inteiro entre % e %: %.',
+                    v_faixa[1], v_faixa[2], v_faixa[3], v_faixa[4]
+                    USING ERRCODE = '90043',
+                          DETAIL = json_build_object('chave', v_faixa[1], 'minimo', v_faixa[2]::INT,
+                                                     'maximo', v_faixa[3]::INT)::text;
+            END IF;
+        END IF;
+    END LOOP;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_configuracoes_faixa ON configuracoes;
+CREATE TRIGGER trg_configuracoes_faixa
+    BEFORE INSERT OR UPDATE OF chave, valor ON configuracoes
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_faixa_configuracoes();
+
 -- ============================================================================
 --  [05-K-1] REGRAS TRANSVERSAIS - INTEGRIDADE E ESCOPO
 --  Descrição: Validações de consistência cruzada entre tabelas e verificação

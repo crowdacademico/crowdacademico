@@ -583,7 +583,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'refresh_token_dias_validade', '30',   'inteiro',  'Por quantos dias a sessão continua válida (refresh token) antes de precisar logar de novo', TRUE, FALSE),
 (NULL, 'sessao_painel_horas_validade', '12', 'inteiro',  'Contas com acesso ao painel (admin, curador, moderador, suporte, revisor): por quantas horas sem uso a sessão continua válida, mesmo com "Manter conectado" (0 = vale o prazo comum de refresh_token_dias_validade)', TRUE, FALSE),
 (NULL, 'verificacao_email_horas_validade', '24', 'inteiro', 'Validade do token de verificação de e-mail, em horas', TRUE, FALSE),
-(NULL, 'recuperacao_senha_minutos_validade', '30', 'inteiro', 'Validade do link de "Esqueci minha senha", em minutos', TRUE, FALSE),
+(NULL, 'recuperacao_senha_minutos_validade', '30', 'inteiro', 'Validade do link de "Esqueci minha senha", em minutos (de 1 a 60: o RF-007 limita a 1 hora)', TRUE, FALSE),
 -- Lida por contar_metricas_dashboard() (03, [03-M]): o card "sessões ativas" conta sessão criada (login ou
 -- renovação do token) dentro desta janela.
 -- Lida por desativar_arquivos_orfaos() (05, [05-G]): prazo para um arquivo enviado ser adotado por um dono

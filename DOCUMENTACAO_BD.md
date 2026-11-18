@@ -785,6 +785,7 @@ Regras conferidas no PGlite com o banco inteiro, usando o papel real `app_nestjs
 * **Configuração:**
   * **O valor bate com o tipo** (`CK_CONFIGURACOES_VALOR_TIPO`, `01`): `'5,00'` (vírgula) numa chave decimal ou de dinheiro derrubaria `config_numero()` em toda aprovação; a escrita já falha com 23514. Dinheiro aceita no máximo 2 casas.
   * **O mínimo não passa do máximo** (`trg_configuracoes_pares_min_max`, `CONSTRAINT TRIGGER` diferida, 90019): prazo da campanha, itens de orçamento, marcos e tamanho de arquivo. Sem a trava, `prazo_minimo = 70` com `prazo_maximo = 60` impediria qualquer envio, sem mensagem clara. Só confere linhas globais, ativas e numéricas; `mínimo = máximo` vale. Como cada edição do painel é uma transação, subir o mínimo acima do máximo atual exige subir o máximo antes; o erro diz qual par e qual ordem seguir, e leva os valores no `DETAIL` (o Nest devolve como `dados`).
+  * **Faixa fixada por requisito** (`trg_configuracoes_faixa`, `BEFORE INSERT OR UPDATE`, 90043, 18-11-2026): `recuperacao_senha_minutos_validade` só aceita inteiro de 1 a 60, porque o RF-007 limita o link de redefinição a 1 hora e 0 faria o link nascer vencido. A lista de chaves e faixas fica na própria função; o React avisa antes de salvar (`configuracoes-faixas.constants.ts`) e o Nest limita de novo ao gerar o link. **Por quê:** sem a trava, o painel aceitava qualquer número e o requisito deixava de valer sem ninguém perceber.
   * **Chave global não se apaga nem se desativa** (`pol_config_delete` e `CK_CONFIGURACOES_GLOBAL_ATIVA`): é parte do contrato do sistema; apagar `limite_campanhas_simultaneas` faria o código cair num padrão escondido. Para "desligar" uma regra, muda-se o valor. **Caso-limite:** uma chave global criada por engano pelo painel não se apaga mais por ele.
 * **`contar_metricas_dashboard()` acha o papel pelo código**, não pelo nome (renomear o papel não zera a métrica).
 
@@ -1275,7 +1276,7 @@ O raciocínio de arquitetura por trás de regras que valem para o banco inteiro.
 
 ## Como conferir este inventário
 
-**Contagem do inventário** (recontada nos `.sql` em 18-11-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **122 policies**, **125 triggers** no `05` (119 comuns e 6 `CONSTRAINT TRIGGER`), **202 funções** (159 no `05`, 41 no `03`, 1 no `08`, 1 no `01`), **69 índices** no `02` e **148 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (recontada nos `.sql` em 18-11-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **122 policies**, **126 triggers** no `05` (120 comuns e 6 `CONSTRAINT TRIGGER`), **203 funções** (160 no `05`, 41 no `03`, 1 no `08`, 1 no `01`), **69 índices** no `02` e **149 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
 
 Para recontar direto do banco (no SQL Editor do Supabase ou no banco local):
 

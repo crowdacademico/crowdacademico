@@ -78,6 +78,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90040 | `fn_denuncia_comentario_preenche` | `denuncia` | Denúncia de um comentário que não existe ou que quem denuncia não consegue ver
 | 90041 | `fn_denuncia_comentario_preenche` | `denuncia` | Denúncia de um comentário cujo autor não tem mais conta
 | 90042 | `entrar_com_google` | `usuario` | O ID token do Google veio sem o identificador (sub) ou sem o e-mail
+| 90043 | `fn_valida_faixa_configuracoes` | `configuracoes` | Parâmetro fora da faixa fixada por requisito: hoje, `recuperacao_senha_minutos_validade` só aceita inteiro de 1 a 60 (RF-007, link de redefinição de no máximo 1 hora). Leva `dados` no corpo: `chave`, `minimo`, `maximo` |
 
 ## 91xxx - Conflito de estado/regra de negócio (409)
 
