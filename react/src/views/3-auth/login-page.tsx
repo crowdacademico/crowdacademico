@@ -6,6 +6,7 @@ import { BotaoGoogle } from '../../components/auth/botao-google';
 import { LOGIN_GOOGLE_DISPONIVEL } from '../../services/3-auth/util/google-identity.util';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { Campo } from '../../components/input/campo';
+import { CaixaMarcacao } from '../../components/input/caixa-marcacao';
 import { ErroHttp } from '../../services/constant/api/http.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
@@ -48,6 +49,9 @@ export function LoginPage({ auth }: PropsPagina) {
   const local = useLocation();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  // "Manter conectado neste computador" (18-11-2026): desmarcada por padrão, a sessão acaba ao fechar o navegador
+  // (computador da escola, da biblioteca). Vale para o login por senha e pelo Google.
+  const [manterConectado, setManterConectado] = useState(false);
   const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const idSenha = useId();
@@ -76,7 +80,7 @@ export function LoginPage({ auth }: PropsPagina) {
     setRecusa('');
     await executarEnviando(async () => {
       try {
-        await auth.login(email, senha);
+        await auth.login(email, senha, manterConectado);
       } catch (erroLogin) {
         // Como a maioria dos sistemas: o e-mail digitado fica, a senha é apagada para a pessoa digitar de novo.
         if (erroLogin instanceof ErroHttp && erroLogin.campos) {
@@ -93,7 +97,7 @@ export function LoginPage({ auth }: PropsPagina) {
   const aoEntrarComGoogle = (credential: string) => {
     setRecusa('');
     void executarEnviando(async () => {
-      await auth.entrarComGoogle(credential);
+      await auth.entrarComGoogle(credential, manterConectado);
       void navigate(destinoDepoisDoLogin(local.state), { replace: true });
     });
   };
@@ -186,6 +190,12 @@ export function LoginPage({ auth }: PropsPagina) {
               Esqueceu a senha?
             </Link>
           </div>
+
+          <CaixaMarcacao
+            rotulo="Manter conectado neste computador"
+            marcado={manterConectado}
+            aoMudar={setManterConectado}
+          />
 
           <button
             type="submit"

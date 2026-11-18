@@ -32,6 +32,17 @@ export const REFRESH_TOKEN_DIAS_VALIDADE_PADRAO = 30;
 export const CHAVE_CONFIG_REFRESH_TOKEN_DIAS_VALIDADE =
   'refresh_token_dias_validade';
 
+// Sessão das contas do painel (18-11-2026): uma conta com papel de gestão aberta num computador esquecido é o risco maior
+// do sistema. Para elas, a sessão vale no máximo estas horas sem uso (cada renovação conta de novo), mesmo com "Manter
+// conectado". 0 = vale o prazo comum. Configurável no painel; o padrão de 12 horas fica perto do console da AWS, que
+// encerra a sessão de quem administra depois de 12 horas.
+export const SESSAO_PAINEL_HORAS_VALIDADE_PADRAO = 12;
+export const CHAVE_CONFIG_SESSAO_PAINEL_HORAS_VALIDADE =
+  'sessao_painel_horas_validade';
+// Papéis que NÃO dão acesso ao painel (a mesma regra de podeAcessarPainelAdmin, no React): qualquer outro papel conta
+// como conta do painel.
+export const PAPEIS_SEM_PAINEL: readonly string[] = ['usuario', 'pesquisador'];
+
 // Refresh token devolvido ao cliente tem o formato "<id_sessao>.<segredo>" -
 // o id_sessao serve só pra achar a linha rápido (índice de PK), a validade de
 // verdade é sempre o bcrypt.compare do segredo contra refresh_token_hash.

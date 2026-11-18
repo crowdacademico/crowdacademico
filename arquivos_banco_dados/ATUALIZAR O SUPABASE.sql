@@ -3054,6 +3054,8 @@ WHERE codigo = 'suporte';
 --   2. Função entrar_com_google(sub, email, nome): entra na conta do sub, liga a conta do mesmo e-mail ou cria a
 --      conta nova (e-mail confirmado, sem senha, Termo de Uso pendente). Códigos novos: 90042 e 91062.
 --   3. excluir_conta_usuario passa a apagar o google_sub (LGPD).
+--   4. Parâmetro sessao_painel_horas_validade (12): a sessão de uma conta do painel vale no máximo 12 horas sem uso,
+--      mesmo com "Manter conectado". Sem o parâmetro, o Nest novo usa os mesmos 12.
 -- ============================================================================
 ALTER TABLE usuario ALTER COLUMN senha_hash DROP NOT NULL;
 ALTER TABLE usuario ADD COLUMN IF NOT EXISTS google_sub VARCHAR(255);
@@ -3237,3 +3239,7 @@ BEGIN
     END IF;
 END;
 $$;
+
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
+(NULL, 'sessao_painel_horas_validade', '12', 'inteiro',  'Contas com acesso ao painel (admin, curador, moderador, suporte, revisor): por quantas horas sem uso a sessão continua válida, mesmo com "Manter conectado" (0 = vale o prazo comum de refresh_token_dias_validade)', TRUE, FALSE)
+ON CONFLICT (chave) DO NOTHING;

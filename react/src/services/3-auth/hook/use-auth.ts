@@ -9,6 +9,41 @@ import { acompanharRequisicao } from '../../../components/layout/barra-carregame
 
 const CHAVE_REFRESH_TOKEN = 'crowdacademico.refreshToken';
 
+// "Manter conectado neste computador" (18-11-2026). A chave de renovação mora em uma de duas gavetas do navegador:
+//   - marcado: localStorage, que sobrevive a fechar o navegador e desligar o computador (como era sempre);
+//   - desmarcado (o padrão): sessionStorage, que o navegador apaga ao fechar. No computador da escola, quem senta
+//     depois não entra na conta de ninguém. Uma aba aberta à mão (não por um link do site) pede o login de novo.
+// A escolha vale até o Sair: a renovação continua gravando na mesma gaveta. O acesso ao storage fica em try/catch:
+// navegador com os dados do site bloqueados não pode derrubar o login (a sessão vale enquanto a página estiver aberta).
+function gaveta(manter: boolean): Storage {
+  return manter ? localStorage : sessionStorage;
+}
+function lerTokenSalvo(): { token: string | null; manter: boolean } {
+  try {
+    const duradouro = localStorage.getItem(CHAVE_REFRESH_TOKEN);
+    if (duradouro) return { token: duradouro, manter: true };
+    return { token: sessionStorage.getItem(CHAVE_REFRESH_TOKEN), manter: false };
+  } catch {
+    return { token: null, manter: false };
+  }
+}
+function gravarToken(token: string, manter: boolean): void {
+  try {
+    gaveta(manter).setItem(CHAVE_REFRESH_TOKEN, token);
+    gaveta(!manter).removeItem(CHAVE_REFRESH_TOKEN);
+  } catch {
+    // Sem gaveta, a sessão vale só enquanto a página estiver aberta.
+  }
+}
+function apagarToken(): void {
+  try {
+    localStorage.removeItem(CHAVE_REFRESH_TOKEN);
+    sessionStorage.removeItem(CHAVE_REFRESH_TOKEN);
+  } catch {
+    // Nada a apagar.
+  }
+}
+
 export interface UseAuthReturn {
   accessToken: string | null;
   usuario: UsuarioResponse | null;
@@ -23,9 +58,10 @@ export interface UseAuthReturn {
   aceitePendente: boolean;
   carregando: boolean;
   autenticado: boolean;
-  login: (email: string, senha: string) => Promise<AuthResponseLogin>;
+  // `manterConectado`: a caixa "Manter conectado neste computador" (desmarcada, a sessão acaba ao fechar o navegador).
+  login: (email: string, senha: string, manterConectado: boolean) => Promise<AuthResponseLogin>;
   // Login com Google: a conta nova volta com aceitePendente e passa pelo aceite do Termo de Uso (RF-015).
-  entrarComGoogle: (credential: string) => Promise<AuthResponseLogin>;
+  entrarComGoogle: (credential: string, manterConectado: boolean) => Promise<AuthResponseLogin>;
   cadastrar: (
     nome: string,
     email: string,
@@ -42,9 +78,9 @@ export interface UseAuthReturn {
 // Hook único de autenticação do painel admin (components/layout/painel-admin, views/3-auth,
 // views/1-usuario) - useAuth() é chamado uma vez em App.tsx e o resultado
 // desce por prop pra Header, Breadcrumb (indiretamente) e cada página.
-// Guarda o accessToken só em memória (nunca localStorage - some ao fechar
-// a aba, de propósito) e o refreshToken em localStorage (pra não precisar
-// logar de novo a cada F5).
+// Guarda o accessToken só em memória (nunca no storage - some ao fechar
+// a aba, de propósito) e o refreshToken no localStorage ou no sessionStorage, conforme o "Manter conectado" (ver
+// gaveta(), acima): nos dois, o F5 não pede login de novo.
 export function useAuth(): UseAuthReturn {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [usuario, setUsuario] = useState<UsuarioResponse | null>(null);
@@ -56,7 +92,10 @@ export function useAuth(): UseAuthReturn {
   const [permissoes, setPermissoes] = useState<string[]>([]);
   const [aceitePendente, setAceitePendente] = useState(false);
   const [carregando, setCarregando] = useState(true);
-  const refreshTokenRef = useRef<string | null>(localStorage.getItem(CHAVE_REFRESH_TOKEN));
+  const [tokenInicial] = useState(lerTokenSalvo);
+  const refreshTokenRef = useRef<string | null>(tokenInicial.token);
+  // Em qual gaveta a chave de renovação mora (ver gaveta()): definido no login, mantido nas renovações.
+  const manterConectadoRef = useRef<boolean>(tokenInicial.manter);
   // Promise compartilhada entre chamadas simultâneas de authFetch - ver
   // renovarSessao() logo abaixo.
   const refreshEmAndamentoRef = useRef<Promise<AuthResponseLogin> | null>(null);
@@ -66,11 +105,13 @@ export function useAuth(): UseAuthReturn {
   // GETs em voo, por caminho - ver comentário em authFetch mais abaixo.
   const requisicoesEmAndamentoRef = useRef<Map<string, Promise<Response>>>(new Map());
 
-  const salvarSessao = useCallback((resultado: AuthResponseLogin) => {
+  // `manterConectado` só vem no login e no cadastro; a renovação não passa nada e continua na gaveta escolhida.
+  const salvarSessao = useCallback((resultado: AuthResponseLogin, manterConectado?: boolean) => {
+    if (manterConectado !== undefined) manterConectadoRef.current = manterConectado;
     setAccessToken(resultado.accessToken);
     accessTokenRef.current = resultado.accessToken;
     refreshTokenRef.current = resultado.refreshToken;
-    localStorage.setItem(CHAVE_REFRESH_TOKEN, resultado.refreshToken);
+    gravarToken(resultado.refreshToken, manterConectadoRef.current);
     setUsuario(resultado.usuario);
     setPapeis(resultado.papeis);
     setPermissoes(resultado.permissoes);
@@ -85,29 +126,30 @@ export function useAuth(): UseAuthReturn {
     setPermissoes([]);
     setAceitePendente(false);
     refreshTokenRef.current = null;
-    localStorage.removeItem(CHAVE_REFRESH_TOKEN);
+    apagarToken();
   }, []);
 
   const login = useCallback(
-    async (email: string, senha: string): Promise<AuthResponseLogin> => {
+    async (email: string, senha: string, manterConectado: boolean): Promise<AuthResponseLogin> => {
       const resultado = await authApi.login(email, senha);
-      salvarSessao(resultado);
+      salvarSessao(resultado, manterConectado);
       return resultado;
     },
     [salvarSessao],
   );
 
   const entrarComGoogle = useCallback(
-    async (credential: string): Promise<AuthResponseLogin> => {
+    async (credential: string, manterConectado: boolean): Promise<AuthResponseLogin> => {
       const resultado = await authApi.entrarComGoogle(credential);
-      salvarSessao(resultado);
+      salvarSessao(resultado, manterConectado);
       return resultado;
     },
     [salvarSessao],
   );
 
   // Cadastro público: mesmo formato de resultado do login (accessToken/refreshToken/usuario/papeis), termina já
-  // logado.
+  // logado. Sem "Manter conectado" (a tela não tem a caixa): a sessão acaba ao fechar o navegador, como no login
+  // com a caixa desmarcada.
   const cadastrar = useCallback(
     async (
       nome: string,
@@ -116,7 +158,7 @@ export function useAuth(): UseAuthReturn {
       aceiteTermos: boolean,
     ): Promise<AuthResponseRegister> => {
       const resultado = await authApi.cadastro(nome, email, senha, aceiteTermos);
-      salvarSessao(resultado);
+      salvarSessao(resultado, false);
       return resultado;
     },
     [salvarSessao],

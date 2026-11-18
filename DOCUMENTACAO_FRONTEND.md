@@ -142,7 +142,15 @@ react/
 | Token | Onde fica | Por quê |
 |---|---|---|
 | access token | só em memória | some ao fechar a aba, de propósito |
-| refresh token | `localStorage` (`crowdacademico.refreshToken`) | para não precisar entrar de novo a cada F5 |
+| refresh token | `crowdacademico.refreshToken`: no `sessionStorage` (o padrão) ou no `localStorage` (com "Manter conectado neste computador") | para não precisar entrar de novo a cada F5 |
+
+📌 **"Manter conectado neste computador" (18-11-2026).** A caixa fica na tela de entrar, **desmarcada por padrão**, e vale para o login por senha e pelo Google.
+- **Desmarcada:** a chave de renovação vai para o `sessionStorage`, que o navegador apaga ao fechar. No computador da escola, quem senta depois não entra na conta de ninguém. Uma aba aberta à mão, sem ser por um link do site, pede o login de novo.
+- **Marcada:** vai para o `localStorage` e sobrevive a fechar o navegador e desligar o computador.
+- A escolha vale até o **Sair**, que apaga a chave das duas gavetas.
+- O cadastro não tem a caixa e se comporta como desmarcada. O "Entrar como" de desenvolvimento entra marcado.
+- O prazo do lado do servidor continua valendo: a conta do painel vale no máximo 12 horas sem uso, mesmo marcada (`DOCUMENTACAO_BACKEND.md`, seção 3).
+- Navegador com os dados do site bloqueados não derruba o login: a sessão vale enquanto a página estiver aberta.
 
 ⚠️ **`papeis` e `ehAdmin` não são autorização:** só decidem o que aparece na tela. Toda ação é validada pelo backend a cada requisição.
 

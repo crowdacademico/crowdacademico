@@ -44,7 +44,8 @@ export function DevLoginRapido({ auth }: DevLoginRapidoProps) {
     setEntrando(true);
     limparErro();
     try {
-      await auth.login(conta.email, SENHA_DEV);
+      // Só existe em desenvolvimento: mantém conectado, como antes, para trocar de conta sem relogar a cada F5 de aba nova.
+      await auth.login(conta.email, SENHA_DEV, true);
       void navigate('/');
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);

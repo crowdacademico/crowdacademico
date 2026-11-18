@@ -258,7 +258,7 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 | | Access token | Refresh token |
 |---|---|---|
 | Formato | JWT assinado (`JWT_SECRET`) | `"<id_sessao>.<segredo>"` - texto puro, não é JWT |
-| Validade | `JWT_ACCESS_EXPIRES_IN` (padrão `15m`) | `configuracoes.refresh_token_dias_validade` (padrão 30, configurável pelo Painel Admin) |
+| Validade | `JWT_ACCESS_EXPIRES_IN` (padrão `15m`) | `configuracoes.refresh_token_dias_validade` (padrão 30, configurável pelo Painel Admin); para conta do painel, no máximo `sessao_painel_horas_validade` (padrão 12) horas sem uso |
 | Onde é validado | `AuthGuardJwt`, em memória - **nunca consultado contra o banco** | `bcrypt.compare` do segredo contra `sessao.refresh_token_hash` |
 | Claims | `sub` (id do usuário) e `sid` (id da sessão) | - |
 
@@ -303,6 +303,11 @@ A conta sem senha não entra pelo formulário de senha (mesma resposta vaga, **s
 **Logout** (`POST /auth/logout`): confere o segredo e marca `revogado_em`. Sessão inexistente devolve sucesso, não erro - do ponto de vista do logout, o objetivo (a sessão não vale mais nada) já está satisfeito.
 
 **Cadastro público** (`POST /auth/cadastro` → `auth.service.register.ts`): reaproveita `UsuarioServiceCreate` (a mesmíssima criação que `POST /usuario` do admin usa) e soma o que só faz sentido no auto-cadastro - grava o aceite do termo **ativo** via `registrar_aceite_termo()` (o id do termo é resolvido pelo servidor, **nunca** aceito do corpo da requisição), gera o token de verificação de e-mail em `verificacao_email` (validade em `configuracoes.verificacao_email_horas_validade`, padrão 24h, também configurável pelo Painel Admin), e já devolve tokens de sessão (quem se cadastra termina logado).
+
+📌 **Quanto a sessão dura (18-11-2026).** Cada renovação cria uma sessão nova com o prazo contado de novo, então o prazo é de **tempo sem uso**: quem usa o sistema pelo menos uma vez dentro dele nunca precisa entrar de novo.
+- **Conta comum:** `refresh_token_dias_validade` (30 dias).
+- **Conta do painel** (algum papel fora de `usuario` e `pesquisador`, a mesma regra de `podeAcessarPainelAdmin` no React): no máximo `sessao_painel_horas_validade` (12) horas sem uso (`horasDeValidade`, em `auth.service.login.ts`), mesmo com "Manter conectado". Uma conta ADMIN aberta num computador esquecido não fica entrando por um mês. O padrão de 12 horas é o do console da AWS para quem administra. O papel é lido a cada renovação, e 0 no parâmetro desliga o limite.
+- **Fechar o navegador:** quem decide é o React, pela caixa "Manter conectado neste computador" da tela de entrar (desmarcada por padrão; `DOCUMENTACAO_FRONTEND.md`, seção do `use-auth`). Teste: `testes-e2e/testes/interface/sessao.spec.ts`.
 
 📌 **Por que estes dois viraram configuráveis, e o custo de bcrypt não.** `refresh_token_dias_validade` e `verificacao_email_horas_validade` são só **janelas de tempo de produto** (por quanto tempo alguém continua logado, por quanto tempo um link de verificação vale), mesmo tipo de número que `configuracoes.bloqueio_login_minutos` já era. Lidos via `ConfiguracaoValorService`, com fallback pro padrão hardcoded se a chave sumir/for desativada - mesmo padrão usado em `26-arquivo` (ver §8.6). `CUSTO_BCRYPT_REFRESH_TOKEN` continua fixo de propósito: é parâmetro de segurança (custo de hash), não regra de produto - baixar isso sem entender a troca enfraquece a defesa contra força bruta offline.
 

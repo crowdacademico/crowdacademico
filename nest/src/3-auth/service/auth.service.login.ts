@@ -15,6 +15,9 @@ import { ConfiguracaoValorService } from '../../commons/configuracao/configuraca
 import { DatabaseService } from '../../commons/database/database.service';
 import {
   CHAVE_CONFIG_REFRESH_TOKEN_DIAS_VALIDADE,
+  CHAVE_CONFIG_SESSAO_PAINEL_HORAS_VALIDADE,
+  PAPEIS_SEM_PAINEL,
+  SESSAO_PAINEL_HORAS_VALIDADE_PADRAO,
   CUSTO_BCRYPT_REFRESH_TOKEN,
   CAMPOS_LOGIN_RECUSADO,
   MENSAGEM_LOGIN_RECUSADO,
@@ -206,6 +209,25 @@ Motivo: ${suspensao.motivoSuspensao}`,
     return resultado.rows[0]?.id_termo != null;
   }
 
+  // Por quantas horas a sessão nova vale (18-11-2026). Conta comum: o prazo comum. Conta do painel (algum papel fora de
+  // PAPEIS_SEM_PAINEL): no máximo sessao_painel_horas_validade, contadas de novo a cada renovação, ou seja, horas SEM
+  // USO. Assim um computador esquecido com a conta ADMIN aberta não fica entrando por 30 dias. O papel é lido na hora,
+  // então quem ganha ou perde um papel muda de prazo na próxima renovação.
+  private async horasDeValidade(
+    idUsuario: number,
+    horasComuns: number,
+  ): Promise<number> {
+    const papeis = await this.listarPapeis(idUsuario);
+    if (papeis.every((papel) => PAPEIS_SEM_PAINEL.includes(papel))) {
+      return horasComuns;
+    }
+    const horasPainel = await this.configuracaoValor.buscarNumero(
+      CHAVE_CONFIG_SESSAO_PAINEL_HORAS_VALIDADE,
+      SESSAO_PAINEL_HORAS_VALIDADE_PADRAO,
+    );
+    return horasPainel > 0 ? Math.min(horasComuns, horasPainel) : horasComuns;
+  }
+
   // Reaproveitado por AuthServiceRefresh (rotação de refresh token): mesma lógica de emitir o par
   // access+refresh, só muda de onde é chamado.
   //
@@ -233,9 +255,11 @@ Motivo: ${suspensao.motivoSuspensao}`,
       CHAVE_CONFIG_REFRESH_TOKEN_DIAS_VALIDADE,
       REFRESH_TOKEN_DIAS_VALIDADE_PADRAO,
     );
-    const expiraEm = new Date(
-      Date.now() + refreshTokenDiasValidade * 24 * 60 * 60 * 1000,
+    const horasValidade = await this.horasDeValidade(
+      idUsuario,
+      refreshTokenDiasValidade * 24,
     );
+    const expiraEm = new Date(Date.now() + horasValidade * 60 * 60 * 1000);
 
     // sessao (pol_sessao_all, USING(true)/WITH CHECK(true)) - gerenciada
     // inteiramente pelo backend, não por RLS por dono; a "autorização" de

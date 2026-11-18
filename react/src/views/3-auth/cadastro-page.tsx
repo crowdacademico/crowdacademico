@@ -251,7 +251,7 @@ export function CadastroPage({ auth }: PropsPagina) {
     setCadastrouAqui(true);
     setEnviando(true);
     auth
-      .entrarComGoogle(credential)
+      .entrarComGoogle(credential, false)
       .then(() => void navigate('/'))
       .catch((erroGoogle: unknown) => {
         setCadastrouAqui(false);

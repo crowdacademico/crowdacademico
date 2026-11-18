@@ -25,6 +25,7 @@ const GRUPO_CONFIGURACAO: Record<string, string> = {
   // Validade da sessão/token: configuráveis pelo Painel Admin (não são constantes fixas em
   // 3-auth/constants/auth.constants.ts).
   refresh_token_dias_validade: 'Segurança',
+  sessao_painel_horas_validade: 'Segurança',
   verificacao_email_horas_validade: 'Segurança',
   recuperacao_senha_minutos_validade: 'Segurança',
   // Financeiro
