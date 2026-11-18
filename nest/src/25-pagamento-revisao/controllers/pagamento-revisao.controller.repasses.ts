@@ -35,7 +35,7 @@ export class PagamentoRevisaoControllerRepasses {
     return this.service.listar(query.limite);
   }
 
-  // Todos os repasses, só leitura. Exige repasse_aprovar (403 sem ela).
+  // Todos os repasses, só leitura. Exige repasse_visualizar (403 sem ela).
   @Get()
   listarTodos(
     @Query() query: PagamentoRevisaoRequestLimite,

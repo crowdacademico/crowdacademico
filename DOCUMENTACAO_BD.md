@@ -960,6 +960,13 @@ Registro genérico de `INSERT`, `UPDATE` e `DELETE` das ações administrativas 
 * **Retenção:** `limpar_log_auditoria()` (`SECURITY DEFINER`, tarefa diária das 3h) apaga o que passou de `configuracoes.log_auditoria_retencao_dias` (**365**; 0 = guardar para sempre). É a **única** forma de apagar log. Ao apagar, grava **uma** linha de rastro (`tabela = 'log_auditoria'`, `operacao = 'DELETE'`, com a quantidade, os dias e a data de corte); se não apaga nada, não grava nada. O que sai não é arquivado: um ano cobre a contestação razoável. O índice BRIN de `ocorrido_em` serve a essa limpeza ([02-L]).
 * **Tela:** `GET /log-auditoria` (`nest/src/28-log-auditoria`, só leitura) e o botão "Ver log" das listas do painel.
 
+#### Prazo de guarda das notificações (18-11-2026)
+
+**Em palavras simples:** os e-mails e os avisos do sino já resolvidos não ficam guardados para sempre; depois de 6 meses, a limpeza diária os apaga.
+
+* `notificacao_retencao_dias` (**180**; 0 = guardar para sempre; interno). `limpar_notificacoes_antigas()` (`SECURITY DEFINER`, na mesma tarefa diária das 3h) apaga de `notificacao` as linhas com `status` `enviado`, `falhou` ou `cancelado` e `criado_em` mais velho que isso. **Pendente nunca sai** (ainda vai ser enviado). Deixa uma linha de rastro em `log_auditoria` (`tabela = 'notificacao'`), como a limpeza do log.
+* **Por quê 180:** os provedores de e-mail guardam o histórico de envio por semanas (SendGrid 30 dias, Postmark 45 por padrão); aqui a tabela também é a caixa do sino e o registro do RF-126 (reenvio de e-mail), então o padrão é maior. Nenhuma tabela aponta para `notificacao`, e o que importa de verdade (dinheiro, decisões) mora em `auditoria_financeira` e `log_auditoria`. Suíte 69 do PGlite.
+
 #### IP do aceite na contribuição
 
 **Em palavras simples:** a cada contribuição, inclusive sem conta, a plataforma registra o IP de onde ela foi feita, como prova do aceite do Termo numa contestação de pagamento. O Termo diz isso e diz o prazo; depois do prazo, o IP é apagado e o resto do aceite continua.
@@ -1158,7 +1165,7 @@ Concede à role `app_nestjs` (criada no `01`) exatamente os privilégios que a R
 * **[07-B-4] (removido em 14-11-2026) Desenvolvimento: toda conta logada lia tudo.** O papel `usuario` recebia as 6 permissões de **leitura** (`relatorio_visualizar`, `usuario_visualizar_sensivel`, `perfil_pesquisador_visualizar_sensivel`, `contribuicao_visualizar_sensivel`, `auditoria_financeira_visualizar`, `log_visualizar`) para qualquer papel testar todas as telas do painel. **Por que saiu:** com a área pública, a conta comum e o pesquisador são testados nas telas deles (Minha Conta, Estúdio do Pesquisador, checkout), e o painel passou a receber só papéis de gestão. Bancos já criados tiram essas permissões pelo Grupo CJ do `ATUALIZAR O SUPABASE.sql`.
 * **[07-C-5] `configuracoes`:** agrupado por domínio; a ordem do `INSERT` é a ordem que a tela de Parâmetros mostra (`id_config`). **Sem "alavanca fantasma":** chave sem nenhum consumidor não entra, porque o admin mudaria algo e nada aconteceria (pior que um valor fixo, porque parece que devia funcionar). A **descrição** de cada parâmetro é o que o admin lê primeiro na tela de Parâmetros: sem número de RF, sem nome de coluna nem de outra chave. Janelas de tempo de produto (validade da sessão, do link de verificação, do pedido de nova senha) são parâmetros; parâmetros de segurança, como o custo do bcrypt, ficam no código.
 * **[07-I-2] Constantes do score:** `score_frequencia_esperada_mensal` e `score_denuncias_para_zerar`, para o admin ajustar a régua pelo painel.
-* **[07-L] Retenção do log:** `log_auditoria_retencao_dias` (365) e `ip_aceite_contribuicao_retencao_dias` (1825) ([05-L]).
+* **[07-L] Retenção do log:** `log_auditoria_retencao_dias` (365), `ip_aceite_contribuicao_retencao_dias` (1825) e `notificacao_retencao_dias` (180) ([05-L]).
 * **[07-I-4] Cores da espera:** `espera_atencao_dias` (7) e `espera_critica_dias` (30), públicos, conferidos como par mínimo e máximo ([05-K-2-C], [05-K-2-K]).
 * **[07-G] Limites de upload:** as 7 chaves de arquivo (tamanho mínimo e máximos, cota por conta, limite de envios por janela, intervalo mínimo). Quem as lê é o Nest (`ConfiguracaoValorService`, `DOCUMENTACAO_BACKEND.md`, seção 8).
 * **[07-D-6] e [07-H-3] Termos e aceites:** o `tipo_termo` tem só `'cadastro'` (o termo da conta, que cobre também as contribuições) e `'upgrade_pesquisador'`. Cada contribuição registra em `aceite_termo_contribuicao` a versão do termo da conta vigente naquele momento (RF-086, RF-087), o que cobre também quem contribui sem conta. ⚠️ Publicar uma versão nova sem desativar a anterior quebra o índice `uq_termos_uso_ativo` ([02-D]): desativar a velha e inserir a nova precisam estar na mesma transação.
@@ -1266,7 +1273,7 @@ O raciocínio de arquitetura por trás de regras que valem para o banco inteiro.
 
 ## Como conferir este inventário
 
-**Contagem do inventário** (recontada nos `.sql` em 16-11-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **122 policies**, **125 triggers** no `05` (119 comuns e 6 `CONSTRAINT TRIGGER`), **200 funções** (158 no `05`, 40 no `03`, 1 no `08`, 1 no `01`), **69 índices** no `02` e **146 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (recontada nos `.sql` em 18-11-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **122 policies**, **125 triggers** no `05` (119 comuns e 6 `CONSTRAINT TRIGGER`), **201 funções** (159 no `05`, 40 no `03`, 1 no `08`, 1 no `01`), **69 índices** no `02` e **146 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
 
 Para recontar direto do banco (no SQL Editor do Supabase ou no banco local):
 

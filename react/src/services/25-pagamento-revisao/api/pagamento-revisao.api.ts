@@ -75,7 +75,7 @@ export const pagamentoRevisaoApi = {
       .then(tratarResposta<ContribuicaoAdminResponse[]>)
       .then(avisarSeTruncada('contribuições')),
 
-  // Todos os repasses, só leitura, o mais novo primeiro. Exige `repasse_aprovar` (403 sem ela).
+  // Todos os repasses, só leitura, o mais novo primeiro. Exige `repasse_visualizar` (403 sem ela).
   listarRepasses: (authFetch: AuthFetch): Promise<RepasseAdminResponse[]> =>
     authFetch(`${BASE}/repasses${paraQueryString({ limite: TAMANHO_PAGINA_MAXIMO_API })}`)
       .then(tratarResposta<RepasseAdminResponse[]>)

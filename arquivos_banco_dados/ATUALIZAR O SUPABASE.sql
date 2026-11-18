@@ -2941,3 +2941,105 @@ AS $$
 $$;
 
 GRANT EXECUTE ON FUNCTION public.listar_permissoes_usuario(INT) TO app_nestjs;
+
+-- ============================================================================
+-- GRUPO DB (18-11-2026) - "Aprovar Repasse" vira "Ver Repasses" (repasse_visualizar), também para o Revisor. IDEMPOTENTE.
+-- Não precisa parar o Nest, mas suba o Nest novo junto (ele passa a conferir repasse_visualizar).
+--
+-- O que muda:
+--   1. A permissão repasse_aprovar só servia para LER a lista de repasses (o repasse sai sozinho, pela tarefa agendada;
+--      ninguém o aprova à mão). Ela troca de nome para repasse_visualizar, e quem já a tinha continua com ela.
+--   2. pol_repasse_select passa a conferir o nome novo.
+--   3. O Revisor (quem audita o dinheiro) ganha a permissão: vê todos os repasses, só leitura.
+-- ============================================================================
+
+UPDATE permissao SET nome = 'repasse_visualizar'
+WHERE nome = 'repasse_aprovar'
+  AND NOT EXISTS (SELECT 1 FROM permissao WHERE nome = 'repasse_visualizar');
+
+DROP POLICY IF EXISTS pol_repasse_select ON repasse;
+CREATE POLICY pol_repasse_select ON repasse FOR SELECT TO app_nestjs USING (
+    (SELECT public.tem_permissao('repasse_visualizar')) OR EXISTS (
+        SELECT 1 FROM campanha WHERE id_campanha = repasse.id_campanha AND id_usuario = (SELECT public.id_usuario_atual())
+    )
+);
+
+INSERT INTO papel_permissao (id_papel, id_permissao)
+SELECT p.id_papel, pm.id_permissao
+FROM papel p, permissao pm
+WHERE p.codigo = 'revisor' AND pm.nome = 'repasse_visualizar'
+ON CONFLICT DO NOTHING;
+
+-- ============================================================================
+-- GRUPO DC (18-11-2026) - Prazo de guarda das notificações. IDEMPOTENTE.
+-- Não precisa parar o Nest; suba o Nest novo depois (a tarefa diária das 3h passa a chamar a função nova; o Nest
+-- antigo só não a chama).
+--
+-- O que muda:
+--   1. Parâmetro notificacao_retencao_dias (180; 0 = guardar para sempre).
+--   2. Função limpar_notificacoes_antigas(): apaga as notificações já resolvidas (enviado, falhou, cancelado) mais
+--      velhas que o prazo; pendente nunca sai. Deixa uma linha de rastro em log_auditoria.
+--   3. O Suporte ganha notificacao_processar: vê na tela Notificações se o e-mail saiu ou falhou e reenvia ou cancela
+--      o que falhou ("não recebi o e-mail"). A descrição do papel muda junto.
+-- ============================================================================
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
+(NULL, 'notificacao_retencao_dias',  '180', 'inteiro', 'Dias que os e-mails e avisos do sino já resolvidos (enviados, com falha ou cancelados) são guardados antes de serem apagados por job diário (0 = guardar para sempre; pendentes nunca são apagados)', TRUE, FALSE)
+ON CONFLICT (chave) DO NOTHING;
+
+-- ----------------------------------------------------------------------------
+-- Função:     limpar_notificacoes_antigas
+-- Assinatura: () -> INT
+-- Bloco:      [05-L]
+-- Regra:      Prazo de guarda das notificações (18-11-2026): apaga os e-mails e os avisos do sino já resolvidos
+--             (enviado, falhou, cancelado) mais velhos que notificacao_retencao_dias (180). Pendente nunca sai: ainda
+--             vai ser enviado. Valor 0 ou negativo = guardar para sempre. Deixa uma linha de rastro em log_auditoria
+--             quando apaga algo, como limpar_log_auditoria. SECURITY DEFINER, chamada pelo mesmo @Cron diário, sem
+--             sessão de usuário. Por quê: a tabela crescia para sempre, e o mercado guarda o histórico de envio por
+--             semanas (SendGrid 30 dias, Postmark 45); aqui ela também é a caixa do sino e o registro do RF-126, por
+--             isso o padrão é maior (6 meses).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.limpar_notificacoes_antigas()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_dias      INT;
+    v_corte     TIMESTAMPTZ;
+    v_apagadas  INT;
+BEGIN
+    v_dias := public.config_numero('notificacao_retencao_dias', 180)::INT;
+    IF v_dias <= 0 THEN
+        RETURN 0;
+    END IF;
+
+    v_corte := NOW() - (v_dias * INTERVAL '1 day');
+
+    DELETE FROM notificacao
+    WHERE status IN ('enviado', 'falhou', 'cancelado')
+      AND criado_em < v_corte;
+    GET DIAGNOSTICS v_apagadas = ROW_COUNT;
+
+    IF v_apagadas > 0 THEN
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, dados_anteriores)
+        VALUES ('notificacao', 'anteriores a ' || to_char(v_corte, 'YYYY-MM-DD'), 'DELETE', NULL,
+                jsonb_build_object('quantidade', v_apagadas, 'dias_retencao', v_dias, 'corte', v_corte));
+    END IF;
+
+    RETURN v_apagadas;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.limpar_notificacoes_antigas() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.limpar_notificacoes_antigas() TO app_nestjs;
+
+INSERT INTO papel_permissao (id_papel, id_permissao)
+SELECT p.id_papel, pm.id_permissao
+FROM papel p, permissao pm
+WHERE p.codigo = 'suporte' AND pm.nome = 'notificacao_processar'
+ON CONFLICT DO NOTHING;
+
+UPDATE papel
+SET descricao = 'Atende quem tem problema para entrar: desbloqueia login, reenvia a verificação de e-mail e confere se os e-mails do sistema chegaram.'
+WHERE codigo = 'suporte';

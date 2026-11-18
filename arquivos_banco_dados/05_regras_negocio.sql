@@ -6655,6 +6655,51 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Função:     limpar_notificacoes_antigas
+-- Assinatura: () -> INT
+-- Bloco:      [05-L]
+-- Regra:      Prazo de guarda das notificações (18-11-2026): apaga os e-mails e os avisos do sino já resolvidos
+--             (enviado, falhou, cancelado) mais velhos que notificacao_retencao_dias (180). Pendente nunca sai: ainda
+--             vai ser enviado. Valor 0 ou negativo = guardar para sempre. Deixa uma linha de rastro em log_auditoria
+--             quando apaga algo, como limpar_log_auditoria. SECURITY DEFINER, chamada pelo mesmo @Cron diário, sem
+--             sessão de usuário. Por quê: a tabela crescia para sempre, e o mercado guarda o histórico de envio por
+--             semanas (SendGrid 30 dias, Postmark 45); aqui ela também é a caixa do sino e o registro do RF-126, por
+--             isso o padrão é maior (6 meses).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.limpar_notificacoes_antigas()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_dias      INT;
+    v_corte     TIMESTAMPTZ;
+    v_apagadas  INT;
+BEGIN
+    v_dias := public.config_numero('notificacao_retencao_dias', 180)::INT;
+    IF v_dias <= 0 THEN
+        RETURN 0;
+    END IF;
+
+    v_corte := NOW() - (v_dias * INTERVAL '1 day');
+
+    DELETE FROM notificacao
+    WHERE status IN ('enviado', 'falhou', 'cancelado')
+      AND criado_em < v_corte;
+    GET DIAGNOSTICS v_apagadas = ROW_COUNT;
+
+    IF v_apagadas > 0 THEN
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, dados_anteriores)
+        VALUES ('notificacao', 'anteriores a ' || to_char(v_corte, 'YYYY-MM-DD'), 'DELETE', NULL,
+                jsonb_build_object('quantidade', v_apagadas, 'dias_retencao', v_dias, 'corte', v_corte));
+    END IF;
+
+    RETURN v_apagadas;
+END;
+$$;
+
 -- Tabelas com PK simples (1 argumento): lista escolhida com critério, não é "logar tudo": só o que o painel
 -- admin já edita hoje via RBAC/usuário/config, mais os catálogos que o admin também edita (motivo_denuncia,
 -- area_conhecimento, tipo_link, termos_de_uso, papel). contribuicao, repasse e evento_pagamento entram mais abaixo, só

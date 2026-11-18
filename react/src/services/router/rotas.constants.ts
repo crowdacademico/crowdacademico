@@ -24,6 +24,7 @@ import { ListarAuditoriaFinanceira } from '../../views/25-pagamento-revisao/list
 import { ListarContribuicoes } from '../../views/25-pagamento-revisao/listar-contribuicoes';
 import { ListarRepasses } from '../../views/25-pagamento-revisao/listar-repasses';
 import { ListarAtualizacoes } from '../../views/15-atualizacao-campanha/listar-atualizacoes';
+import { ListarComentariosModeracao } from '../../views/17-comentario/listar-comentarios-moderacao';
 import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
 import { PontuacaoScore } from '../../views/11-configuracoes/pontuacao-score';
 import { ListarModelosMensagem } from '../../views/27-notificacao/listar-modelos-mensagem';
@@ -199,7 +200,7 @@ export const ROTAS_ADMIN: Rota[] = [
   // Pontuação (Score): pesos das dimensões e faixas de reputação (tabelas score_config e score_rotulo).
   {
     caminho: '/admin/pontuacao',
-    permissoes: ['score_editar'],
+    permissoes: ['score_editar', 'relatorio_visualizar'],
     caminhoRelativo: 'pontuacao',
     elemento: PontuacaoScore,
     rotuloMenu: 'Pontuação (Score)',
@@ -290,6 +291,18 @@ export const ROTAS_ADMIN: Rota[] = [
     grupoMenu: 'CAMPANHA',
     icone: 'fa-newspaper',
   },
+  // Os comentários de todas as campanhas (18-11-2026): só para o caso excepcional de um comentário perigoso que
+  // ninguém denunciou (comentario_moderar). Não é um mural: só o endossado fica público.
+  {
+    caminho: '/admin/comentarios',
+    permissoes: ['comentario_moderar'],
+    caminhoRelativo: 'comentarios',
+    elemento: ListarComentariosModeracao,
+    rotuloMenu: 'Comentários',
+    rotuloBreadcrumb: 'Comentários',
+    grupoMenu: 'CAMPANHA',
+    icone: 'fa-comments',
+  },
 
   // Fila de aprovação: item do grupo MODERAÇÃO.
   {
@@ -368,10 +381,10 @@ export const ROTAS_ADMIN: Rota[] = [
     grupoMenu: 'PAGAMENTOS',
     icone: 'fa-hand-holding-heart',
   },
-  // Só leitura: todos os repasses ao pesquisador (repasse_aprovar: admin).
+  // Só leitura: todos os repasses ao pesquisador (repasse_visualizar: o admin e o Revisor).
   {
     caminho: '/admin/repasses',
-    permissoes: ['repasse_aprovar'],
+    permissoes: ['repasse_visualizar'],
     caminhoRelativo: 'repasses',
     elemento: ListarRepasses,
     rotuloMenu: 'Repasses',

@@ -19,7 +19,7 @@ interface LinhaRepasse {
 
 // Todos os repasses, só leitura, o mais novo primeiro. "Aguardando chave Pix" com a mesma regra de
 // listar_repasses_atencao (05): o dono da campanha sem chave Pix verificada. A RLS (pol_repasse_select, 04) mostraria a
-// quem não tem repasse_aprovar só os repasses das próprias campanhas; a tela é de quem tem a permissão, então sem ela é
+// quem não tem repasse_visualizar só os repasses das próprias campanhas; a tela é de quem tem a permissão, então sem ela é
 // 403, e não uma lista pela metade.
 @Injectable()
 export class PagamentoRevisaoServiceRepassesTodos {
@@ -30,7 +30,7 @@ export class PagamentoRevisaoServiceRepassesTodos {
 
   async listar(limite = 500): Promise<RepasseAdminResponse[]> {
     await this.autorizacao.exigirPermissao(
-      'repasse_aprovar',
+      'repasse_visualizar',
       'Você não tem permissão para ver os repasses.',
     );
     const resultado = await sql<LinhaRepasse>`

@@ -26,6 +26,11 @@ Só o que ainda falta **fazer ou decidir**. O que fica pronto sai daqui (atualiz
 
 ### Decisões do financeiro (comparado com o mercado em 19-10-2026)
 
+**Recomendação de 18-11-2026 (pesquisa nova: Catarse, Kickstarter, iugu, Guia do MED do Banco Central, Adyen).** Os três itens abaixo, na ordem de fazer:
+1. **Ressarcimento depois do repasse:** a cláusula no Termo do Pesquisador (o rascunho abaixo, sem multa nem juros: num TCC gratuito eles só afastam pesquisador) e **sem desconto automático** por enquanto. É o que o mercado faz (Catarse 7.9/7.10; no Kickstarter o criador responde pelo que volta depois do repasse; a iugu desconta do saldo e cobra). O MED não obriga o banco do recebedor a cobrir com dinheiro próprio: quem recompõe é o recebedor, então a cláusula é o que dá base para cobrar. A contestação já cai na revisão manual; o admin registra e cobra. O desconto automático no próximo repasse só vale a pena com volume.
+2. **Devolução que ninguém recebe:** a opção (C) com prazo de **120 dias** (o do Catarse) num parâmetro (`devolucao_prazo_reclamar_dias`), contado da primeira falha, com um e-mail no começo e outro 30 dias antes do fim. Depois do prazo o admin encerra como "não reclamado", com justificativa no log. O estorno do Pix só funciona até 90 dias, então depois disso o caminho é transferir para a chave que a pessoa informar.
+3. **Conciliação de saldo:** a opção (B). Uma tarefa diária lê o saldo do provedor (o Asaas tem consulta de saldo) e compara com o dinheiro de terceiros que o sistema diz que deveria estar lá. Se ficar abaixo, avisa o admin. É a parte "o dinheiro de terceiros bate com o que está guardado" da conciliação das plataformas grandes (Adyen), sem a conciliação linha a linha.
+
 Feitos no mesmo dia: a contestação de cartão vai para revisão manual, e o repasse espera a carência de `repasse_carencia_dias` (15). Fica para decidir:
 
 - **Quem ressarce o dinheiro que volta depois do repasse.** Contestação de cartão e devolução por fraude do Pix (MED, até 80 dias) podem chegar depois da carência. O Catarse põe no termo que o criador ressarce, desconta do saldo dele e, se ele já sacou, cobra em 10 dias com multa de 10% (Termos de Uso, itens 7.9 e 7.10). Aqui: escrever a cláusula no Termo do Pesquisador (Lucas e Alexia) e decidir se o sistema registra a dívida e desconta do próximo repasse.
@@ -40,12 +45,9 @@ Feitos no mesmo dia: a contestação de cartão vai para revisão manual, e o re
   - **Opções:** (A) só o prazo, e o admin encerra como "não reclamado"; (B) igual ao Catarse: e-mail, a pessoa informa a chave em Minha Conta, o sistema transfere sozinho com novas tentativas, lembretes e prazo; (C) a (B) sem a transferência automática: o admin devolve pelo painel do provedor e usa o "Registrar a devolução" que já existe. Recomendação: (C) agora e (B) se houver volume, porque transferir sozinho para uma chave recém-informada abre a porta para quem invadiu a conta (a chave do pesquisador passa por verificação de titularidade por esse motivo). O visitante sem conta fica só com o prazo até o apoio da área pública guardar o e-mail. Decidir também o prazo (120 dias, como o Catarse, ou outro) e confirmar o escopo antes.
 - **Conciliação de saldo** (conferir o saldo da conta no provedor com o que o sistema diz que deveria estar lá). Opções: (A) mostrar no painel, lado a lado, o saldo do provedor e o "dinheiro de terceiros" que a conta tem de ter (pago e ainda não repassado, a devolver, em reembolso manual), sem alerta; (B) o mesmo, conferido por uma tarefa diária que avisa quando o saldo fica abaixo do dinheiro de terceiros; (C) conciliação completa, linha a linha, do extrato do provedor com os eventos do sistema. Recomendada: (B), que pega dinheiro saindo sem aviso sem precisar contabilizar a receita da plataforma; a (C) é a das empresas grandes e pesada para o TCC.
 
-### Textos dos Termos (quem escreve é o Administrador, numa versão nova pelo painel)
+### Textos dos Termos
 
-- **Prazo de aprovação da campanha (pedido do orientador, 05-11-2026):** o TCC (Seção 2.4.3) diz que a análise sugere publicar um prazo de avaliação de cinco dias úteis; nenhum dos dois Termos fala em prazo (o item 4.1 do Termo de Uso diz só que toda campanha passa por aprovação). Escrever o prazo no Termo de Pesquisador. Já combina com o sistema: a fila de aprovação fica amarela a partir de 7 dias (`espera_atencao_dias`), mais ou menos os 5 dias úteis.
-- **Desistência do apoio:** o Termo de Uso precisa falar do "Desistir do apoio" (CDC, art. 49; 7 dias da contribuição; devolve só o valor, a tarifa fica com o provedor).
-- **Chave Pix (RF-026):** o requisito pede que o Termo de Pesquisador diga, de forma explícita, que a correção da chave Pix cadastrada é responsabilidade do pesquisador. O termo vigente não fala da chave. Antes, estudar e fazer uma pesquisa de mercado, sem pressa. O e-mail do repasse previsto, a outra parte do RF-026, já foi feito.
-- **Boleto no Termo de Uso do Supabase:** o Termo vigente no Supabase ainda cita o boleto ("Pix, cartão ou boleto"). O seed já foi corrigido (17-11-2026) e vale quando o banco for recriado; sem recriar, publicar uma versão nova pelo painel.
+Resolvidos no seed em 18-11-2026 (valem quando o banco for recriado): prazo de análise de 5 dias úteis (Termo de Pesquisador, 3.2), chave Pix por conta do pesquisador (3.3, RF-026), desistência do apoio (Termo de Uso, 5.4) e o Termo de Uso sem boleto. Sem recriar o banco, o Supabase continua com os textos antigos: publicar versões novas pelo painel.
 
 ---
 
@@ -58,7 +60,6 @@ Feitos no mesmo dia: a contestação de cartão vai para revisão manual, e o re
 
 ## 4. No dia do deploy
 
-- **Prazo de guarda das notificações (auditoria de 01-11-2026):** a tabela `notificacao` (e-mails e avisos do sino) cresce para sempre; o `log_auditoria` tem prazo de guarda, ela não. Decidir no deploy se ganha um parâmetro de guarda como o do log.
 - **Banco de produção:** rodar o `07_seed_dados.sql` só até o marcador `[07-DEMONSTRACAO]` e promover a primeira conta a admin uma vez (ver `.Tutorial-rodar-projeto.md`).
 - **Banco depois do deploy: mudança vira arquivo novo numerado** (começando em 09, depois 10, e assim por diante), nunca edição dos arquivos `01` a `08` nem só o `ATUALIZAR`. O executor de migrações (`npm run db:migrate`) aplica só o que é novo e avisa, sem reaplicar, quando um arquivo já aplicado muda. No primeiro deploy: `npm run db:migrate:adotar` no banco que já tem tudo, e `DATABASE_URL_MIGRATIONS` com a credencial de administrador do banco.
 - **Registro de acessos (Marco Civil da Internet, art. 15):** quem opera como empresa precisa guardar IP, data e hora de cada acesso por 6 meses. Hoje o IP fica só nos aceites e no último login. Só vale se o sistema entrar em operação; detalhe em `DOCUMENTACAO_BD.md`, "IP: base legal e anonimato do Pix".

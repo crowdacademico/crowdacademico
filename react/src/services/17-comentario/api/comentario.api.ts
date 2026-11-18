@@ -2,7 +2,7 @@ import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
 import { desembrulharPaginado, TAMANHO_PAGINA_MAXIMO_API } from '../../constant/type/paginacao.type';
-import type { ComentarioMeuResponse, ComentarioResponse } from '../type/comentario.type';
+import type { ComentarioMeuResponse, ComentarioModeracaoResponse, ComentarioResponse } from '../type/comentario.type';
 
 // Espelha nest/src/17-comentario. Quem pode o quê é decidido pelo banco (pol_comentario_*, 04): o dono da campanha
 // endossa, exclui (apaga de vez) e bloqueia (inativo: fica guardado e o autor não comenta mais naquela campanha); a
@@ -38,6 +38,19 @@ export const comentarioApi = {
     ),
   excluir: (authFetch: AuthFetch, id: number): Promise<void> =>
     authFetch(`/comentario/${id}`, { method: 'DELETE' }).then(tratarResposta<void>),
+  // Moderação (18-11-2026): todos os comentários, de todas as campanhas, o mais novo primeiro.
+  listarModeracao: (authFetch: AuthFetch): Promise<ComentarioModeracaoResponse[]> =>
+    authFetch('/comentario/moderacao?limite=500').then(tratarResposta<ComentarioModeracaoResponse[]>),
+  // Ocultar tira do ar e tira o endosso (sai da página pública); mostrar de novo devolve sem endosso (o dono da
+  // campanha decide se endossa outra vez). Só a moderação devolve ao ar um comentário oculto (regra do banco).
+  ocultarModeracao: (authFetch: AuthFetch, id: number): Promise<ComentarioResponse> =>
+    authFetch(`/comentario/${id}`, { method: 'PATCH', body: JSON.stringify({ ativo: false, endossado: false }) }).then(
+      tratarResposta<ComentarioResponse>,
+    ),
+  mostrarModeracao: (authFetch: AuthFetch, id: number): Promise<ComentarioResponse> =>
+    authFetch(`/comentario/${id}`, { method: 'PATCH', body: JSON.stringify({ ativo: true }) }).then(
+      tratarResposta<ComentarioResponse>,
+    ),
   bloquear: (authFetch: AuthFetch, id: number): Promise<ComentarioResponse> =>
     authFetch(`/comentario/${id}`, { method: 'PATCH', body: JSON.stringify({ ativo: false }) }).then(
       tratarResposta<ComentarioResponse>,

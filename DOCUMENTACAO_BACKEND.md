@@ -682,7 +682,7 @@ Pra comparação de escala: 96 chamadas por dia é um volume desprezível perto 
 | `CampanhaServiceExpireDrafts` | de hora em hora | `expirar_campanhas_rascunho()` | apaga rascunho mais velho que `campanha_rascunho_ttl_horas` (336h), contado da criação |
 | `CampanhaServiceExpireRejected` | de hora em hora | `expirar_campanhas_rejeitadas()` | apaga campanha rejeitada cujo prazo de reenvio (`campanha_rejeitada_prazo_dias`, 30) venceu |
 | `ArquivoServiceCleanOrphans` | 1x por dia, às 4h | `desativar_arquivos_orfaos()` | desativa arquivo que ninguém adotou (nem foto nem anexo) em `arquivo_horas_para_vincular` (24h; 0 = desligado), apaga o objeto do armazenamento e deixa uma linha de rastro |
-| `LogAuditoriaServiceClean` | 1x por dia, às 3h | `limpar_log_auditoria()` e `limpar_ip_aceite_contribuicao()` | apaga `log_auditoria` mais velho que `log_auditoria_retencao_dias` (365; 0 = guardar para sempre) e deixa uma linha de rastro com a quantidade e a data de corte; depois apaga o IP do aceite de contribuição mais velho que `ip_aceite_contribuicao_retencao_dias` (1825, 5 anos, o prazo do Termo) |
+| `LogAuditoriaServiceClean` | 1x por dia, às 3h | `limpar_log_auditoria()`, `limpar_ip_aceite_contribuicao()` e `limpar_notificacoes_antigas()` | apaga `log_auditoria` mais velho que `log_auditoria_retencao_dias` (365; 0 = guardar para sempre) e deixa uma linha de rastro com a quantidade e a data de corte; depois apaga o IP do aceite de contribuição mais velho que `ip_aceite_contribuicao_retencao_dias` (1825, 5 anos, o prazo do Termo); por fim apaga as notificações já resolvidas (enviado, falhou, cancelado) mais velhas que `notificacao_retencao_dias` (180; 0 = guardar para sempre; pendente nunca sai) |
 
 Os 6 têm `try/catch` com `logger.error` (incluindo o nome do job). Motivo: o `@Cron` chama o método sem `await` de ninguém, então uma exceção da função SQL vira `unhandledRejection`, e o Node moderno derruba o processo inteiro por causa de um job de limpeza. Só o registro da falha, sem repetir a tentativa: o job roda de novo no próximo ciclo.
 
@@ -1212,6 +1212,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | GET | `/atualizacao-campanha/moderacao` *(as atualizações de todas as campanhas, com os anexos, a mais nova primeiro; a RLS escopa: quem tem `atualizacao_moderar` vê todas, os outros as visíveis e as próprias ocultas)* |
 | pub | GET | `/comentario` *(filtro `endossado`: só os endossados, na ordem do endosso)* |
 | AUTH | GET | `/comentario/minhas` *(os comentários que a conta logada escreveu)* |
+| AUTH | GET | `/comentario/moderacao` *(todos os comentários, para a tela Comentários da moderação; a RLS escopa)* |
 | AUTH | POST | `/comentario` |
 | AUTH | PATCH | `/comentario/:id` |
 | AUTH | DELETE | `/comentario/:id` |
@@ -1255,7 +1256,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | GET | `/conta-recebimento/repasses` · `/conta-recebimento/cartao-a-liberar` |
 | AUTH | GET | `/pagamento-admin/revisoes` · `/pagamento-admin/reembolsos-manuais` · `/pagamento-admin/repasses/atencao` |
 | AUTH | GET | `/pagamento-admin/auditoria-financeira` *(só leitura; exige `auditoria_financeira_visualizar`)* |
-| AUTH | GET | `/pagamento-admin/repasses` *(só leitura; todos os repasses, com "aguardando chave Pix"; exige `repasse_aprovar`)* |
+| AUTH | GET | `/pagamento-admin/repasses` *(só leitura; todos os repasses, com "aguardando chave Pix"; exige `repasse_visualizar`)* |
 | AUTH | GET | `/pagamento-admin/contribuicoes` *(só leitura; todas as contribuições com a situação do repasse; exige `contribuicao_visualizar_sensivel`)* |
 | AUTH | POST | `/pagamento-admin/revisoes/:id/resolver` · `/pagamento-admin/reembolsos-manuais/:id/concluir` · `/pagamento-admin/repasses/:id/reenfileirar` · `/pagamento-admin/repasses/:id/marcar-pago` |
 | AUTH | GET | `/campo-testes/pagamento` *(T5, bancada de pagamento: qualquer conta logada, cada uma alcançando o que a RLS dela deixa; só fora de produção, como todo o Campo de Testes)* |

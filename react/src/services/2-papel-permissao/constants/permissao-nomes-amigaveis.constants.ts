@@ -169,10 +169,10 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     impacto: 'baixo',
   },
   notificacao_processar: {
-    nome: 'Processar Notificações',
-    resumo: 'Marcar notificações do sistema como processadas/enviadas.',
-    oQueFaz: 'Permite marcar notificações do sistema como processadas/enviadas.',
-    porQueExiste: 'Suporte técnico da fila de notificações, garantir que nada fique parado sem ser entregue.',
+    nome: 'Gerenciar Notificações',
+    resumo: 'Ver os e-mails e avisos que o sistema mandou e reenviar ou cancelar um e-mail que falhou.',
+    oQueFaz: 'Abre a tela Notificações: para quem foi cada e-mail e aviso do sino, se saiu ou falhou e por quê; reenvia ou cancela o e-mail que falhou. Também é a permissão da tarefa que envia a fila.',
+    porQueExiste: '"Não recebi o e-mail" é o atendimento mais comum: o Suporte confere se o e-mail saiu e reenvia o que falhou, sem ver o link com token que o e-mail leva.',
     impacto: 'baixo',
   },
   usuario_criar: {
@@ -261,12 +261,12 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     porQueExiste: 'Mesma lógica de moderar comentário, mas para o conteúdo que o próprio autor da campanha publica.',
     impacto: 'médio',
   },
-  repasse_aprovar: {
-    nome: 'Aprovar Repasse',
-    resumo: 'Liberar a transferência do dinheiro arrecadado.',
-    oQueFaz: 'Permite liberar a transferência de dinheiro arrecadado para a conta do pesquisador.',
-    porQueExiste: 'É o ponto onde dinheiro de verdade sai do sistema, exige aprovação explícita, nunca automático.',
-    impacto: 'alto',
+  repasse_visualizar: {
+    nome: 'Ver Repasses',
+    resumo: 'Ver todos os repasses ao pesquisador, só leitura.',
+    oQueFaz: 'Mostra a lista de todos os repasses (valor, taxa, situação, quando saiu), de todas as campanhas. Não aprova nem mexe em nada: o repasse sai sozinho, pela tarefa agendada, depois da carência.',
+    porQueExiste: 'Quem audita o dinheiro (o Revisor) precisa ver o que saiu para cada pesquisador. Até 18-11-2026 se chamava repasse_aprovar, um nome enganoso: ninguém aprova repasse à mão.',
+    impacto: 'médio',
   },
   campanha_criar_para_outro: {
     nome: 'Criar Campanha para Outro Pesquisador',

@@ -9,21 +9,21 @@ const CONTAS = {
   admin: 'admin@crowdacademico.com.br',
   curador: 'curador@crowdacademico.com.br', // aprova e rejeita campanhas, catálogos, relatório, pesquisadores e contas (só leitura)
   moderador: 'moderador@crowdacademico.com.br', // denúncias, comentários, atualizações, encerrar por moderação
-  suporte: 'suporte.sistema@crowdacademico.com.br', // atendimento: ver usuários, desbloquear, reenviar verificação
-  revisor: 'revisor@crowdacademico.com.br', // relatório, auditoria financeira, log
+  suporte: 'suporte.sistema@crowdacademico.com.br', // atendimento: ver usuários, desbloquear, reenviar verificação, conferir e-mails
+  revisor: 'revisor@crowdacademico.com.br', // relatório, auditoria financeira, repasses e pontuação (só leitura), log
 };
 
 // O que cada papel PRECISA ver e o que NÃO pode aparecer (rótulos do menu lateral).
 const ESPERADO: Record<keyof typeof CONTAS, { ve: string[]; naoVe: string[]; proibida: string }> = {
   admin: { ve: ['Dashboard', 'Usuários', 'Parâmetros do Sistema', 'Aprovar Campanhas', 'Denúncias', 'Auditoria Financeira'], naoVe: [], proibida: '' },
-  curador: { ve: ['Dashboard', 'Aprovar Campanhas', 'Campanhas', 'Áreas do Conhecimento', 'Pesquisadores', 'Usuários'], naoVe: ['Notificações', 'Parâmetros do Sistema', 'Denúncias', 'Auditoria Financeira', 'Papéis & Permissões'], proibida: '/admin/parametros-sistema' },
-  moderador: { ve: ['Denúncias', 'Atualizações', 'Campanhas'], naoVe: ['Dashboard', 'Aprovar Campanhas', 'Usuários', 'Parâmetros do Sistema', 'Repasses'], proibida: '/admin/usuarios' },
-  suporte: { ve: ['Usuários'], naoVe: ['Dashboard', 'Aprovar Campanhas', 'Denúncias', 'Parâmetros do Sistema', 'Contribuições'], proibida: '/admin/denuncias' },
-  revisor: { ve: ['Dashboard', 'Auditoria Financeira', 'Campanhas'], naoVe: ['Aprovar Campanhas', 'Denúncias', 'Usuários', 'Parâmetros do Sistema'], proibida: '/admin/aprovar-campanhas' },
+  curador: { ve: ['Dashboard', 'Aprovar Campanhas', 'Campanhas', 'Áreas do Conhecimento', 'Pesquisadores', 'Usuários'], naoVe: ['Notificações', 'Parâmetros do Sistema', 'Denúncias', 'Comentários', 'Auditoria Financeira', 'Papéis & Permissões'], proibida: '/admin/parametros-sistema' },
+  moderador: { ve: ['Denúncias', 'Atualizações', 'Comentários', 'Campanhas'], naoVe: ['Dashboard', 'Aprovar Campanhas', 'Usuários', 'Parâmetros do Sistema', 'Repasses'], proibida: '/admin/usuarios' },
+  suporte: { ve: ['Usuários', 'Notificações'], naoVe: ['Dashboard', 'Aprovar Campanhas', 'Denúncias', 'Parâmetros do Sistema', 'Contribuições'], proibida: '/admin/denuncias' },
+  revisor: { ve: ['Dashboard', 'Auditoria Financeira', 'Repasses', 'Pontuação (Score)', 'Campanhas'], naoVe: ['Aprovar Campanhas', 'Denúncias', 'Usuários', 'Parâmetros do Sistema'], proibida: '/admin/aprovar-campanhas' },
 };
 
 const menu = (page: Page) => page.locator('.admin-sidebar');
-const itemDoMenu = (page: Page, rotulo: string) => menu(page).locator('a.admin-sidebar__item', { hasText: new RegExp(`^\\s*${rotulo.replace(/[&]/g, '\\$&')}\\s*$`) });
+const itemDoMenu = (page: Page, rotulo: string) => menu(page).locator('a.admin-sidebar__item', { hasText: new RegExp(`^\\s*${rotulo.replace(/[&()]/g,'\\$&')}\\s*$`) });
 
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });

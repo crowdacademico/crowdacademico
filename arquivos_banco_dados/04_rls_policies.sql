@@ -605,7 +605,7 @@ DROP POLICY IF EXISTS pol_repasse_update ON repasse;
 
 DROP POLICY IF EXISTS pol_repasse_select ON repasse;
 CREATE POLICY pol_repasse_select ON repasse FOR SELECT TO app_nestjs USING (
-    (SELECT public.tem_permissao('repasse_aprovar')) OR EXISTS (
+    (SELECT public.tem_permissao('repasse_visualizar')) OR EXISTS (
         SELECT 1 FROM campanha WHERE id_campanha = repasse.id_campanha AND id_usuario = (SELECT public.id_usuario_atual())
     )
 );

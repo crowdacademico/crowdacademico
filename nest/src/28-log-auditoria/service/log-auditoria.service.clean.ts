@@ -12,6 +12,10 @@ import { PG_POOL } from '../../commons/database/database.constants';
 // `configuracoes.ip_aceite_contribuicao_retencao_dias` (5 anos, o prazo que o Termo
 // de Uso promete no item 5.4), pela função `limpar_ip_aceite_contribuicao()`.
 //
+// E apaga as notificações já resolvidas (enviado, falhou, cancelado) mais velhas que
+// `configuracoes.notificacao_retencao_dias` (180 dias; 0 = guardar para sempre), pela
+// função `limpar_notificacoes_antigas()` (18-11-2026). Pendente nunca é apagada.
+//
 // Mesmo molde dos jobs de campanha (`PG_POOL` direto, porque o job roda fora do
 // pipeline HTTP e sem sessão de usuário).
 @Injectable()
@@ -47,9 +51,20 @@ export class LogAuditoriaServiceClean {
           `${quantidadeIps} IP(s) de aceite de contribuição apagado(s) por passar do prazo de retenção.`,
         );
       }
+
+      const notificacoes = await this.pool.query<{
+        limpar_notificacoes_antigas: number;
+      }>('SELECT public.limpar_notificacoes_antigas()');
+      const quantidadeNotificacoes =
+        notificacoes.rows[0]?.limpar_notificacoes_antigas ?? 0;
+      if (quantidadeNotificacoes > 0) {
+        this.logger.log(
+          `${quantidadeNotificacoes} notificação(ões) já resolvida(s) apagada(s) por passar do prazo de guarda.`,
+        );
+      }
     } catch (erro) {
       this.logger.error(
-        `Falha na limpeza por prazo de retenção (log de auditoria ou IP de aceite): ${erro instanceof Error ? erro.message : String(erro)}`,
+        `Falha na limpeza por prazo de retenção (log de auditoria, IP de aceite ou notificações): ${erro instanceof Error ? erro.message : String(erro)}`,
       );
     }
   }

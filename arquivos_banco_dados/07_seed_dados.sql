@@ -76,7 +76,7 @@ INSERT INTO papel (nome, codigo, descricao, ordem_exibicao) VALUES
 ('admin', 'admin', 'Acesso total ao painel: usuários, papéis e permissões, parâmetros, catálogos, Termo de Uso, aprovação de campanhas, moderação e log.', 1),
 ('moderador', 'moderador', 'Cuida do conteúdo: julga denúncias, decide contestações de denúncias julgadas por outra pessoa, modera comentários e atualizações e pode encerrar uma campanha por moderação.', 2),
 ('revisor', 'revisor', 'Acompanha o funcionamento, só lendo: vê relatórios, a pontuação dos pesquisadores, a auditoria financeira e o log, sem dados pessoais.', 3),
-('suporte', 'suporte', 'Atende quem tem problema para entrar: desbloqueia login e reenvia a verificação de e-mail.', 4),
+('suporte', 'suporte', 'Atende quem tem problema para entrar: desbloqueia login, reenvia a verificação de e-mail e confere se os e-mails do sistema chegaram.', 4),
 ('curador', 'curador', 'Faz a curadoria das campanhas (aprova e rejeita) e cuida dos catálogos: áreas do conhecimento, tipos de link e motivos de denúncia.', 5),
 ('pesquisador', 'pesquisador', 'Recebido no upgrade para pesquisador: cria e gerencia as próprias campanhas. Não dá acesso ao que é de outras pessoas.', 6),
 ('usuario', 'usuario', 'Papel de toda conta cadastrada. Sozinho, não libera nenhuma área de administração.', 7)
@@ -150,7 +150,7 @@ INSERT INTO permissao (nome) VALUES
 ('solicitacao_encerramento_decidir'),
 ('comentario_moderar'),
 ('atualizacao_moderar'),
-('repasse_aprovar'),
+('repasse_visualizar'),
 -- F - LINK (Vinculação de URLs Externas)
 -- Junto com arquivo_gerenciar (grupo C): as duas fecham a remoção de eh_admin() de 100% das RLS policies (ver
 -- RBAC-pontos-discutidos.md).
@@ -212,7 +212,7 @@ WHERE (p.nome, perm.nome) IN (
     ('admin', 'solicitacao_encerramento_decidir'),
     ('admin', 'comentario_moderar'),
     ('admin', 'atualizacao_moderar'),
-    ('admin', 'repasse_aprovar'),
+    ('admin', 'repasse_visualizar'),
     -- F
     ('admin', 'link_academico_gerenciar'),
     -- H
@@ -235,6 +235,8 @@ WHERE (p.nome, perm.nome) IN (
     ('revisor', 'relatorio_visualizar'),
     ('revisor', 'auditoria_financeira_visualizar'),
     ('revisor', 'log_visualizar'),
+    -- Quem audita o dinheiro vê os repasses (18-11-2026). Só leitura: o repasse sai sozinho, pela tarefa agendada.
+    ('revisor', 'repasse_visualizar'),
     -- suporte: atendimento de conta, sem acesso a dados sensíveis ou financeiros.
     ('suporte', 'verificacao_email_reenviar'),
     -- Desbloquear login é atendimento de conta, mesmo escopo das outras permissões de 'suporte' acima.
@@ -244,6 +246,9 @@ WHERE (p.nome, perm.nome) IN (
     ('suporte', 'usuario_desbloquear'),
     -- Sem ver a conta, o Suporte não chega aos botões acima (ficam no Alterar Usuário).
     ('suporte', 'usuario_visualizar_atendimento'),
+    -- "Não recebi o e-mail" é o atendimento mais comum (18-11-2026): o Suporte vê na tela Notificações se o e-mail saiu
+    -- ou falhou, e reenvia ou cancela o que falhou. Nunca vê o link com token (a resposta não o traz e ele é apagado ao enviar).
+    ('suporte', 'notificacao_processar'),
     -- curador: aprova e rejeita campanhas (a curadoria) e cuida dos catálogos que classificam o conteúdo.
     -- relatorio_visualizar: sem ela a fila de campanhas aguardando aprovação fica invisível (pol_campanha_select, 04).
     -- Publicar o Termo de Uso é só do admin.
@@ -518,7 +523,9 @@ ON CONFLICT (tipo, versao) DO NOTHING;
 
 -- v2 do pesquisador: em relação à v1, a seção 4 explica como a pontuação é calculada (as quatro dimensões, as
 -- denúncias procedentes contra o perfil e contra as campanhas, o encerramento direto fora do histórico) e o pedido
--- de revisão (LGPD, art. 20). Versão nova, não edição da v1: versão já aceita não se altera.
+-- de revisão (LGPD, art. 20). Versão nova, não edição da v1: versão já aceita não se altera. Em 18-11-2026 (decisão
+-- do Lucas, que recria o banco do zero) a seção 3 ganhou o prazo de análise das campanhas (3.2, os 5 dias úteis da
+-- Seção 2.4.3 do TCC) e a responsabilidade pela chave Pix (3.3, RF-026).
 INSERT INTO termos_de_uso (id_termo, tipo, versao, conteudo, ativo, criado_em) VALUES
 (4, 'upgrade_pesquisador', 'v2-2026-10-03', 'TERMOS DE UPGRADE DE PERFIL DE PESQUISADOR - CROWDACADÊMICO
 
@@ -529,7 +536,9 @@ Este termo é exibido no momento em que um usuário comum solicita o upgrade de 
 Ao solicitar o upgrade, o usuário declara que o CPF, o vínculo institucional (quando aplicável) e o título acadêmico informados são verdadeiros. Informações falsas podem levar à suspensão do perfil de pesquisador e das campanhas vinculadas a ele.
 
 3. RESPONSABILIDADES DO PERFIL DE PESQUISADOR
-O perfil de pesquisador autoriza submeter e gerenciar campanhas de financiamento coletivo. O pesquisador é responsável pela veracidade das informações de cada campanha, pela execução do projeto descrito e pela prestação de contas aos apoiadores, conforme as regras de moderação da plataforma.
+3.1. O perfil de pesquisador autoriza submeter e gerenciar campanhas de financiamento coletivo. O pesquisador é responsável pela veracidade das informações de cada campanha, pela execução do projeto descrito e pela prestação de contas aos apoiadores, conforme as regras de moderação da plataforma.
+3.2. Análise das campanhas. Toda campanha enviada passa pela análise da curadoria antes de ficar visível ao público. A plataforma busca concluir essa análise em até 5 (cinco) dias úteis contados do envio; campanhas de maior risco, como as que envolvem seres humanos, animais ou dados sensíveis, podem levar mais tempo. A campanha rejeitada recebe a justificativa da curadoria e pode ser corrigida e reenviada, nos limites de reenvio e de prazo informados na plataforma.
+3.3. Chave Pix para os repasses. O pesquisador é o único responsável por cadastrar e manter correta a chave Pix que recebe os repasses das suas campanhas. A plataforma confere que a chave pertence ao CPF do pesquisador antes de usá-la e avisa, por e-mail, a data prevista de cada repasse. O repasse feito para a chave cadastrada e conferida é considerado cumprido; um erro na chave informada pelo pesquisador não obriga a plataforma a repetir o pagamento.
 
 4. PONTUAÇÃO E REPUTAÇÃO
 4.1. O perfil de pesquisador recebe uma pontuação (score) de 0 a 100, calculada automaticamente pela plataforma e exibida publicamente junto com uma faixa de reputação.
@@ -722,6 +731,7 @@ ON CONFLICT (chave) DO NOTHING;
 -- [07-L] configuracoes: retenção do log de auditoria (ver DOCUMENTACAO_BD.md [05-L])
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
 (NULL, 'log_auditoria_retencao_dias', '365', 'inteiro', 'Dias que o log de auditoria é guardado antes de ser apagado por job diário (0 = guardar para sempre)', TRUE, FALSE),
+(NULL, 'notificacao_retencao_dias',  '180', 'inteiro', 'Dias que os e-mails e avisos do sino já resolvidos (enviados, com falha ou cancelados) são guardados antes de serem apagados por job diário (0 = guardar para sempre; pendentes nunca são apagados)', TRUE, FALSE),
 -- Lida por limpar_ip_aceite_contribuicao() (05, [05-L]). 1825 dias = 5 anos, prazo do Código de Defesa do Consumidor
 -- (art. 27) e o que o Termo de Uso promete (item 5.4): mudar o prazo pede uma versão nova do Termo.
 (NULL, 'ip_aceite_contribuicao_retencao_dias', '1825', 'inteiro', 'Dias que o IP do aceite de cada contribuição é guardado antes de ser apagado (0 = guardar para sempre). O prazo está escrito no Termo de Uso: mudar aqui pede uma versão nova do Termo.', TRUE, FALSE)

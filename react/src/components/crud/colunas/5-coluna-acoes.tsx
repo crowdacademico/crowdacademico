@@ -17,7 +17,7 @@ interface DefinicaoAcao<A> {
 
 // Ações do sistema
 
-export type AcaoSistema = 'alterar' | 'consultar' | 'reenviar' | 'cancelarEnvio' | 'excluir';
+export type AcaoSistema = 'alterar' | 'consultar' | 'reenviar' | 'cancelarEnvio' | 'ocultar' | 'mostrarDeNovo' | 'excluir';
 
 const ACOES_SISTEMA: DefinicaoAcao<AcaoSistema>[] = [
   { acao: 'alterar', rotulo: 'Alterar', icone: 'fa-pen', variante: 'alterar' },
@@ -25,6 +25,9 @@ const ACOES_SISTEMA: DefinicaoAcao<AcaoSistema>[] = [
   // E-mails do sistema (tela Notificações): tratamento manual do que falhou.
   { acao: 'reenviar', rotulo: 'Reenviar', icone: 'fa-paper-plane', variante: 'alterar' },
   { acao: 'cancelarEnvio', rotulo: 'Cancelar envio', icone: 'fa-ban', variante: 'excluir' },
+  // Moderação de comentários: tirar do ar o que é perigoso e desfazer um engano.
+  { acao: 'ocultar', rotulo: 'Ocultar', icone: 'fa-eye-slash', variante: 'excluir' },
+  { acao: 'mostrarDeNovo', rotulo: 'Mostrar de novo', icone: 'fa-rotate-left', variante: 'alterar' },
   { acao: 'excluir', rotulo: 'Excluir', icone: 'fa-trash', variante: 'excluir' },
 ];
 

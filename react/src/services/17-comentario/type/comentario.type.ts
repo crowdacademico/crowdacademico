@@ -15,6 +15,11 @@ export interface ComentarioResponse {
   fotoPesquisador: string | null;
 }
 
+// A tela Comentários da moderação (GET /comentario/moderacao).
+export interface ComentarioModeracaoResponse extends ComentarioResponse {
+  tituloCampanha: string | null;
+}
+
 export interface ComentarioMeuResponse {
   idComentario: number;
   idCampanha: number;

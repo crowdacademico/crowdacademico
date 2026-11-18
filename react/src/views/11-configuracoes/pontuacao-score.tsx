@@ -104,6 +104,7 @@ function problemaDasFaixas(faixas: FaixaEditavel[]): string | null {
 // Pontuação (score) dos pesquisadores: os pesos das 4 dimensões e dos itens de cada uma, e as faixas de reputação.
 // Só peso e ligado/desligado (os itens são a estrutura que o cálculo lê); salvar recalcula todo mundo.
 export function PontuacaoScore({ auth }: PropsPagina) {
+  const podeEditar = auth.permissoes.includes('score_editar');
   const erros = useErroToast({ mostraTexto: true });
   const { mostrar } = useToast();
   const [dimensoes, setDimensoes] = useState<DimensaoEditavel[]>([]);
@@ -201,10 +202,15 @@ export function PontuacaoScore({ auth }: PropsPagina) {
         </div>
 
         <MensagemErro texto={erros.erro} className="crud-erro" />
+        {!podeEditar && (
+          <p className="legenda texto-fraco mb-4">Só leitura: mudar pesos e faixas é de quem tem a permissão "Editar Pontuação".</p>
+        )}
         {carregando && original === null ? (
           <p className="legenda texto-fraco">carregando...</p>
         ) : (
-          <>
+          // Quem só lê (o Revisor, 18-11-2026) vê tudo, com os campos travados: o fieldset desativado trava de uma vez
+          // cada campo e botão de dentro. O banco recusaria salvar de qualquer jeito (score_editar).
+          <fieldset disabled={!podeEditar} className="min-w-0 border-0 p-0 m-0">
             {/* As explicações ficam na dica, não na tela: menos texto à vista (fadiga visual). */}
             <h2 className="titulo-bloco titulo-bloco--linha flex items-center gap-2">
               Pesos
@@ -487,7 +493,7 @@ export function PontuacaoScore({ auth }: PropsPagina) {
                 }}
               />
             </div>
-          </>
+          </fieldset>
         )}
       </section>
       {confirmando && (
