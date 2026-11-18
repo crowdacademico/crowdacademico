@@ -286,7 +286,7 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 
 📌 **Data formatada dentro da mensagem de erro.** As duas mensagens de bloqueio/suspensão são as **únicas** do projeto que embutem data no texto do `throw` (todo o resto formata no React). `formatarDataHoraBr()` usa `timeZone: 'America/Sao_Paulo'` explícito, não o fuso do processo Node - o servidor pode rodar em UTC mesmo com público brasileiro. O motivo está registrado no comentário: `toISOString()` cru ("...T00:28:27.382Z") não significa nada para quem não programa.
 
-**Login com Google** (`POST /auth/google` → `auth.service.google.ts`, 18-11-2026). O React usa o botão oficial do Google Identity Services (sem redirecionamento) e manda só o ID token (`credential`):
+**Login com Google** (`POST /auth/google` → `auth.service.google.ts`, 18-11-2026; guia completo, com configuração, segurança e problemas comuns, em `.Tutorial-login-google.md`). O React usa o botão oficial do Google Identity Services (sem redirecionamento) e manda só o ID token (`credential`):
 1. `AuthServiceGoogleToken` confere o token com `google-auth-library` (`verifyIdToken`, `audience = GOOGLE_CLIENT_ID`): assinatura, emissor e validade. A chave secreta do cliente não é usada. Token que não confere → 401; sem `GOOGLE_CLIENT_ID` → 503.
 2. `email_verified` diferente de `true` → 401: sem a confirmação do Google, o e-mail do token pode não ser da pessoa.
 3. `entrar_com_google(sub, email, nome)` (03, [03-O]) decide a conta: a já ligada ao sub, a do mesmo e-mail (grava o vínculo; a senha não muda) ou uma nova (e-mail confirmado, sem senha). Conta excluída → 401.
