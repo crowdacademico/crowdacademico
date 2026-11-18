@@ -486,11 +486,11 @@ export function Campanha({ auth }: PropsPagina) {
                       <p className="paragrafo texto-fraco">Nenhum marco do cronograma está disponível para consulta.</p>
                     )}
                     {publicada && !marcos.erro && marcos.dados.length > 0 && (
-                      <ol className="flex flex-col gap-5">
+                      <ol className="linha-do-tempo">
                         {marcos.dados
                           .sort((a, b) => a.ordem - b.ordem)
                           .map((marco) => (
-                            <li className="border-l-2 borda-padrao pl-4" key={marco.idMarco}>
+                            <li className="linha-do-tempo__marco" key={marco.idMarco}>
                               <p className="rotulo-leitura texto-marca">{formatarData(marco.dataPrevista)}</p>
                               <h3 className="subtitulo mt-1">{marco.titulo}</h3>
                               {marco.descricao && <p className="paragrafo texto-padrao mt-2">{marco.descricao}</p>}

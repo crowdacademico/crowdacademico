@@ -438,7 +438,7 @@ export function ComoFunciona() {
             <Link to="/perguntas-frequentes" className="btn">
               Perguntas frequentes
             </Link>
-            <Link to="/explorar" className="texto-marca font-bold hover:underline">
+            <Link to="/explorar" className="texto-marca font-bold hover:underline px-5 py-2.5">
               Explorar campanhas
             </Link>
           </div>

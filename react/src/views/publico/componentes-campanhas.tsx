@@ -53,7 +53,7 @@ export function CartaoCampanha({
     : `Encerrada em ${formatarData(campanha.dataFim)}`;
 
   return (
-    <article className="cartao-campanha fundo-cartao border borda-padrao rounded-xl overflow-hidden flex flex-col">
+    <article className="cartao-campanha fundo-cartao border borda-padrao rounded-xl overflow-hidden">
       <div className="cartao-campanha__capa relative flex items-center justify-center">
         {campanha.imagemCapaUrl ? (
           <img

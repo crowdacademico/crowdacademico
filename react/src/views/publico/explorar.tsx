@@ -371,7 +371,7 @@ export function Explorar({ auth }: PropsPagina) {
           </section>
         ) : (
 
-        <section aria-labelledby="explorar-pesquisadores-titulo" className="border-t borda-padrao pt-10">
+        <section aria-labelledby="explorar-pesquisadores-titulo" className="mb-16">
           <div className="mb-6">
             <div>
               <h2 id="explorar-pesquisadores-titulo" className="titulo-secao">Pesquisadores ativos</h2>

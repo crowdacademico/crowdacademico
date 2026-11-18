@@ -888,6 +888,45 @@
       height: 100%;
     }
 
+    /* Cronograma da campanha (RF-047): cada marco é uma bolinha na cor da marca, e um traço liga uma à seguinte.
+       O traço sai do pseudo-elemento ::after de cada marco e para no último. */
+    .linha-do-tempo {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .linha-do-tempo__marco {
+      position: relative;
+      padding: 0 0 1.75rem 2rem;
+    }
+
+    .linha-do-tempo__marco:last-child {
+      padding-bottom: 0;
+    }
+
+    .linha-do-tempo__marco::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.2rem;
+      width: 0.875rem;
+      height: 0.875rem;
+      border-radius: var(--radius-full);
+      background: var(--cor-marca);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--cor-marca) 18%, transparent);
+    }
+
+    .linha-do-tempo__marco:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: calc(0.4375rem - 1px);
+      top: 1.35rem;
+      bottom: 0.15rem;
+      width: 2px;
+      border-radius: 1px;
+      background: var(--cor-borda-forte);
+    }
+
     .campanha-detalhe__imagem-capa {
       object-fit: cover;
     }
