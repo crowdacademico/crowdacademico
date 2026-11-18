@@ -77,6 +77,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90039 | `reenviar_notificacao`, `cancelar_notificacao` | `notificacao` | E-mail não encontrado |
 | 90040 | `fn_denuncia_comentario_preenche` | `denuncia` | Denúncia de um comentário que não existe ou que quem denuncia não consegue ver
 | 90041 | `fn_denuncia_comentario_preenche` | `denuncia` | Denúncia de um comentário cujo autor não tem mais conta
+| 90042 | `entrar_com_google` | `usuario` | O ID token do Google veio sem o identificador (sub) ou sem o e-mail
 
 ## 91xxx - Conflito de estado/regra de negócio (409)
 
@@ -141,6 +142,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91059 | `desistir_contribuicao` | `contribuicao` | Desistir de uma contribuição que não está paga (pendente, vencida, já devolvida ou repassada)
 | 91060 | `desistir_contribuicao` | `contribuicao` | Desistir depois do prazo (`desistencia_prazo_dias`, 7 por padrão, contados da contribuição)
 | 91061 | `desistir_contribuicao` | `contribuicao` | Desistir quando o repasse da campanha já saiu de `pendente` (transferência em andamento ou feita)
+| 91062 | `entrar_com_google` | `usuario` | Login com Google com um e-mail que já está ligado a outra conta Google
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
 

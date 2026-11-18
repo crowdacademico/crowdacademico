@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { BotaoGoogle, LOGIN_GOOGLE_DISPONIVEL } from '../../components/auth/botao-google';
 import { MENSAGEM_NOME_CURTO, NOME_MINIMO_CARACTERES } from '../../services/constant/constants/minimos.constants';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
@@ -242,6 +243,22 @@ export function CadastroPage({ auth }: PropsPagina) {
     }
   };
 
+  // O Google entregou o ID token (18-11-2026): a conta é criada (ou, se o e-mail já tem conta, a pessoa entra nela) e
+  // a tela do aceite do Termo de Uso aparece na página inicial antes de qualquer outra coisa.
+  const aoCadastrarComGoogle = (credential: string) => {
+    limparErro();
+    setCadastrouAqui(true);
+    setEnviando(true);
+    auth
+      .entrarComGoogle(credential)
+      .then(() => void navigate('/'))
+      .catch((erroGoogle: unknown) => {
+        setCadastrouAqui(false);
+        reportarErro(erroGoogle);
+      })
+      .finally(() => setEnviando(false));
+  };
+
   // Quem já chega com a sessão aberta não cria outra conta por cima da sua (16-11-2026): vai para a página inicial.
   if (!auth.carregando && auth.usuario && !cadastrouAqui) {
     return <Navigate to="/" replace />;
@@ -323,6 +340,23 @@ export function CadastroPage({ auth }: PropsPagina) {
                 })}
               </div>
               {erroTipoConta && <p className="legenda enfase erro-campo mt-3" role="alert">{erroTipoConta}</p>}
+
+              {/* Cadastro com Google (18-11-2026): cria a conta de apoiador com o e-mail já confirmado pelo Google, sem
+                  senha. Antes de usar o sistema, a pessoa aceita o Termo de Uso (RF-015). Ser pesquisador continua pelo
+                  caminho normal (CPF, Termo de Pesquisador), em Minha Conta > "Tornar-me pesquisador". */}
+              {LOGIN_GOOGLE_DISPONIVEL && (
+                <div className="mt-6 space-y-3">
+                  <div className="relative flex items-center">
+                    <div className="flex-grow border-t-2 borda-padrao"></div>
+                    <span className="rotulo-leitura flex-shrink-0 mx-4 texto-fraco">Ou crie a conta com</span>
+                    <div className="flex-grow border-t-2 borda-padrao"></div>
+                  </div>
+                  <BotaoGoogle contexto="signup" aoReceberToken={aoCadastrarComGoogle} aoFalhar={reportarErro} />
+                  <p className="legenda texto-fraco text-center">
+                    Pelo Google, a conta nasce como apoiador. Para ser pesquisador, use depois "Tornar-me pesquisador", em Minha Conta.
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <>

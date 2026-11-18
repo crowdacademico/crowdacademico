@@ -24,6 +24,16 @@ export async function login(email: string, senha: string): Promise<AuthResponseL
   return tratarResposta<AuthResponseLogin>(resposta);
 }
 
+// Login com Google (18-11-2026): o ID token que o botão do Google entregou. Mesma resposta do login por senha.
+export async function entrarComGoogle(credential: string): Promise<AuthResponseLogin> {
+  const resposta = await fetch(`${API_BASE_URL}/auth/google`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ credential }),
+  });
+  return tratarResposta<AuthResponseLogin>(resposta);
+}
+
 // A renovação devolve o mesmo formato do login (AuthResponseLogin do Nest), com `usuario` e `papeis`.
 export async function refresh(refreshToken: string): Promise<AuthResponseLogin> {
   const resposta = await fetch(`${API_BASE_URL}/auth/refresh`, {

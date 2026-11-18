@@ -153,7 +153,8 @@ A pontuação dos pesquisadores é pública: todo papel a vê, sem permissão pr
 ### [01-D] USUÁRIO (Autenticação Própria, Segurança e Sessões)
 
 * **`usuario`:** tabela central de contas.
-  * `senha_hash`: obrigatório (`NOT NULL`), hash bcrypt.
+  * `senha_hash`: hash bcrypt. `NULL` só na conta criada pelo login com Google que ainda não criou senha (18-11-2026); `CK_USUARIO_FORMA_DE_ENTRAR` exige que toda conta ativa tenha senha, Google ou os dois.
+  * `google_sub` (18-11-2026): o "sub" do ID token do Google, o identificador fixo da conta Google (`UK_USUARIO_GOOGLE_SUB`). Só `entrar_com_google()` escreve; o `app_nestjs` nem lê (fora dos GRANTs de coluna). LGPD: do Google, o sistema guarda só isto, o e-mail e o nome. `excluir_conta_usuario()` apaga o vínculo.
   * **E-mail sempre em minúsculas:** `trg_usuario_normaliza_email` grava `lower(btrim(email))` (o Nest também normaliza, `DOCUMENTACAO_BACKEND.md`, seção 19). Sem isso, `UK_USUARIO_EMAIL` só barraria texto igual, e "Alice@" e "alice@" virariam duas contas.
   * **Proteção contra força bruta:** `tentativas_login_falhas`, `bloqueado_ate`, `ultimo_login_em` e `ultimo_login_ip` controlam o bloqueio temporário depois de falhas seguidas de login.
   * **`email_verificado`:** indica se o usuário confirmou o e-mail; não tem relação com o bloqueio por tentativas.
@@ -412,6 +413,7 @@ Duas ferramentas do Campo de Testes (`nest/src/30-campo-testes`, só fora de pro
   | `registrar_falha_login(p_id_usuario)` | `tentativas_login_falhas++`, `bloqueado_ate` | Bloqueia ao chegar em `limite_tentativas_login` (5) por `bloqueio_login_minutos` (15), os dois configuráveis. **Sem autorização de propósito** (ver abaixo). |
   | `liberar_bloqueio_login(p_id_usuario)` | zera o bloqueio | Exige `usuario_desbloquear` (suporte e admin). |
   | `registrar_login_sucesso(p_id_usuario, p_ip)` | `ultimo_login_em`, `ultimo_login_ip`, zera as falhas | **Sem autorização de propósito.** `p_ip` é `TEXT` na assinatura só para evitar ambiguidade de tipo no `GRANT EXECUTE`. |
+  | `entrar_com_google(p_sub, p_email, p_nome)` | `google_sub`; na conta nova, a linha inteira (e-mail confirmado, sem senha, papel padrão) | Login com Google (18-11-2026). **Sem autorização de propósito**, como o login: os dados vêm do ID token que o Nest conferiu. Entra na conta já ligada ao sub; liga a do mesmo e-mail (a senha não muda); cria a conta nova (Termo de Uso pendente, RF-015); recusa o e-mail ligado a outra conta Google (91062); devolve `NULL` para a conta excluída. Se a conta do mesmo e-mail nunca confirmou o e-mail, quem criou a senha nunca provou ser dono do endereço: a função confirma o e-mail, apaga a senha antiga e derruba as sessões (defesa contra quem cadastra o e-mail de outra pessoa antes dela). Suíte 70 do PGlite. |
   | `excluir_conta_usuario(p_id_usuario)` | `deletado = TRUE`, `deletado_em`, `deletado_por` | A própria pessoa (`p_id_usuario = id_usuario_atual()`) ou quem tem `usuario_excluir` (só o admin: exclusão é auto-serviço do titular; o suporte abre chamado, não executa). Mão única: não há função para desfazer. Recusa conta com campanha ativa (91031) e o último administrador (91030). |
   | `registrar_exportacao_dados(p_id_usuario)` | uma linha `EXPORT` em `log_auditoria` | Rastro da exportação de dados (RF-016, LGPD art. 18). O `app_nestjs` não tem `INSERT` no log; a função abre só esta linha. `p_id_usuario` é sempre a conta logada (a rota não aceita id). |
   | `redefinir_senha_por_token(...)` | `senha_hash`, zera o bloqueio, encerra as sessões | O token de "Esqueci a senha" (`recuperacao_senha`) é a autorização, usado uma vez. |
@@ -1273,7 +1275,7 @@ O raciocínio de arquitetura por trás de regras que valem para o banco inteiro.
 
 ## Como conferir este inventário
 
-**Contagem do inventário** (recontada nos `.sql` em 18-11-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **122 policies**, **125 triggers** no `05` (119 comuns e 6 `CONSTRAINT TRIGGER`), **201 funções** (159 no `05`, 40 no `03`, 1 no `08`, 1 no `01`), **69 índices** no `02` e **146 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (recontada nos `.sql` em 18-11-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **122 policies**, **125 triggers** no `05` (119 comuns e 6 `CONSTRAINT TRIGGER`), **202 funções** (159 no `05`, 41 no `03`, 1 no `08`, 1 no `01`), **69 índices** no `02` e **148 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
 
 Para recontar direto do banco (no SQL Editor do Supabase ou no banco local):
 

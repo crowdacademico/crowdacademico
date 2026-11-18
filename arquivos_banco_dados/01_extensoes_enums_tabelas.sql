@@ -250,7 +250,7 @@ CREATE TABLE usuario (
     id_usuario       SERIAL,
     nome             VARCHAR(150) NOT NULL,
     email            VARCHAR(255) NOT NULL,
-    senha_hash       VARCHAR(255) NOT NULL,     -- [01-I] SENHA HASH OBRIGATÓRIA PARA LOGIN PRÓPRIO
+    senha_hash       VARCHAR(255),              -- [01-I] hash da senha; NULL só na conta que entra pelo Google e ainda não criou senha
     id_imagem_perfil INT,
     criado_em        TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
     deletado         BOOLEAN      NOT NULL DEFAULT FALSE,
@@ -275,8 +275,17 @@ CREATE TABLE usuario (
     motivo_suspensao         TEXT,
     suspenso_por             INT,
 
+    -- Login com Google (18-11-2026): o "sub" do ID token, o identificador fixo da conta Google (o e-mail dela pode
+    -- mudar). Só entrar_com_google() (03, [03-O]) escreve aqui; o Nest nem lê a coluna. LGPD: do Google, o sistema
+    -- guarda só isto, o e-mail e o nome.
+    google_sub               VARCHAR(255),
+
     CONSTRAINT "PK_USUARIO" PRIMARY KEY (id_usuario),
     CONSTRAINT "UK_USUARIO_EMAIL" UNIQUE (email),
+    CONSTRAINT "UK_USUARIO_GOOGLE_SUB" UNIQUE (google_sub),
+    -- Toda conta ativa tem como entrar: senha, Google ou os dois. A conta excluída perde o vínculo com o Google
+    -- (excluir_conta_usuario) e pode ficar sem nenhum.
+    CONSTRAINT "CK_USUARIO_FORMA_DE_ENTRAR" CHECK (deletado OR senha_hash IS NOT NULL OR google_sub IS NOT NULL),
     CONSTRAINT "FK_USUARIO_IMAGEM" FOREIGN KEY (id_imagem_perfil) REFERENCES arquivo(id_arquivo) ON DELETE SET NULL,
     CONSTRAINT "FK_USUARIO_DELETADO_POR" FOREIGN KEY (deletado_por) REFERENCES usuario(id_usuario),
     CONSTRAINT "FK_USUARIO_SUSPENSO_POR" FOREIGN KEY (suspenso_por) REFERENCES usuario(id_usuario),

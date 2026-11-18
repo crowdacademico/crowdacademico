@@ -4,11 +4,13 @@ import { defineConfig, devices } from '@playwright/test';
 // 5173 do dia a dia ficam livres):
 //   1. banco local descartável (Postgres de verdade, 01 a 08 com o seed) .......... 5434, e /sql em 5498;
 //   2. Nest compilado, com pagamento e e-mail de TESTE ............................ 3101;
-//   3. React (Vite), apontando para o Nest de teste ............................... 5175.
+//   3. React (Vite), apontando para o Nest de teste ............................... 5175;
+//   4. o mesmo React com o ID do login com Google, só para o teste do botão ........ 5176.
 // Os quatro projetos dividem o mesmo banco da rodada; cada teste cria o que precisa (contas com e-mail único) e não
 // depende da ordem dos outros.
 export const URL_SITE = 'http://localhost:5175';
 export const URL_API = 'http://localhost:3101';
+export const URL_SITE_COM_GOOGLE = 'http://localhost:5176';
 
 export default defineConfig({
   testDir: './testes',
@@ -58,7 +60,18 @@ export default defineConfig({
       url: URL_SITE,
       timeout: 120_000,
       reuseExistingServer: Boolean(process.env.REUSAR),
-      env: { VITE_API_URL: URL_API },
+      // Sem o ID do Google: o botão "Continuar com o Google" não pode aparecer (vazio aqui vence o react/.env).
+      env: { VITE_API_URL: URL_API, VITE_GOOGLE_CLIENT_ID: '' },
+    },
+    {
+      // O mesmo React COM o ID do Google (18-11-2026), só para conferir que o botão aparece. O login real do Google não
+      // dá para automatizar; o teste bloqueia o script do Google e confere só o lugar do botão.
+      command: 'npx vite --port 5176 --strictPort',
+      cwd: '../react',
+      url: URL_SITE_COM_GOOGLE,
+      timeout: 120_000,
+      reuseExistingServer: Boolean(process.env.REUSAR),
+      env: { VITE_API_URL: URL_API, VITE_GOOGLE_CLIENT_ID: 'cliente-de-teste.apps.googleusercontent.com' },
     },
   ],
 });

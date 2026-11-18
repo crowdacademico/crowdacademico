@@ -43,6 +43,9 @@ const env = {
   EMAIL_REDIRECIONAR_PARA: '',
   EMAIL_REMETENTE: 'testes@crowdacademico.local',
   PAINEL_URL: 'http://localhost:5175',
+  // Login com Google (18-11-2026): um ID de teste. O Google de verdade nunca é chamado: o token dos testes já é recusado
+  // na leitura, antes de qualquer consulta às chaves do Google.
+  GOOGLE_CLIENT_ID: 'cliente-de-teste.apps.googleusercontent.com',
   NODE_ENV: 'development',
 };
 

@@ -11,7 +11,8 @@ export interface UsuarioTable {
   id_usuario: Generated<number>;
   nome: string;
   email: string;
-  senha_hash: string;
+  // NULL na conta criada pelo Google que ainda não tem senha (18-11-2026).
+  senha_hash: string | null;
   id_imagem_perfil: number | null;
   criado_em: Generated<Date>;
   deletado: Generated<boolean>;
@@ -27,6 +28,9 @@ export interface UsuarioTable {
   suspenso_ate: Date | null;
   motivo_suspensao: string | null;
   suspenso_por: number | null;
+  // Login com Google (18-11-2026). Fica aqui para o espelho bater com o banco, mas o Nest não lê nem escreve a coluna
+  // (fora dos GRANTs de coluna): só entrar_com_google(), no banco.
+  google_sub: string | null;
 }
 
 export interface PapelTable {

@@ -286,6 +286,14 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 
 📌 **Data formatada dentro da mensagem de erro.** As duas mensagens de bloqueio/suspensão são as **únicas** do projeto que embutem data no texto do `throw` (todo o resto formata no React). `formatarDataHoraBr()` usa `timeZone: 'America/Sao_Paulo'` explícito, não o fuso do processo Node - o servidor pode rodar em UTC mesmo com público brasileiro. O motivo está registrado no comentário: `toISOString()` cru ("...T00:28:27.382Z") não significa nada para quem não programa.
 
+**Login com Google** (`POST /auth/google` → `auth.service.google.ts`, 18-11-2026). O React usa o botão oficial do Google Identity Services (sem redirecionamento) e manda só o ID token (`credential`):
+1. `AuthServiceGoogleToken` confere o token com `google-auth-library` (`verifyIdToken`, `audience = GOOGLE_CLIENT_ID`): assinatura, emissor e validade. A chave secreta do cliente não é usada. Token que não confere → 401; sem `GOOGLE_CLIENT_ID` → 503.
+2. `email_verified` diferente de `true` → 401: sem a confirmação do Google, o e-mail do token pode não ser da pessoa.
+3. `entrar_com_google(sub, email, nome)` (03, [03-O]) decide a conta: a já ligada ao sub, a do mesmo e-mail (grava o vínculo; a senha não muda) ou uma nova (e-mail confirmado, sem senha). Conta excluída → 401.
+4. As mesmas barreiras do login por senha (`barrarContaImpedida`: bloqueio e suspensão) e a mesma sessão (`abrirSessao`). A conta nova volta com `aceitePendente` e só usa o sistema depois de aceitar o Termo de Uso vigente (RF-015).
+
+A conta sem senha não entra pelo formulário de senha (mesma resposta vaga, **sem contar falha**: não há senha a adivinhar, e contar deixaria qualquer um bloquear a conta, o que também barraria o Google) e cria a primeira senha pela recuperação de senha. O "Alterar senha" da Minha Conta explica isso em vez de pedir uma senha atual que não existe. Testes: `auth.service.google.spec.ts` (Jest, Google e banco falsos) e a suíte 70 do PGlite.
+
 **Refresh** (`POST /auth/refresh`): faz o parse de `"<id>.<segredo>"`, busca a sessão **com `.forUpdate()`**, valida (não revogada, não expirada, `bcrypt.compare` bate), **revoga a sessão usada** (`revogado_em`) e emite um par novo com `origem = 'refresh'`.
 
 🧩 **O `.forUpdate()` corrige uma corrida real.** O comentário registra o sintoma: linhas duplicadas em `sessao`, com `criado_em` idêntico até o milissegundo e nenhuma revogada. Duas renovações concorrentes com o **mesmo** refresh token (várias abas, ou uma tela que dispara N buscas de uma vez com o token vencido) liam `revogado_em = NULL` ao mesmo tempo, as duas passavam, e as duas criavam sessão nova. Como cada requisição já roda na própria transação, `FOR UPDATE` trava a linha até a primeira terminar - a segunda só lê depois, já vê `revogado_em` preenchido, e cai corretamente em *"Refresh token inválido ou expirado."*.
@@ -1092,6 +1100,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | `DATABASE_URL_MIGRATIONS` | conexão com privilégio de DDL, só para `npm run db:migrate` |
 | `PORT` | porta HTTP (padrão 3000) |
 | `JWT_SECRET`, `JWT_ACCESS_EXPIRES_IN` | assinatura e validade do access token |
+| `GOOGLE_CLIENT_ID` | login com Google: o `audience` que o ID token precisa ter. Não é segredo; sem ele, `POST /auth/google` responde 503 |
 | `CPF_ENCRYPTION_KEY`, `CPF_INDEX_KEY` | cifra e índice cego de CPF (seção 9) |
 | `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, `STORAGE_BUCKET`, `STORAGE_PUBLIC_BASE_URL`, `STORAGE_REGION`, `STORAGE_FORCE_PATH_STYLE` | bucket S3-compatível (seção 8) |
 | `NODE_ENV` | muda o limite do throttler e o retorno de `tokenVerificacaoEmailDev` |
@@ -1137,6 +1146,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | pub | GET | `/health` |
 | **Auth** | | |
 | pub | POST | `/auth/cadastro` *(throttled)* |
+| pub | POST | `/auth/google` *(throttled; login com Google, 18-11-2026)* |
 | pub | POST | `/auth/login` *(throttled)* |
 | pub | POST | `/auth/refresh` |
 | pub | POST | `/auth/logout` |

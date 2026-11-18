@@ -10,6 +10,15 @@ export const CUSTO_BCRYPT_REFRESH_TOKEN = 10;
 // texto embaixo (formato `campos`, o mesmo da validação); a tela mantém o e-mail e limpa a senha.
 export const MENSAGEM_LOGIN_RECUSADO =
   "E-mail ou senha inválidos. Tente novamente ou clique em 'Esqueceu a senha?'.";
+// Login com Google (18-11-2026). Token que não confere (assinatura, validade, audience): mensagem genérica.
+export const MENSAGEM_GOOGLE_TOKEN_INVALIDO =
+  'Não foi possível confirmar o login com o Google. Tente de novo.';
+// O Google não confirmou o e-mail da conta: entrar por ele poderia abrir a conta de outra pessoa.
+export const MENSAGEM_GOOGLE_EMAIL_NAO_VERIFICADO =
+  'O Google não confirmou o e-mail desta conta. Confirme o e-mail no Google ou entre com e-mail e senha.';
+// E-mail de uma conta excluída: a conta não volta, e o e-mail não serve para uma conta nova.
+export const MENSAGEM_GOOGLE_SEM_CONTA =
+  'Não foi possível entrar com esta conta do Google.';
 export const CAMPOS_LOGIN_RECUSADO = {
   email: ['E-mail inválido.'],
   senha: ['Senha inválida.'],

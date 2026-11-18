@@ -1,11 +1,11 @@
 /// <reference types="vite/client" />
 
-// VITE_API_URL é a única env var própria do projeto (ver
-// services/constant/constants/api.constants.ts) - as demais usadas em
-// import.meta.env (DEV/PROD/MODE/...) já vêm tipadas pela referência
-// "vite/client" acima, sem precisar declarar aqui.
+// As env vars próprias do projeto: VITE_API_URL (services/constant/constants/api.constants.ts) e
+// VITE_GOOGLE_CLIENT_ID (components/auth/botao-google.tsx). As demais usadas em import.meta.env (DEV/PROD/MODE/...) já
+// vêm tipadas pela referência "vite/client" acima.
 interface ImportMetaEnv {
   readonly VITE_API_URL?: string;
+  readonly VITE_GOOGLE_CLIENT_ID?: string;
 }
 
 interface ImportMeta {

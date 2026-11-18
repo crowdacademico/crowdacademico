@@ -7,6 +7,7 @@ import { TermoUsoModule } from '../5-termo-uso/termo-uso.module';
 import { NotificacaoModule } from '../27-notificacao/notificacao.module';
 import { AuthControllerRegister } from './controllers/auth.controller.register';
 import { AuthControllerLogin } from './controllers/auth.controller.login';
+import { AuthControllerGoogle } from './controllers/auth.controller.google';
 import { AuthControllerLogout } from './controllers/auth.controller.logout';
 import { AuthControllerRefresh } from './controllers/auth.controller.refresh';
 import { AuthControllerFindAllSessions } from './controllers/auth.controller.findall-sessions';
@@ -20,6 +21,8 @@ import { AuthServiceRegister } from './service/auth.service.register';
 import { AuthServiceEndSession } from './service/auth.service.end-session';
 import { AuthServiceFindAllSessions } from './service/auth.service.findall-sessions';
 import { AuthServiceLogin } from './service/auth.service.login';
+import { AuthServiceGoogle } from './service/auth.service.google';
+import { AuthServiceGoogleToken } from './service/auth.service.google-token';
 import { AuthServiceLogout } from './service/auth.service.logout';
 import { AuthServiceRefresh } from './service/auth.service.refresh';
 import { AuthServiceVerifyEmail } from './service/auth.service.verify-email';
@@ -52,6 +55,7 @@ import { AuthServiceResendVerification } from './service/auth.service.resend-ver
   ],
   controllers: [
     AuthControllerLogin,
+    AuthControllerGoogle,
     AuthControllerRefresh,
     AuthControllerLogout,
     AuthControllerRegister,
@@ -63,6 +67,8 @@ import { AuthServiceResendVerification } from './service/auth.service.resend-ver
   ],
   providers: [
     AuthServiceLogin,
+    AuthServiceGoogle,
+    AuthServiceGoogleToken,
     AuthServiceRefresh,
     AuthServiceLogout,
     AuthServiceRegister,

@@ -23,6 +23,8 @@ export interface UseAuthReturn {
   carregando: boolean;
   autenticado: boolean;
   login: (email: string, senha: string) => Promise<AuthResponseLogin>;
+  // Login com Google: a conta nova volta com aceitePendente e passa pelo aceite do Termo de Uso (RF-015).
+  entrarComGoogle: (credential: string) => Promise<AuthResponseLogin>;
   cadastrar: (
     nome: string,
     email: string,
@@ -88,6 +90,15 @@ export function useAuth(): UseAuthReturn {
   const login = useCallback(
     async (email: string, senha: string): Promise<AuthResponseLogin> => {
       const resultado = await authApi.login(email, senha);
+      salvarSessao(resultado);
+      return resultado;
+    },
+    [salvarSessao],
+  );
+
+  const entrarComGoogle = useCallback(
+    async (credential: string): Promise<AuthResponseLogin> => {
+      const resultado = await authApi.entrarComGoogle(credential);
       salvarSessao(resultado);
       return resultado;
     },
@@ -281,6 +292,7 @@ export function useAuth(): UseAuthReturn {
     carregando,
     autenticado: accessToken !== null,
     login,
+    entrarComGoogle,
     cadastrar,
     logout,
     renovarSessaoAgora,

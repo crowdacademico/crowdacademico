@@ -48,13 +48,29 @@ export class UsuarioServiceUpdate {
         .select('senha_hash')
         .where('id_usuario', '=', idUsuario)
         .executeTakeFirst();
+      // Conta criada pelo Google, ainda sem senha (18-11-2026): não há senha atual para conferir. Criar a primeira
+      // senha é pela recuperação de senha, que prova o dono pelo e-mail (pedir só a sessão aberta deixaria quem pegou
+      // um computador logado pôr uma senha na conta).
+      const senhaHashAtual = atual?.senha_hash ?? null;
+      if (propriaConta && senhaHashAtual === null) {
+        throw erroNoCampo(
+          'senhaAtual',
+          "A sua conta entra pelo Google e ainda não tem senha. Para criar uma, use 'Esqueceu a senha?' na tela de entrar.",
+        );
+      }
       if (
         dto.senhaAtual !== undefined &&
-        !(atual && (await bcrypt.compare(dto.senhaAtual, atual.senha_hash)))
+        !(
+          senhaHashAtual !== null &&
+          (await bcrypt.compare(dto.senhaAtual, senhaHashAtual))
+        )
       ) {
         throw erroNoCampo('senhaAtual', 'Senha atual incorreta.');
       }
-      if (atual && (await bcrypt.compare(dto.novaSenha, atual.senha_hash))) {
+      if (
+        senhaHashAtual !== null &&
+        (await bcrypt.compare(dto.novaSenha, senhaHashAtual))
+      ) {
         throw erroNoCampo(
           'novaSenha',
           'A nova senha precisa ser diferente da senha atual.',

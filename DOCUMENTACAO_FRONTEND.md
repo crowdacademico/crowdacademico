@@ -559,10 +559,10 @@ Em Repasses em Atenção e Reembolsos Manuais (lista e ficha), o "último motivo
 - **Termos e privacidade:** `/termos` mostra o Termo de Uso ativo de conta/contribuições via backend. O protótipo tinha texto Lorem Ipsum; uma política de privacidade separada só deve ser exibida quando houver conteúdo oficial publicado.
 - **Conteúdo sem backend:** páginas institucionais usam texto explicativo, mas não reproduzem métricas, perfis ou campanhas fictícias.
 - **Cabeçalho e rodapé únicos:** `header.tsx` (com a variante `publico` ou `painel`) e `footer.tsx` servem as duas áreas, com a mesma marca oficial (`LogoMarca`).
-- **Botões de autenticação:** "Continuar com Google" ainda é simulado.
+- **Login com Google** (18-11-2026): `components/auth/botao-google.tsx` mostra o botão oficial do Google Identity Services no login ("Continuar com o Google") e no passo 1 do cadastro ("Inscrever-se com o Google"), só quando `VITE_GOOGLE_CLIENT_ID` existe; sem a variável, nem o botão nem o separador aparecem. O script do Google é baixado só nessas telas, e o botão segue o tema (claro ou escuro). O ID token vai para `POST /auth/google` (`authApi.entrarComGoogle`, `auth.entrarComGoogle`), que devolve a mesma sessão do login por senha. A conta nova passa pelo aceite do Termo de Uso (RF-015) e nasce como apoiador: ser pesquisador continua em Minha Conta > "Tornar-me pesquisador".
 - **Trocar logo e ícone pelo painel** (aba Identidade Visual): hoje a marca são arquivos do projeto (seção 12).
 - **Testes de ponta a ponta** (16-11-2026): a pasta `testes-e2e/` (Playwright e axe-core) testa as telas, a acessibilidade, o celular e o tempo de resposta, com banco local e provedores de teste (`.Tutorial-testes-playwright.md`). Não há teste de unidade de componente.
-- ⚠️ **`react/.gitignore` não cobre `.env`** (inofensivo hoje: o arquivo só tem a URL da API).
+- ⚠️ **`react/.gitignore` não cobre `.env`** (inofensivo hoje: o arquivo só tem a URL da API e o ID do cliente do Google, que não é segredo).
 - ⚠️ **Espelhos manuais do Nest:** tipos dos DTOs, perfil de redução de imagem, lista de tipos de imagem aceitos. Sem import entre os dois projetos, cada mudança no Nest precisa ser repetida aqui.
 - ⚠️ **Busca, filtro e paginação no navegador** (`GenericTable`, busca global): não escalam para milhares de linhas.
 - ✅ **Permissão por rota no menu e na guarda** (feito em 17-11-2026, seção 4). Texto antigo: a entrada no painel já exige papel de gestão; o controle mais granular por permissão de rota continua pendente (seção 4).

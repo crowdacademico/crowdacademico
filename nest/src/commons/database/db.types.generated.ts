@@ -523,11 +523,12 @@ export interface Usuario {
   deletado_por: number | null;
   email: string;
   email_verificado: Generated<boolean>;
+  google_sub: string | null;
   id_imagem_perfil: number | null;
   id_usuario: Generated<number>;
   motivo_suspensao: string | null;
   nome: string;
-  senha_hash: string;
+  senha_hash: string | null;
   suspenso_ate: Timestamp | null;
   suspenso_por: number | null;
   tentativas_login_falhas: Generated<number>;

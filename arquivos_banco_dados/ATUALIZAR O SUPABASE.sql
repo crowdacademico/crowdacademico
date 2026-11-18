@@ -3043,3 +3043,197 @@ ON CONFLICT DO NOTHING;
 UPDATE papel
 SET descricao = 'Atende quem tem problema para entrar: desbloqueia login, reenvia a verificação de e-mail e confere se os e-mails do sistema chegaram.'
 WHERE codigo = 'suporte';
+
+-- ============================================================================
+-- GRUPO DD (18-11-2026) - Login com Google. IDEMPOTENTE.
+-- Cole ANTES de subir o Nest novo (ele chama entrar_com_google). O Nest antigo continua funcionando com o grupo colado.
+--
+-- O que muda:
+--   1. usuario.senha_hash aceita NULL (a conta criada pelo Google nasce sem senha) e ganha google_sub (o "sub" do ID
+--      token, único). CHECK novo: toda conta ativa tem senha, Google ou os dois.
+--   2. Função entrar_com_google(sub, email, nome): entra na conta do sub, liga a conta do mesmo e-mail ou cria a
+--      conta nova (e-mail confirmado, sem senha, Termo de Uso pendente). Códigos novos: 90042 e 91062.
+--   3. excluir_conta_usuario passa a apagar o google_sub (LGPD).
+-- ============================================================================
+ALTER TABLE usuario ALTER COLUMN senha_hash DROP NOT NULL;
+ALTER TABLE usuario ADD COLUMN IF NOT EXISTS google_sub VARCHAR(255);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'UK_USUARIO_GOOGLE_SUB') THEN
+        ALTER TABLE usuario ADD CONSTRAINT "UK_USUARIO_GOOGLE_SUB" UNIQUE (google_sub);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'CK_USUARIO_FORMA_DE_ENTRAR') THEN
+        ALTER TABLE usuario ADD CONSTRAINT "CK_USUARIO_FORMA_DE_ENTRAR"
+            CHECK (deletado OR senha_hash IS NOT NULL OR google_sub IS NOT NULL);
+    END IF;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     entrar_com_google
+-- Assinatura: (p_sub TEXT, p_email TEXT, p_nome TEXT) -> INT
+-- Bloco:      [03-O]
+-- Regra:      Login com Google (18-11-2026). O Nest já conferiu o ID token (assinatura, audience = GOOGLE_CLIENT_ID,
+--             validade e email_verified = true) e manda só o que o token diz; esta função decide a conta e devolve o
+--             id dela, ou NULL quando o e-mail é de uma conta excluída (o login responde igual ao e-mail sem conta).
+--               1. Conta já ligada a este sub: entra nela (mesmo que o e-mail do Google tenha mudado).
+--               2. Conta com o mesmo e-mail e sem vínculo: grava o vínculo e entra. A senha não muda. Exceção: se o
+--                  e-mail dessa conta nunca foi confirmado, quem criou a senha nunca provou ser dono do endereço
+--                  (alguém pode ter cadastrado o e-mail de outra pessoa antes dela). O Google acaba de provar quem é
+--                  o dono: a conta fica com o e-mail confirmado, a senha antiga é apagada e as sessões abertas caem.
+--                  A pessoa cria uma senha nova quando quiser, pela recuperação de senha.
+--               3. Conta com o mesmo e-mail ligada a OUTRA conta Google: recusa (91062).
+--               4. E-mail novo: cria a conta com o e-mail já confirmado e sem senha, com o papel padrão. Sem aceite do
+--                  Termo de Uso: o login devolve aceitePendente (fn_termo_uso_pendente) e a conta só usa o sistema
+--                  depois de aceitar, o mesmo fluxo do RF-015.
+--             Suspensão e bloqueio continuam com o Nest, como no login por senha. SEM AUTORIZAÇÃO DE PROPÓSITO
+--             (pré-autenticação, como registrar_login_sucesso): os dados vêm do token conferido no Nest, nunca do
+--             corpo da requisição.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.entrar_com_google(p_sub TEXT, p_email TEXT, p_nome TEXT)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_email      TEXT := lower(btrim(COALESCE(p_email, '')));
+    v_sub        TEXT := btrim(COALESCE(p_sub, ''));
+    v_id         INT;
+    v_deletado   BOOLEAN;
+    v_sub_atual  TEXT;
+    v_verificado BOOLEAN;
+    v_nome       TEXT;
+BEGIN
+    IF v_sub = '' OR v_email = '' THEN
+        RAISE EXCEPTION 'O Google não mandou os dados da conta (identificador e e-mail).' USING ERRCODE = '90042';
+    END IF;
+
+    SELECT id_usuario, deletado INTO v_id, v_deletado FROM usuario WHERE google_sub = v_sub;
+    IF FOUND THEN
+        RETURN CASE WHEN v_deletado THEN NULL ELSE v_id END;
+    END IF;
+
+    SELECT id_usuario, deletado, google_sub, email_verificado
+    INTO v_id, v_deletado, v_sub_atual, v_verificado
+    FROM usuario WHERE email = v_email;
+    IF FOUND THEN
+        IF v_deletado THEN
+            RETURN NULL;
+        END IF;
+        IF v_sub_atual IS NOT NULL THEN
+            RAISE EXCEPTION 'Este e-mail já está ligado a outra conta Google. Entre com a conta Google de sempre ou com a sua senha.'
+                USING ERRCODE = '91062';
+        END IF;
+        IF v_verificado THEN
+            UPDATE usuario SET google_sub = v_sub WHERE id_usuario = v_id;
+        ELSE
+            UPDATE usuario
+            SET google_sub = v_sub, email_verificado = TRUE, senha_hash = NULL,
+                tentativas_login_falhas = 0, bloqueado_ate = NULL
+            WHERE id_usuario = v_id;
+            UPDATE sessao SET revogado_em = NOW() WHERE id_usuario = v_id AND revogado_em IS NULL;
+        END IF;
+        RETURN v_id;
+    END IF;
+
+    v_nome := left(btrim(COALESCE(NULLIF(btrim(p_nome), ''), split_part(v_email, '@', 1))), 150);
+    INSERT INTO usuario (nome, email, senha_hash, email_verificado, google_sub)
+    VALUES (v_nome, v_email, NULL, TRUE, v_sub)
+    RETURNING id_usuario INTO v_id;
+    PERFORM public.atribuir_papel_padrao(v_id);
+    RETURN v_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.entrar_com_google(TEXT, TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.entrar_com_google(TEXT, TEXT, TEXT) TO app_nestjs;
+
+-- ----------------------------------------------------------------------------
+-- Função:     excluir_conta_usuario
+-- Assinatura: (p_id_usuario INT) -> VOID
+-- Bloco:      [03-O]
+-- Regra:      RNF-003 (LGPD): marca deletado = TRUE e grava deletado_em/deletado_por (Art. 37: quem fez e quando).
+--             Via de mão única de propósito: não existe função para reverter. O próprio usuário exclui a própria
+--             conta sem permissão nenhuma; quem tem usuario_excluir (só o admin, auto-atribuída por
+--             trg_admin_recebe_toda_permissao) exclui a de outra pessoa.
+--             Campanhas da conta (RF-016): com campanha ATIVA a exclusão é recusada (91031); rascunho e campanha
+--             aguardando aprovação que nunca foi avaliada somem junto; a que aguarda por REENVIO de uma rejeitada
+--             volta a 'rejeitado' e segue o caminho normal da rejeição (o histórico dela fica). O resto (sucesso,
+--             não atingido, encerrada, rejeitada) fica como está. O último admin ativo não pode ser excluído (91030).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.excluir_conta_usuario(p_id_usuario INT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_id_imagem_perfil INT;
+BEGIN
+    -- COALESCE: sem ninguém logado, id_usuario_atual() é NULL, e "p_id_usuario = NULL" é NULL, não FALSE;
+    -- "NOT (NULL OR FALSE)" também é NULL, e o IF deixava passar sem login.
+    IF NOT (COALESCE(p_id_usuario = public.id_usuario_atual(), FALSE)
+            OR COALESCE(public.tem_permissao('usuario_excluir'), FALSE)) THEN
+        RAISE EXCEPTION 'Sem permissão para excluir a conta de outro usuário.' USING ERRCODE = '92013';
+    END IF;
+    IF public.fn_eh_ultimo_admin_ativo(p_id_usuario) THEN
+        RAISE EXCEPTION 'Não é possível excluir a conta do último administrador ativo do sistema.' USING ERRCODE = '91030';
+    END IF;
+    IF EXISTS (SELECT 1 FROM campanha WHERE id_usuario = p_id_usuario AND status = 'ativo') THEN
+        RAISE EXCEPTION 'Não é possível excluir a conta enquanto houver campanha ativa. A exclusão fica liberada quando a campanha terminar.'
+            USING ERRCODE = '91031';
+    END IF;
+
+    SELECT id_imagem_perfil INTO v_id_imagem_perfil
+    FROM usuario WHERE id_usuario = p_id_usuario;
+
+    -- google_sub = NULL (18-11-2026): a conta excluída deixa de entrar pelo Google, e o identificador da conta
+    -- Google não fica guardado sem uso (LGPD).
+    UPDATE usuario
+    SET deletado = TRUE, deletado_em = NOW(), deletado_por = public.id_usuario_atual(), google_sub = NULL
+    WHERE id_usuario = p_id_usuario;
+
+    -- Conta excluída não renova mais nenhuma sessão (mesmo motivo de suspender_usuario).
+    UPDATE sessao SET revogado_em = NOW()
+    WHERE id_usuario = p_id_usuario AND revogado_em IS NULL;
+
+    DELETE FROM campanha c
+    WHERE c.id_usuario = p_id_usuario
+      AND (c.status = 'rascunho'
+           OR (c.status = 'aguardando_aprovacao'
+               AND NOT EXISTS (SELECT 1 FROM historico_rejeicao h WHERE h.id_campanha = c.id_campanha)));
+
+    -- A volta a 'rejeitado' pede linha em historico_rejeicao na mesma transação (trg_campanha_exige_historico_rejeicao,
+    -- 05); id_admin NULL porque ninguém da moderação rejeitou.
+    WITH devolvidas AS (
+        UPDATE campanha SET status = 'rejeitado'
+        WHERE id_usuario = p_id_usuario AND status = 'aguardando_aprovacao'
+        RETURNING id_campanha, id_usuario, titulo
+    )
+    INSERT INTO historico_rejeicao (id_campanha, id_usuario_dono, titulo_campanha, id_admin, justificativa)
+    SELECT id_campanha, id_usuario, titulo, NULL,
+           'Reenvio cancelado: o pesquisador excluiu a própria conta.'
+    FROM devolvidas;
+
+    -- Desativa a foto de
+    -- perfil vinculada na mesma transação - sem isto, a linha em `arquivo`
+    -- ficava ativo=true pra sempre, mesmo com a conta dona já excluída.
+    -- SECURITY DEFINER bypassa pol_arquivo_update DE PROPÓSITO aqui: quem
+    -- executou a exclusão da conta já foi autorizado acima (dono OU
+    -- 'usuario_excluir') - não faz sentido também exigir 'arquivo_gerenciar'
+    -- ou posse sobre o arquivo em si só pra essa consequência automática.
+    -- Os BYTES de verdade no bucket NÃO são apagados aqui - Postgres não
+    -- fala com o provedor de armazenamento (B2/R2/Supabase Storage). Isso é
+    -- feito depois, do lado da aplicação (ver
+    -- nest/src/1-usuario/service/usuario.service.remove.ts), que lê
+    -- `arquivo.chave` (ainda intacta, só `ativo` mudou) e chama
+    -- armazenamento.excluirObjeto().
+    IF v_id_imagem_perfil IS NOT NULL THEN
+        UPDATE arquivo
+        SET ativo = FALSE, desativado_em = NOW()
+        WHERE id_arquivo = v_id_imagem_perfil;
+    END IF;
+END;
+$$;

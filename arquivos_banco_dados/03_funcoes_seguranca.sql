@@ -460,6 +460,83 @@ AS $$
 $$;
 
 -- ----------------------------------------------------------------------------
+-- Função:     entrar_com_google
+-- Assinatura: (p_sub TEXT, p_email TEXT, p_nome TEXT) -> INT
+-- Bloco:      [03-O]
+-- Regra:      Login com Google (18-11-2026). O Nest já conferiu o ID token (assinatura, audience = GOOGLE_CLIENT_ID,
+--             validade e email_verified = true) e manda só o que o token diz; esta função decide a conta e devolve o
+--             id dela, ou NULL quando o e-mail é de uma conta excluída (o login responde igual ao e-mail sem conta).
+--               1. Conta já ligada a este sub: entra nela (mesmo que o e-mail do Google tenha mudado).
+--               2. Conta com o mesmo e-mail e sem vínculo: grava o vínculo e entra. A senha não muda. Exceção: se o
+--                  e-mail dessa conta nunca foi confirmado, quem criou a senha nunca provou ser dono do endereço
+--                  (alguém pode ter cadastrado o e-mail de outra pessoa antes dela). O Google acaba de provar quem é
+--                  o dono: a conta fica com o e-mail confirmado, a senha antiga é apagada e as sessões abertas caem.
+--                  A pessoa cria uma senha nova quando quiser, pela recuperação de senha.
+--               3. Conta com o mesmo e-mail ligada a OUTRA conta Google: recusa (91062).
+--               4. E-mail novo: cria a conta com o e-mail já confirmado e sem senha, com o papel padrão. Sem aceite do
+--                  Termo de Uso: o login devolve aceitePendente (fn_termo_uso_pendente) e a conta só usa o sistema
+--                  depois de aceitar, o mesmo fluxo do RF-015.
+--             Suspensão e bloqueio continuam com o Nest, como no login por senha. SEM AUTORIZAÇÃO DE PROPÓSITO
+--             (pré-autenticação, como registrar_login_sucesso): os dados vêm do token conferido no Nest, nunca do
+--             corpo da requisição.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.entrar_com_google(p_sub TEXT, p_email TEXT, p_nome TEXT)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_email      TEXT := lower(btrim(COALESCE(p_email, '')));
+    v_sub        TEXT := btrim(COALESCE(p_sub, ''));
+    v_id         INT;
+    v_deletado   BOOLEAN;
+    v_sub_atual  TEXT;
+    v_verificado BOOLEAN;
+    v_nome       TEXT;
+BEGIN
+    IF v_sub = '' OR v_email = '' THEN
+        RAISE EXCEPTION 'O Google não mandou os dados da conta (identificador e e-mail).' USING ERRCODE = '90042';
+    END IF;
+
+    SELECT id_usuario, deletado INTO v_id, v_deletado FROM usuario WHERE google_sub = v_sub;
+    IF FOUND THEN
+        RETURN CASE WHEN v_deletado THEN NULL ELSE v_id END;
+    END IF;
+
+    SELECT id_usuario, deletado, google_sub, email_verificado
+    INTO v_id, v_deletado, v_sub_atual, v_verificado
+    FROM usuario WHERE email = v_email;
+    IF FOUND THEN
+        IF v_deletado THEN
+            RETURN NULL;
+        END IF;
+        IF v_sub_atual IS NOT NULL THEN
+            RAISE EXCEPTION 'Este e-mail já está ligado a outra conta Google. Entre com a conta Google de sempre ou com a sua senha.'
+                USING ERRCODE = '91062';
+        END IF;
+        IF v_verificado THEN
+            UPDATE usuario SET google_sub = v_sub WHERE id_usuario = v_id;
+        ELSE
+            UPDATE usuario
+            SET google_sub = v_sub, email_verificado = TRUE, senha_hash = NULL,
+                tentativas_login_falhas = 0, bloqueado_ate = NULL
+            WHERE id_usuario = v_id;
+            UPDATE sessao SET revogado_em = NOW() WHERE id_usuario = v_id AND revogado_em IS NULL;
+        END IF;
+        RETURN v_id;
+    END IF;
+
+    v_nome := left(btrim(COALESCE(NULLIF(btrim(p_nome), ''), split_part(v_email, '@', 1))), 150);
+    INSERT INTO usuario (nome, email, senha_hash, email_verificado, google_sub)
+    VALUES (v_nome, v_email, NULL, TRUE, v_sub)
+    RETURNING id_usuario INTO v_id;
+    PERFORM public.atribuir_papel_padrao(v_id);
+    RETURN v_id;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
 -- Função:     registrar_exportacao_dados
 -- Assinatura: (p_id_usuario INT) -> VOID
 -- Bloco:      [03-O]
@@ -517,8 +594,10 @@ BEGIN
     SELECT id_imagem_perfil INTO v_id_imagem_perfil
     FROM usuario WHERE id_usuario = p_id_usuario;
 
+    -- google_sub = NULL (18-11-2026): a conta excluída deixa de entrar pelo Google, e o identificador da conta
+    -- Google não fica guardado sem uso (LGPD).
     UPDATE usuario
-    SET deletado = TRUE, deletado_em = NOW(), deletado_por = public.id_usuario_atual()
+    SET deletado = TRUE, deletado_em = NOW(), deletado_por = public.id_usuario_atual(), google_sub = NULL
     WHERE id_usuario = p_id_usuario;
 
     -- Conta excluída não renova mais nenhuma sessão (mesmo motivo de suspender_usuario).

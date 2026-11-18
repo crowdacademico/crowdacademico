@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import type { FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router';
-import { IconeGoogle } from '../../components/auth/icone-google';
+import { BotaoGoogle, LOGIN_GOOGLE_DISPONIVEL } from '../../components/auth/botao-google';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { Campo } from '../../components/input/campo';
 import { ErroHttp } from '../../services/constant/api/http.util';
@@ -19,8 +19,8 @@ import { LogoMarca } from '../../components/layout/logo-marca';
 // combinado. Esta tela NÃO coleta nome (só e-mail/senha): o cadastro público de verdade é /cadastro
 // (cadastro-page.tsx), tela própria com nome/confirmação de senha/aceite de termos; o link "Já tem conta?
 // Entrar" dela devolve para cá, e o link "Cadastre-se" abaixo leva para lá. O botão é só "Entrar" porque só faz
-// login. O login social com Google é só alert() de protótipo, como no original; "Esqueceu a senha?" leva a
-// /esqueci-senha.
+// login. O login com Google usa o botão oficial do Google (BotaoGoogle, 18-11-2026; no original era só um alert() de
+// protótipo); "Esqueceu a senha?" leva a /esqueci-senha.
 //
 // Depois de entrar, volta para onde a pessoa estava (`voltarPara`): a página do painel que a guarda do AdminLayout
 // interceptou, ou a página pública de onde ela clicou em "Entrar" (a campanha com o modal Apoiar aberto, Submeter
@@ -84,6 +84,15 @@ export function LoginPage({ auth }: PropsPagina) {
         }
         throw erroLogin;
       }
+      void navigate(destinoDepoisDoLogin(local.state), { replace: true });
+    });
+  };
+
+  // O Google entregou o ID token: o Nest confere e devolve a mesma sessão do login por senha.
+  const aoEntrarComGoogle = (credential: string) => {
+    setRecusa('');
+    void executarEnviando(async () => {
+      await auth.entrarComGoogle(credential);
       void navigate(destinoDepoisDoLogin(local.state), { replace: true });
     });
   };
@@ -185,27 +194,21 @@ export function LoginPage({ auth }: PropsPagina) {
             {enviando ? 'Entrando...' : 'Entrar'}
           </button>
 
-          <div className="relative flex py-4 items-center">
-            <div className="flex-grow border-t-2 borda-padrao"></div>
-            <span className="rotulo-leitura flex-shrink-0 mx-4 texto-fraco">
-              Ou acesse com
-            </span>
-            <div className="flex-grow border-t-2 borda-padrao"></div>
-          </div>
-
-          {/* Botão do Google: logo oficial de 4 cores via SVG (icone-google.tsx), texto "Continuar com
-              Google" (um `fa-brands fa-google text-red-500` seria um G vermelho chapado, nada parecido com o
-              que Google/GitHub/qualquer site usa). Cores do fundo/borda ficam nos tokens de tema
-              (fundo-cartao/borda-padrao), não fixas em branco: diferente da diretriz oficial (que é sempre
-              branca), mas consistente com o app inteiro reagir ao tema escuro; um botão sempre branco
-              destoaria numa tela escura. */}
-          <button
-            type="button"
-            onClick={() => window.alert('Login social com Google simulado no protótipo.')}
-            className="paragrafo enfase w-full border-2 borda-padrao fundo-cartao texto-forte py-3.5 rounded-xl hover-fundo-sutil transition flex items-center justify-center gap-3"
-          >
-            <IconeGoogle /> Continuar com Google
-          </button>
+          {/* Login com Google (18-11-2026): o botão oficial do Google, só quando VITE_GOOGLE_CLIENT_ID existe (sem ele, nem
+              o separador aparece). A conta nova criada pelo Google passa pelo aceite do Termo de Uso antes de usar o
+              sistema (RF-015), como qualquer conta com termo pendente. */}
+          {LOGIN_GOOGLE_DISPONIVEL && (
+            <>
+              <div className="relative flex py-4 items-center">
+                <div className="flex-grow border-t-2 borda-padrao"></div>
+                <span className="rotulo-leitura flex-shrink-0 mx-4 texto-fraco">
+                  Ou acesse com
+                </span>
+                <div className="flex-grow border-t-2 borda-padrao"></div>
+              </div>
+              <BotaoGoogle contexto="signin" aoReceberToken={aoEntrarComGoogle} aoFalhar={reportarErro} />
+            </>
+          )}
 
           {/* Chamada de cadastro: a segunda ação mais importante da tela, por isso tem mais respiro
               acima. Continua sendo link, não um 2º botão cheio (dois botões grandes competiriam entre si). */}

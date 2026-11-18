@@ -165,6 +165,7 @@ REVOKE EXECUTE ON FUNCTION public.redefinir_senha_por_token(TEXT, TEXT)   FROM P
 REVOKE EXECUTE ON FUNCTION public.registrar_falha_login(INT)              FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.liberar_bloqueio_login(INT)             FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.registrar_login_sucesso(INT, TEXT)      FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.entrar_com_google(TEXT, TEXT, TEXT)    FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.excluir_conta_usuario(INT)              FROM PUBLIC;
 -- registrar_aceite_termo(INT, INT, TEXT) - ver [03-D-1], usada pelo cadastro
 -- público (POST /auth/cadastro, 3-auth) pra gravar o aceite de termo no
@@ -198,6 +199,7 @@ GRANT EXECUTE ON FUNCTION public.redefinir_senha_por_token(TEXT, TEXT)    TO app
 GRANT EXECUTE ON FUNCTION public.registrar_falha_login(INT)               TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.liberar_bloqueio_login(INT)              TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.registrar_login_sucesso(INT, TEXT)       TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.entrar_com_google(TEXT, TEXT, TEXT)     TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.excluir_conta_usuario(INT)               TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.registrar_aceite_termo(INT, INT, TEXT)   TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_pesquisador(INT, TIMESTAMPTZ, TEXT) TO app_nestjs;

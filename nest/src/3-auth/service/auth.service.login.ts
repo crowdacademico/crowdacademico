@@ -66,21 +66,13 @@ export class AuthServiceLogin {
       throw loginRecusado();
     }
 
-    if (usuario.bloqueado_ate && usuario.bloqueado_ate > new Date()) {
-      throw new UnauthorizedException(
-        `Conta temporariamente bloqueada por excesso de tentativas. Tente novamente após ${formatarDataHoraBr(usuario.bloqueado_ate)}.`,
-      );
-    }
+    await this.barrarContaImpedida(usuario.id_usuario, usuario.bloqueado_ate);
 
-    // Suspensão de MODERAÇÃO: conceito diferente de bloqueado_ate acima (ver comentário completo em
-    // usuario.suspenso_ate, 01_extensoes_enums_tabelas.sql [01-D]). 403, não 401: a pessoa não errou credencial
-    // nenhuma, a CONTA é que está impedida, e precisa saber por quê (diferente do MENSAGEM_LOGIN_RECUSADO
-    // deliberadamente vago).
-    const suspensao = await this.buscarSuspensao(usuario.id_usuario);
-    if (suspensao.suspensoAte && suspensao.suspensoAte > new Date()) {
-      throw new ForbiddenException(
-        `Conta suspensa até ${formatarDataHoraBr(suspensao.suspensoAte)}\n\nMotivo: ${suspensao.motivoSuspensao}`,
-      );
+    // Conta criada pelo Google que ainda não tem senha (18-11-2026): a mesma resposta vaga de senha errada, mas sem
+    // contar falha. Não há senha a adivinhar, e contar falhas deixaria qualquer um bloquear a conta (o bloqueio
+    // também barra o login pelo Google). A pessoa cria uma senha pela recuperação de senha.
+    if (usuario.senha_hash === null) {
+      throw loginRecusado();
     }
 
     const senhaValida = await bcrypt.compare(dto.senha, usuario.senha_hash);
@@ -95,18 +87,65 @@ export class AuthServiceLogin {
       throw loginRecusado();
     }
 
-    await sql`SELECT public.registrar_login_sucesso(${usuario.id_usuario}, ${ip ?? null})`.execute(
+    return this.abrirSessao(usuario.id_usuario, ip, userAgent);
+  }
+
+  // O que barra a entrada de uma conta que já foi identificada, pela senha ou pelo Google (18-11-2026): o bloqueio
+  // automático por senha errada repetida e a suspensão de moderação. `bloqueadoAte` vem de quem já leu a linha (o
+  // login por senha); sem ele, a função lê.
+  async barrarContaImpedida(
+    idUsuario: number,
+    bloqueadoAte?: Date | null,
+  ): Promise<void> {
+    const bloqueio =
+      bloqueadoAte !== undefined
+        ? bloqueadoAte
+        : ((
+            await this.database
+              .getDb()
+              .selectFrom('usuario')
+              .select('bloqueado_ate')
+              .where('id_usuario', '=', idUsuario)
+              .executeTakeFirst()
+          )?.bloqueado_ate ?? null);
+    if (bloqueio && bloqueio > new Date()) {
+      throw new UnauthorizedException(
+        `Conta temporariamente bloqueada por excesso de tentativas. Tente novamente após ${formatarDataHoraBr(bloqueio)}.`,
+      );
+    }
+
+    // Suspensão de MODERAÇÃO: conceito diferente de bloqueado_ate acima (ver comentário completo em
+    // usuario.suspenso_ate, 01_extensoes_enums_tabelas.sql [01-D]). 403, não 401: a pessoa não errou credencial
+    // nenhuma, a CONTA é que está impedida, e precisa saber por quê (diferente do MENSAGEM_LOGIN_RECUSADO
+    // deliberadamente vago).
+    const suspensao = await this.buscarSuspensao(idUsuario);
+    if (suspensao.suspensoAte && suspensao.suspensoAte > new Date()) {
+      throw new ForbiddenException(
+        `Conta suspensa até ${formatarDataHoraBr(suspensao.suspensoAte)}
+
+Motivo: ${suspensao.motivoSuspensao}`,
+      );
+    }
+  }
+
+  // A conta passou por tudo: registra o login e devolve a sessão. A mesma resposta para senha e Google.
+  async abrirSessao(
+    idUsuario: number,
+    ip: string | undefined,
+    userAgent: string | undefined,
+  ): Promise<AuthResponseLogin> {
+    const db = this.database.getDb();
+    await sql`SELECT public.registrar_login_sucesso(${idUsuario}, ${ip ?? null})`.execute(
       db,
     );
 
     const { accessToken, refreshToken, aceitePendente } =
-      await this.emitirTokens(usuario.id_usuario, ip, userAgent, 'login');
+      await this.emitirTokens(idUsuario, ip, userAgent, 'login');
 
-    const usuarioResponse = await this.usuarioServiceFindOne.executar(
-      usuario.id_usuario,
-    );
-    const papeis = await this.listarPapeis(usuario.id_usuario);
-    const permissoes = await this.listarPermissoes(usuario.id_usuario);
+    const usuarioResponse =
+      await this.usuarioServiceFindOne.executar(idUsuario);
+    const papeis = await this.listarPapeis(idUsuario);
+    const permissoes = await this.listarPermissoes(idUsuario);
 
     return {
       accessToken,
