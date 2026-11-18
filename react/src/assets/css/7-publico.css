@@ -918,12 +918,30 @@
       height: 100%;
     }
 
-    .orcamento-rosca__fatia {
-      transition: opacity 0.15s;
+    /* Rosca de progresso: a fatia inteira apagada embaixo; a parte já coberta pelo arrecadado, viva por cima. */
+    .orcamento-rosca__fundo {
+      opacity: 0.28;
     }
 
-    .orcamento-rosca__grafico svg:hover .orcamento-rosca__fatia:not(:hover) {
-      opacity: 0.45;
+    .orcamento-rosca__serie-1 .orcamento-rosca__fundo, .orcamento-rosca__serie-1 .orcamento-rosca__aceso { stroke: var(--serie-1); }
+    .orcamento-rosca__serie-2 .orcamento-rosca__fundo, .orcamento-rosca__serie-2 .orcamento-rosca__aceso { stroke: var(--serie-2); }
+    .orcamento-rosca__serie-3 .orcamento-rosca__fundo, .orcamento-rosca__serie-3 .orcamento-rosca__aceso { stroke: var(--serie-3); }
+    .orcamento-rosca__serie-4 .orcamento-rosca__fundo, .orcamento-rosca__serie-4 .orcamento-rosca__aceso { stroke: var(--serie-4); }
+    .orcamento-rosca__serie-5 .orcamento-rosca__fundo, .orcamento-rosca__serie-5 .orcamento-rosca__aceso { stroke: var(--serie-5); }
+    .orcamento-rosca__serie-6 .orcamento-rosca__fundo, .orcamento-rosca__serie-6 .orcamento-rosca__aceso { stroke: var(--serie-6); }
+    .orcamento-rosca__serie-7 .orcamento-rosca__fundo, .orcamento-rosca__serie-7 .orcamento-rosca__aceso { stroke: var(--serie-7); }
+    .orcamento-rosca__serie-8 .orcamento-rosca__fundo, .orcamento-rosca__serie-8 .orcamento-rosca__aceso { stroke: var(--serie-8); }
+
+    /* A ponta do progresso: bolinha na cor do cartão com borda forte, por cima das fatias. */
+    .orcamento-rosca__ponta {
+      fill: var(--cor-fundo-cartao);
+      stroke: var(--cor-texto-forte);
+      stroke-width: 2.5;
+    }
+
+    /* Item ainda não alcançado: a amostra fica apagada como a fatia dele. */
+    .orcamento-rosca__linha--pendente .orcamento-rosca__amostra {
+      opacity: 0.35;
     }
 
     .orcamento-rosca__centro {

@@ -25,6 +25,7 @@ import { comentarioApi } from '../../services/17-comentario/api/comentario.api';
 import type { ComentarioResponse } from '../../services/17-comentario/type/comentario.type';
 import { contribuicaoApi } from '../../services/22-contribuicao/api/contribuicao.api';
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
+import { OrcamentoRosca } from './orcamento-rosca';
 import {
   campanhaAceitaApoios,
   diasRestantes,
@@ -460,7 +461,7 @@ export function Campanha({ auth }: PropsPagina) {
                       <p className="paragrafo texto-fraco">Nenhum item de orçamento está disponível para consulta.</p>
                     )}
                     {publicada && !orcamentos.erro && orcamentos.dados.length > 0 && (
-                      <DistribuicaoOrcamento itens={orcamentos.dados} meta={campanha.metaFinanceira} />
+                      <OrcamentoRosca itens={orcamentos.dados} meta={campanha.metaFinanceira} arrecadado={campanha.valorBrutoArrecadado} />
                     )}
                   </section>
                 )}
@@ -629,115 +630,3 @@ export function Campanha({ auth }: PropsPagina) {
   );
 }
 
-// RF-047: o orçamento como gráfico de distribuição por categoria (rosca, 18-11-2026, escolha do Lucas no lugar das
-// barras). Soma os itens da mesma categoria e desenha uma fatia por categoria, da menor para a maior, com as 8 cores
-// fixas da paleta de séries (--serie-1 a --serie-8, validadas para daltonismo nos dois temas). Passando de 8, as menores
-// viram "Outras". A cor nunca fica sozinha: a legenda ao lado ESCREVE o nome, o valor e o percentual acumulado, e a
-// descrição de cada item (RF-042) aparece embaixo da categoria. Cada fatia tem <title> (dica ao passar o mouse).
-const MAX_FATIAS = 8;
-
-function DistribuicaoOrcamento({ itens, meta }: { itens: OrcamentoCampanhaResponse[]; meta: number }) {
-  const porCategoria = new Map<string, { total: number; itens: OrcamentoCampanhaResponse[] }>();
-  for (const item of itens) {
-    const chave = item.categoria.trim();
-    const grupo = porCategoria.get(chave) ?? { total: 0, itens: [] };
-    grupo.total += item.valor;
-    grupo.itens.push(item);
-    porCategoria.set(chave, grupo);
-  }
-  // Da mais barata para a mais cara (pedido do Lucas, 18-11-2026). Passando de 8, as menores se juntam em "Outras",
-  // que fica no fim da lista (a legenda ainda mostra cada item dela pelo nome).
-  const ordenadas = [...porCategoria.entries()].sort((a, b) => a[1].total - b[1].total);
-  let categorias = ordenadas;
-  if (ordenadas.length > MAX_FATIAS) {
-    const resto = ordenadas.slice(0, ordenadas.length - (MAX_FATIAS - 1));
-    const outras = {
-      total: resto.reduce((soma, [, grupo]) => soma + grupo.total, 0),
-      itens: resto.flatMap(([, grupo]) => grupo.itens),
-    };
-    categorias = [...ordenadas.slice(ordenadas.length - (MAX_FATIAS - 1)), ['Outras', outras]];
-  }
-  const soma = categorias.reduce((total, [, grupo]) => total + grupo.total, 0);
-  const base = meta > 0 ? meta : soma;
-  const percentual = (valor: number) => (base > 0 ? (valor / base) * 100 : 0);
-  const PERCENTUAL = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 });
-
-  // Rosca em SVG: cada fatia é um arco do mesmo círculo (stroke-dasharray), com um vão de 2 unidades entre elas.
-  const RAIO = 42;
-  const CIRCUNFERENCIA = 2 * Math.PI * RAIO;
-  const VAO = categorias.length > 1 ? 2 : 0;
-  const tamanhos = categorias.map(([, grupo]) => (soma > 0 ? (grupo.total / soma) * CIRCUNFERENCIA : 0));
-  const fatias = categorias.map(([categoria, grupo], indice) => ({
-    categoria,
-    grupo,
-    indice,
-    inicio: tamanhos.slice(0, indice).reduce((total, tamanho) => total + tamanho, 0),
-    tamanho: Math.max(tamanhos[indice] - VAO, 0.5),
-    // Percentual ACUMULADO (pedido do Lucas, 18-11-2026): com quanto da meta este item e todos os mais baratos acima
-    // dele já estão cobertos. O último chega a 100%, que é a meta inteira.
-    acumulado: categorias.slice(0, indice + 1).reduce((total, [, g]) => total + g.total, 0),
-  }));
-
-  return (
-    <figure>
-      <figcaption className="rotulo mb-4">Como a meta se divide</figcaption>
-      <div className="orcamento-rosca">
-        <div className="orcamento-rosca__grafico">
-          <svg viewBox="0 0 100 100" role="img" aria-label="Gráfico de rosca do orçamento por categoria">
-            {fatias.map((fatia) => (
-              <circle
-                key={fatia.categoria}
-                cx="50"
-                cy="50"
-                r={RAIO}
-                fill="none"
-                strokeWidth="14"
-                className={`orcamento-rosca__fatia orcamento-rosca__serie-${fatia.indice + 1}`}
-                strokeDasharray={`${fatia.tamanho} ${CIRCUNFERENCIA - fatia.tamanho}`}
-                strokeDashoffset={-fatia.inicio}
-                transform="rotate(-90 50 50)"
-              >
-                <title>{`${fatia.categoria}: ${formatarMoeda(fatia.grupo.total)} (${PERCENTUAL.format(percentual(fatia.grupo.total))}%)`}</title>
-              </circle>
-            ))}
-          </svg>
-          <div className="orcamento-rosca__centro" aria-hidden="true">
-            <span className="rotulo texto-fraco">Meta</span>
-            <span className="paragrafo enfase texto-forte numero">{formatarMoeda(base)}</span>
-          </div>
-        </div>
-        <ul className="orcamento-rosca__legenda" aria-label="Itens do orçamento">
-          {fatias.map(({ categoria, grupo, indice, acumulado }) => {
-            const comDescricao = grupo.itens.filter((item) => item.descricao?.trim());
-            return (
-              <li key={categoria} className="orcamento-rosca__linha">
-                <span className={`orcamento-rosca__amostra orcamento-rosca__serie-${indice + 1}`} aria-hidden="true" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                    <h3 className="paragrafo enfase texto-forte">{categoria}</h3>
-                    <span className="paragrafo texto-forte numero">
-                      {formatarMoeda(grupo.total)}{' '}
-                      <span className="texto-fraco">({PERCENTUAL.format(percentual(acumulado))}%)</span>
-                    </span>
-                  </div>
-                  {grupo.itens.length === 1
-                    ? comDescricao.length === 1 && <p className="paragrafo texto-padrao mt-1">{grupo.itens[0].descricao}</p>
-                    : (
-                      <ul className="mt-1 flex flex-col gap-0.5" aria-label={`Itens de ${categoria}`}>
-                        {grupo.itens.map((item) => (
-                          <li key={item.idOrcamento} className="flex justify-between gap-3 paragrafo texto-padrao">
-                            <span>{categoria === 'Outras' ? item.categoria : (item.descricao?.trim() || 'Sem descrição')}</span>
-                            <span className="numero whitespace-nowrap">{formatarMoeda(item.valor)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    </figure>
-  );
-}
