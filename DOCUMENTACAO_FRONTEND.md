@@ -525,6 +525,19 @@ Em Repasses em Atenção e Reembolsos Manuais (lista e ficha), o "último motivo
 - **Textos:** "pra"/"pro" trocados por "para"/"para o" nos textos que o usuário vê (Nest e React); o boleto desligado não aparece mais nos textos do modal de apoio.
 - **Testes de ponta a ponta:** pasta `testes-e2e/` na raiz do repositório (README próprio).
 
+### Rodada de 18-11-2026: ajustes visuais da área pública
+
+- **Orçamento em rosca de progresso** (`views/publico/orcamento-rosca.tsx`, RF-047; regra DS-122 no `informacoes/DESIGN_SYSTEM.md`):
+  - **Rosca:** fatias por categoria, da mais barata para a mais cara, apagadas. O arrecadado (`campanha.valorBrutoArrecadado`) as acende do topo, no sentido horário, até a ponta (bolinha).
+  - **Legenda:** percentual acumulado e "Coberto" ou "Faltam R$ X".
+  - **Animação:** `useProgressoAnimado`, com requestAnimationFrame; respeita "reduzir movimento".
+  - **Padrão de mercado:** progress donut ou segmented donut (Avalonia, RGraph).
+- **Descrição do item de orçamento:** coluna "Descrição (opcional)" em `components/crud/tabelas/3-tabela-itens-orcamento.tsx` (RF-042). O Nest e o banco já aceitavam.
+- **Cronograma** com bolinhas ligadas por traço (`.linha-do-tempo`, DS-124).
+- **Abas dos modais** (`FiltroPartes`) numa linha só, com rolagem lateral (DS-123).
+- **Explorar em lista:** o cartão saiu da classe `flex-col`, que impedia o modo lista de deitar o cartão (DSP-32).
+- **Ajustes de espaço:** aba Pesquisadores do Explorar sem a linha e o espaço extra; link "Explorar campanhas" do Como funciona com o mesmo recuo dos botões.
+
 ## 14. Usabilidade e acessibilidade
 
 📌 **Auditoria Nielsen/WCAG da área pública (16-11-2026):** relatório em informacoes/AUDITORIA_AREA_PUBLICA_NIELSEN_WCAG_16-11-2026.md. Ficou valendo: cada página tem o próprio título na aba (`components/layout/titulo-da-pagina.tsx`, WCAG 2.4.2; a campanha usa o nome dela); o login volta para onde a pessoa estava (`voltarPara`, só caminho interno); a gaveta do menu no celular prende o foco; as abas da campanha trocam com as setas (padrão da W3C).
