@@ -44,10 +44,13 @@ async function buscarMetricas(authFetch: AuthFetch, campanhas: CampanhaResponse[
 
 // O ícone fica na linha do rótulo (não ao lado do valor), para o valor usar a largura toda do cartão: com o ícone ao
 // lado, "R$ 6.555,55" já vazava do cartão.
+// Tudo centralizado, nos quatro cartões (21-11-2026): alinhado à esquerda, um valor curto ("20" em Apoios recebidos)
+// ficava sozinho no canto, com um vazio ao lado. Centralizado também na altura: a grade deixa os quatro com a altura do
+// maior (o de Repasses, quando tem a linha "previsto"), e sem isso o conteúdo dos outros grudava no topo.
 function Cartao({ icone, rotulo, valor, detalhe }: { icone: string; rotulo: string; valor: string; detalhe?: string }) {
   return (
-    <div className="fundo-cartao border borda-padrao rounded-xl p-4 min-w-0">
-      <p className="legenda texto-fraco flex items-center gap-2 mb-2">
+    <div className="fundo-cartao border borda-padrao rounded-xl p-4 min-w-0 flex flex-col items-center justify-center text-center">
+      <p className="legenda texto-fraco flex items-center justify-center gap-2 mb-2">
         <span className="w-7 h-7 shrink-0 rounded-lg fundo-sutil texto-marca flex items-center justify-center" aria-hidden="true">
           <i className={`fa-solid ${icone}`} />
         </span>
