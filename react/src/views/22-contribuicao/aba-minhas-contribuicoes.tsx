@@ -93,7 +93,6 @@ export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'au
         nivelTitulo={2}
         ajuda={`Todas as contribuições feitas com esta conta, da mais nova para a mais antiga, com a situação de cada uma (paga, devolvida, vencida...). A tarifa é a do meio de pagamento, paga por cima do valor; Consultar mostra o total cobrado. Até ${prazoDesistencia} dias depois de apoiar, você pode desistir de uma contribuição paga e receber o valor de volta (a tarifa não volta).`}
         colunas={[
-          { chave: 'idContribuicao', rotulo: 'id', tipo: 'id' },
           { chave: 'campanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
           { chave: 'valor', rotulo: 'valor', tipo: 'dinheiro' },
           { chave: 'taxaPagamento', rotulo: 'tarifa', tipo: 'dinheiro' },
@@ -135,11 +134,9 @@ export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'au
         nivelTitulo={2}
         ajuda="Toda recompensa que o valor de uma contribuição sua paga alcançou. Na campanha Tudo ou Nada, ela é liberada quando a campanha bate a meta. Se a contribuição for devolvida, a recompensa sai daqui. O link especial só você, o pesquisador e a administração enxergam."
         colunas={[
-          { chave: 'idRecompensa', rotulo: 'id', tipo: 'id' },
           { chave: 'titulo', rotulo: 'recompensa', tipo: 'nome', umaLinha: true },
           { chave: 'tipoRotulo', rotulo: 'tipo', tipo: 'status' },
           { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'texto', umaLinha: true },
-          { chave: 'idContribuicao', rotulo: 'contribuição', tipo: 'id' },
           {
             chave: 'links',
             rotulo: 'link',

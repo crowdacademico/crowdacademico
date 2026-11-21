@@ -856,7 +856,7 @@ INSERT INTO modelo_mensagem (tipo_evento, canal, titulo, corpo, ativo, obrigator
 ('apoio_confirmado', 'email', 'Recebemos seu apoio',
  E'Obrigado por apoiar "{{titulo}}"! O pagamento de {{valor}} foi confirmado e já conta para a meta.\n\nProtocolo do seu apoio: {{protocolo}}. Guarde este número.\n\n{{#recompensas}}Suas recompensas já estão liberadas: {{recompensas}}. Veja em Minha Conta, na aba Financeiro.{{/recompensas}}\n\nSe mudar de ideia, você pode desistir em até {{prazo_desistencia}} dias, em Minha Conta, na aba Financeiro. O valor do apoio volta; a tarifa do meio de pagamento não.', TRUE, FALSE),
 ('apoio_confirmado', 'interna', 'Apoio confirmado',
- E'Seu apoio de {{valor}} a "{{titulo}}" foi confirmado. Protocolo {{protocolo}}.', TRUE, FALSE),
+ E'Seu apoio de {{valor}} a "{{titulo}}" foi confirmado.', TRUE, FALSE),
 ('recompensa_liberada', 'interna', 'Recompensa liberada',
  E'Sua recompensa de "{{titulo}}" está liberada: {{recompensas}}.', TRUE, FALSE)
 ON CONFLICT (tipo_evento, canal) DO NOTHING;
@@ -1335,7 +1335,9 @@ WHERE a.titulo = 'Artigo submetido com o código aberto' AND t.codigo = 'GITHUB'
 DO $$
 BEGIN
     PERFORM set_config('app.id_usuario_atual', '3', TRUE);  -- Moderador Sistema
-    UPDATE atualizacao_campanha SET ativo = FALSE WHERE titulo = 'Fotos de pacientes sem autorização';
+    UPDATE atualizacao_campanha SET ativo = FALSE,
+        motivo_moderacao = 'As fotos mostram pacientes sem a autorização deles, o que fere a privacidade (LGPD).'
+    WHERE titulo = 'Fotos de pacientes sem autorização';
     PERFORM set_config('app.id_usuario_atual', (SELECT id_usuario FROM campanha WHERE id_campanha = 5)::TEXT, TRUE);
     UPDATE atualizacao_campanha SET ativo = FALSE WHERE titulo = 'Agenda de visitas (versão antiga)';
     PERFORM set_config('app.id_usuario_atual', '', TRUE);

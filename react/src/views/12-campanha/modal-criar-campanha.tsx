@@ -19,6 +19,7 @@ import { useErrosFormulario } from '../../services/constant/hook/use-erros-formu
 import { ContadorCaracteres } from '../../components/input/contador-caracteres';
 import { erroLimiteCaracteres } from '../../services/constant/util/validacao.util';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
+import { AjudaEtapaCampanha } from './ajuda-etapa-campanha';
 import { EtapaRevisaoCampanha } from './etapa-revisao-campanha';
 import { SecaoRecompensasCampanha } from '../18-recompensa/secao-recompensas-campanha';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
@@ -93,7 +94,7 @@ const ETAPAS = [
 // nunca criada outra vez. O mínimo de itens e de marcos só é exigido no envio: dá para fechar e continuar depois,
 // e o rascunho reabre neste mesmo passo a passo (idRascunho).
 //
-// O selo no topo ("Rascunho #N salvo") fica à vista em todas as etapas: o aviso flutuante some, e a pessoa
+// O selo no topo ("Rascunho salvo") fica à vista em todas as etapas: o aviso flutuante some, e a pessoa
 // precisa saber que a campanha já está guardada. Na Revisão, "Salvar rascunho" fecha o modal (tudo já está
 // gravado) e "Enviar para aprovação" parece indisponível enquanto o checklist tiver item vermelho, mas continua
 // clicável: quem cobra orçamento, soma, cronograma e prazo é o banco (trg_campanha_valida_completude), e o erro
@@ -204,7 +205,7 @@ export function ModalCriarCampanha({
       if (idCampanha === null) {
         const nova = criar ? await criar(corpo()) : await campanhaApi.criar(auth.authFetch, corpo());
         setIdCampanha(nova.idCampanha);
-        mostrar('Campanha criada como rascunho.', `ID: ${nova.idCampanha}. Agora, o orçamento.`);
+        mostrar('Campanha criada como rascunho.', 'Agora, o orçamento.');
       } else {
         await campanhaApi.atualizar(auth.authFetch, idCampanha, corpo());
       }
@@ -236,7 +237,7 @@ export function ModalCriarCampanha({
     }
     await executarTrabalhando(async () => {
       await campanhaApi.enviar(auth.authFetch, idCampanha);
-      mostrar('Campanha enviada para aprovação.', `ID: ${idCampanha}`);
+      mostrar('Campanha enviada para aprovação.', 'Agora é com a curadoria.');
       aoMudar();
       aoFechar();
     });
@@ -247,7 +248,7 @@ export function ModalCriarCampanha({
     if (idCampanha === null) {
       return;
     }
-    mostrar('Rascunho salvo.', `ID: ${idCampanha}. Dá para continuar depois, de onde parou.`);
+    mostrar('Rascunho salvo.', 'Dá para continuar depois, de onde parou.');
     aoFechar();
   };
 
@@ -266,10 +267,10 @@ export function ModalCriarCampanha({
     idCampanha === null ? (
       <span key="selo" className="badge badge-neutro">Ainda não salva</span>
     ) : etapa === 'dados' && sujo ? (
-      <span key="selo" className="badge badge-aviso">Rascunho #{idCampanha}: alterações não salvas</span>
+      <span key="selo" className="badge badge-aviso">Rascunho com alterações não salvas</span>
     ) : (
       <span key="selo" className="badge badge-sucesso">
-        <i className="fa-solid fa-circle-check" aria-hidden="true"></i> Rascunho #{idCampanha} salvo
+        <i className="fa-solid fa-circle-check" aria-hidden="true"></i> Rascunho salvo
       </span>
     );
 
@@ -362,6 +363,12 @@ export function ModalCriarCampanha({
           />
         ) : (etapa === 'orcamento' || etapa === 'cronograma') && idCampanha !== null ? (
           <SecaoFicha titulo={etapa === 'orcamento' ? 'Orçamento' : 'Cronograma'}>
+            <AjudaEtapaCampanha
+              key={`ajuda-${etapa}`}
+              etapa={etapa}
+              meta={Number(form.metaFinanceira) || undefined}
+              minimoMarcos={regras.minimoMarcosCronograma}
+            />
             <div className="sm:col-span-2">
               <PainelOrcamentoCronograma
                 // `key`: a etapa troca só a prop `abaFixa`, e o painel guarda a aba no próprio estado; sem remontar,
@@ -372,6 +379,7 @@ export function ModalCriarCampanha({
                 podeEditar
                 abaFixa={etapa}
                 dataInicioCampanha={form.dataInicio}
+                minimoMarcos={regras.minimoMarcosCronograma}
               />
             </div>
           </SecaoFicha>

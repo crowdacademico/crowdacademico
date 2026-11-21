@@ -32,6 +32,8 @@ interface PainelOrcamentoCronogramaProps {
   abaFixa?: 'orcamento' | 'cronograma';
   // `dataInicioCampanha`: mínimo da data prevista de um marco (ver 4-tabela-marcos-cronograma.tsx).
   dataInicioCampanha?: string;
+  // Mínimo de marcos: no Criar, as linhas que faltam já aparecem abertas (ver tabela-editavel.tsx).
+  minimoMarcos?: number;
 }
 
 export function PainelOrcamentoCronograma({
@@ -41,6 +43,7 @@ export function PainelOrcamentoCronograma({
   aoCarregar,
   abaFixa,
   dataInicioCampanha,
+  minimoMarcos,
 }: PainelOrcamentoCronogramaProps) {
   const { reportarErro } = useErroToast();
   const [orcamento, setOrcamento] = useState<OrcamentoCampanhaResponse[]>([]);
@@ -113,6 +116,7 @@ export function PainelOrcamentoCronograma({
               marcos={cronograma}
               podeEditar={podeEditar}
               dataInicioCampanha={dataInicioCampanha}
+              minimoMarcos={minimoMarcos}
               aoAdicionar={(dados: DadosMarco) => executar(() => marcoCronogramaApi.criar(auth.authFetch, { idCampanha, ...dados }))}
               aoSalvar={(marco, dados) => executar(() => marcoCronogramaApi.atualizar(auth.authFetch, marco.idMarco, dados))}
               aoExcluir={(marco) => void executar(() => marcoCronogramaApi.remover(auth.authFetch, marco.idMarco))}

@@ -113,6 +113,7 @@ export interface AtualizacaoCampanha {
   fase: FaseAtualizacao;
   id_atualizacao: Generated<number>;
   id_campanha: number;
+  motivo_moderacao: string | null;
   ocultada_moderacao: Generated<boolean>;
   publicado_em: Generated<Timestamp>;
   tipo: TipoAtualizacao;

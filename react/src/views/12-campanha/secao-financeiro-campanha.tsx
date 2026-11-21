@@ -50,7 +50,7 @@ export function SecaoFinanceiroCampanha({ campanha, meta, campoMeta, resumoContr
         rotulo="Contribuições"
         valor={
           resumoContribuicoes &&
-          (resumoContribuicoes.total === 0 ? 'Nenhuma ainda.' : `${resumoContribuicoes.pagas} pagas de ${resumoContribuicoes.total}`)
+          (resumoContribuicoes.pagas === 0 ? 'Nenhuma ainda.' : String(resumoContribuicoes.pagas))
         }
       />
     </SecaoFicha>

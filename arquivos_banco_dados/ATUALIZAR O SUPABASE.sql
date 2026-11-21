@@ -3286,3 +3286,199 @@ CREATE TRIGGER trg_configuracoes_faixa
 
 UPDATE configuracoes SET valor = '60'
 WHERE chave = 'recuperacao_senha_minutos_validade' AND valor ~ '^\s*\d+\s*$' AND btrim(valor)::NUMERIC > 60;
+
+-- ============================================================================
+-- GRUPO DF (21-11-2026) - Notificação "Apoio confirmado" sem o protocolo. IDEMPOTENTE.
+-- Não precisa parar o Nest.
+--
+-- O que muda:
+--   1. A notificação interna (o sino) dizia "... foi confirmado. Protocolo 50.". O protocolo é o id da contribuição
+--      e não serve para quem tem conta (desiste pela Minha Conta). Sai do texto.
+--   2. Só troca se o texto ainda for o original: se o admin já mudou em Configurações > Mensagens, fica como está.
+--   3. O e-mail e a página de apoio confirmado continuam com o protocolo (o visitante sem conta desiste pelo
+--      suporte informando esse número).
+-- ============================================================================
+UPDATE modelo_mensagem
+SET corpo = E'Seu apoio de {{valor}} a "{{titulo}}" foi confirmado.'
+WHERE tipo_evento = 'apoio_confirmado' AND canal = 'interna'
+  AND corpo = E'Seu apoio de {{valor}} a "{{titulo}}" foi confirmado. Protocolo {{protocolo}}.';
+
+
+-- ============================================================================
+-- GRUPO DG (21-11-2026) - Campanha aguardando aprovação não pode ser alterada. IDEMPOTENTE.
+-- Não precisa parar o Nest. Código novo: 91063.
+--
+-- O que muda:
+--   1. fn_campanha_campos_bloqueados: em 'aguardando_aprovacao' trava título, descrição, meta, modelo, datas, área,
+--      vídeo e capa. A mesma lista vai para GET /campanha/:id (camposBloqueados), então a tela já mostra travado.
+--   2. fn_congela_regras_campanha: mudar um desses campos com a campanha aguardando aprovação dá 91063.
+--   3. fn_congela_orcamento_campanha e fn_congela_marco_cronograma: incluir, alterar ou excluir item de orçamento ou
+--      marco de cronograma de campanha aguardando aprovação dá 91063.
+--   Aprovar e rejeitar continuam: mudam só status, aprovado_em e quem decidiu, e a taxa é carimbada pela aprovação.
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.fn_campanha_campos_bloqueados(p public.campanha)
+RETURNS TEXT[]
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT CASE
+        WHEN p.status = 'rejeitado' AND public.fn_campanha_reenvios_esgotados(p.id_campanha) THEN
+            ARRAY['titulo', 'descricao', 'meta_financeira', 'modelo', 'data_inicio', 'data_fim',
+                  'id_area_conhecimento', 'video_apresentacao_url', 'id_imagem_capa']
+        -- Aguardando aprovação (21-11-2026): nada muda enquanto a curadoria analisa, para ela aprovar o que leu. A taxa
+        -- fica de fora: é a aprovação que a carimba (fn_carimba_taxa_plataforma_aprovacao).
+        WHEN p.status = 'aguardando_aprovacao' THEN
+            ARRAY['titulo', 'descricao', 'meta_financeira', 'modelo', 'data_inicio', 'data_fim',
+                  'id_area_conhecimento', 'video_apresentacao_url', 'id_imagem_capa']
+        WHEN public.fn_status_pos_aprovacao(p.status) THEN
+            ARRAY['meta_financeira', 'modelo', 'taxa_plataforma', 'titulo', 'descricao',
+                  'video_apresentacao_url', 'id_area_conhecimento']
+            || CASE WHEN p.data_inicio IS NOT NULL AND p.data_inicio <= NOW()
+                    THEN ARRAY['data_fim', 'data_inicio'] ELSE ARRAY[]::TEXT[] END
+        ELSE ARRAY[]::TEXT[]
+    END;
+$$;
+
+CREATE OR REPLACE FUNCTION fn_congela_regras_campanha()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_campo TEXT;
+    v_erro  RECORD;
+BEGIN
+    -- A lista de campos travados e o código/mensagem de cada um moram em fn_campanha_campos_bloqueados e
+    -- fn_campanha_erro_congelamento (a mesma lista alimenta GET /campanha/:id). A comparação usa to_jsonb, que
+    -- trata NULL como o IS DISTINCT FROM de antes (taxa_plataforma e data_inicio são nullable).
+    FOREACH v_campo IN ARRAY public.fn_campanha_campos_bloqueados(OLD) LOOP
+        IF (to_jsonb(NEW) -> v_campo) IS DISTINCT FROM (to_jsonb(OLD) -> v_campo) THEN
+            IF OLD.status = 'aguardando_aprovacao' THEN
+                RAISE EXCEPTION 'Campanha enviada para aprovação: não pode ser alterada enquanto a curadoria analisa.'
+                    USING ERRCODE = '91063';
+            END IF;
+            SELECT * INTO v_erro FROM public.fn_campanha_erro_congelamento(v_campo, OLD.status = 'rejeitado');
+            RAISE EXCEPTION '%', v_erro.mensagem USING ERRCODE = v_erro.errcode;
+        END IF;
+    END LOOP;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION public.fn_congela_orcamento_campanha()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_id_campanha INT := COALESCE(NEW.id_campanha, OLD.id_campanha);
+    v_status      status_campanha;
+BEGIN
+    SELECT status INTO v_status FROM campanha WHERE id_campanha = v_id_campanha;
+
+    IF public.fn_status_pos_aprovacao(v_status) THEN
+        RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o orçamento após a aprovação da campanha.'
+            USING ERRCODE = '91011';
+    END IF;
+
+    -- Aguardando aprovação (21-11-2026): a curadoria aprova o orçamento que leu (mesmo código da campanha).
+    IF v_status = 'aguardando_aprovacao' THEN
+        RAISE EXCEPTION 'Campanha enviada para aprovação: o orçamento não pode ser alterado enquanto a curadoria analisa.'
+            USING ERRCODE = '91063';
+    END IF;
+
+    -- Rejeitada sem reenvios é só leitura, ver fn_campanha_reenvios_esgotados. Na exclusão da própria campanha
+    -- (cascata, expirar_campanhas_rejeitadas) v_status vem NULL, porque a linha-pai já sumiu, e o bloqueio não se
+    -- aplica: é o que deixa a expiração apagar.
+    IF v_status = 'rejeitado' AND public.fn_campanha_reenvios_esgotados(v_id_campanha) THEN
+        RAISE EXCEPTION 'Esta campanha rejeitada já usou todos os reenvios permitidos e agora é somente leitura.'
+            USING ERRCODE = '91027';
+    END IF;
+
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.fn_congela_marco_cronograma()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_id_campanha INT := COALESCE(NEW.id_campanha, OLD.id_campanha);
+    v_status      status_campanha;
+    v_data_inicio TIMESTAMP;
+BEGIN
+    SELECT status, data_inicio INTO v_status, v_data_inicio FROM campanha WHERE id_campanha = v_id_campanha;
+
+    IF public.fn_status_pos_aprovacao(v_status)
+       AND v_data_inicio IS NOT NULL AND v_data_inicio <= NOW() THEN
+        RAISE EXCEPTION 'Operação bloqueada: o cronograma não pode ser alterado depois que a campanha começa de verdade.'
+            USING ERRCODE = '91013';
+    END IF;
+
+    -- Aguardando aprovação (21-11-2026): a curadoria aprova o cronograma que leu (mesmo código da campanha).
+    IF v_status = 'aguardando_aprovacao' THEN
+        RAISE EXCEPTION 'Campanha enviada para aprovação: o cronograma não pode ser alterado enquanto a curadoria analisa.'
+            USING ERRCODE = '91063';
+    END IF;
+
+    -- Mesmo bloqueio de fn_congela_orcamento_campanha (ver comentário lá, inclusive sobre v_status NULL na
+    -- cascata de exclusão).
+    IF v_status = 'rejeitado' AND public.fn_campanha_reenvios_esgotados(v_id_campanha) THEN
+        RAISE EXCEPTION 'Esta campanha rejeitada já usou todos os reenvios permitidos e agora é somente leitura.'
+            USING ERRCODE = '91027';
+    END IF;
+
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+-- ============================================================================
+-- GRUPO DH (21-11-2026) - Motivo da exclusão de atualização pela moderação. IDEMPOTENTE.
+-- Cole ANTES de subir o Nest novo (ele lê a coluna nova). Código novo: 90044.
+--
+-- O que muda:
+--   1. Coluna atualizacao_campanha.motivo_moderacao (texto, até 1000 caracteres).
+--   2. fn_atualizacao_ocultacao: a moderação só exclui (mantendo o registro) com o motivo escrito (90044). Depois o
+--      motivo não muda; some se a atualização voltar ao ar. O dono vê o motivo no Estúdio, clicando na pílula Excluída.
+--   As excluídas antes deste grupo ficam sem motivo: o Estúdio avisa que ele não foi registrado.
+-- ============================================================================
+ALTER TABLE atualizacao_campanha ADD COLUMN IF NOT EXISTS motivo_moderacao TEXT;
+
+ALTER TABLE atualizacao_campanha DROP CONSTRAINT IF EXISTS "CK_ATUALIZACAO_CAMPANHA_MOTIVO_TAMANHO";
+ALTER TABLE atualizacao_campanha ADD CONSTRAINT "CK_ATUALIZACAO_CAMPANHA_MOTIVO_TAMANHO" CHECK (char_length(motivo_moderacao) <= 1000);
+
+CREATE OR REPLACE FUNCTION fn_atualizacao_ocultacao()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.ocultada_moderacao := OLD.ocultada_moderacao;
+
+    IF OLD.ativo = TRUE AND NEW.ativo = FALSE THEN
+        NEW.ocultada_moderacao := NOT EXISTS (
+            SELECT 1 FROM campanha WHERE id_campanha = NEW.id_campanha AND id_usuario = public.id_usuario_atual()
+        );
+    ELSIF OLD.ativo = FALSE AND NEW.ativo = TRUE THEN
+        IF OLD.ocultada_moderacao AND NOT public.tem_permissao('atualizacao_moderar') THEN
+            RAISE EXCEPTION 'Esta atualização foi excluída pela moderação e não pode voltar a aparecer.'
+                USING ERRCODE = '92040';
+        END IF;
+        NEW.ocultada_moderacao := FALSE;
+    END IF;
+
+    IF NEW.ocultada_moderacao AND NOT OLD.ocultada_moderacao THEN
+        NEW.motivo_moderacao := NULLIF(btrim(NEW.motivo_moderacao), '');
+        IF NEW.motivo_moderacao IS NULL THEN
+            RAISE EXCEPTION 'Informe o motivo da exclusão: o pesquisador vê esse texto no Estúdio.'
+                USING ERRCODE = '90044';
+        END IF;
+    ELSIF NEW.ocultada_moderacao THEN
+        NEW.motivo_moderacao := OLD.motivo_moderacao;
+    ELSE
+        NEW.motivo_moderacao := NULL;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;

@@ -93,7 +93,7 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
     };
   }, [auth.authFetch, id, idValido, idUsuario]);
 
-  // Publicações: as atualizações de todas as campanhas do pesquisador, juntas e pela data.
+  // Atualizações: as atualizações de todas as campanhas do pesquisador, juntas e pela data.
   useEffect(() => {
     if (!campanhas || idUsuario === undefined) return;
     let ativo = true;
@@ -199,6 +199,7 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
   const encerradas = campanhas?.filter((campanha) => campanha.status !== 'ativo') ?? [];
   const lista = publicacoes !== null && publicacoes.chave === idUsuario ? publicacoes.lista : undefined;
   const tituloPorCampanha = new Map(campanhas?.map((campanha) => [campanha.idCampanha, campanha.titulo]) ?? []);
+  const idsEncerradas = new Set(encerradas.map((campanha) => campanha.idCampanha));
   const nome = pesquisador?.nome ?? (carregando ? 'Carregando…' : 'Pesquisador');
   const pontuacao = score?.scoreTotal ?? perfil?.scoreAtual ?? null;
 
@@ -303,12 +304,16 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
               <SecaoCampanhas titulo="Campanhas encerradas" campanhas={encerradas} carregando={campanhas === null && carregando} vazio="Nenhuma campanha encerrada." />
 
               <section id="perfil-pesquisador-publicacoes" aria-labelledby="perfil-publicacoes-titulo">
-                <h2 id="perfil-publicacoes-titulo" className="titulo-secao mb-4">Publicações</h2>
+                <h2 id="perfil-publicacoes-titulo" className="titulo-secao mb-4">Atualizações</h2>
                 {lista === undefined && <p className="paragrafo texto-fraco">Carregando…</p>}
                 {lista === null && <p className="paragrafo texto-fraco">Não foi possível carregar as publicações.</p>}
                 {lista && lista.length === 0 && <p className="paragrafo texto-fraco">Sem publicações recentes.</p>}
                 {lista && lista.length > 0 && (
-                  <ListaAtualizacoes atualizacoes={lista} tituloCampanha={(idCampanha) => tituloPorCampanha.get(idCampanha)} />
+                  <ListaAtualizacoes
+                    atualizacoes={lista}
+                    tituloCampanha={(idCampanha) => tituloPorCampanha.get(idCampanha)}
+                    campanhaEncerrada={(idCampanha) => idsEncerradas.has(idCampanha)}
+                  />
                 )}
               </section>
             </div>

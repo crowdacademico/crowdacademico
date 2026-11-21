@@ -24,6 +24,9 @@ export class AtualizacaoCampanhaServiceUpdate {
       ...(dto.fase !== undefined ? { fase: dto.fase } : {}),
       ...(dto.tipo !== undefined ? { tipo: dto.tipo } : {}),
       ...(dto.ativo !== undefined ? { ativo: dto.ativo } : {}),
+      ...(dto.motivoModeracao !== undefined
+        ? { motivo_moderacao: dto.motivoModeracao }
+        : {}),
     };
     if (Object.keys(campos).length === 0) {
       // `UPDATE ... SET WHERE` sem coluna é SQL inválido: 400 claro em vez do 500 do Postgres.

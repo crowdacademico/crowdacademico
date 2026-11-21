@@ -614,6 +614,7 @@ export interface AtualizacaoCampanhaTable {
   tipo: TipoAtualizacao;
   ativo: Generated<boolean>;
   ocultada_moderacao: Generated<boolean>;
+  motivo_moderacao: string | null;
 }
 
 export interface OrcamentoCampanhaTable {

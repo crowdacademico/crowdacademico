@@ -22,6 +22,8 @@ export interface AtualizacaoCampanhaResponse {
   ativo: boolean;
   // Oculta pela moderação: o dono não mostra de novo. false com ativo false: o próprio dono ocultou.
   ocultadaModeracao: boolean;
+  // Por que a moderação excluiu (21-11-2026); null quando foi o dono ou é anterior a essa data.
+  motivoModeracao: string | null;
   anexos: AnexoAtualizacao[];
 }
 
@@ -46,4 +48,6 @@ export interface AtualizacaoCampanhaRequestUpdate {
   conteudo?: string;
   fase?: FaseAtualizacao;
   ativo?: boolean;
+  // Obrigatório quando a moderação exclui (90044).
+  motivoModeracao?: string;
 }

@@ -79,6 +79,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90041 | `fn_denuncia_comentario_preenche` | `denuncia` | Denúncia de um comentário cujo autor não tem mais conta
 | 90042 | `entrar_com_google` | `usuario` | O ID token do Google veio sem o identificador (sub) ou sem o e-mail
 | 90043 | `fn_valida_faixa_configuracoes` | `configuracoes` | Parâmetro fora da faixa fixada por requisito: hoje, `recuperacao_senha_minutos_validade` só aceita inteiro de 1 a 60 (RF-007, link de redefinição de no máximo 1 hora). Leva `dados` no corpo: `chave`, `minimo`, `maximo` |
+| 90044 | `fn_atualizacao_ocultacao` | `atualizacao_campanha` | A moderação excluiu uma atualização (mantendo o registro) sem escrever o motivo. O pesquisador vê o motivo no Estúdio (Grupo DH, 21-11-2026) |
 
 ## 91xxx - Conflito de estado/regra de negócio (409)
 
@@ -144,6 +145,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91060 | `desistir_contribuicao` | `contribuicao` | Desistir depois do prazo (`desistencia_prazo_dias`, 7 por padrão, contados da contribuição)
 | 91061 | `desistir_contribuicao` | `contribuicao` | Desistir quando o repasse da campanha já saiu de `pendente` (transferência em andamento ou feita)
 | 91062 | `entrar_com_google` | `usuario` | Login com Google com um e-mail que já está ligado a outra conta Google
+| 91063 | `fn_congela_regras_campanha`, `fn_congela_orcamento_campanha`, `fn_congela_marco_cronograma` | `campanha`, `orcamento_campanha`, `marco_cronograma` | Campanha aguardando aprovação: conteúdo, orçamento e cronograma não mudam enquanto a curadoria analisa (Grupo DG, 21-11-2026)
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
 

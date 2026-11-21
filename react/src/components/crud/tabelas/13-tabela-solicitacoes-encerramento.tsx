@@ -14,13 +14,14 @@ function quemDecidiu(item: SolicitacaoEncerramentoResponse): string {
   return item.nomeAdmin ?? `#${item.idAdmin}`;
 }
 
-export function TabelaSolicitacoesEncerramento({ solicitacoes }: { solicitacoes: SolicitacaoEncerramentoResponse[] }) {
+// `semId`: no Alterar do dono (Estúdio, área pública) o id não aparece; só a gestão vê.
+export function TabelaSolicitacoesEncerramento({ solicitacoes, semId = false }: { solicitacoes: SolicitacaoEncerramentoResponse[]; semId?: boolean }) {
   return (
     <CaixaTabela rotulo="Pedidos de encerramento da campanha">
       <table className="crud-tabela">
         <thead>
           <tr>
-            <th className="crud-tabela__col--id">id</th>
+            {!semId && <th className="crud-tabela__col--id">id</th>}
             <th className="crud-tabela__col--curta">Data</th>
             <th>Justificativa</th>
             <th className="crud-tabela__col--curta">Situação</th>
@@ -31,7 +32,7 @@ export function TabelaSolicitacoesEncerramento({ solicitacoes }: { solicitacoes:
         <tbody>
           {solicitacoes.map((item) => (
             <tr key={item.idSolicitacao}>
-              <td data-rotulo="id" className="crud-tabela__col--id">{item.idSolicitacao}</td>
+              {!semId && <td data-rotulo="id" className="crud-tabela__col--id">{item.idSolicitacao}</td>}
               <td data-rotulo="Data" className="crud-tabela__col--curta">{formatarData(item.solicitadoEm)}</td>
               <td data-rotulo="Justificativa">
                 <TextoResumido texto={item.justificativaPesquisador} />

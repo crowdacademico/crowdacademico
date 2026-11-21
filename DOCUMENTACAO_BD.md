@@ -1276,7 +1276,7 @@ O raciocínio de arquitetura por trás de regras que valem para o banco inteiro.
 
 ## Como conferir este inventário
 
-**Contagem do inventário** (recontada nos `.sql` em 18-11-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **122 policies**, **126 triggers** no `05` (120 comuns e 6 `CONSTRAINT TRIGGER`), **203 funções** (160 no `05`, 41 no `03`, 1 no `08`, 1 no `01`), **69 índices** no `02` e **149 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (recontada nos `.sql` em 21-11-2026; evite repetir estes números em outros documentos, eles envelhecem): **44 tabelas**, **122 policies**, **126 triggers** no `05` (120 comuns e 6 `CONSTRAINT TRIGGER`), **203 funções** (160 no `05`, 41 no `03`, 1 no `08`, 1 no `01`), **69 índices** no `02` e **151 códigos** de ERRCODE próprio (tabelas no `DOCUMENTACAO_ERRCODE.md`).
 
 Para recontar direto do banco (no SQL Editor do Supabase ou no banco local):
 

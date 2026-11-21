@@ -17,6 +17,7 @@ export class AtualizacaoCampanhaConverter {
       tipo: entity.tipo,
       ativo: entity.ativo,
       ocultadaModeracao: entity.ocultada_moderacao,
+      motivoModeracao: entity.motivo_moderacao,
       anexos,
     };
   }

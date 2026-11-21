@@ -49,9 +49,10 @@ export function LoginPage({ auth }: PropsPagina) {
   const local = useLocation();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  // "Manter conectado neste computador" (18-11-2026): desmarcada por padrão, a sessão acaba ao fechar o navegador
-  // (computador da escola, da biblioteca). Vale para o login por senha e pelo Google.
-  const [manterConectado, setManterConectado] = useState(false);
+  // "Manter conectado neste computador" (18-11-2026): marcada por padrão desde 21-11-2026 (padrão de mercado). Quem
+  // usa computador da escola ou da biblioteca desmarca, e a sessão acaba ao fechar o navegador. Vale para o login
+  // por senha e pelo Google.
+  const [manterConectado, setManterConectado] = useState(true);
   const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const idSenha = useId();

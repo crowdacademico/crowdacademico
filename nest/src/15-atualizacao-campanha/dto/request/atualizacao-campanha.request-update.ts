@@ -38,4 +38,10 @@ export class AtualizacaoCampanhaRequestUpdate {
   @IsOptional()
   @IsBoolean()
   ativo?: boolean;
+
+  // Obrigatório quando a moderação exclui (ativo = false): o banco recusa sem ele (90044). Fora disso, é ignorado.
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  motivoModeracao?: string;
 }

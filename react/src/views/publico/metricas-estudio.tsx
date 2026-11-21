@@ -69,13 +69,13 @@ export function MetricasEstudio({ authFetch, campanhas }: { authFetch: AuthFetch
   return (
     <section aria-label="Resumo das suas campanhas" className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-3 mb-6">
       <Cartao icone="fa-sack-dollar" rotulo="Arrecadado" valor={formatarMoeda(arrecadado)} />
-      <Cartao icone="fa-hand-holding-heart" rotulo="Apoios recebidos" valor={carregando ? '…' : String(dado.apoios)} detalhe="pagos" />
+      <Cartao icone="fa-hand-holding-heart" rotulo="Apoios recebidos" valor={carregando ? '…' : String(dado.apoios)} />
       <Cartao icone="fa-calculator" rotulo="Líquido (estimado)" valor={carregando ? '…' : formatarMoeda(dado.liquidoEstimado)} />
       <Cartao
         icone="fa-building-columns"
         rotulo="Repasses recebidos"
         valor={carregando ? '…' : formatarMoeda(dado.recebido)}
-        detalhe={carregando ? undefined : dado.previsto > 0 ? `previsto: ${formatarMoeda(dado.previsto)}` : 'nada previsto agora'}
+        detalhe={carregando ? undefined : dado.previsto > 0 ? `previsto: ${formatarMoeda(dado.previsto)}` : undefined}
       />
     </section>
   );

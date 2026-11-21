@@ -682,6 +682,10 @@
     .cartao-campanha__status {
       top: auto;
       bottom: 0.75rem;
+      /* 21-11-2026: no tema escuro o fundo das pílulas é translúcido (16-18%) e, por cima da foto, a imagem clara
+         aparecia através e a pílula ficava apagada ("Sucesso"). Escurecer o que está atrás deixa o tom igual ao das
+         tabelas. No tema claro o fundo da pílula é opaco, então isto não aparece. */
+      backdrop-filter: blur(0.5rem) brightness(0.3);
     }
 
     .cartao-campanha__corpo {

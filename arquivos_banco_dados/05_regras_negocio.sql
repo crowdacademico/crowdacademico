@@ -1776,6 +1776,10 @@ BEGIN
     -- trata NULL como o IS DISTINCT FROM de antes (taxa_plataforma e data_inicio são nullable).
     FOREACH v_campo IN ARRAY public.fn_campanha_campos_bloqueados(OLD) LOOP
         IF (to_jsonb(NEW) -> v_campo) IS DISTINCT FROM (to_jsonb(OLD) -> v_campo) THEN
+            IF OLD.status = 'aguardando_aprovacao' THEN
+                RAISE EXCEPTION 'Campanha enviada para aprovação: não pode ser alterada enquanto a curadoria analisa.'
+                    USING ERRCODE = '91063';
+            END IF;
             SELECT * INTO v_erro FROM public.fn_campanha_erro_congelamento(v_campo, OLD.status = 'rejeitado');
             RAISE EXCEPTION '%', v_erro.mensagem USING ERRCODE = v_erro.errcode;
         END IF;
@@ -1824,6 +1828,12 @@ BEGIN
     IF public.fn_status_pos_aprovacao(v_status) THEN
         RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o orçamento após a aprovação da campanha.'
             USING ERRCODE = '91011';
+    END IF;
+
+    -- Aguardando aprovação (21-11-2026): a curadoria aprova o orçamento que leu (mesmo código da campanha).
+    IF v_status = 'aguardando_aprovacao' THEN
+        RAISE EXCEPTION 'Campanha enviada para aprovação: o orçamento não pode ser alterado enquanto a curadoria analisa.'
+            USING ERRCODE = '91063';
     END IF;
 
     -- Rejeitada sem reenvios é só leitura, ver fn_campanha_reenvios_esgotados. Na exclusão da própria campanha
@@ -1924,6 +1934,12 @@ BEGIN
        AND v_data_inicio IS NOT NULL AND v_data_inicio <= NOW() THEN
         RAISE EXCEPTION 'Operação bloqueada: o cronograma não pode ser alterado depois que a campanha começa de verdade.'
             USING ERRCODE = '91013';
+    END IF;
+
+    -- Aguardando aprovação (21-11-2026): a curadoria aprova o cronograma que leu (mesmo código da campanha).
+    IF v_status = 'aguardando_aprovacao' THEN
+        RAISE EXCEPTION 'Campanha enviada para aprovação: o cronograma não pode ser alterado enquanto a curadoria analisa.'
+            USING ERRCODE = '91063';
     END IF;
 
     -- Mesmo bloqueio de fn_congela_orcamento_campanha (ver comentário lá, inclusive sobre v_status NULL na
@@ -2296,6 +2312,11 @@ STABLE
 AS $$
     SELECT CASE
         WHEN p.status = 'rejeitado' AND public.fn_campanha_reenvios_esgotados(p.id_campanha) THEN
+            ARRAY['titulo', 'descricao', 'meta_financeira', 'modelo', 'data_inicio', 'data_fim',
+                  'id_area_conhecimento', 'video_apresentacao_url', 'id_imagem_capa']
+        -- Aguardando aprovação (21-11-2026): nada muda enquanto a curadoria analisa, para ela aprovar o que leu. A taxa
+        -- fica de fora: é a aprovação que a carimba (fn_carimba_taxa_plataforma_aprovacao).
+        WHEN p.status = 'aguardando_aprovacao' THEN
             ARRAY['titulo', 'descricao', 'meta_financeira', 'modelo', 'data_inicio', 'data_fim',
                   'id_area_conhecimento', 'video_apresentacao_url', 'id_imagem_capa']
         WHEN public.fn_status_pos_aprovacao(p.status) THEN
@@ -5729,6 +5750,8 @@ EXECUTE FUNCTION validar_atualizacao_campanha();
 -- Regra:      RF-053: a moderação exclui qualquer atualização mantendo o registro ("Excluída") e o dono oculta as
 --             suas. Grava quem tirou do ar em ocultada_moderacao (ninguém escreve nela direto) e não deixa o dono pôr
 --             de volta o que a moderação excluiu (92040). O que o próprio dono ocultou ele mesmo mostra de novo.
+--             motivo_moderacao (21-11-2026): obrigatório quando a moderação exclui (90044), para o pesquisador ver o
+--             porquê no Estúdio; depois não muda, e some quando a atualização volta ao ar ou é o dono que oculta.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_atualizacao_ocultacao()
 RETURNS TRIGGER
@@ -5747,6 +5770,18 @@ BEGIN
                 USING ERRCODE = '92040';
         END IF;
         NEW.ocultada_moderacao := FALSE;
+    END IF;
+
+    IF NEW.ocultada_moderacao AND NOT OLD.ocultada_moderacao THEN
+        NEW.motivo_moderacao := NULLIF(btrim(NEW.motivo_moderacao), '');
+        IF NEW.motivo_moderacao IS NULL THEN
+            RAISE EXCEPTION 'Informe o motivo da exclusão: o pesquisador vê esse texto no Estúdio.'
+                USING ERRCODE = '90044';
+        END IF;
+    ELSIF NEW.ocultada_moderacao THEN
+        NEW.motivo_moderacao := OLD.motivo_moderacao;
+    ELSE
+        NEW.motivo_moderacao := NULL;
     END IF;
 
     RETURN NEW;

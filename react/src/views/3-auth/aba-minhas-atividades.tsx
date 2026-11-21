@@ -24,6 +24,12 @@ import {
   situacaoDenuncia,
 } from '../../services/19-denuncia/constants/status-denuncia.constants';
 import type { DenunciaResponse } from '../../services/19-denuncia/type/denuncia.type';
+import type { SituacaoDenuncia } from '../../services/19-denuncia/constants/status-denuncia.constants';
+import { BadgeClicavel } from '../../components/crud/badge-clicavel';
+import { ModalFicha } from '../../components/crud/modal-ficha';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
+import { CampoFicha } from '../../components/crud/ficha-consulta';
+import { formatarDataHora } from '../../services/constant/util/formatacao.util';
 
 interface CampanhaSeguindo extends SeguirCampanhaResponse {
   tituloCampanha: string;
@@ -39,6 +45,7 @@ interface PesquisadorSeguido extends SeguirPesquisadorResponse {
 
 interface DenunciaLinha extends DenunciaResponse {
   alvo: string;
+  situacaoChave: SituacaoDenuncia;
   situacao: string;
   classeSituacao: string;
 }
@@ -59,10 +66,20 @@ function paraDenunciaLinha(denuncia: DenunciaResponse): DenunciaLinha {
   return {
     ...denuncia,
     alvo,
+    situacaoChave: situacao,
     situacao: ROTULO_STATUS_DENUNCIA[situacao],
     classeSituacao: CLASSE_BADGE_STATUS_DENUNCIA[situacao],
   };
 }
+
+// O desfecho em palavras simples, para quem denunciou (21-11-2026): antes ela só via a pílula e não sabia o que tinha
+// acontecido. Quem julgou não aparece: a decisão é da moderação, não de uma pessoa.
+const DESFECHO_DENUNCIA: Record<SituacaoDenuncia, string> = {
+  pendente: 'A moderação ainda vai analisar esta denúncia. Quando decidir, o resultado aparece aqui.',
+  resolvida: 'A moderação analisou e concordou com a denúncia: o problema foi confirmado e tratado.',
+  improcedente: 'A moderação analisou e não encontrou o problema apontado, então nada mudou.',
+  em_contestacao: 'A moderação concordou com a denúncia, mas o pesquisador contestou a decisão. A moderação vai analisar de novo, e o resultado pode mudar.',
+};
 
 function paraComentarioLinha(comentario: ComentarioMeuResponse): ComentarioLinha {
   return {
@@ -78,6 +95,7 @@ function paraComentarioLinha(comentario: ComentarioMeuResponse): ComentarioLinha
 export function AbaMinhasAtividades({ auth }: AbaMinhasAtividadesProps) {
   const [chaveRecargaCampanhas, setChaveRecargaCampanhas] = useState(0);
   const [chaveRecargaPesquisadores, setChaveRecargaPesquisadores] = useState(0);
+  const [vendoDenuncia, setVendoDenuncia] = useState<DenunciaLinha | null>(null);
   const erros = useErroToast();
   const { mostrar } = useToast();
   const { executar } = useEnvio(erros.reportarErro, erros.limparErro);
@@ -177,14 +195,16 @@ export function AbaMinhasAtividades({ auth }: AbaMinhasAtividadesProps) {
         titulo="Denúncias que fiz"
         nivelTitulo={2}
         colunas={[
-          { chave: 'idDenuncia', rotulo: 'id', tipo: 'id' },
           { chave: 'alvo', rotulo: 'alvo', tipo: 'nome', umaLinha: true },
           { chave: 'motivo', rotulo: 'motivo', tipo: 'texto' },
           {
             chave: 'situacao',
             rotulo: 'situação',
             tipo: 'status',
-            renderizar: (linha) => <span className={'badge ' + linha.classeSituacao}>{linha.situacao}</span>,
+            // A pílula abre o desfecho (21-11-2026).
+            renderizar: (linha) => (
+              <BadgeClicavel classe={linha.classeSituacao} rotulo={linha.situacao} dica="Ver o que aconteceu" aoClicar={() => setVendoDenuncia(linha)} />
+            ),
             textoExibido: (linha) => linha.situacao,
           },
           { chave: 'criadoEm', rotulo: 'enviada em', tipo: 'dataHora' },
@@ -193,6 +213,33 @@ export function AbaMinhasAtividades({ auth }: AbaMinhasAtividadesProps) {
         listar={listarDenuncias}
         vazio={{ icone: 'fa-flag', titulo: 'Você ainda não fez denúncias.' }}
       />
+      {vendoDenuncia && (
+        <ModalFicha
+          titulo="Sua denúncia"
+          subtitulo={vendoDenuncia.alvo}
+          aoFechar={() => setVendoDenuncia(null)}
+          rodape={<RodapeAcoes aoCancelar={() => setVendoDenuncia(null)} rotuloCancelar="Fechar" />}
+        >
+          <div className="grade-ficha">
+            <CampoFicha rotulo="Situação" valor={vendoDenuncia.situacao} />
+            <CampoFicha rotulo="Enviada em" valor={formatarDataHora(vendoDenuncia.criadoEm)} />
+            <CampoFicha rotulo="O que aconteceu" valor={DESFECHO_DENUNCIA[vendoDenuncia.situacaoChave]} largura="cheia" />
+            {vendoDenuncia.justificativaModeracao && (
+              <CampoFicha rotulo="Resposta da moderação" valor={vendoDenuncia.justificativaModeracao} largura="cheia" />
+            )}
+            {vendoDenuncia.contestacaoStatus === 'aceita' && (
+              <CampoFicha
+                rotulo="Revisão da decisão"
+                valor={`O pesquisador contestou e a moderação reviu a decisão.${vendoDenuncia.justificativaContestacao ? ` ${vendoDenuncia.justificativaContestacao}` : ''}`}
+                largura="cheia"
+              />
+            )}
+            {vendoDenuncia.julgadoEm && <CampoFicha rotulo="Decidida em" valor={formatarDataHora(vendoDenuncia.julgadoEm)} />}
+            <CampoFicha rotulo="Motivo" valor={vendoDenuncia.motivo} largura="cheia" />
+            {vendoDenuncia.relato && <CampoFicha rotulo="O que você relatou" valor={vendoDenuncia.relato} largura="cheia" />}
+          </div>
+        </ModalFicha>
+      )}
 
       {/* Denúncias recebidas (decisão de 14-11-2026): junto das enviadas, aqui em Minhas atividades, não mais em Segurança. */}
       {auth.usuario?.ehPesquisador && <SecaoContestacaoScore authFetch={auth.authFetch} />}

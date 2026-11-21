@@ -157,7 +157,7 @@ export function SecaoEncerramentoAntecipado({ authFetch, idCampanha, valorArreca
           )}
         </>
       )}
-      {pedidos.length > 0 && <TabelaSolicitacoesEncerramento solicitacoes={pedidos} />}
+      {pedidos.length > 0 && <TabelaSolicitacoesEncerramento solicitacoes={pedidos} semId />}
     </SecaoFicha>
   );
 }

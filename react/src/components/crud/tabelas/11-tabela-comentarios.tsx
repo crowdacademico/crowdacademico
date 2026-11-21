@@ -30,7 +30,7 @@ export function TabelaComentarios({ comentarios, ehDono, limiteAtingido = false,
       <table className="crud-tabela mb-4">
         <thead>
           <tr>
-            <th className="crud-tabela__col--id">id</th>
+            {!ehDono && <th className="crud-tabela__col--id">id</th>}
             <th className="crud-tabela__col--texto">Autor</th>
             <th className="crud-tabela__col--curta">Data</th>
             <th>Comentário</th>
@@ -41,7 +41,7 @@ export function TabelaComentarios({ comentarios, ehDono, limiteAtingido = false,
         <tbody>
           {comentarios.map((item) => (
             <tr key={item.idComentario}>
-              <td className="crud-tabela__col--id">{item.idComentario}</td>
+              {!ehDono && <td className="crud-tabela__col--id">{item.idComentario}</td>}
               <td className="crud-tabela__col--texto">{item.nomePesquisador ?? 'Pesquisador removido'}</td>
               <td className="crud-tabela__col--curta">{formatarData(item.criadoEm)}</td>
               <td>

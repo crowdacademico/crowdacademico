@@ -11,10 +11,13 @@ interface ListaAtualizacoesProps {
   atualizacoes: AtualizacaoCampanhaResponse[];
   // Perfil do pesquisador: cada atualização mostra de qual campanha é (título com link).
   tituloCampanha?: (idCampanha: number) => string | undefined;
+  // Perfil (21-11-2026): a campanha já terminou. A fase "Andamento" ao lado de uma campanha encerrada confundia no
+  // teste com usuários: a pílula deixa claro que a fase é da atualização (quando foi escrita), não da campanha.
+  campanhaEncerrada?: (idCampanha: number) => boolean;
 }
 
 // As atualizações em estilo blog: um artigo por atualização, com fase, título, data, texto inteiro e anexos.
-export function ListaAtualizacoes({ atualizacoes, tituloCampanha }: ListaAtualizacoesProps) {
+export function ListaAtualizacoes({ atualizacoes, tituloCampanha, campanhaEncerrada }: ListaAtualizacoesProps) {
   return (
     <ol className="flex flex-col gap-5">
       {atualizacoes.map((atualizacao) => {
@@ -22,7 +25,7 @@ export function ListaAtualizacoes({ atualizacoes, tituloCampanha }: ListaAtualiz
         return (
           <li key={atualizacao.idAtualizacao}>
             <article className="fundo-cartao border borda-padrao rounded-xl p-6">
-              <p className="rotulo-leitura texto-marca mb-2">{ROTULO_FASE_ATUALIZACAO[atualizacao.fase]}</p>
+              <p className="rotulo-leitura texto-marca mb-2">Fase: {ROTULO_FASE_ATUALIZACAO[atualizacao.fase]}</p>
               <h3 className="subtitulo">{atualizacao.titulo}</h3>
               <p className="legenda mt-2 texto-fraco">
                 {dataPublicacao(atualizacao.publicadoEm)}
@@ -32,6 +35,7 @@ export function ListaAtualizacoes({ atualizacoes, tituloCampanha }: ListaAtualiz
                     <Link to={`/campanha/${atualizacao.idCampanha}`} className="texto-marca hover:underline">
                       {campanha}
                     </Link>
+                    {campanhaEncerrada?.(atualizacao.idCampanha) && <span className="badge badge-neutro ml-2 align-middle">Campanha encerrada</span>}
                   </>
                 )}
               </p>

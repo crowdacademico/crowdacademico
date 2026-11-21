@@ -58,7 +58,7 @@ export interface UseAuthReturn {
   aceitePendente: boolean;
   carregando: boolean;
   autenticado: boolean;
-  // `manterConectado`: a caixa "Manter conectado neste computador" (desmarcada, a sessão acaba ao fechar o navegador).
+  // `manterConectado`: a caixa "Manter conectado neste computador" (marcada por padrão; desmarcada, a sessão acaba ao fechar o navegador).
   login: (email: string, senha: string, manterConectado: boolean) => Promise<AuthResponseLogin>;
   // Login com Google: a conta nova volta com aceitePendente e passa pelo aceite do Termo de Uso (RF-015).
   entrarComGoogle: (credential: string, manterConectado: boolean) => Promise<AuthResponseLogin>;

@@ -96,9 +96,9 @@ const ROTULO_CAMPO_BLOQUEADO: Record<string, string> = {
   dataFim: 'Fim',
 };
 
-// Orçamento e cronograma continuam editáveis enquanto a campanha não foi aprovada: o congelamento (fn_congela_*,
-// 05) só começa em 'ativo', e por isso a completude é conferida de novo na aprovação, não só no envio.
-const STATUS_EDITAVEIS = new Set(['rascunho', 'aguardando_aprovacao', 'rejeitado']);
+// Orçamento e cronograma editáveis só no rascunho e na rejeitada: aguardando aprovação trava (91063, 21-11-2026) e,
+// depois, o congelamento (fn_congela_*, 05). A completude é conferida de novo na aprovação, não só no envio.
+const STATUS_EDITAVEIS = new Set(['rascunho', 'rejeitado']);
 
 const paraForm = (campanha: CampanhaResponse): FormCampanha => ({
   titulo: campanha.titulo,
@@ -227,7 +227,7 @@ export function ModalAlterarCampanha({
     }
     await executarTrabalhando(async () => {
       await campanhaApi.atualizar(auth.authFetch, idCampanha, corpo(form));
-      mostrar('Campanha alterada com sucesso.', `ID: ${idCampanha} foi alterada`);
+      mostrar('Campanha alterada com sucesso.');
       aoMudar();
       aoFechar();
     });
@@ -246,7 +246,7 @@ export function ModalAlterarCampanha({
         await campanhaApi.deslizarDatas(auth.authFetch, idCampanha, new Date().toISOString());
       }
       await campanhaApi.enviar(auth.authFetch, idCampanha);
-      mostrar('Campanha enviada para aprovação.', `ID: ${idCampanha}`);
+      mostrar('Campanha enviada para aprovação.', 'Agora é com a curadoria.');
       aoMudar();
       aoFechar();
     });

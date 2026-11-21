@@ -148,7 +148,8 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, rep
               linhas={[
                 {
                   esquerda: [
-                    <CampoFicha key="id" rotulo="id" valor={campanha.idCampanha} />,
+                    // O dono (Estúdio, área pública) não vê o id; a gestão vê.
+                    ...(comoDono ? [] : [<CampoFicha key="id" rotulo="id" valor={campanha.idCampanha} />]),
                     <CampoFicha key="area" rotulo="Área do conhecimento" valor={campanha.nomeArea ?? `#${campanha.idAreaConhecimento}`} />,
                   ],
                   direita: [

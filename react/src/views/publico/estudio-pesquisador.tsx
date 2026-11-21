@@ -7,6 +7,7 @@ import { AvisoSoPesquisador } from '../../components/crud/aviso-so-pesquisador';
 import { BotaoCriar } from '../../components/crud/botao-criar';
 import { GenericTable } from '../../components/crud/generic-table';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
+import { BadgeClicavel } from '../../components/crud/badge-clicavel';
 import { ListaAnexos } from '../../components/crud/lista-anexos';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { ModalExcluirComentario } from '../../components/crud/modal-excluir-comentario';
@@ -188,6 +189,23 @@ interface CampanhaLinha extends Omit<CampanhaResponse, 'status'> {
 // Campanha que já terminou (bloco "Campanhas encerradas" do Estúdio).
 const STATUS_ENCERRADA: ReadonlySet<CampanhaResponse['status']> = new Set(['sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao']);
 
+// Alterar e Excluir que não se aplicam à campanha (21-11-2026): o ícone fica apagado, com o motivo na dica.
+// Excluir só no rascunho (o banco também só aceita esse). Alterar não vale enquanto a curadoria analisa nem depois
+// de encerrada. Na campanha ativa o Alterar continua: é onde o dono pede o encerramento antecipado.
+function motivoAcaoCampanhaIndisponivel(linha: CampanhaLinha, acao: string): string | undefined {
+  const status = linha.statusOriginal;
+  if (acao === 'excluir' && status !== 'rascunho') {
+    return 'Só um rascunho pode ser excluído. Esta campanha não é um rascunho.';
+  }
+  if (acao === 'alterar' && status === 'aguardando_aprovacao') {
+    return 'Enviada para aprovação: não pode ser alterada enquanto a curadoria analisa.';
+  }
+  if (acao === 'alterar' && STATUS_ENCERRADA.has(status)) {
+    return 'Campanha encerrada: não pode mais ser alterada.';
+  }
+  return undefined;
+}
+
 async function montarLinhasCampanhas(
   authFetch: PropsPagina['auth']['authFetch'],
   campanhas: CampanhaResponse[],
@@ -270,6 +288,7 @@ function PainelCampanhas({
         grupoAlinhamento="estudio-campanhas"
         chaveRecarga={chaveRecarga}
         acoes={acoesCompletas}
+        acaoIndisponivel={motivoAcaoCampanhaIndisponivel}
         linhaApagada={(linha) => linha.statusOriginal !== 'ativo'}
         filtrosFacetados={[{ chave: 'status', rotulo: 'Situação', ordem: ORDEM_ROTULOS_STATUS_CAMPANHA }]}
         vazio={{
@@ -295,6 +314,7 @@ function PainelCampanhas({
           grupoAlinhamento="estudio-campanhas"
           chaveRecarga={chaveRecarga}
           acoes={acoesCompletas}
+          acaoIndisponivel={motivoAcaoCampanhaIndisponivel}
           filtrosFacetados={[{ chave: 'status', rotulo: 'Situação', ordem: ORDEM_ROTULOS_STATUS_CAMPANHA }]}
           vazio={{ icone: 'fa-flag-checkered', titulo: 'Nenhuma campanha encerrada ainda.' }}
         />
@@ -357,7 +377,7 @@ function PainelRecompensas({ auth, campanhas }: { auth: PropsPagina['auth']; cam
         )}
         colunas={[
           { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
-          { chave: 'titulo', rotulo: 'recompensa', tipo: 'nome', umaLinha: true },
+          { chave: 'titulo', rotulo: 'recompensa', tipo: 'texto', umaLinha: true },
           { chave: 'tipoRotulo', rotulo: 'tipo', tipo: 'texto' },
           { chave: 'valorMinimo', rotulo: 'a partir de', tipo: 'dinheiro' },
           {
@@ -448,11 +468,16 @@ interface AtualizacaoLinha extends AtualizacaoCampanhaResponse {
   situacao: string;
 }
 
+// Excluídas antes de 21-11-2026 não têm motivo gravado (a moderação ainda não escrevia).
+const textoMotivoModeracao = (atualizacao: { motivoModeracao: string | null }) =>
+  atualizacao.motivoModeracao ?? 'A moderação não registrou o motivo (exclusão anterior a 21/11/2026).';
+
 function PainelAtualizacoes({ auth, campanhas }: { auth: PropsPagina['auth']; campanhas: CampanhaResponse[] }) {
   const [chaveRecarga, setChaveRecarga] = useState(0);
   const [editando, setEditando] = useState<{ campanha: number; atualizacao?: AtualizacaoCampanhaResponse } | null>(null);
   const [excluindo, setExcluindo] = useState<AtualizacaoCampanhaResponse | null>(null);
   const [consultando, setConsultando] = useState<AtualizacaoLinha | null>(null);
+  const [vendoMotivo, setVendoMotivo] = useState<AtualizacaoLinha | null>(null);
   const { reportarErro } = useErroToast();
   const { mostrar } = useToast();
   const { executar } = useEnvio(reportarErro);
@@ -483,7 +508,7 @@ function PainelAtualizacoes({ auth, campanhas }: { auth: PropsPagina['auth']; ca
         )}
         colunas={[
           { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
-          { chave: 'titulo', rotulo: 'título', tipo: 'nome', umaLinha: true },
+          { chave: 'titulo', rotulo: 'título', tipo: 'texto', umaLinha: true },
           { chave: 'faseRotulo', rotulo: 'fase', tipo: 'texto' },
           { chave: 'tipoRotulo', rotulo: 'formato', tipo: 'texto' },
           { chave: 'publicadoEm', rotulo: 'publicada em', tipo: 'dataHora' },
@@ -493,9 +518,12 @@ function PainelAtualizacoes({ auth, campanhas }: { auth: PropsPagina['auth']; ca
             tipo: 'status',
             renderizar: (linha) => (
               <div className="inline-flex flex-wrap items-center gap-2">
-                <span className={'badge ' + (linha.ativo ? 'badge-sucesso' : linha.ocultadaModeracao ? 'badge-erro' : 'badge-neutro')}>
-                  {linha.situacao}
-                </span>
+                {/* Excluída pela moderação: a pílula abre o motivo (21-11-2026). */}
+                {linha.ocultadaModeracao ? (
+                  <BadgeClicavel classe="badge-erro" rotulo={linha.situacao} dica="Ver por que foi excluída" aoClicar={() => setVendoMotivo(linha)} />
+                ) : (
+                  <span className={'badge ' + (linha.ativo ? 'badge-sucesso' : 'badge-neutro')}>{linha.situacao}</span>
+                )}
                 {!linha.ativo && !linha.ocultadaModeracao && (
                   <button
                     type="button"
@@ -522,11 +550,15 @@ function PainelAtualizacoes({ auth, campanhas }: { auth: PropsPagina['auth']; ca
           consultar: setConsultando,
           excluir: (linha) => setExcluindo(linha),
         }}
-        acaoIndisponivel={(linha, acao) => (
-          acao === 'excluir' && !linha.ativo
+        acaoIndisponivel={(linha, acao) => {
+          // Excluída pela moderação: nem Alterar (21-11-2026), senão o pesquisador editaria o que a moderação tirou.
+          if (acao === 'alterar' && linha.ocultadaModeracao) {
+            return 'Excluída pela moderação: não pode ser alterada.';
+          }
+          return acao === 'excluir' && !linha.ativo
             ? linha.ocultadaModeracao ? 'Excluída pela moderação.' : 'Esta atualização já foi ocultada.'
-            : undefined
-        )}
+            : undefined;
+        }}
         filtrosFacetados={[
           { chave: 'faseRotulo', rotulo: 'Fase' },
           { chave: 'situacao', rotulo: 'Situação' },
@@ -570,8 +602,29 @@ function PainelAtualizacoes({ auth, campanhas }: { auth: PropsPagina['auth']; ca
             <CampoFicha rotulo="Formato" valor={consultando.tipoRotulo} />
             <CampoFicha rotulo="Publicada em" valor={formatarDataHora(consultando.publicadoEm)} />
             <CampoFicha rotulo="Situação" valor={consultando.situacao} />
+            {consultando.ocultadaModeracao && (
+              <CampoFicha rotulo="Motivo da exclusão" valor={textoMotivoModeracao(consultando)} largura="cheia" />
+            )}
             <CampoFicha rotulo="Conteúdo" valor={consultando.conteudo} largura="cheia" />
             <CampoFicha rotulo="Anexos" valor={<ListaAnexos anexos={consultando.anexos} />} largura="cheia" />
+          </div>
+        </ModalFicha>
+      )}
+      {vendoMotivo && (
+        <ModalFicha
+          titulo="Atualização excluída pela moderação"
+          subtitulo={vendoMotivo.titulo}
+          aoFechar={() => setVendoMotivo(null)}
+          rodape={<RodapeAcoes aoCancelar={() => setVendoMotivo(null)} rotuloCancelar="Fechar" />}
+        >
+          <div className="grade-ficha">
+            <CampoFicha rotulo="Campanha" valor={vendoMotivo.tituloCampanha} largura="cheia" />
+            <CampoFicha rotulo="Motivo" valor={textoMotivoModeracao(vendoMotivo)} largura="cheia" />
+            <CampoFicha
+              rotulo="O que isso significa"
+              valor="A atualização saiu da página da campanha e não pode ser alterada nem voltar ao ar. Se discordar, fale com o suporte."
+              largura="cheia"
+            />
           </div>
         </ModalFicha>
       )}
@@ -631,7 +684,7 @@ function PainelComentarios({ auth, campanhas }: { auth: PropsPagina['auth']; cam
           ajuda={`Consulte os comentários recebidos e escolha até ${limiteEndossos} por campanha para endossar.`}
           colunas={[
             { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
-            { chave: 'autor', rotulo: 'apoiador', tipo: 'nome', umaLinha: true },
+            { chave: 'autor', rotulo: 'apoiador', tipo: 'texto', umaLinha: true },
             { chave: 'criadoEm', rotulo: 'data', tipo: 'data' },
             { chave: 'conteudo', rotulo: 'comentário', tipo: 'texto', umaLinha: true },
             {
@@ -766,10 +819,14 @@ function ModalEndossoComentario({
   );
 }
 
+// Só as pagas (21-11-2026): as que entram no arrecadado, a mesma regra de resumo_contribuicoes_campanha (05).
+// Aguardando pagamento, vencida e devolvida não são apoio recebido; devolvida sai da lista e da contagem.
+const STATUS_CONTRIBUICAO_PAGA: ReadonlySet<ContribuicaoRecebida['status']> = new Set(['confirmado', 'repassado']);
+
 function PainelContribuicoes({ auth, campanhas }: { auth: PropsPagina['auth']; campanhas: CampanhaResponse[] }) {
-  const [consultandoId, setConsultandoId] = useState<number | null>(null);
+  const [consultando, setConsultando] = useState<ContribuicaoRecebida | null>(null);
   const listar = useCallback(
-    () => contribuicaoApi.recebidas(auth.authFetch),
+    async () => (await contribuicaoApi.recebidas(auth.authFetch)).filter((linha) => STATUS_CONTRIBUICAO_PAGA.has(linha.status)),
     [auth.authFetch],
   );
 
@@ -778,10 +835,10 @@ function PainelContribuicoes({ auth, campanhas }: { auth: PropsPagina['auth']; c
       <GenericTable<ContribuicaoRecebida>
         titulo="Contribuições"
         nivelTitulo={2}
-        ajuda="Acompanhe o valor, a situação e a recompensa de cada apoio recebido."
+        ajuda="Os apoios pagos que suas campanhas receberam, com o valor, o meio de pagamento e a recompensa de cada um."
         colunas={[
           { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
-          { chave: 'apoiador', rotulo: 'apoiador', tipo: 'nome', umaLinha: true },
+          { chave: 'apoiador', rotulo: 'apoiador', tipo: 'texto', umaLinha: true },
           { chave: 'valor', rotulo: 'valor', tipo: 'dinheiro' },
           {
             chave: 'status',
@@ -806,11 +863,11 @@ function PainelContribuicoes({ auth, campanhas }: { auth: PropsPagina['auth']; c
         ]}
         chavePrimaria="idContribuicao"
         listar={listar}
-        acoes={{ consultar: (linha) => setConsultandoId(linha.idCampanha) }}
+        acoes={{ consultar: setConsultando }}
         filtrosFacetados={[{
           chave: 'status',
           rotulo: 'Situação',
-          ordem: Object.keys(ROTULO_STATUS_CONTRIBUICAO),
+          ordem: [...STATUS_CONTRIBUICAO_PAGA],
           rotulos: ROTULO_STATUS_CONTRIBUICAO,
         }]}
         vazio={{
@@ -818,13 +875,24 @@ function PainelContribuicoes({ auth, campanhas }: { auth: PropsPagina['auth']; c
           titulo: campanhas.length ? 'Nenhuma contribuição recebida.' : 'Cadastre uma campanha para receber contribuições.',
         }}
       />
-      {consultandoId !== null && (
-        <ModalConsultarCampanha
-          auth={auth}
-          idCampanha={consultandoId}
-          comoDono
-          aoFechar={() => setConsultandoId(null)}
-        />
+      {/* O Consultar é da contribuição (21-11-2026), não da campanha: quem apoiou, quanto, onde e como. */}
+      {consultando && (
+        <ModalFicha
+          titulo={`Contribuição de ${consultando.apoiador}`}
+          subtitulo={consultando.tituloCampanha}
+          aoFechar={() => setConsultando(null)}
+          rodape={<RodapeAcoes aoCancelar={() => setConsultando(null)} rotuloCancelar="Fechar" />}
+        >
+          <div className="grade-ficha">
+            <CampoFicha rotulo="Apoiador" valor={consultando.apoiador} />
+            <CampoFicha rotulo="Valor" valor={formatarMoeda(consultando.valor)} />
+            <CampoFicha rotulo="Campanha" valor={consultando.tituloCampanha} largura="cheia" />
+            <CampoFicha rotulo="Recompensa" valor={consultando.recompensas ?? 'Nenhuma'} largura="cheia" />
+            <CampoFicha rotulo="Data" valor={formatarDataHora(consultando.criadoEm)} />
+            <CampoFicha rotulo="Meio de pagamento" valor={ROTULO_MEIO_PAGAMENTO[consultando.meioPagamento]} />
+            <CampoFicha rotulo="Situação" valor={ROTULO_STATUS_CONTRIBUICAO[consultando.status]} />
+          </div>
+        </ModalFicha>
       )}
     </>
   );

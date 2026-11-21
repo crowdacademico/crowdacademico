@@ -1,3 +1,4 @@
+import type { ExportacaoDados } from '../type/exportacao-dados.type';
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
@@ -76,6 +77,6 @@ export const usuarioApi = {
     authFetch(`/usuario/${id}/revogar-suspensao`, { method: 'POST' }).then(tratarResposta<void>),
   // Portabilidade (LGPD Art. 18): o pacote inteiro dos dados da própria conta. O backend limita a 1 por hora e
   // deixa rastro no log de auditoria. `unknown`: a tela só grava o pacote num arquivo, não lê campo nenhum.
-  exportarMeusDados: (authFetch: AuthFetch): Promise<unknown> =>
-    authFetch('/usuario/eu/exportar-dados').then(tratarResposta<unknown>),
+  exportarMeusDados: (authFetch: AuthFetch): Promise<ExportacaoDados> =>
+    authFetch('/usuario/eu/exportar-dados').then(tratarResposta<ExportacaoDados>),
 };

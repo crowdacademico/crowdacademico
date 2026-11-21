@@ -36,7 +36,7 @@ export function ModalExcluirCampanha({ auth, campanha, aoExcluida, aoFechar }: M
   const excluir = async () => {
     await executarExcluindo(async () => {
       await campanhaApi.remover(auth.authFetch, campanha.idCampanha);
-      mostrar('Campanha excluída com sucesso.', `ID: ${campanha.idCampanha} foi excluída`);
+      mostrar('Campanha excluída com sucesso.', `"${campanha.titulo}" foi excluída.`);
       aoExcluida();
       aoFechar();
     });
@@ -67,7 +67,6 @@ export function ModalExcluirCampanha({ auth, campanha, aoExcluida, aoFechar }: M
       }
     >
       <SecaoFicha titulo={podeExcluir ? 'O que será excluído' : 'Dados da campanha'}>
-        <CampoFicha rotulo="id" valor={campanha.idCampanha} />
         <CampoFicha rotulo="Título" valor={campanha.titulo} />
         <CampoFicha rotulo="Situação" valor={ROTULO_STATUS_CAMPANHA[campanha.status]} />
         <CampoFicha rotulo="Meta" valor={formatarMoeda(campanha.metaFinanceira)} />

@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { MENSAGEM_NOME_CURTO, NOME_MINIMO_CARACTERES } from '../../services/constant/constants/minimos.constants';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
+import { BotaoDividido } from '../../components/crud/botao-dividido';
+import { gerarHtmlExportacao } from '../../services/1-usuario/util/exportacao-html.util';
+import type { ExportacaoDados } from '../../services/1-usuario/type/exportacao-dados.type';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import type { FormEvent } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router';
@@ -672,16 +675,25 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
   const { erro: erroExportar, reportarErro: reportarErroExportar } = useErroToast({ mostraTexto: true });
   const { ocupado: exportando, executar: executarExportando } = useEnvio(reportarErroExportar);
 
-  const aoExportar = async () => {
+  // Exportar em HTML (para ler, o padrão) ou JSON (para levar a outro serviço), 21-11-2026. O pacote fica guardado
+  // na tela depois da primeira busca: o segundo formato reaproveita, sem esbarrar no limite de uma exportação por hora.
+  const [pacoteExportado, setPacoteExportado] = useState<ExportacaoDados | null>(null);
+  const aoExportar = async (formato: 'html' | 'json') => {
     await executarExportando(async () => {
-      const pacote = await usuarioApi.exportarMeusDados(auth.authFetch);
-      const arquivo = new Blob([JSON.stringify(pacote, null, 2)], { type: 'application/json' });
+      const pacote = pacoteExportado ?? (await usuarioApi.exportarMeusDados(auth.authFetch));
+      setPacoteExportado(pacote);
+      const conteudo = formato === 'html' ? gerarHtmlExportacao(pacote) : JSON.stringify(pacote, null, 2);
+      const tipo = formato === 'html' ? 'text/html;charset=utf-8' : 'application/json';
+      const arquivo = new Blob([conteudo], { type: tipo });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(arquivo);
-      link.download = `meus-dados-crowdacademico-${new Date().toISOString().slice(0, 10)}.json`;
+      link.download = `meus-dados-crowdacademico-${new Date().toISOString().slice(0, 10)}.${formato}`;
       link.click();
       URL.revokeObjectURL(link.href);
-      mostrar('Seus dados foram exportados.', 'O arquivo foi baixado pelo navegador.');
+      mostrar(
+        'Seus dados foram exportados.',
+        formato === 'html' ? 'O arquivo foi baixado: abra no navegador para ler.' : 'O arquivo JSON foi baixado pelo navegador.',
+      );
     });
   };
 
@@ -708,14 +720,22 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
         <div>
           <p className="paragrafo enfase texto-padrao">Exportar meus dados</p>
           <p className="legenda texto-fraco">
-            Baixe um arquivo com todos os dados da sua conta. É um direito seu pela LGPD (art. 18). Pode ser feito uma
-            vez por hora.
+            Baixe um arquivo com todos os dados da sua conta, para ler no navegador (HTML) ou levar a outro serviço (JSON,
+            na seta). É um direito seu pela LGPD (art. 18). Pode ser feito uma vez por hora.
           </p>
           <MensagemErro texto={erroExportar} className="legenda enfase erro-campo" />
         </div>
-        <button type="button" onClick={() => void aoExportar()} disabled={exportando} className="btn btn-secondary">
-          {exportando ? 'Exportando...' : 'Exportar'}
-        </button>
+        <BotaoDividido
+          rotulo={exportando ? 'Exportando...' : 'Exportar'}
+          icone="fa-download"
+          aoClicar={() => void aoExportar('html')}
+          desabilitado={exportando}
+          rotuloOpcoes="Escolher o formato da exportação"
+          opcoes={[
+            { rotulo: 'HTML (para ler)', descricao: 'Abre no navegador, organizado por seção.', icone: 'fa-file-lines', aoEscolher: () => void aoExportar('html') },
+            { rotulo: 'JSON (para outro serviço)', descricao: 'Formato de dados, para levar a outro sistema.', icone: 'fa-file-code', aoEscolher: () => void aoExportar('json') },
+          ]}
+        />
       </div>
 
       <div className="rounded-lg border borda-forte fundo-erro p-4">

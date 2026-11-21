@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { AcaoLinha } from '../acao-linha';
 import { CabecalhoAcoes, CelulaAcoesLivre } from '../colunas/5-coluna-acoes';
+import { Tooltip } from '../../layout/tooltip';
 
 // Base das tabelas com edição na própria linha (links acadêmicos, itens de orçamento, marcos de cronograma):
 // cada linha mostra Alterar/Excluir (sem Consultar: a linha já mostra tudo, e o texto longo tem "ler tudo"); Alterar
@@ -10,6 +11,8 @@ import { CabecalhoAcoes, CelulaAcoesLivre } from '../colunas/5-coluna-acoes';
 
 export interface ColunaEditavel<T, F> {
   rotulo: string;
+  // Explicação com exemplos num ⓘ ao lado do nome da coluna (ex.: o que é a Categoria do orçamento).
+  dica?: string;
   centralizada?: boolean;
   exibir: (linha: T) => ReactNode;
   // Campo usado na linha em edição e na linha de adicionar. `editavel: false`: a coluna só aparece no adicionar;
@@ -33,6 +36,9 @@ interface TabelaEditavelProps<T, F> {
   aoExcluir: (linha: T) => void;
   podeEditar?: boolean;
   podeAdicionar?: boolean;
+  // Mínimo de registros que a tabela pede (ex.: 3 marcos no cronograma): enquanto faltar, aparecem linhas de
+  // adicionar até completar o mínimo, já abertas; depois, só uma. Cada linha salva sozinha no "+ adicionar".
+  minimoLinhas?: number;
 }
 
 const classeCelula = (centralizada?: boolean) => (centralizada ? 'crud-tabela__celula--centralizada' : undefined);
@@ -48,17 +54,28 @@ export function TabelaEditavel<T, F>({
   aoExcluir,
   podeEditar = true,
   podeAdicionar = podeEditar,
+  minimoLinhas = 0,
 }: TabelaEditavelProps<T, F>) {
-  const [novo, setNovo] = useState<F>(formVazio);
+  // Um formulário por linha de adicionar; a linha i que não está no array usa o formVazio.
+  const [novos, setNovos] = useState<F[]>([]);
+  const quantasNovas = Math.max(1, minimoLinhas - linhas.length);
   const [idEditando, setIdEditando] = useState<number | null>(null);
   const [edicao, setEdicao] = useState<F>(formVazio);
 
-  const mudarNovo = (parcial: Partial<F>) => setNovo((atual) => ({ ...atual, ...parcial }));
+  const formNovo = (indice: number): F => novos[indice] ?? formVazio;
+  const mudarNovo = (indice: number) => (parcial: Partial<F>) =>
+    setNovos((atuais) => {
+      const proximos = [...atuais];
+      for (let i = proximos.length; i < indice; i++) proximos[i] = formVazio;
+      proximos[indice] = { ...(atuais[indice] ?? formVazio), ...parcial };
+      return proximos;
+    });
   const mudarEdicao = (parcial: Partial<F>) => setEdicao((atual) => ({ ...atual, ...parcial }));
 
-  const adicionar = async () => {
-    if (await aoAdicionar(novo)) {
-      setNovo(formVazio);
+  // Deu certo: a linha salva sai do array (vira registro), e as outras continuam com o que já foi digitado.
+  const adicionar = async (indice: number) => {
+    if (await aoAdicionar(formNovo(indice))) {
+      setNovos((atuais) => atuais.filter((_, i) => i !== indice));
     }
   };
 
@@ -80,6 +97,7 @@ export function TabelaEditavel<T, F>({
                   className={[classeCelula(coluna.centralizada), coluna.principal && 'crud-tabela__col--principal'].filter(Boolean).join(' ') || undefined}
                 >
                   {coluna.rotulo}
+                  {coluna.dica && <> <Tooltip texto={coluna.dica} baixo esquerda /></>}
                 </th>
               ))}
               {podeEditar && <CabecalhoAcoes />}
@@ -121,18 +139,19 @@ export function TabelaEditavel<T, F>({
                 </tr>
               );
             })}
-            {podeAdicionar && (
-              <tr>
-                {colunas.map((coluna) => (
-                  <td key={coluna.rotulo}>{coluna.campo(novo, mudarNovo)}</td>
-                ))}
-                <CelulaAcoesLivre>
-                  <button type="button" className="btn btn-sucesso btn-pequeno whitespace-nowrap" onClick={() => void adicionar()}>
-                    + adicionar
-                  </button>
-                </CelulaAcoesLivre>
-              </tr>
-            )}
+            {podeAdicionar &&
+              Array.from({ length: quantasNovas }, (_, indice) => (
+                <tr key={`novo-${indice}`}>
+                  {colunas.map((coluna) => (
+                    <td key={coluna.rotulo}>{coluna.campo(formNovo(indice), mudarNovo(indice))}</td>
+                  ))}
+                  <CelulaAcoesLivre>
+                    <button type="button" className="btn btn-sucesso btn-pequeno whitespace-nowrap" onClick={() => void adicionar(indice)}>
+                      + adicionar
+                    </button>
+                  </CelulaAcoesLivre>
+                </tr>
+              ))}
           </tbody>
         </table>
       </div>

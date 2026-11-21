@@ -71,18 +71,30 @@ export class UsuarioResponseExportData {
 
   // Só os comentários que ELE escreveu (id_pesquisador = titular) - nunca
   // os que recebeu de outros pesquisadores em campanhas dele.
+  // Títulos e nomes (21-11-2026): para a versão HTML da exportação ser legível. null quando a campanha ou o
+  // pesquisador não está mais visível (excluído ou fora do ar).
   comentariosEscritos: Array<{
     idCampanha: number;
+    tituloCampanha: string | null;
     conteudo: string;
     endossado: boolean;
     criadoEm: Date;
   }>;
 
-  seguindoCampanhas: Array<{ idCampanha: number; seguidoEm: Date }>;
-  seguindoPesquisadores: Array<{ idPesquisador: number; seguidoEm: Date }>;
+  seguindoCampanhas: Array<{
+    idCampanha: number;
+    tituloCampanha: string | null;
+    seguidoEm: Date;
+  }>;
+  seguindoPesquisadores: Array<{
+    idPesquisador: number;
+    nomePesquisador: string | null;
+    seguidoEm: Date;
+  }>;
 
   contribuicoes: Array<{
     idCampanha: number;
+    tituloCampanha: string | null;
     valor: string;
     meioPagamento: string;
     status: string;
@@ -90,7 +102,12 @@ export class UsuarioResponseExportData {
     criadoEm: Date;
   }>;
 
-  aceitesTermos: Array<{ idTermo: number; aceitoEm: Date }>;
+  aceitesTermos: Array<{
+    idTermo: number;
+    tipoTermo: string | null;
+    versao: string | null;
+    aceitoEm: Date;
+  }>;
   // Histórico de rejeições das campanhas do titular. SEM o administrador que
   // rejeitou: registro que identifica quem executou a ação fica de fora da
   // exportação (mesmo critério de denúncias e afins, ver REQUISITOS_V7).

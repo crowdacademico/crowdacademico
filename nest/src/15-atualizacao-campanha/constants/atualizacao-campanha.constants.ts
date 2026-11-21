@@ -8,4 +8,5 @@ export const ATUALIZACAO_CAMPANHA_COLUNAS_SELECT = [
   'tipo',
   'ativo',
   'ocultada_moderacao',
+  'motivo_moderacao',
 ] as const;

@@ -29,6 +29,8 @@ interface TabelaMarcosCronogramaProps {
   // `min` da data prevista. Só mínimo, de propósito: RF-045/fn_valida_data_marco_cronograma barram data anterior
   // ao início, mas permitem passar do fim (a divulgação de resultado costuma vir depois do prazo).
   dataInicioCampanha?: string;
+  // Mínimo de marcos (minimo_marcos_cronograma): as linhas que faltam já aparecem abertas.
+  minimoMarcos?: number;
   aoAdicionar: (dados: DadosMarco) => Promise<boolean>;
   aoSalvar: (marco: MarcoCronogramaResponse, dados: DadosMarco) => Promise<boolean>;
   aoExcluir: (marco: MarcoCronogramaResponse) => void;
@@ -38,6 +40,7 @@ export function TabelaMarcosCronograma({
   marcos,
   podeEditar,
   dataInicioCampanha,
+  minimoMarcos,
   aoAdicionar,
   aoSalvar,
   aoExcluir,
@@ -47,7 +50,7 @@ export function TabelaMarcosCronograma({
       rotulo: 'Título',
       exibir: (marco) => marco.titulo,
       campo: (form, mudar) => (
-        <input type="text" aria-label="Título do marco" placeholder="Título" value={form.titulo} onChange={(evento) => mudar({ titulo: evento.target.value })} className="input-padrao" />
+        <input type="text" aria-label="Título do marco" placeholder="Ex.: Coleta das amostras" value={form.titulo} onChange={(evento) => mudar({ titulo: evento.target.value })} className="input-padrao" />
       ),
     },
     {
@@ -76,6 +79,7 @@ export function TabelaMarcosCronograma({
         formVazio={FORM_VAZIO}
         paraForm={(marco) => ({ titulo: marco.titulo, dataPrevista: dataLocal(marco.dataPrevista) })}
         podeEditar={podeEditar}
+        minimoLinhas={minimoMarcos}
         aoAdicionar={(form) => {
           const dados = paraDados(form);
           return dados ? aoAdicionar(dados) : Promise.resolve(false);

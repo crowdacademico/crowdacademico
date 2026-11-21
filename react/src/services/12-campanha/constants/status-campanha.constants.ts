@@ -60,8 +60,8 @@ export const EXPLICACAO_PUBLICA_MODELO_CAMPANHA: Record<ModeloCampanha, string> 
 
 // A dica (ⓘ) do campo Modelo, igual no Criar e no Alterar.
 export const EXPLICACAO_MODELO_CAMPANHA =
-  'Tudo ou nada: o pesquisador só recebe se a meta for batida até o fim do prazo; senão, todo o dinheiro volta para quem apoiou. ' +
-  'Flexível: o pesquisador recebe o que for arrecadado, mesmo sem bater a meta. Cartão de crédito só no flexível. ' +
+  'Tudo ou nada: o pesquisador só recebe se a meta for batida até o fim do prazo; senão, todo o dinheiro volta para quem apoiou.\n\n' +
+  'Flexível: o pesquisador recebe o que for arrecadado, mesmo sem bater a meta. Cartão de crédito só no flexível.\n\n' +
   'Dá para trocar enquanto a campanha é rascunho ou foi rejeitada.';
 
 // Onde o pesquisador ainda troca o modelo: antes de enviar e depois de uma rejeição. Aguardando aprovação não, para

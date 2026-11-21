@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { CONTAS, ipNovo, SENHA, sql, URL_API } from '../apoio';
 
 // Quanto tempo a sessão dura (18-11-2026):
-//   - "Manter conectado neste computador", desmarcada por padrão: desmarcada, a chave de renovação vai para o
+//   - "Manter conectado neste computador", marcada por padrão (21-11-2026): desmarcada, a chave de renovação vai para o
 //     sessionStorage e some ao fechar o navegador; marcada, vai para o localStorage e sobrevive;
 //   - conta do painel: a sessão vale no máximo sessao_painel_horas_validade (12) horas sem uso, mesmo marcada; a conta
 //     comum segue o prazo comum (refresh_token_dias_validade, 30 dias).
@@ -24,7 +24,9 @@ const entrar = async (page: Page, email: string, manter: boolean) => {
   await page.goto('/login');
   await page.getByLabel('Seu E-mail').fill(email);
   await page.locator('input[type="password"]').fill(SENHA);
-  if (manter) await page.getByLabel('Manter conectado neste computador').check();
+  const caixa = page.getByLabel('Manter conectado neste computador');
+  await expect(caixa).toBeChecked();
+  if (!manter) await caixa.uncheck();
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();
   await page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 20_000 });
 };
@@ -43,7 +45,7 @@ test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 });
 
-test('a caixa "Manter conectado" vem desmarcada, e a sessão fica só nesta aba (sessionStorage)', async ({ page, context }) => {
+test('a caixa "Manter conectado" vem marcada; desmarcada, a sessão fica só nesta aba (sessionStorage)', async ({ page, context }) => {
   await entrar(page, CONTAS.fernanda, false);
   const g = await gavetas(page);
   expect(g.local).toBeNull();

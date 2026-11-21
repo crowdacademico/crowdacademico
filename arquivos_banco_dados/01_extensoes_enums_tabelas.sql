@@ -646,12 +646,16 @@ CREATE TABLE atualizacao_campanha (
     -- Quem tirou do ar: TRUE = a moderação excluiu mantendo o registro ("Excluída"; o dono não desfaz), FALSE = o dono
     -- ocultou. Só a trigger [05-K-2] grava.
     ocultada_moderacao BOOLEAN      NOT NULL DEFAULT FALSE,
+    -- Por que a moderação excluiu (21-11-2026): obrigatório na hora de excluir, para o pesquisador saber no Estúdio.
+    -- Só a trigger [05-K-2] deixa gravar, e só nesse momento.
+    motivo_moderacao   TEXT,
 
     CONSTRAINT "PK_ATUALIZACAO_CAMPANHA" PRIMARY KEY (id_atualizacao),
     CONSTRAINT "FK_ATUALIZACAO_CAMPANHA_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE,
     -- Mesmo raciocínio de CK_CAMPANHA_DESCRICAO_TAMANHO: limite técnico largo aqui, limite de negócio
     -- configurável via trigger, ver [05-K-1].
-    CONSTRAINT "CK_ATUALIZACAO_CAMPANHA_CONTEUDO_TAMANHO" CHECK (char_length(conteudo) <= 20000)
+    CONSTRAINT "CK_ATUALIZACAO_CAMPANHA_CONTEUDO_TAMANHO" CHECK (char_length(conteudo) <= 20000),
+    CONSTRAINT "CK_ATUALIZACAO_CAMPANHA_MOTIVO_TAMANHO" CHECK (char_length(motivo_moderacao) <= 1000)
 );
 
 -- Orçamento estruturado da campanha (itens de gasto com categoria + valor), inspirado na estrutura de

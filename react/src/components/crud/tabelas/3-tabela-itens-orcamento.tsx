@@ -1,4 +1,4 @@
-import { TabelaEditavel } from './tabela-editavel';
+import { TabelaEditavel } from './tabela-editavel';
 import type { ColunaEditavel } from './tabela-editavel';
 import { InputDinheiro } from '../../input/input-dinheiro';
 import { formatarMoeda } from '../../../services/constant/util/formatacao.util';
@@ -27,19 +27,24 @@ const paraDados = (form: FormItem): DadosItemOrcamento | null =>
     ? { categoria: form.categoria, descricao: form.descricao.trim() || undefined, valor: Number(form.valor) }
     : null;
 
+// Dica (ⓘ) do cabeçalho Categoria, no Criar e no Alterar (21-11-2026: no teste, ninguém sabia o que pôr ali).
+const DICA_CATEGORIA_ORCAMENTO =
+  'O tipo de gasto do projeto. Exemplos: Equipamentos, Material de consumo, Viagens, Serviços de terceiros, Bolsas, Publicação de artigo.';
+
 const COLUNAS: ColunaEditavel<OrcamentoCampanhaResponse, FormItem>[] = [
   {
     rotulo: 'Categoria',
+    dica: DICA_CATEGORIA_ORCAMENTO,
     exibir: (item) => item.categoria,
     campo: (form, mudar) => (
-      <input type="text" aria-label="Categoria do item" placeholder="Categoria" value={form.categoria} onChange={(evento) => mudar({ categoria: evento.target.value })} className="input-padrao" />
+      <input type="text" aria-label="Categoria do item" placeholder="Ex.: Material de consumo" value={form.categoria} onChange={(evento) => mudar({ categoria: evento.target.value })} className="input-padrao" />
     ),
   },
   {
     rotulo: 'Descrição (opcional)',
     exibir: (item) => item.descricao ?? '',
     campo: (form, mudar) => (
-      <input type="text" aria-label="Descrição do item (opcional)" placeholder="Descrição (opcional)" value={form.descricao} onChange={(evento) => mudar({ descricao: evento.target.value })} className="input-padrao" />
+      <input type="text" aria-label="Descrição do item (opcional)" placeholder="Ex.: Reagentes e frascos de coleta" value={form.descricao} onChange={(evento) => mudar({ descricao: evento.target.value })} className="input-padrao" />
     ),
   },
   {

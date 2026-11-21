@@ -77,45 +77,70 @@ export class UsuarioServiceExportData {
       // recebido de outro pesquisador nas campanhas dele (dado de terceiro).
       () =>
         db
-          .selectFrom('comentario')
-          .select(['id_campanha', 'conteudo', 'endossado', 'criado_em'])
-          .where('id_pesquisador', '=', idUsuario)
-          .orderBy('criado_em', 'desc')
+          .selectFrom('comentario as co')
+          .leftJoin('campanha as ca', 'ca.id_campanha', 'co.id_campanha')
+          .select([
+            'co.id_campanha',
+            'ca.titulo as titulo_campanha',
+            'co.conteudo',
+            'co.endossado',
+            'co.criado_em',
+          ])
+          .where('co.id_pesquisador', '=', idUsuario)
+          .orderBy('co.criado_em', 'desc')
           .execute(),
       () =>
         db
-          .selectFrom('seguir_campanha')
-          .select(['id_campanha', 'seguido_em'])
-          .where('id_usuario', '=', idUsuario)
+          .selectFrom('seguir_campanha as sc')
+          .leftJoin('campanha as ca', 'ca.id_campanha', 'sc.id_campanha')
+          .select([
+            'sc.id_campanha',
+            'ca.titulo as titulo_campanha',
+            'sc.seguido_em',
+          ])
+          .where('sc.id_usuario', '=', idUsuario)
           .execute(),
       () =>
         db
-          .selectFrom('seguir_pesquisador')
-          .select(['id_pesquisador', 'seguido_em'])
-          .where('id_usuario', '=', idUsuario)
+          .selectFrom('seguir_pesquisador as sp')
+          .leftJoin('usuario as u', 'u.id_usuario', 'sp.id_pesquisador')
+          .select([
+            'sp.id_pesquisador',
+            'u.nome as nome_pesquisador',
+            'sp.seguido_em',
+          ])
+          .where('sp.id_usuario', '=', idUsuario)
           .execute(),
       // Só contribuição IDENTIFICADA (id_usuario preenchido) - contribuição
       // anônima nunca é ligada a nenhuma conta, não existe "minha
       // contribuição anônima" pra exportar.
       () =>
         db
-          .selectFrom('contribuicao')
+          .selectFrom('contribuicao as ct')
+          .leftJoin('campanha as ca', 'ca.id_campanha', 'ct.id_campanha')
           .select([
-            'id_campanha',
-            'valor',
-            'meio_pagamento',
-            'status',
-            'anonima',
-            'criado_em',
+            'ct.id_campanha',
+            'ca.titulo as titulo_campanha',
+            'ct.valor',
+            'ct.meio_pagamento',
+            'ct.status',
+            'ct.anonima',
+            'ct.criado_em',
           ])
-          .where('id_usuario', '=', idUsuario)
-          .orderBy('criado_em', 'desc')
+          .where('ct.id_usuario', '=', idUsuario)
+          .orderBy('ct.criado_em', 'desc')
           .execute(),
       () =>
         db
-          .selectFrom('usuario_termo')
-          .select(['id_termo', 'aceito_em'])
-          .where('id_usuario', '=', idUsuario)
+          .selectFrom('usuario_termo as ut')
+          .leftJoin('termos_de_uso as t', 't.id_termo', 'ut.id_termo')
+          .select([
+            'ut.id_termo',
+            't.tipo as tipo_termo',
+            't.versao',
+            'ut.aceito_em',
+          ])
+          .where('ut.id_usuario', '=', idUsuario)
           .execute(),
       // Mesmo filtro de UsuarioServiceFindAllLogins - renovação silenciosa de
       // token não conta como "sessão" pra este propósito.
@@ -282,20 +307,24 @@ export class UsuarioServiceExportData {
       })),
       comentariosEscritos: comentarios.map((c) => ({
         idCampanha: c.id_campanha,
+        tituloCampanha: c.titulo_campanha,
         conteudo: c.conteudo,
         endossado: c.endossado,
         criadoEm: c.criado_em,
       })),
       seguindoCampanhas: seguindoCampanhas.map((s) => ({
         idCampanha: s.id_campanha,
+        tituloCampanha: s.titulo_campanha,
         seguidoEm: s.seguido_em,
       })),
       seguindoPesquisadores: seguindoPesquisadores.map((s) => ({
         idPesquisador: s.id_pesquisador,
+        nomePesquisador: s.nome_pesquisador,
         seguidoEm: s.seguido_em,
       })),
       contribuicoes: contribuicoes.map((c) => ({
         idCampanha: c.id_campanha,
+        tituloCampanha: c.titulo_campanha,
         valor: c.valor,
         meioPagamento: c.meio_pagamento,
         status: c.status,
@@ -304,6 +333,8 @@ export class UsuarioServiceExportData {
       })),
       aceitesTermos: aceitesTermos.map((a) => ({
         idTermo: a.id_termo,
+        tipoTermo: a.tipo_termo,
+        versao: a.versao,
         aceitoEm: a.aceito_em,
       })),
       sessoes: sessoes.map((s) => ({ logadoEm: s.criado_em, ip: s.ip })),

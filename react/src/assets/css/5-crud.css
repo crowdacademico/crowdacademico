@@ -457,16 +457,17 @@
     font-size: var(--font-size-base);
   }
 
-  /* Primeiro passo quando a seção aperta: o texto secundário (e-mail, código, chave) desce um tamanho de fonte,
-     antes de precisar quebrar a linha. O nome continua no tamanho normal. */
+  /* Primeiro passo quando a seção aperta: a tabela inteira desce um tamanho de fonte, antes de precisar quebrar a
+     linha. Todas as colunas juntas (21-11-2026): só o texto secundário diminuindo deixava a linha com dois tamanhos,
+     e no teste com usuários isso pareceu erro. */
   @container (max-width: 1000px) {
-    .crud-tabela td.crud-tabela__col--texto {
+    .crud-tabela td {
       font-size: var(--font-size-xs);
     }
   }
 
   /* Tabela que não coube nem com as ações só em ícone (generic-table.tsx, ajustarApertada), em qualquer largura de
-     tela, em dois degraus. Degrau 1: o texto secundário desce um tamanho de fonte e pode quebrar nos pontos naturais
+     tela, em dois degraus. Degrau 1: a tabela inteira desce um tamanho de fonte, o texto secundário pode quebrar nos pontos naturais
      ("@", "_"), e os vãos (entre colunas e depois do id) vão ao mínimo. Degrau 2, só se ainda não coube: o nome aceita
      ficar mais estreito (corta com reticências e o "ler tudo"). Tabela que cabe não muda nada. */
   .crud-tabela__wrapper[data-apertada] .crud-tabela {
@@ -483,7 +484,7 @@
     --coluna-piso-maximo: var(--coluna-texto-piso-estreito);
   }
 
-  .crud-tabela__wrapper[data-apertada] .crud-tabela td.crud-tabela__col--texto {
+  .crud-tabela__wrapper[data-apertada] .crud-tabela td {
     font-size: var(--font-size-xs);
   }
 

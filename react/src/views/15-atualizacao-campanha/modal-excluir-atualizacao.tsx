@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { CampoFicha } from '../../components/crud/ficha-consulta';
 import { ModalExcluirItem } from '../../components/crud/modal-excluir-item';
 import { CaixaMarcacao } from '../../components/input/caixa-marcacao';
+import { Campo } from '../../components/input/campo';
+import { ContadorCaracteres } from '../../components/input/contador-caracteres';
 import { atualizacaoCampanhaApi } from '../../services/15-atualizacao-campanha/api/atualizacao-campanha.api';
 import { ROTULO_FASE_ATUALIZACAO } from '../../services/15-atualizacao-campanha/constants/atualizacao-campanha.constants';
 import { formatarDataHora } from '../../services/constant/util/formatacao.util';
@@ -26,8 +28,11 @@ interface ModalExcluirAtualizacaoProps {
 // padrão): desmarcado, apaga de vez com os anexos; e a que já saiu do ar, para ela, só sai de vez.
 export function ModalExcluirAtualizacao({ authFetch, atualizacao, campanha, situacao, moderacao = false, aoFechar, aoExcluida }: ModalExcluirAtualizacaoProps) {
   const [manterRegistro, setManterRegistro] = useState(true);
+  // Motivo (21-11-2026): a moderação que exclui mantendo o registro explica o porquê; o pesquisador vê no Estúdio.
+  const [motivo, setMotivo] = useState('');
   const podeManter = atualizacao.ativo;
   const manter = !moderacao || (podeManter && manterRegistro);
+  const pedeMotivo = moderacao && manter;
 
   return (
     <ModalExcluirItem
@@ -44,10 +49,29 @@ export function ModalExcluirAtualizacao({ authFetch, atualizacao, campanha, situ
       subtitulo={manter ? (moderacao ? 'Fica guardada como Excluída; dá para apagar de vez depois.' : 'Fica guardada como Excluída.') : undefined}
       // Mantendo o registro nada se perde: o aviso vermelho fica só para o apagar de vez.
       explicacao={manter ? undefined : 'A atualização e os anexos dela são apagados de vez.'}
-      extra={moderacao && podeManter && <CaixaMarcacao rotulo="Manter o registro" marcado={manterRegistro} aoMudar={setManterRegistro} className="mt-4" />}
+      extra={
+        moderacao && podeManter && (
+          <>
+            <CaixaMarcacao rotulo="Manter o registro" marcado={manterRegistro} aoMudar={setManterRegistro} className="mt-4" />
+            {pedeMotivo && (
+              <div className="mt-4">
+                <Campo rotulo="Motivo da exclusão (o pesquisador vê este texto)">
+                  {({ atributos }) => (
+                    <>
+                      <textarea {...atributos} rows={3} maxLength={1000} value={motivo} onChange={(evento) => setMotivo(evento.target.value)} className="input-padrao" />
+                      <ContadorCaracteres texto={motivo} limite={1000} />
+                    </>
+                  )}
+                </Campo>
+              </div>
+            )}
+          </>
+        )
+      }
       remover={async () => {
+        // Motivo em branco: o banco recusa com a mensagem certa (90044), que aparece no aviso de erro.
         if (manter) {
-          await atualizacaoCampanhaApi.alterar(authFetch, atualizacao.idAtualizacao, { ativo: false });
+          await atualizacaoCampanhaApi.alterar(authFetch, atualizacao.idAtualizacao, pedeMotivo ? { ativo: false, motivoModeracao: motivo.trim() } : { ativo: false });
         } else {
           await atualizacaoCampanhaApi.excluir(authFetch, atualizacao.idAtualizacao);
         }

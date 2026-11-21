@@ -6,6 +6,21 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta da
 
 ---
 
+## Exportar meus dados: a opção PDF (anotado em 21-11-2026)
+
+**Hoje:** Minha Conta > Privacidade tem o botão dividido "Exportar". O clique principal baixa um **HTML** para ler no navegador (`services/1-usuario/util/exportacao-html.util.ts`), e a seta oferece o **JSON** para levar a outro serviço. Os dois saem do mesmo pacote (`GET /usuario/eu/exportar-dados`), buscado uma vez só, então o limite de uma exportação por hora não atrapalha a troca de formato. É o padrão do Facebook e do Instagram ("Baixar suas informações": HTML ou JSON).
+
+**Por que o PDF ficou de fora agora:** decisão do Lucas, para não pesar o código. Por enquanto, o rodapé do HTML ensina "Imprimir → Salvar como PDF", e o arquivo já tem estilo de impressão.
+
+**Opções para o PDF, se valer a pena depois:**
+1. **Terceira opção na seta que abre o HTML e chama a impressão** (`window.print()`): quase sem código e sem biblioteca. A pessoa só confirma "Salvar como PDF" na janela do navegador.
+2. **pdfmake no Nest** (JavaScript puro, monta o PDF descrevendo o conteúdo, com tabelas): o arquivo já sai pronto, sem passo a mais. Custa uma biblioteca nova e a montagem do documento seção por seção.
+3. **Puppeteer** (HTML → PDF): reaproveitaria o HTML, mas precisa de um navegador Chromium de ~300 MB no servidor, ruim no plano gratuito do Render. Não recomendado.
+
+**Sugestão do Claude:** a 1 primeiro, porque é quase de graça; a 2 só se a banca ou os usuários pedirem um PDF pronto.
+
+---
+
 ## Estúdio > Campanhas: a quarta coluna (prazo) das tabelas Ativas e Encerradas (anotado em 15-11-2026)
 
 **Hoje:** as duas tabelas têm as mesmas colunas, na mesma ordem e do mesmo tipo: campanha (`nome`) · situação (`status`) · arrecadado (`dinheiro`) · meta (`dinheiro`). A coluna **dias rest.** (tipo `numero`) saiu por enquanto, para as duas ficarem alinhadas.

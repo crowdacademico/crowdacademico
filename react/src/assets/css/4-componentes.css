@@ -343,6 +343,18 @@
     color: var(--cor-texto-concluido);
   }
 
+  /* Pílula que abre os detalhes (badge-clicavel.tsx): mesma cor, com borda, ícone e sublinhado no hover. */
+  .badge--clicavel {
+    gap: 0.35rem;
+    border: 1px solid currentColor;
+    cursor: pointer;
+  }
+
+  .badge--clicavel:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
   .badge-erro {
     background-color: var(--cor-fundo-erro);
     color: var(--cor-texto-erro);
@@ -1226,5 +1238,61 @@
     .grade-ficha {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
+  }
+
+  /* Botão dividido (botao-dividido.tsx): as duas metades coladas, com uma linha entre elas. */
+  .botao-dividido__principal {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .botao-dividido__seta {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: 1px solid var(--cor-borda-forte);
+    padding-inline: 0.75rem;
+  }
+
+  /* Exemplo pronto das etapas Orçamento e Cronograma do Criar Campanha (ajuda-etapa-campanha.tsx, 21-11-2026):
+     caixa tracejada (é exemplo, não dado de verdade) com uma tabela pequena. */
+  .exemplo-etapa {
+    margin-inline: 0;
+    border: 1px dashed var(--cor-borda-forte);
+    border-radius: var(--radius-lg, 0.75rem);
+    background-color: var(--cor-fundo-sutil);
+    padding: 0.75rem 1rem;
+  }
+
+  .exemplo-etapa__tabela {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-xs);
+    color: var(--cor-texto);
+  }
+
+  .exemplo-etapa__tabela th {
+    text-align: left;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--cor-texto-fraco);
+    border-bottom: 1px solid var(--cor-borda-forte);
+    padding: 0.25rem 0.5rem 0.25rem 0;
+  }
+
+  .exemplo-etapa__tabela td {
+    padding: 0.35rem 0.5rem 0.35rem 0;
+    border-bottom: 1px solid var(--cor-borda);
+  }
+
+  .exemplo-etapa__tabela tfoot td {
+    font-weight: 700;
+    color: var(--cor-texto-forte);
+    border-bottom: none;
+  }
+
+  .exemplo-etapa__tabela .exemplo-etapa__numero {
+    text-align: right;
+    white-space: nowrap;
+    padding-right: 0;
   }
 }
