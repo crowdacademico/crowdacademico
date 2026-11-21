@@ -21,6 +21,7 @@ export class ComentarioServiceUpdate {
       ...(dto.conteudo !== undefined ? { conteudo: dto.conteudo } : {}),
       ...(dto.endossado !== undefined ? { endossado: dto.endossado } : {}),
       ...(dto.ativo !== undefined ? { ativo: dto.ativo } : {}),
+      ...(dto.bloqueado !== undefined ? { bloqueado: dto.bloqueado } : {}),
     };
     if (Object.keys(campos).length === 0) {
       // `UPDATE ... SET WHERE` sem coluna é SQL inválido: 400 claro em vez do 500 do Postgres.

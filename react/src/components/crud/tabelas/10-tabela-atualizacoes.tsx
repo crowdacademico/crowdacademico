@@ -3,6 +3,7 @@ import { ListaAnexos } from '../lista-anexos';
 import { formatarData } from '../../../services/constant/util/formatacao.util';
 import {
   ROTULO_FASE_ATUALIZACAO,
+  motivoAtualizacaoNaoEditavel,
   rotuloSituacaoAtualizacao,
 } from '../../../services/15-atualizacao-campanha/constants/atualizacao-campanha.constants';
 import type { AtualizacaoCampanhaResponse } from '../../../services/15-atualizacao-campanha/type/atualizacao-campanha.type';
@@ -16,9 +17,11 @@ interface TabelaAtualizacoesProps {
   // Só o dono passa: sem eles, a coluna Ações não aparece e a situação diz "pelo pesquisador".
   aoAlterar?: (atualizacao: AtualizacaoCampanhaResponse) => void;
   aoExcluir?: (atualizacao: AtualizacaoCampanhaResponse) => void;
+  // A campanha aceita atualização (ativa, sucesso, não atingida): fora disso, o Alterar fica apagado (91064).
+  campanhaAceita?: boolean;
 }
 
-export function TabelaAtualizacoes({ atualizacoes, aoAlterar, aoExcluir }: TabelaAtualizacoesProps) {
+export function TabelaAtualizacoes({ atualizacoes, aoAlterar, aoExcluir, campanhaAceita = true }: TabelaAtualizacoesProps) {
   const doDono = Boolean(aoExcluir);
   return (
     <CaixaTabela rotulo="Atualizações da campanha">
@@ -53,7 +56,9 @@ export function TabelaAtualizacoes({ atualizacoes, aoAlterar, aoExcluir }: Tabel
                   linha={item}
                   // O dono sempre exclui mantendo o registro: a que já saiu do ar não exclui de novo.
                   indisponivel={(linha, acao) =>
-                    acao === 'excluir' && !linha.ativo
+                    acao === 'alterar'
+                      ? motivoAtualizacaoNaoEditavel(linha, campanhaAceita)
+                      : acao === 'excluir' && !linha.ativo
                       ? linha.ocultadaModeracao
                         ? 'Excluída pela moderação.'
                         : 'Já excluída: o registro fica guardado.'

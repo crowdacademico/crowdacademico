@@ -7,4 +7,5 @@ export const COMENTARIO_COLUNAS_SELECT = [
   'criado_em',
   'ordem_endosso',
   'ativo',
+  'bloqueado',
 ] as const;

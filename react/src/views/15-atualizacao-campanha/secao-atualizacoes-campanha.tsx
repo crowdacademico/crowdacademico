@@ -66,6 +66,7 @@ export function SecaoAtualizacoesCampanha({ auth, idCampanha, podePublicar, pode
           atualizacoes={atualizacoes}
           aoAlterar={podeGerenciar ? setEditando : undefined}
           aoExcluir={podeGerenciar ? setExcluindo : undefined}
+          campanhaAceita={podePublicar}
         />
       )}
 

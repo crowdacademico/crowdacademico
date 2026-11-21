@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 
-// Excluir de vez um comentário recebido. pol_comentario_delete (04): só o dono da campanha, e só comentário ativo
-// ("excluir e bloquear" é o PATCH ativo = false, e o bloqueado não se apaga). O autor não é avisado.
+// Apagar de vez um comentário: pol_comentario_delete (04) só deixa a moderação (21-11-2026). O dono da campanha
+// exclui e bloqueia pelo PATCH (ativo e bloqueado): o comentário fica guardado. O autor não é avisado.
 @Injectable()
 export class ComentarioServiceRemove {
   constructor(private readonly database: DatabaseService) {}
@@ -21,7 +21,7 @@ export class ComentarioServiceRemove {
         'comentario',
         { id_comentario: id },
         'Comentário não encontrado.',
-        'Só o dono da campanha exclui um comentário recebido, e um comentário bloqueado não pode ser excluído.',
+        'Só a moderação apaga um comentário de vez; o dono da campanha exclui e bloqueia sem apagar.',
       );
     }
   }

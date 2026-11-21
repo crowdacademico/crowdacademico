@@ -20,6 +20,7 @@ export class ComentarioConverter {
       criadoEm: entity.criado_em,
       ordemEndosso: entity.ordem_endosso,
       ativo: entity.ativo,
+      bloqueado: entity.bloqueado,
       nomePesquisador: entity.nome_pesquisador ?? null,
       fotoPesquisador,
     };

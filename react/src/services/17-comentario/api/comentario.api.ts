@@ -5,8 +5,8 @@ import { desembrulharPaginado, TAMANHO_PAGINA_MAXIMO_API } from '../../constant/
 import type { ComentarioMeuResponse, ComentarioModeracaoResponse, ComentarioResponse } from '../type/comentario.type';
 
 // Espelha nest/src/17-comentario. Quem pode o quê é decidido pelo banco (pol_comentario_*, 04): o dono da campanha
-// endossa, exclui (apaga de vez) e bloqueia (inativo: fica guardado e o autor não comenta mais naquela campanha); a
-// lista esconde do dono o comentário bloqueado. O autor não é avisado de nenhuma dessas ações (RF-094).
+// endossa, exclui (sai da lista dele, fica guardado para a moderação, e o autor pode comentar de novo) e exclui e
+// bloqueia (também guardado, e o autor não comenta mais naquela campanha). Só a moderação apaga de vez (21-11-2026). O autor não é avisado de nenhuma dessas ações (RF-094).
 export const comentarioApi = {
   listarMinhas: (authFetch: AuthFetch): Promise<ComentarioMeuResponse[]> =>
     authFetch(`/comentario/minhas?tamanho=${TAMANHO_PAGINA_MAXIMO_API}`)
@@ -36,8 +36,11 @@ export const comentarioApi = {
     authFetch(`/comentario/${id}`, { method: 'PATCH', body: JSON.stringify({ endossado }) }).then(
       tratarResposta<ComentarioResponse>,
     ),
+  // Exclusão lógica (21-11-2026): sai do ar e do endosso, e fica guardado para a moderação.
   excluir: (authFetch: AuthFetch, id: number): Promise<void> =>
-    authFetch(`/comentario/${id}`, { method: 'DELETE' }).then(tratarResposta<void>),
+    authFetch(`/comentario/${id}`, { method: 'PATCH', body: JSON.stringify({ ativo: false, endossado: false }) })
+      .then(tratarResposta<ComentarioResponse>)
+      .then(() => undefined),
   // Moderação (18-11-2026): todos os comentários, de todas as campanhas, o mais novo primeiro.
   listarModeracao: (authFetch: AuthFetch): Promise<ComentarioModeracaoResponse[]> =>
     authFetch('/comentario/moderacao?limite=500').then(tratarResposta<ComentarioModeracaoResponse[]>),
@@ -52,7 +55,7 @@ export const comentarioApi = {
       tratarResposta<ComentarioResponse>,
     ),
   bloquear: (authFetch: AuthFetch, id: number): Promise<ComentarioResponse> =>
-    authFetch(`/comentario/${id}`, { method: 'PATCH', body: JSON.stringify({ ativo: false }) }).then(
+    authFetch(`/comentario/${id}`, { method: 'PATCH', body: JSON.stringify({ ativo: false, endossado: false, bloqueado: true }) }).then(
       tratarResposta<ComentarioResponse>,
     ),
 };

@@ -9,6 +9,8 @@ export interface ComentarioResponse {
   criadoEm: string;
   ordemEndosso: number | null;
   ativo: boolean;
+  // Excluído e bloqueado pelo dono da campanha: o autor não comenta mais nela.
+  bloqueado: boolean;
   // Só na listagem; `null` também quando a conta do autor foi excluída.
   nomePesquisador: string | null;
   // Só na listagem: URL da foto de perfil do autor (null = sem foto).

@@ -159,6 +159,7 @@ export interface Campanha {
 
 export interface Comentario {
   ativo: Generated<boolean>;
+  bloqueado: Generated<boolean>;
   conteudo: string;
   criado_em: Generated<Timestamp>;
   endossado: Generated<boolean>;

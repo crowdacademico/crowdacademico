@@ -29,4 +29,9 @@ export class ComentarioRequestUpdate {
   @IsOptional()
   @IsBoolean()
   ativo?: boolean;
+
+  // "Excluir e bloquear" do dono da campanha (21-11-2026): só o dono ou a moderação (fn_comentario_bloqueio, 92046).
+  @IsOptional()
+  @IsBoolean()
+  bloqueado?: boolean;
 }

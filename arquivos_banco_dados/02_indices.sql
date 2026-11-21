@@ -111,6 +111,9 @@ CREATE INDEX idx_historico_rejeicao_campanha ON historico_rejeicao(id_campanha);
 -- FK sem índice que o score consulta.
 CREATE INDEX idx_historico_rejeicao_dono    ON historico_rejeicao(id_usuario_dono);
 CREATE INDEX idx_comentario_campanha        ON comentario(id_campanha);
+-- Um comentário por pesquisador por campanha, contando só o que está no ar ou bloqueado (21-11-2026): o comentário que o
+-- dono só excluiu fica guardado para a moderação e o autor pode comentar de novo.
+CREATE UNIQUE INDEX "UK_COMENTARIO_CAMPANHA_PESQUISADOR" ON comentario(id_campanha, id_pesquisador) WHERE ativo OR bloqueado;
 -- (id_pesquisador, criado_em): a consulta do limite de frequência de comentário e a busca por autor ("meus
 -- endossos", painel de moderação).
 CREATE INDEX idx_comentario_pesquisador     ON comentario(id_pesquisador, criado_em);

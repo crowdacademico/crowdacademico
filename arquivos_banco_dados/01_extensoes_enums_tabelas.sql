@@ -768,11 +768,15 @@ CREATE TABLE comentario (
     criado_em      TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
     ordem_endosso  INT,
     ativo          BOOLEAN      NOT NULL DEFAULT TRUE, -- SOFT DELETE DOS COMENTÁRIOS
+    -- Excluído E bloqueado pelo dono da campanha (21-11-2026): o autor não comenta mais nesta campanha. Só o "Excluir"
+    -- (ativo = FALSE, bloqueado = FALSE) deixa o autor comentar de novo. Regras em fn_comentario_bloqueio [05-K-3].
+    bloqueado      BOOLEAN      NOT NULL DEFAULT FALSE,
 
     CONSTRAINT "PK_COMENTARIO" PRIMARY KEY (id_comentario),
     CONSTRAINT "FK_COMENTARIO_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE,
     CONSTRAINT "FK_COMENTARIO_PESQUISADOR" FOREIGN KEY (id_pesquisador) REFERENCES perfil_pesquisador(id_usuario) ON DELETE SET NULL,
-    CONSTRAINT "UK_COMENTARIO_CAMPANHA_PESQUISADOR" UNIQUE (id_campanha, id_pesquisador),
+    -- Um comentário por pesquisador por campanha: índice único PARCIAL "UK_COMENTARIO_CAMPANHA_PESQUISADOR" no 02
+    -- (conta só o que está no ar ou bloqueado; o excluído sem bloqueio não ocupa a vaga).
     CONSTRAINT "CK_COMENTARIO_ENDOSSO"
         CHECK ((endossado = TRUE AND ordem_endosso IS NOT NULL) OR (endossado = FALSE AND ordem_endosso IS NULL)),
     -- Só espaço não é comentário: cada pesquisador comenta uma vez por campanha, e um texto vazio gastaria a vaga.

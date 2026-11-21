@@ -646,6 +646,7 @@ export interface ComentarioTable {
   criado_em: Generated<Date>;
   ordem_endosso: number | null;
   ativo: Generated<boolean>;
+  bloqueado: Generated<boolean>;
 }
 
 export interface RecompensaTable {

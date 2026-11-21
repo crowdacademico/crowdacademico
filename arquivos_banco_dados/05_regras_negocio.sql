@@ -5802,6 +5802,86 @@ BEFORE UPDATE ON atualizacao_campanha
 FOR EACH ROW
 EXECUTE FUNCTION fn_atualizacao_ocultacao();
 
+-- ----------------------------------------------------------------------------
+-- Função:     fn_atualizacao_trava_edicao
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      21-11-2026 (teste com usuários): o conteúdo de uma atualização (título, texto, fase, formato) e os anexos
+--             dela só mudam enquanto ela pode ser publicada: não depois que a moderação a excluiu (senão o pesquisador
+--             reescreveria o que foi tirado do ar) e não com a campanha fora de 'ativo', 'sucesso' ou 'nao_atingido' (a
+--             mesma regra de criar, validar_atualizacao_campanha). Os dois dão 91064. Ocultar e mostrar de novo
+--             (ativo) não passam por aqui: seguem fn_atualizacao_ocultacao. Na tabela de anexos, roda em INSERT, UPDATE
+--             e DELETE; se a atualização-pai já não existe (exclusão de vez, em cascata), não há o que travar.
+--             SECURITY DEFINER: lê a situação da campanha sem a RLS de quem edita.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_atualizacao_trava_edicao()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_id_atualizacao INT;
+    v_ocultada       BOOLEAN;
+    v_status         status_campanha;
+BEGIN
+    IF TG_TABLE_NAME = 'atualizacao_campanha' THEN
+        IF NEW.titulo IS NOT DISTINCT FROM OLD.titulo AND NEW.conteudo IS NOT DISTINCT FROM OLD.conteudo
+           AND NEW.fase IS NOT DISTINCT FROM OLD.fase AND NEW.tipo IS NOT DISTINCT FROM OLD.tipo THEN
+            RETURN NEW;
+        END IF;
+        v_id_atualizacao := OLD.id_atualizacao;
+    ELSIF TG_OP = 'DELETE' THEN
+        v_id_atualizacao := OLD.id_atualizacao;
+    ELSE
+        v_id_atualizacao := NEW.id_atualizacao;
+    END IF;
+
+    SELECT a.ocultada_moderacao, c.status INTO v_ocultada, v_status
+    FROM atualizacao_campanha a
+    JOIN campanha c ON c.id_campanha = a.id_campanha
+    WHERE a.id_atualizacao = v_id_atualizacao;
+
+    IF FOUND THEN
+        IF v_ocultada THEN
+            RAISE EXCEPTION 'Esta atualização foi excluída pela moderação e não pode mais ser alterada.'
+                USING ERRCODE = '91064';
+        END IF;
+        IF v_status NOT IN ('ativo', 'sucesso', 'nao_atingido') THEN
+            RAISE EXCEPTION 'A campanha está encerrada ou fora do ar: as atualizações dela não podem mais ser alteradas.'
+                USING ERRCODE = '91064';
+        END IF;
+    END IF;
+
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Triggers:  trg_atualizacao_trava_edicao, trg_link_atualizacao_trava_edicao, trg_arquivo_atualizacao_trava_edicao
+-- Momento:   BEFORE UPDATE (atualização) e BEFORE INSERT OR UPDATE OR DELETE (anexos)
+-- Função:    fn_atualizacao_trava_edicao()
+-- Bloco:     [05-K-2]
+-- Regra:     Conteúdo e anexos de atualização excluída pela moderação ou de campanha encerrada não mudam (91064).
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_atualizacao_trava_edicao ON atualizacao_campanha;
+CREATE TRIGGER trg_atualizacao_trava_edicao
+BEFORE UPDATE ON atualizacao_campanha
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_atualizacao_trava_edicao();
+
+DROP TRIGGER IF EXISTS trg_link_atualizacao_trava_edicao ON link_atualizacao;
+CREATE TRIGGER trg_link_atualizacao_trava_edicao
+BEFORE INSERT OR UPDATE OR DELETE ON link_atualizacao
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_atualizacao_trava_edicao();
+
+DROP TRIGGER IF EXISTS trg_arquivo_atualizacao_trava_edicao ON arquivo_atualizacao;
+CREATE TRIGGER trg_arquivo_atualizacao_trava_edicao
+BEFORE INSERT OR UPDATE OR DELETE ON arquivo_atualizacao
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_atualizacao_trava_edicao();
+
+
 -- ============================================================================
 --  [05-K-3] REGRAS TRANSVERSAIS - COMUNIDADE, ENGAJAMENTO E RBAC
 --  Descrição: Regras de interação social (comentários, denúncias) e concessão
@@ -6172,6 +6252,67 @@ CREATE TRIGGER trg_comentario_bloqueia_reversao_moderacao
 BEFORE UPDATE ON comentario
 FOR EACH ROW
 EXECUTE FUNCTION fn_bloqueia_reversao_moderacao_comentario();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_comentario_bloqueio
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      21-11-2026. O dono da campanha tem dois jeitos de tirar um comentário, os dois lógicos (o comentário fica
+--             guardado para a moderação): "Excluir" (ativo = FALSE; o autor pode comentar de novo) e "Excluir e
+--             bloquear" (ativo = FALSE e bloqueado = TRUE; o autor não comenta mais nesta campanha). Aqui:
+--               - INSERT: autor bloqueado nesta campanha não comenta (91065), e ninguém nasce bloqueado;
+--               - UPDATE de bloqueado: só o dono da campanha ou a moderação (92046); bloquear sempre tira do ar;
+--                 voltar ao ar (só a moderação, fn_bloqueia_reversao_moderacao_comentario) tira o bloqueio.
+--             SECURITY DEFINER: lê o dono da campanha e o bloqueio sem a RLS de quem comenta.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_comentario_bloqueio()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        NEW.bloqueado := FALSE;
+        IF EXISTS (
+            SELECT 1 FROM comentario
+            WHERE id_campanha = NEW.id_campanha AND id_pesquisador = NEW.id_pesquisador AND bloqueado
+        ) THEN
+            RAISE EXCEPTION 'O dono desta campanha bloqueou novos comentários seus nela.'
+                USING ERRCODE = '91065';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    IF NEW.bloqueado IS DISTINCT FROM OLD.bloqueado
+       AND NOT public.tem_permissao('comentario_moderar')
+       AND NOT EXISTS (
+           SELECT 1 FROM campanha WHERE id_campanha = NEW.id_campanha AND id_usuario = public.id_usuario_atual()
+       ) THEN
+        RAISE EXCEPTION 'Só o dono da campanha ou a moderação bloqueia ou desbloqueia o autor de um comentário.'
+            USING ERRCODE = '92046';
+    END IF;
+
+    IF NEW.bloqueado THEN
+        NEW.ativo := FALSE;
+    END IF;
+    IF NEW.ativo AND NOT OLD.ativo THEN
+        NEW.bloqueado := FALSE;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_comentario_bloqueio
+-- Tabela:    comentario
+-- Momento:   BEFORE INSERT OR UPDATE
+-- Função:    fn_comentario_bloqueio()
+-- Bloco:     [05-K-3]
+-- Regra:     Autor bloqueado não comenta de novo; só o dono ou a moderação mexe no bloqueio.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_comentario_bloqueio ON comentario;
+CREATE TRIGGER trg_comentario_bloqueio
+BEFORE INSERT OR UPDATE ON comentario
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_comentario_bloqueio();
 
 -- ----------------------------------------------------------------------------
 -- Função:     validar_comentario_frequencia

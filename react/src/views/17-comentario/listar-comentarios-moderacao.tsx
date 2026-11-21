@@ -18,14 +18,21 @@ interface ComentarioLinha extends ComentarioModeracaoResponse {
 
 // Quem vê o comentário hoje: endossado é público; o não endossado só o dono da campanha (e o autor) veem; o oculto
 // ninguém vê fora daqui (o autor ocultou, o dono da campanha bloqueou, uma denúncia procedente ou esta tela).
-const SITUACOES = ['Público (endossado)', 'Só o dono da campanha vê', 'Oculto'];
+// Oculto e bloqueado (21-11-2026): o dono da campanha excluiu e bloqueou o autor, que não comenta mais nela.
+const SITUACOES = ['Público (endossado)', 'Só o dono da campanha vê', 'Oculto', 'Oculto e autor bloqueado'];
 
 function paraLinha(comentario: ComentarioModeracaoResponse): ComentarioLinha {
   return {
     ...comentario,
     autor: comentario.nomePesquisador ?? 'Conta excluída',
     campanha: comentario.tituloCampanha ?? `Campanha #${comentario.idCampanha}`,
-    situacao: !comentario.ativo ? SITUACOES[2] : comentario.endossado ? SITUACOES[0] : SITUACOES[1],
+    situacao: comentario.bloqueado
+      ? SITUACOES[3]
+      : !comentario.ativo
+        ? SITUACOES[2]
+        : comentario.endossado
+          ? SITUACOES[0]
+          : SITUACOES[1],
   };
 }
 

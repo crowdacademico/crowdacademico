@@ -55,6 +55,7 @@ import { ModalCriarCampanha } from '../12-campanha/modal-criar-campanha';
 import { ModalExcluirCampanha } from '../12-campanha/modal-excluir-campanha';
 import { ModalRecompensa } from '../18-recompensa/modal-recompensa';
 import { ModalAtualizacao } from '../15-atualizacao-campanha/modal-atualizacao';
+import { motivoAtualizacaoNaoEditavel } from '../../services/15-atualizacao-campanha/constants/atualizacao-campanha.constants';
 import { ModalExcluirAtualizacao } from '../15-atualizacao-campanha/modal-excluir-atualizacao';
 
 type SecaoEstudio = 'campanhas' | 'recompensas' | 'atualizacoes' | 'comentarios' | 'contribuicoes';
@@ -463,6 +464,7 @@ function PainelRecompensas({ auth, campanhas }: { auth: PropsPagina['auth']; cam
 
 interface AtualizacaoLinha extends AtualizacaoCampanhaResponse {
   tituloCampanha: string;
+  campanhaAceita: boolean;
   faseRotulo: string;
   tipoRotulo: string;
   situacao: string;
@@ -488,6 +490,7 @@ function PainelAtualizacoes({ auth, campanhas }: { auth: PropsPagina['auth']; ca
       return atualizacoes.map((atualizacao) => ({
         ...atualizacao,
         tituloCampanha: campanha.titulo,
+        campanhaAceita: STATUS_ACEITA_ATUALIZACAO.has(campanha.status),
         faseRotulo: ROTULO_FASE_ATUALIZACAO[atualizacao.fase],
         tipoRotulo: ROTULO_TIPO_ATUALIZACAO[atualizacao.tipo],
         situacao: rotuloSituacaoAtualizacao(atualizacao, true),
@@ -551,9 +554,10 @@ function PainelAtualizacoes({ auth, campanhas }: { auth: PropsPagina['auth']; ca
           excluir: (linha) => setExcluindo(linha),
         }}
         acaoIndisponivel={(linha, acao) => {
-          // Excluída pela moderação: nem Alterar (21-11-2026), senão o pesquisador editaria o que a moderação tirou.
-          if (acao === 'alterar' && linha.ocultadaModeracao) {
-            return 'Excluída pela moderação: não pode ser alterada.';
+          // Excluída pela moderação ou campanha encerrada: nem Alterar (21-11-2026; o banco recusa com 91064).
+          if (acao === 'alterar') {
+            const motivo = motivoAtualizacaoNaoEditavel(linha, linha.campanhaAceita);
+            if (motivo) return motivo;
           }
           return acao === 'excluir' && !linha.ativo
             ? linha.ocultadaModeracao ? 'Excluída pela moderação.' : 'Esta atualização já foi ocultada.'

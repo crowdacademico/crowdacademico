@@ -21,10 +21,11 @@ interface ModalExcluirComentarioProps {
   aoExcluido: () => void;
 }
 
-// Excluir um comentário recebido, pelo dono da campanha: excluir (apaga de vez, o autor pode comentar de novo) ou
-// excluir e bloquear (para ofensa, ameaça ou spam). Bloquear nunca é automático: nem todo comentário excluído é
-// ofensivo. Com "Denunciar" marcado, o comentário fica guardado como prova para a moderação: só "Excluir e bloquear"
-// vale (apagar de vez sumiria com o que foi denunciado). O autor não é avisado de nada.
+// Excluir um comentário recebido, pelo dono da campanha. Os dois jeitos guardam o comentário para a moderação
+// (21-11-2026: só a moderação apaga de vez): excluir (o autor pode comentar de novo) ou excluir e bloquear (para ofensa,
+// ameaça ou spam; o autor não comenta mais nesta campanha). Bloquear nunca é automático: nem todo comentário excluído
+// é ofensivo. Com "Denunciar" marcado, só "Excluir e bloquear" vale: quem denuncia um comentário ofensivo não quer o
+// autor de volta. O autor não é avisado de nada.
 export function ModalExcluirComentario({ autor, conteudo, excluir, denunciar, aoFechar, aoExcluido }: ModalExcluirComentarioProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
@@ -95,8 +96,9 @@ export function ModalExcluirComentario({ autor, conteudo, excluir, denunciar, ao
         icone="fa-circle-info"
         titulo={
           <span className="font-normal">
-            <strong>Excluir e bloquear:</strong> o comentário some da sua lista, mas fica guardado, e o autor não consegue
-            mais comentar nesta campanha. Use em caso de ofensa, ameaça ou spam.
+            <strong>Excluir:</strong> o comentário some da sua lista e da página, e o autor pode comentar de novo.{' '}
+            <strong>Excluir e bloquear:</strong> igual, mas o autor não consegue mais comentar nesta campanha. Use em caso
+            de ofensa, ameaça ou spam. Nos dois casos o comentário fica guardado para a moderação.
           </span>
         }
         espacado
@@ -117,8 +119,8 @@ export function ModalExcluirComentario({ autor, conteudo, excluir, denunciar, ao
             <span>
               <span className="enfase texto-forte">Denunciar este comentário à moderação</span>
               <span className="block legenda texto-fraco">
-                Para conteúdo ofensivo, discriminatório, ameaçador, ilegal ou spam. O comentário fica guardado para a
-                moderação analisar, por isso só vale "Excluir e bloquear".
+                Para conteúdo ofensivo, discriminatório, ameaçador, ilegal ou spam. A moderação analisa o comentário, e o
+                autor fica bloqueado nesta campanha ("Excluir e bloquear").
               </span>
             </span>
           </label>

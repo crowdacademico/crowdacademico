@@ -146,6 +146,8 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91061 | `desistir_contribuicao` | `contribuicao` | Desistir quando o repasse da campanha já saiu de `pendente` (transferência em andamento ou feita)
 | 91062 | `entrar_com_google` | `usuario` | Login com Google com um e-mail que já está ligado a outra conta Google
 | 91063 | `fn_congela_regras_campanha`, `fn_congela_orcamento_campanha`, `fn_congela_marco_cronograma` | `campanha`, `orcamento_campanha`, `marco_cronograma` | Campanha aguardando aprovação: conteúdo, orçamento e cronograma não mudam enquanto a curadoria analisa (Grupo DG, 21-11-2026)
+| 91064 | `fn_atualizacao_trava_edicao` | `atualizacao_campanha`, `link_atualizacao`, `arquivo_atualizacao` | Alterar o conteúdo ou os anexos de uma atualização excluída pela moderação, ou de campanha fora de ativa, sucesso ou não atingida (Grupo DI, 21-11-2026) |
+| 91065 | `fn_comentario_bloqueio` | `comentario` | Autor bloqueado pelo dono da campanha tentando comentar de novo nela (Grupo DJ, 21-11-2026) |
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
 
@@ -195,6 +197,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92043 | `listar_ganhadores_recompensa` | `recompensa` | Ver quem ganhou uma recompensa sem ser o dono da campanha nem admin |
 | 92044 | `fn_valida_transicao_campanha` | `campanha` | Aprovar a própria campanha: quem tem a permissão de aprovar não aprova uma campanha da qual é dono (conflito de interesse, CT-11) |
 | 92045 | `decidir_solicitacao_encerramento` | `solicitacao_encerramento` | Decidir o pedido de encerramento antecipado da própria campanha (conflito de interesse) |
+| 92046 | `fn_comentario_bloqueio` | `comentario` | Bloquear ou desbloquear o autor de um comentário sem ser o dono da campanha nem a moderação (Grupo DJ, 21-11-2026) |
 
 ## 93xxx - Limite de taxa (429)
 
