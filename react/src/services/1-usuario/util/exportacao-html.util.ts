@@ -182,7 +182,12 @@ export function gerarHtmlExportacao(dados: ExportacaoDados): string {
     'Nenhum aceite registrado.',
   )}`);
 
-  partes.push(`<h2>Acessos (logins)</h2>${tabela(
+  // Prazo de guarda (21-11-2026): só os logins que a limpeza diária ainda não apagou.
+  const prazoAcessos =
+    dados.sessoesRetencaoDias > 0
+      ? `<p class="sub">Os logins ficam guardados por ${dados.sessoesRetencaoDias} dias (o prazo de registro de acesso do Marco Civil da Internet); os mais antigos são apagados automaticamente.</p>`
+      : '';
+  partes.push(`<h2>Acessos (logins)</h2>${prazoAcessos}${tabela(
     ['Data', 'IP'],
     dados.sessoes.map((s) => [formatarDataHora(s.logadoEm), s.ip ?? '-']),
     'Nenhum login registrado.',

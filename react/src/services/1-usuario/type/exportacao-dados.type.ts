@@ -49,4 +49,6 @@ export interface ExportacaoDados {
   aceitesTermos: { idTermo: number; tipoTermo: string | null; versao: string | null; aceitoEm: string }[];
   historicoRejeicoes: { idCampanha: number; tituloCampanha: string; justificativa: string | null; rejeitadoEm: string }[];
   sessoes: { logadoEm: string; ip: string | null }[];
+  // Dias que as sessões ficam guardadas (0 = para sempre); os logins mais antigos já foram apagados.
+  sessoesRetencaoDias: number;
 }

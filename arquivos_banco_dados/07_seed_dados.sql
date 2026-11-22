@@ -732,6 +732,7 @@ ON CONFLICT (chave) DO NOTHING;
 -- [07-L] configuracoes: retenção do log de auditoria (ver DOCUMENTACAO_BD.md [05-L])
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
 (NULL, 'log_auditoria_retencao_dias', '365', 'inteiro', 'Dias que o log de auditoria é guardado antes de ser apagado por job diário (0 = guardar para sempre)', TRUE, FALSE),
+(NULL, 'sessao_retencao_dias',  '180', 'inteiro', 'Dias que as sessões já encerradas (login e renovação) são guardadas antes de serem apagadas por job diário (0 = guardar para sempre). 180 = os 6 meses de registro de acesso do Marco Civil da Internet (art. 15)', TRUE, FALSE),
 (NULL, 'notificacao_retencao_dias',  '180', 'inteiro', 'Dias que os e-mails e avisos do sino já resolvidos (enviados, com falha ou cancelados) são guardados antes de serem apagados por job diário (0 = guardar para sempre; pendentes nunca são apagados)', TRUE, FALSE),
 -- Lida por limpar_ip_aceite_contribuicao() (05, [05-L]). 1825 dias = 5 anos, prazo do Código de Defesa do Consumidor
 -- (art. 27) e o que o Termo de Uso promete (item 5.4): mudar o prazo pede uma versão nova do Termo.

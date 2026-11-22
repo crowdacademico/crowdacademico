@@ -16,6 +16,9 @@ import { PG_POOL } from '../../commons/database/database.constants';
 // `configuracoes.notificacao_retencao_dias` (180 dias; 0 = guardar para sempre), pela
 // função `limpar_notificacoes_antigas()` (18-11-2026). Pendente nunca é apagada.
 //
+// E apaga as sessões (login e renovação) encerradas há mais de `configuracoes.sessao_retencao_dias` (180 dias, os 6
+// meses do Marco Civil; 0 = guardar para sempre), pela função `limpar_sessoes_antigas()` (21-11-2026).
+//
 // Mesmo molde dos jobs de campanha (`PG_POOL` direto, porque o job roda fora do
 // pipeline HTTP e sem sessão de usuário).
 @Injectable()
@@ -62,9 +65,19 @@ export class LogAuditoriaServiceClean {
           `${quantidadeNotificacoes} notificação(ões) já resolvida(s) apagada(s) por passar do prazo de guarda.`,
         );
       }
+
+      const sessoes = await this.pool.query<{
+        limpar_sessoes_antigas: number;
+      }>('SELECT public.limpar_sessoes_antigas()');
+      const quantidadeSessoes = sessoes.rows[0]?.limpar_sessoes_antigas ?? 0;
+      if (quantidadeSessoes > 0) {
+        this.logger.log(
+          `${quantidadeSessoes} sessão(ões) encerrada(s) apagada(s) por passar do prazo de guarda.`,
+        );
+      }
     } catch (erro) {
       this.logger.error(
-        `Falha na limpeza por prazo de retenção (log de auditoria, IP de aceite ou notificações): ${erro instanceof Error ? erro.message : String(erro)}`,
+        `Falha na limpeza por prazo de retenção (log de auditoria, IP de aceite, notificações ou sessões): ${erro instanceof Error ? erro.message : String(erro)}`,
       );
     }
   }

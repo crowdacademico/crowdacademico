@@ -59,3 +59,64 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+
+-- ============================================================================
+-- GRUPO DL (21-11-2026) - Prazo de guarda das sessões (6 meses). IDEMPOTENTE.
+-- Cole ANTES de subir o Nest novo (o job diário passa a chamar a função nova).
+--
+-- O que muda:
+--   1. Parâmetro sessao_retencao_dias (180). 0 = guardar para sempre.
+--   2. limpar_sessoes_antigas(): o job diário das 3h apaga as sessões (login e renovação) que terminaram há mais de
+--      6 meses. Antes a tabela crescia para sempre. Sessão válida nunca sai.
+--   3. A exportação de dados (Minha Conta) mostra os logins que sobram, com o prazo explicado.
+-- ============================================================================
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
+(NULL, 'sessao_retencao_dias',  '180', 'inteiro', 'Dias que as sessões já encerradas (login e renovação) são guardadas antes de serem apagadas por job diário (0 = guardar para sempre). 180 = os 6 meses de registro de acesso do Marco Civil da Internet (art. 15)', TRUE, FALSE)
+ON CONFLICT (chave) DO NOTHING;
+
+-- ----------------------------------------------------------------------------
+-- Função:     limpar_sessoes_antigas
+-- Assinatura: () -> INT
+-- Bloco:      [05-L]
+-- Regra:      Prazo de guarda das sessões (21-11-2026): apaga as sessões (login e renovação) que terminaram há mais de
+--             sessao_retencao_dias (180, 6 meses; 0 ou negativo = guardar para sempre). "Terminou" é a revogação (Sair,
+--             troca de senha) ou, sem ela, a expiração. Sessão ainda válida nunca sai. Por quê: a tabela crescia para
+--             sempre (uma linha a cada login e a cada renovação do token), e o Marco Civil da Internet (art. 15) pede
+--             guardar os registros de acesso (IP, data e hora) por 6 meses. Deixa uma linha de rastro em log_auditoria
+--             quando apaga algo. SECURITY DEFINER, chamada pelo @Cron diário das 3h, sem sessão de usuário.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.limpar_sessoes_antigas()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_dias     INT;
+    v_corte    TIMESTAMPTZ;
+    v_apagadas INT;
+BEGIN
+    v_dias := public.config_numero('sessao_retencao_dias', 180)::INT;
+    IF v_dias <= 0 THEN
+        RETURN 0;
+    END IF;
+
+    v_corte := NOW() - (v_dias * INTERVAL '1 day');
+
+    DELETE FROM sessao
+    WHERE LEAST(expira_em, COALESCE(revogado_em, expira_em)) < v_corte;
+    GET DIAGNOSTICS v_apagadas = ROW_COUNT;
+
+    IF v_apagadas > 0 THEN
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, dados_anteriores)
+        VALUES ('sessao', 'anteriores a ' || to_char(v_corte, 'YYYY-MM-DD'), 'DELETE', NULL,
+                jsonb_build_object('quantidade', v_apagadas, 'dias_retencao', v_dias, 'corte', v_corte));
+    END IF;
+
+    RETURN v_apagadas;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.limpar_sessoes_antigas() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.limpar_sessoes_antigas() TO app_nestjs;

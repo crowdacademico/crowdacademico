@@ -122,4 +122,7 @@ export class UsuarioResponseExportData {
   // UsuarioServiceFindAllLogins - renovação silenciosa de token não conta
   // como "sessão" pra este propósito).
   sessoes: Array<{ logadoEm: Date; ip: string | null }>;
+  // Por quantos dias as sessões ficam guardadas (sessao_retencao_dias; 0 = para sempre): os logins mais antigos já
+  // foram apagados pela limpeza diária.
+  sessoesRetencaoDias: number;
 }

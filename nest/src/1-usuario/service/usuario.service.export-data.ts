@@ -230,6 +230,13 @@ export class UsuarioServiceExportData {
       db,
     );
 
+    // Prazo de guarda das sessões (21-11-2026): a seção de logins só tem o que sobrou da limpeza diária.
+    const retencao = await sql<{ dias: number }>`
+      SELECT public.config_numero('sessao_retencao_dias', 180)::INT AS dias`.execute(
+      db,
+    );
+    const sessoesRetencaoDias = Number(retencao.rows[0]?.dias ?? 180);
+
     const secoesIncluidas = [
       'conta',
       perfil ? 'perfil_pesquisador' : null,
@@ -338,6 +345,7 @@ export class UsuarioServiceExportData {
         aceitoEm: a.aceito_em,
       })),
       sessoes: sessoes.map((s) => ({ logadoEm: s.criado_em, ip: s.ip })),
+      sessoesRetencaoDias,
       historicoRejeicoes: historicoRejeicoes.map((h) => ({
         idCampanha: h.id_campanha,
         tituloCampanha: h.titulo_campanha,

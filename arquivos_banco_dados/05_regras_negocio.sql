@@ -6913,6 +6913,49 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Função:     limpar_sessoes_antigas
+-- Assinatura: () -> INT
+-- Bloco:      [05-L]
+-- Regra:      Prazo de guarda das sessões (21-11-2026): apaga as sessões (login e renovação) que terminaram há mais de
+--             sessao_retencao_dias (180, 6 meses; 0 ou negativo = guardar para sempre). "Terminou" é a revogação (Sair,
+--             troca de senha) ou, sem ela, a expiração. Sessão ainda válida nunca sai. Por quê: a tabela crescia para
+--             sempre (uma linha a cada login e a cada renovação do token), e o Marco Civil da Internet (art. 15) pede
+--             guardar os registros de acesso (IP, data e hora) por 6 meses. Deixa uma linha de rastro em log_auditoria
+--             quando apaga algo. SECURITY DEFINER, chamada pelo @Cron diário das 3h, sem sessão de usuário.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.limpar_sessoes_antigas()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_dias     INT;
+    v_corte    TIMESTAMPTZ;
+    v_apagadas INT;
+BEGIN
+    v_dias := public.config_numero('sessao_retencao_dias', 180)::INT;
+    IF v_dias <= 0 THEN
+        RETURN 0;
+    END IF;
+
+    v_corte := NOW() - (v_dias * INTERVAL '1 day');
+
+    DELETE FROM sessao
+    WHERE LEAST(expira_em, COALESCE(revogado_em, expira_em)) < v_corte;
+    GET DIAGNOSTICS v_apagadas = ROW_COUNT;
+
+    IF v_apagadas > 0 THEN
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, dados_anteriores)
+        VALUES ('sessao', 'anteriores a ' || to_char(v_corte, 'YYYY-MM-DD'), 'DELETE', NULL,
+                jsonb_build_object('quantidade', v_apagadas, 'dias_retencao', v_dias, 'corte', v_corte));
+    END IF;
+
+    RETURN v_apagadas;
+END;
+$$;
+
 -- Tabelas com PK simples (1 argumento): lista escolhida com critério, não é "logar tudo": só o que o painel
 -- admin já edita hoje via RBAC/usuário/config, mais os catálogos que o admin também edita (motivo_denuncia,
 -- area_conhecimento, tipo_link, termos_de_uso, papel). contribuicao, repasse e evento_pagamento entram mais abaixo, só

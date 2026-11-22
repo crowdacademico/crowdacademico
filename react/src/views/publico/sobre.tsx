@@ -51,6 +51,76 @@ const PRINCIPIOS = [
   },
 ] as const;
 
+// Quem criou a plataforma (21-11-2026), em faixas: a foto ao lado das informações, como as páginas "Sobre" e
+// "Equipe" de muitos sites. As duas faixas têm sempre a mesma altura (grade de linhas iguais) e as fotos o mesmo
+// tamanho (400x500, WebP, ~10 KB; ver react/public/imagens). Campo vazio não aparece: o da Alexia fica para depois.
+interface Criador {
+  nome: string;
+  foto: string;
+  papel?: string;
+  formacao?: string;
+  resumo?: string;
+  links?: { rotulo: string; href: string; icone: string; texto: string }[];
+}
+
+const CRIADORES: readonly Criador[] = [
+  {
+    nome: 'Lucas Novais de Oliveira',
+    foto: '/imagens/criador-lucas-novais.webp',
+    papel: 'Cocriador do CrowdAcadêmico',
+    formacao: 'Tecnologia em Sistemas para Internet · IFSP, câmpus Birigui',
+    resumo:
+      'Programador full-stack em formação. Tem formação técnica em Administração pela Etec e voltou a estudar para se aprofundar em programação, a área que sempre o interessou.',
+    links: [
+      { rotulo: 'E-mail de Lucas', href: 'mailto:novais.oliveira@aluno.ifsp.edu.br', icone: 'fa-solid fa-envelope', texto: 'novais.oliveira@aluno.ifsp.edu.br' },
+      { rotulo: 'GitHub de Lucas', href: 'https://github.com/lucasnovais01', icone: 'fa-brands fa-github', texto: 'github.com/lucasnovais01' },
+    ],
+  },
+  {
+    nome: 'Alexia',
+    foto: '/imagens/criador-alexia.webp',
+  },
+];
+
+function FaixaCriador({ criador }: { criador: Criador }) {
+  return (
+    <li className="pagina-publica__cartao flex flex-col items-center gap-5 text-center sm:flex-row sm:items-start sm:text-left">
+      <img
+        src={criador.foto}
+        alt={`Foto de ${criador.nome}`}
+        width={160}
+        height={200}
+        loading="lazy"
+        decoding="async"
+        className="w-40 h-50 shrink-0 rounded-xl object-cover border borda-padrao"
+      />
+      <div className="min-w-0">
+        <h3 className="subtitulo texto-forte">{criador.nome}</h3>
+        {criador.papel && <p className="paragrafo texto-marca enfase mt-1">{criador.papel}</p>}
+        {criador.formacao && <p className="legenda texto-fraco mt-1">{criador.formacao}</p>}
+        {criador.resumo && <p className="paragrafo texto-padrao mt-3">{criador.resumo}</p>}
+        {criador.links && (
+          <ul className="mt-4 flex flex-col gap-2">
+            {criador.links.map((link) => (
+              <li key={link.href}>
+                <a
+                  href={link.href}
+                  aria-label={link.rotulo}
+                  className="paragrafo texto-marca hover:underline break-all"
+                  {...(link.href.startsWith('http') ? { target: '_blank', rel: 'noreferrer' } : {})}
+                >
+                  <i className={`${link.icone} mr-2`} aria-hidden="true" />
+                  {link.texto}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </li>
+  );
+}
+
 export function Sobre() {
   return (
     <div className="pagina-publica fundo-pagina min-h-full py-16">
@@ -156,6 +226,17 @@ export function Sobre() {
             Sistemas para Internet, no Instituto Federal de São Paulo, câmpus Birigui. O projeto começou de uma pergunta
             simples: e se financiar uma pesquisa pudesse ser tão fácil e tão claro quanto apoiar qualquer outra causa?
           </p>
+        </section>
+
+        <section aria-labelledby="sobre-criadores" className="mb-14">
+          <h2 id="sobre-criadores" className="titulo-secao mb-4">
+            Quem fez
+          </h2>
+          <ul className="grid auto-rows-fr gap-5">
+            {CRIADORES.map((criador) => (
+              <FaixaCriador key={criador.nome} criador={criador} />
+            ))}
+          </ul>
         </section>
 
         <section aria-label="Continue conhecendo a plataforma" className="pagina-publica__cartao">
