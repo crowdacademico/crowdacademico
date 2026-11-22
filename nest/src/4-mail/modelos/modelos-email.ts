@@ -57,10 +57,6 @@ const BOTOES: Partial<
   [TIPO_NOTIFICACAO.pesquisadorReativado]: entrar,
   [TIPO_NOTIFICACAO.denunciaProcedente]: entrar,
   [TIPO_NOTIFICACAO.moderacaoEncerrouCampanha]: entrar,
-  [TIPO_NOTIFICACAO.recompensaLiberada]: ({ urlPainel }) => ({
-    texto: 'Ver minhas recompensas',
-    url: `${urlPainel}/minha-conta/financeiro`,
-  }),
   [TIPO_NOTIFICACAO.apoioConfirmado]: ({ urlPainel }) => ({
     texto: 'Ver meus apoios',
     url: `${urlPainel}/minha-conta/financeiro`,

@@ -1,58 +1,47 @@
 import { Type } from 'class-transformer';
 import {
-  IsIn,
+  IsBoolean,
   IsInt,
-  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
-  IsUrl,
   MaxLength,
   Min,
-  ValidateNested,
 } from 'class-validator';
-import {
-  TIPOS_RECOMPENSA,
-  type TipoRecompensa,
-} from '../../../commons/database/db.types';
 
-// O "link especial": só o dono da campanha e quem ganhou a recompensa enxergam (pol_link_recompensa_select, 04).
-export class RecompensaRequestLink {
-  @IsInt()
-  idTipoLink: number;
-
-  @IsUrl({}, { message: 'URL inválida.' })
-  @MaxLength(500)
-  url: string;
-}
-
+// Recompensa = o Mural dos apoiadores da campanha (22-11-2026, RF-103 a RF-105): uma por campanha (UK_RECOMPENSA_CAMPANHA),
+// com o valor mínimo para entrar e uma mensagem de agradecimento opcional. Quem pode criar e alterar é a RLS
+// (pol_recompensa_*, 04): o dono da campanha.
 export class RecompensaRequestCreate {
   @IsInt()
   idCampanha: number;
-
-  @IsString()
-  @IsNotEmpty({ message: 'Informe o título da recompensa.' })
-  @MaxLength(150)
-  titulo: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(10000)
-  descricao?: string;
 
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0.01, { message: 'O valor mínimo precisa ser maior que zero.' })
   valorMinimo: number;
 
-  @IsIn(TIPOS_RECOMPENSA, {
-    message:
-      'Tipo de recompensa: reconhecimento, acesso antecipado ou digital.',
-  })
-  tipo: TipoRecompensa;
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  descricao?: string | null;
+}
+
+// Com alguém no mural, o valor mínimo não muda e a recompensa não é desativada (fn_recompensa_trava, 05, 91067); a
+// mensagem continua editável.
+export class RecompensaRequestUpdate {
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01, { message: 'O valor mínimo precisa ser maior que zero.' })
+  valorMinimo?: number;
 
   @IsOptional()
-  @ValidateNested()
-  @Type(() => RecompensaRequestLink)
-  link?: RecompensaRequestLink;
+  @IsString()
+  @MaxLength(10000)
+  descricao?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  ativo?: boolean;
 }

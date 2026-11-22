@@ -3,10 +3,8 @@ import { CaixaMarcacao } from '../../components/input/caixa-marcacao';
 interface EscoposTipoLinkProps {
   permitePerfil: boolean;
   permiteAtualizacao: boolean;
-  permiteRecompensa: boolean;
   aoMudarPerfil: (marcado: boolean) => void;
   aoMudarAtualizacao: (marcado: boolean) => void;
-  aoMudarRecompensa: (marcado: boolean) => void;
   className?: string;
 }
 
@@ -15,13 +13,11 @@ interface EscoposTipoLinkProps {
 export function EscoposTipoLink({
   permitePerfil,
   permiteAtualizacao,
-  permiteRecompensa,
   aoMudarPerfil,
   aoMudarAtualizacao,
-  aoMudarRecompensa,
   className,
 }: EscoposTipoLinkProps) {
-  const nenhumMarcado = !permitePerfil && !permiteAtualizacao && !permiteRecompensa;
+  const nenhumMarcado = !permitePerfil && !permiteAtualizacao;
   return (
     <fieldset className={className}>
       <legend className="rotulo-campo">Onde este tipo pode ser usado</legend>
@@ -35,11 +31,6 @@ export function EscoposTipoLink({
           rotulo="Atualização de campanha (prova de progresso)"
           marcado={permiteAtualizacao}
           aoMudar={aoMudarAtualizacao}
-        />
-        <CaixaMarcacao
-          rotulo="Recompensa (ex.: acesso antecipado a um repositório)"
-          marcado={permiteRecompensa}
-          aoMudar={aoMudarRecompensa}
         />
       </div>
       {nenhumMarcado && (

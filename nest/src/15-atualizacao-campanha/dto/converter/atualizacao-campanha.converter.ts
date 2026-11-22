@@ -13,8 +13,6 @@ export class AtualizacaoCampanhaConverter {
       titulo: entity.titulo,
       conteudo: entity.conteudo,
       publicadoEm: entity.publicado_em,
-      fase: entity.fase,
-      tipo: entity.tipo,
       ativo: entity.ativo,
       ocultadaModeracao: entity.ocultada_moderacao,
       motivoModeracao: entity.motivo_moderacao,

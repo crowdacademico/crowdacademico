@@ -120,15 +120,12 @@ CREATE TYPE status_contribuicao   AS ENUM ('pendente', 'confirmado', 'repassado'
 CREATE TYPE status_repasse       AS ENUM ('pendente', 'processando', 'concluido', 'erro');
 CREATE TYPE tipo_chave_pix       AS ENUM ('cpf', 'cnpj', 'email', 'telefone', 'aleatoria');
 CREATE TYPE meio_pagamento        AS ENUM ('pix', 'cartao_credito', 'cartao_debito', 'boleto');
-CREATE TYPE fase_atualizacao      AS ENUM ('andamento', 'resultado_preliminar', 'resultado_final');
-CREATE TYPE tipo_atualizacao      AS ENUM ('texto', 'imagem', 'pdf', 'linkexterno');
 -- status_denuncia: 'em_analise' fica no tipo, fora de uso (CK_DENUNCIA_SEM_EM_ANALISE na tabela denuncia).
 CREATE TYPE status_denuncia       AS ENUM ('pendente', 'em_analise', 'resolvida', 'improcedente');
 CREATE TYPE status_encerramento   AS ENUM ('pendente', 'aprovado', 'rejeitado', 'cancelado');
 CREATE TYPE status_contestacao    AS ENUM ('pendente', 'aceita', 'recusada');
 CREATE TYPE tipo_motivo_denuncia  AS ENUM ('campanha', 'perfil');
 CREATE TYPE status_notificacao    AS ENUM ('pendente', 'enviado', 'falhou', 'cancelado');
-CREATE TYPE tipo_recompensa       AS ENUM ('digital', 'reconhecimento', 'acesso_antecipado');
 -- Dois termos, cada um com sempre 1 versão vigente: 'cadastro' (o termo da conta, que cobre também as
 -- contribuições; o aceite dele é registrado no cadastro e de novo a cada contribuição, em
 -- aceite_termo_contribuicao) e 'upgrade_pesquisador' (aceito ao virar pesquisador). Ver termos_de_uso abaixo.
@@ -193,12 +190,11 @@ CREATE TABLE tipo_link (
     dominio             VARCHAR(255)[] NOT NULL DEFAULT '{}',
     permite_perfil      BOOLEAN NOT NULL DEFAULT TRUE,
     permite_atualizacao BOOLEAN NOT NULL DEFAULT FALSE,
-    permite_recompensa  BOOLEAN NOT NULL DEFAULT FALSE,
 
     CONSTRAINT "PK_TIPO_LINK" PRIMARY KEY (id_tipolink),
     CONSTRAINT "UK_TIPO_LINK_CODIGO" UNIQUE (codigo),
     CONSTRAINT "CK_TIPO_LINK_ALGUM_ESCOPO"
-        CHECK (permite_perfil OR permite_atualizacao OR permite_recompensa)
+        CHECK (permite_perfil OR permite_atualizacao)
 );
 
 -- id_pai auto-referenciado (mesmo padrão de score_config, ver [01-I]) suporta a hierarquia de 2
@@ -649,8 +645,8 @@ CREATE TABLE atualizacao_campanha (
     titulo         VARCHAR(150)     NOT NULL,
     conteudo       TEXT             NOT NULL,
     publicado_em   TIMESTAMPTZ        NOT NULL DEFAULT NOW(),
-    fase           fase_atualizacao NOT NULL,  -- RF-053: toda atualização registra a fase e o formato
-    tipo           tipo_atualizacao NOT NULL,
+    -- RF-053 (22-11-2026): texto livre com anexos, como o "blog" do Kickstarter, do Catarse e do Experiment.com. As
+    -- colunas fase e tipo (formato) saíram: ninguém usava, e o formato já saía dos anexos.
     ativo          BOOLEAN          NOT NULL DEFAULT TRUE, -- SOFT DELETE E MODERAÇÃO DAS ATUALIZAÇÕES
     -- Quem tirou do ar: TRUE = a moderação excluiu mantendo o registro ("Excluída"; o dono não desfaz), FALSE = o dono
     -- ocultou. Só a trigger [05-K-2] grava.
@@ -865,28 +861,30 @@ CREATE TABLE denuncia (
     CONSTRAINT "CK_DENUNCIA_JUST_CONTESTACAO_TAMANHO" CHECK (justificativa_contestacao IS NULL OR char_length(justificativa_contestacao) <= 5000)
 );
 
+-- Recompensa = o "Mural dos apoiadores" da campanha (22-11-2026, RF-103 a RF-105 reescritos). Uma por campanha,
+-- criada pelo pesquisador (sem ela, a campanha não tem mural): o valor mínimo para entrar e uma mensagem de
+-- agradecimento opcional. Quem soma esse valor em contribuições que contam entra no mural (mural_apoiadores, 05:
+-- calculado na hora, não gravado). O nome "recompensa" fica de propósito: o módulo pode crescer depois (faixas,
+-- entregas). Saíram título, tipo, quantidade e os links e arquivos de entrega (recompensa simbólica não entrega nada).
 CREATE TABLE recompensa (
     id_recompensa         SERIAL,
     id_campanha           INT             NOT NULL,
-    titulo                VARCHAR(150)    NOT NULL,
-    descricao             TEXT,
-    valor_minimo          DECIMAL(10,2)   NOT NULL,          -- contribuição mínima pra desbloquear essa recompensa
-    quantidade_disponivel INT,                                -- NULL = ilimitada
-    tipo                  tipo_recompensa NOT NULL,
+    descricao             TEXT,                              -- mensagem de agradecimento, opcional
+    valor_minimo          DECIMAL(10,2)   NOT NULL,          -- soma mínima das contribuições da pessoa para entrar no mural
     ativo                 BOOLEAN         NOT NULL DEFAULT TRUE,
-    criado_em             TIMESTAMPTZ       NOT NULL DEFAULT NOW(),      -- [melhoria]
+    criado_em             TIMESTAMPTZ       NOT NULL DEFAULT NOW(),
 
     CONSTRAINT "PK_RECOMPENSA" PRIMARY KEY (id_recompensa),
     CONSTRAINT "FK_RECOMPENSA_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE,
+    CONSTRAINT "UK_RECOMPENSA_CAMPANHA" UNIQUE (id_campanha),  -- um mural por campanha
     CONSTRAINT "CK_RECOMPENSA_VALOR_MINIMO" CHECK (valor_minimo > 0),
-    CONSTRAINT "CK_RECOMPENSA_QUANTIDADE"   CHECK (quantidade_disponivel IS NULL OR quantidade_disponivel >= 0),
     -- Texto livre sem limite: mesmo raciocínio de CK_CAMPANHA_DESCRICAO_TAMANHO. Limite técnico largo
     -- aqui; limite de negócio configurável via trigger, ver [05-K-1].
     CONSTRAINT "CK_RECOMPENSA_DESCRICAO_TAMANHO" CHECK (descricao IS NULL OR char_length(descricao) <= 10000)
 );
 
 -- ============================================================
--- [01-F] LINK (3 tabelas de associação)
+-- [01-F] LINK (2 tabelas de associação)
 -- ============================================================
 CREATE TABLE link_academico (
     id_link_academico SERIAL,
@@ -915,20 +913,9 @@ CREATE TABLE link_atualizacao (
     CONSTRAINT "FK_LINK_ATUALIZACAO_TIPOLINK" FOREIGN KEY (id_tipolink) REFERENCES tipo_link(id_tipolink)
 );
 
-CREATE TABLE link_recompensa (
-    id_link_recompensa SERIAL,
-    id_recompensa      INT NOT NULL,
-    id_tipolink        INT NOT NULL,
-    ordem              INT,
-    url                VARCHAR(500) NOT NULL,
-
-    CONSTRAINT "PK_LINK_RECOMPENSA" PRIMARY KEY (id_link_recompensa),
-    CONSTRAINT "FK_LINK_RECOMPENSA_RECOMPENSA" FOREIGN KEY (id_recompensa) REFERENCES recompensa(id_recompensa) ON DELETE CASCADE,
-    CONSTRAINT "FK_LINK_RECOMPENSA_TIPOLINK" FOREIGN KEY (id_tipolink) REFERENCES tipo_link(id_tipolink)
-);
 
 -- ============================================================
--- [01-G] ARQUIVO (2 tabelas de associação)
+-- [01-G] ARQUIVO (1 tabela de associação)
 -- ============================================================
 CREATE TABLE arquivo_atualizacao (
     id_arq_atu     SERIAL,
@@ -942,19 +929,6 @@ CREATE TABLE arquivo_atualizacao (
     CONSTRAINT "UK_ARQUIVO_ATUALIZACAO_ARQUIVO" UNIQUE (id_arquivo)
 );
 
-CREATE TABLE arquivo_recompensa (
-    id_arq_recompensa SERIAL,
-    id_recompensa     INT NOT NULL,
-    id_arquivo        INT NOT NULL,
-    ordem             INT,
-    principal         BOOLEAN NOT NULL DEFAULT FALSE,
-
-    CONSTRAINT "PK_ARQUIVO_RECOMPENSA" PRIMARY KEY (id_arq_recompensa),
-    CONSTRAINT "FK_ARQUIVO_RECOMPENSA_RECOMPENSA" FOREIGN KEY (id_recompensa) REFERENCES recompensa(id_recompensa) ON DELETE CASCADE,
-    CONSTRAINT "FK_ARQUIVO_RECOMPENSA_ARQUIVO" FOREIGN KEY (id_arquivo) REFERENCES arquivo(id_arquivo) ON DELETE CASCADE,
-    -- Um arquivo é anexo de UMA recompensa só (e de nenhum outro lugar, ver fn_valida_posse_anexo, 05 [05-G]).
-    CONSTRAINT "UK_ARQUIVO_RECOMPENSA_ARQUIVO" UNIQUE (id_arquivo)
-);
 
 -- ============================================================
 -- [01-H] CONTRIBUIÇÃO (5 tabelas)
@@ -998,6 +972,9 @@ CREATE TABLE contribuicao (
     -- anteriores a 14-11-2026 (seed incluso). A regra mora no Nest, não numa trigger, de propósito: os scripts de
     -- informacoes/testes-banco inserem contribuições flexíveis direto no banco.
     ciencia_modelo_em            TIMESTAMPTZ,
+    -- Quando quem apoiou desistiu (desistir_contribuicao, 05). Separa a devolução pedida pela pessoa da devolução porque
+    -- a campanha não deu certo: só a primeira tira do Mural dos apoiadores (contribuicao_conta_mural, 22-11-2026).
+    desistida_em                 TIMESTAMPTZ,
 
     CONSTRAINT "PK_CONTRIBUICAO" PRIMARY KEY (id_contribuicao),
     CONSTRAINT "FK_CONTRIBUICAO_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha),
@@ -1059,19 +1036,6 @@ CREATE TABLE auditoria_financeira (
     CONSTRAINT "FK_AUDITORIA_FINANCEIRA_USUARIO_RESPONSAVEL" FOREIGN KEY (id_usuario_responsavel) REFERENCES usuario(id_usuario) ON DELETE SET NULL
 );
 
-CREATE TABLE contribuicao_recompensa (
-    id_contrib_recompensa SERIAL,
-    id_contribuicao       INT NOT NULL,
-    id_recompensa         INT NOT NULL,
-    quantidade            INT NOT NULL DEFAULT 1,          -- [melhoria] mesma recompensa pode ser levada em mais de 1 unidade
-    adquirida_em          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT "PK_CONTRIBUICAO_RECOMPENSA" PRIMARY KEY (id_contrib_recompensa),
-    CONSTRAINT "FK_CONTRIBUICAO_RECOMPENSA_CONTRIBUICAO" FOREIGN KEY (id_contribuicao) REFERENCES contribuicao(id_contribuicao) ON DELETE CASCADE,
-    CONSTRAINT "FK_CONTRIBUICAO_RECOMPENSA_RECOMPENSA" FOREIGN KEY (id_recompensa) REFERENCES recompensa(id_recompensa) ON DELETE RESTRICT, -- não deixa apagar recompensa já adquirida por alguém
-    CONSTRAINT "CK_CONTRIBUICAO_RECOMPENSA_QTD" CHECK (quantidade > 0),
-    CONSTRAINT "UK_CONTRIBUICAO_RECOMPENSA_CONTRIBUICAO_RECOMPENSA" UNIQUE (id_contribuicao, id_recompensa) -- 1 linha por par; quantidade acumula em vez de duplicar linha
-);
 
 -- Versão do termo da CONTA ('cadastro') vigente no momento de cada contribuição (RF-086/RF-087): prova, numa
 -- contestação de pagamento, quais regras valiam naquele dia. Vale também para a contribuição anônima, que

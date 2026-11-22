@@ -1,6 +1,5 @@
 import { Link } from 'react-router';
 import { ModalFicha } from '../../components/crud/modal-ficha';
-import { ROTULO_FASE_ATUALIZACAO } from '../../services/15-atualizacao-campanha/constants/atualizacao-campanha.constants';
 import type { AtualizacaoCampanhaResponse } from '../../services/15-atualizacao-campanha/type/atualizacao-campanha.type';
 
 function dataPublicacao(valor: string) {
@@ -11,12 +10,11 @@ interface ListaAtualizacoesProps {
   atualizacoes: AtualizacaoCampanhaResponse[];
   // Perfil do pesquisador: cada atualização mostra de qual campanha é (título com link).
   tituloCampanha?: (idCampanha: number) => string | undefined;
-  // Perfil (21-11-2026): a campanha já terminou. A fase "Andamento" ao lado de uma campanha encerrada confundia no
-  // teste com usuários: a pílula deixa claro que a fase é da atualização (quando foi escrita), não da campanha.
+  // Perfil (21-11-2026): a campanha já terminou; a pílula avisa ao lado do título dela.
   campanhaEncerrada?: (idCampanha: number) => boolean;
 }
 
-// As atualizações em estilo blog: um artigo por atualização, com fase, título, data, texto inteiro e anexos.
+// As atualizações em estilo blog: um artigo por atualização, com título, data, texto inteiro e anexos.
 export function ListaAtualizacoes({ atualizacoes, tituloCampanha, campanhaEncerrada }: ListaAtualizacoesProps) {
   return (
     <ol className="flex flex-col gap-5">
@@ -25,7 +23,6 @@ export function ListaAtualizacoes({ atualizacoes, tituloCampanha, campanhaEncerr
         return (
           <li key={atualizacao.idAtualizacao}>
             <article className="fundo-cartao border borda-padrao rounded-xl p-6">
-              <p className="rotulo-leitura texto-marca mb-2">Fase: {ROTULO_FASE_ATUALIZACAO[atualizacao.fase]}</p>
               <h3 className="subtitulo">{atualizacao.titulo}</h3>
               <p className="legenda mt-2 texto-fraco">
                 {dataPublicacao(atualizacao.publicadoEm)}

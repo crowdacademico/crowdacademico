@@ -2,7 +2,7 @@ import { IsBoolean, IsIn, IsOptional } from 'class-validator';
 import { PaginacaoQueryDto } from '../../../commons/database/dto/paginacao.query.dto';
 import { BooleanoDaQuery } from '../../../commons/validacao/transformacoes.decorator';
 
-const ESCOPOS_VALIDOS = ['perfil', 'atualizacao', 'recompensa'] as const;
+const ESCOPOS_VALIDOS = ['perfil', 'atualizacao'] as const;
 export type EscopoTipoLink = (typeof ESCOPOS_VALIDOS)[number];
 
 export class TipoLinkRequestList extends PaginacaoQueryDto {

@@ -64,7 +64,6 @@ export class UsuarioResponseExportData {
     atualizacoes: Array<{
       titulo: string;
       conteudo: string;
-      fase: string | null;
       publicadoEm: Date;
     }>;
   }>;

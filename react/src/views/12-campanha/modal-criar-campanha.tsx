@@ -356,7 +356,7 @@ export function ModalCriarCampanha({
             botaoRecompensas={
               comRecompensas && (
                 <button type="button" className="btn btn-secondary" onClick={() => setVendoRecompensas(true)}>
-                  <i className="fa-solid fa-gift" aria-hidden="true"></i> Coloque recompensas
+                  <i className="fa-solid fa-users" aria-hidden="true"></i> Oferecer o Mural dos apoiadores
                 </button>
               )
             }
@@ -561,7 +561,7 @@ export function ModalCriarCampanha({
         )}
       </ModalFicha>
       {vendoRecompensas && idCampanha !== null && (
-        <ModalFicha titulo="Recompensas" subtitulo={form.titulo} aoFechar={() => setVendoRecompensas(false)}>
+        <ModalFicha titulo="Recompensa" subtitulo={form.titulo} aoFechar={() => setVendoRecompensas(false)}>
           <SecaoRecompensasCampanha auth={auth} idCampanha={idCampanha} podeGerenciar />
         </ModalFicha>
       )}

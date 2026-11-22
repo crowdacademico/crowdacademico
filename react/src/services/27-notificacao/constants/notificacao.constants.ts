@@ -51,7 +51,6 @@ const ROTULO_TIPO_NOTIFICACAO: Partial<Record<string, string>> = {
   moderacao_encerrou_campanha: 'Campanha encerrada pela moderação (ao dono)',
   campanha_encerrada_antes: 'Campanha apoiada encerrada antes do prazo',
   lembrete_fim_campanha: 'Campanha seguida perto do fim',
-  recompensa_liberada: 'Recompensa liberada a quem apoiou',
   apoio_confirmado: 'Apoio confirmado (comprovante a quem apoiou)',
 };
 

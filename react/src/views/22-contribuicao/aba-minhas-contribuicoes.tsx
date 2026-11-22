@@ -2,13 +2,10 @@ import { useCallback, useState } from 'react';
 import { ModalConsultarContribuicao } from './modal-consultar-contribuicao';
 import { BadgeStatusContribuicao } from '../../components/crud/badge-status-contribuicao';
 import { GenericTable } from '../../components/crud/generic-table';
-import { recompensaApi } from '../../services/18-recompensa/api/recompensa.api';
-import { ROTULO_TIPO_RECOMPENSA } from '../../services/18-recompensa/constants/recompensa.constants';
 import { contribuicaoApi } from '../../services/22-contribuicao/api/contribuicao.api';
 import { ROTULO_MEIO_PAGAMENTO } from '../../services/22-contribuicao/constants/contribuicao.constants';
 import { ROTULO_STATUS_CONTRIBUICAO } from '../../services/22-contribuicao/constants/status-contribuicao.constants';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
-import type { RecompensaGanha } from '../../services/18-recompensa/type/recompensa.type';
 import type { MinhaContribuicao } from '../../services/22-contribuicao/type/contribuicao.type';
 import { pedirConfirmacao } from '../../components/crud/confirmacao';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -20,17 +17,11 @@ interface ContribuicaoLinha extends MinhaContribuicao {
   campanha: string;
   meio: string;
   situacao: string;
+  mural: string;
 }
 
-interface RecompensaLinha extends RecompensaGanha {
-  // A mesma recompensa pode vir de duas contribuições: o par é a chave.
-  chave: string;
-  tipoRotulo: string;
-}
-
-// Aba Contribuições da Minha Conta (RF-009, RF-089, RF-105): o histórico de contribuições da própria conta e as
-// recompensas que ela ganhou (todas as que o valor de cada contribuição paga alcançou), em tabela, com a campanha e o link
-// especial de cada uma. Mora em 22-contribuicao (o dono do dado). Contribuir é
+// Aba Contribuições da Minha Conta (RF-009, RF-089, RF-105): o histórico de contribuições da própria conta, com a
+// coluna Mural: se a pessoa está no Mural dos apoiadores da campanha (a recompensa, 22-11-2026). Mora em 22-contribuicao (o dono do dado). Contribuir é
 // pelo modal Apoiar da página pública da campanha (modal-apoiar.tsx); a T5 do Campo de Testes também cria, para testes.
 export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
   const [consultando, setConsultando] = useState<ContribuicaoLinha | null>(null);
@@ -49,7 +40,7 @@ export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'au
     if (desistindo !== null) return;
     const confirmou = await pedirConfirmacao({
       titulo: 'Desistir deste apoio?',
-      texto: `Você recebe de volta ${formatarMoeda(linha.valor)} pelo mesmo meio de pagamento. A tarifa do meio de pagamento (${formatarMoeda(linha.taxaPagamento)}) não é devolvida, porque fica com o provedor. As recompensas que este apoio deu são perdidas. Não dá para desfazer.`,
+      texto: `Você recebe de volta ${formatarMoeda(linha.valor)} pelo mesmo meio de pagamento. A tarifa do meio de pagamento (${formatarMoeda(linha.taxaPagamento)}) não é devolvida, porque fica com o provedor. Se a soma dos seus apoios a esta campanha ficar abaixo do mínimo do Mural dos apoiadores, você sai do mural. Não dá para desfazer.`,
       rotuloConfirmar: 'Desistir do apoio',
       perigo: true,
     });
@@ -66,16 +57,6 @@ export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'au
     }
   }
 
-  const listarRecompensas = useCallback(
-    async (): Promise<RecompensaLinha[]> =>
-      (await recompensaApi.minhas(auth.authFetch)).map((r) => ({
-        ...r,
-        chave: `${r.idContribuicao}-${r.idRecompensa}`,
-        tipoRotulo: ROTULO_TIPO_RECOMPENSA[r.tipo],
-      })),
-    [auth.authFetch],
-  );
-
   const listar = useCallback(async (): Promise<ContribuicaoLinha[]> => {
     const lista = await contribuicaoApi.minhas(auth.authFetch);
     return lista.map((c) => ({
@@ -83,6 +64,7 @@ export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'au
       campanha: c.tituloCampanha ?? `Campanha #${c.idCampanha}`,
       meio: ROTULO_MEIO_PAGAMENTO[c.meioPagamento],
       situacao: ROTULO_STATUS_CONTRIBUICAO[c.status],
+      mural: c.noMural ? 'No mural' : '-',
     }));
   }, [auth.authFetch]);
 
@@ -91,13 +73,14 @@ export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'au
       <GenericTable<ContribuicaoLinha>
         titulo="Minhas contribuições"
         nivelTitulo={2}
-        ajuda={`Todas as contribuições feitas com esta conta, da mais nova para a mais antiga, com a situação de cada uma (paga, devolvida, vencida...). A tarifa é a do meio de pagamento, paga por cima do valor; Consultar mostra o total cobrado. Até ${prazoDesistencia} dias depois de apoiar, você pode desistir de uma contribuição paga e receber o valor de volta (a tarifa não volta).`}
+        ajuda={`Todas as contribuições feitas com esta conta, da mais nova para a mais antiga, com a situação de cada uma (paga, devolvida, vencida...). Mural: você está no Mural dos apoiadores daquela campanha (a soma dos seus apoios alcançou o mínimo do pesquisador). A tarifa é a do meio de pagamento, paga por cima do valor; Consultar mostra o total cobrado. Até ${prazoDesistencia} dias depois de apoiar, você pode desistir de uma contribuição paga e receber o valor de volta (a tarifa não volta).`}
         colunas={[
           { chave: 'campanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
           { chave: 'valor', rotulo: 'valor', tipo: 'dinheiro' },
           { chave: 'taxaPagamento', rotulo: 'tarifa', tipo: 'dinheiro' },
           { chave: 'meio', rotulo: 'meio', tipo: 'texto' },
           { chave: 'criadoEm', rotulo: 'data', tipo: 'dataHora' },
+          { chave: 'mural', rotulo: 'mural', tipo: 'texto' },
           {
             chave: 'situacao',
             rotulo: 'situação',
@@ -129,36 +112,6 @@ export function AbaMinhasContribuicoes({ auth }: { auth: Pick<UseAuthReturn, 'au
         />
       )}
 
-      <GenericTable<RecompensaLinha>
-        titulo="Recompensas ganhas"
-        nivelTitulo={2}
-        ajuda="Toda recompensa que o valor de uma contribuição sua paga alcançou. Na campanha Tudo ou Nada, ela é liberada quando a campanha bate a meta. Se a contribuição for devolvida, a recompensa sai daqui. O link especial só você, o pesquisador e a administração enxergam."
-        colunas={[
-          { chave: 'titulo', rotulo: 'recompensa', tipo: 'nome', umaLinha: true },
-          { chave: 'tipoRotulo', rotulo: 'tipo', tipo: 'status' },
-          { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'texto', umaLinha: true },
-          {
-            chave: 'links',
-            rotulo: 'link',
-            tipo: 'texto',
-            renderizar: (linha: RecompensaLinha) =>
-              !linha.liberada ? (
-                <span className="badge badge-aviso">Aguardando a meta</span>
-              ) : linha.links[0] ? (
-                <a href={linha.links[0].url} target="_blank" rel="noreferrer" className="link-texto">
-                  <i className="fa-solid fa-link" aria-hidden="true"></i> Abrir
-                </a>
-              ) : (
-                '-'
-              ),
-            textoExibido: (linha: RecompensaLinha) => (!linha.liberada ? 'Aguardando a meta' : linha.links[0] ? 'Abrir' : '-'),
-          },
-        ]}
-        chavePrimaria="chave"
-        listar={listarRecompensas}
-        vazio={{ icone: 'fa-gift', titulo: 'Nenhuma recompensa ainda.', texto: 'Elas aparecem aqui quando uma contribuição sua que alcança o valor de uma recompensa é paga.' }}
-        filtrosFacetados={[{ chave: 'tipoRotulo', rotulo: 'Tipo' }]}
-      />
     </div>
   );
 }

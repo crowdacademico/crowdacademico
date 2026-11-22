@@ -127,9 +127,9 @@ A pontuação dos pesquisadores é pública: todo papel a vê, sem permissão pr
 * **`configuracoes`:** parâmetros globais do sistema (`id_usuario IS NULL`) e preferências individuais (`id_usuario` preenchido). `UNIQUE` em `chave`, para *upsert*. O `tipo` diz o formato do valor: `inteiro`, `decimal` (porcentagem e outros números), `dinheiro` (valor em reais, até 2 casas; o painel mostra o campo de R$), `booleano` e `texto`.
   * **Coluna `publica`** (`BOOLEAN NOT NULL DEFAULT FALSE`): separa o que o navegador precisa para montar uma tela (ex.: `valor_minimo_contribuicao`) do que é parâmetro interno de segurança ou moderação (ex.: `limite_tentativas_login`). `GET /configuracoes` sem login só devolve as públicas; quem tem `configuracao_gerenciar` vê todas (`pol_config_select`, [04-C]). Só tem efeito em linha global.
   * **Por que nasce `FALSE`:** uma chave nova nasce interna e só fica pública por ato deliberado; com `DEFAULT TRUE`, esquecer de marcar seria o mesmo que expor.
-* **`tipo_link`:** catálogo de redes e links externos. As flags `permite_perfil`, `permite_atualizacao` e `permite_recompensa` definem onde cada tipo pode ser usado. Tem `codigo` estável (chave natural, usada pelo seed para referenciar o catálogo sem depender do id).
+* **`tipo_link`:** catálogo de redes e links externos. As flags `permite_perfil` e `permite_atualizacao` definem onde cada tipo pode ser usado. Tem `codigo` estável (chave natural, usada pelo seed para referenciar o catálogo sem depender do id).
   * **Tipos ativos:** `LATTES`, `ORCID`, `RESEARCHGATE`, `LINKEDIN` e `GITHUB`, todos com domínio e formato conferidos (`regex`, `dominio`). Não existe tipo "Outro" nem "Site Institucional": um tipo sem domínio aceitaria qualquer URL, o oposto do que os outros garantem.
-  * **Só o `GITHUB` serve a atualização e recompensa** (`permite_atualizacao`/`permite_recompensa = TRUE`): repositório como prova de progresso, ou como acesso antecipado (`tipo_recompensa = 'acesso_antecipado'`) a um repositório privado. Os outros quatro são só de perfil (identidade profissional). Manter as três flags booleanas, sem tabela dinâmica, está no Anexo C.
+  * **Só o `GITHUB` serve a atualização** (`permite_atualizacao = TRUE`): repositório como prova de progresso, ou como acesso antecipado (`tipo_recompensa = 'acesso_antecipado'`) a um repositório privado. Os outros quatro são só de perfil (identidade profissional). Manter as três flags booleanas, sem tabela dinâmica, está no Anexo C.
 * **`area_conhecimento`, em dois níveis:** `id_pai` auto-referenciado (mesmo padrão de `score_config`, [01-I]). Cada grande área do CNPq (`id_pai IS NULL`) tem as áreas de nível 2 como filhas. A campanha é **obrigada** a informar uma área de nível 2, nunca a grande área (trigger em [05-K-1]).
   * **Por quê:** só as 9 grandes áreas seriam amplas demais para o filtro de busca (ex.: "Ciências da Saúde" cobrindo de odontologia a saúde coletiva).
   * **`codigo_cnpq` sem dígito verificador** (`'X.YY.00.00'`): o código é comparado por igualdade e nunca digitado à mão, então o dígito não protegeria nada. Nomes e hierarquia seguem a nomenclatura padrão do CNPq.
@@ -142,8 +142,8 @@ A pontuação dos pesquisadores é pública: todo papel a vê, sem permissão pr
 >
 > | Catálogo / recurso base (mora em `C`) | Quem usa (mora na letra própria) |
 > |---|---|
-> | `tipo_link` - tipos de link (Lattes, ORCID, LinkedIn...) | `link_academico`, `link_atualizacao`, `link_recompensa` → **F** (LINK) |
-> | `arquivo` - metadados de mídia (chave, MIME, tamanho) | `arquivo_atualizacao`, `arquivo_recompensa` → **G** (ARQUIVO) |
+> | `tipo_link` - tipos de link (Lattes, ORCID, LinkedIn...) | `link_academico`, `link_atualizacao` → **F** (LINK) |
+> | `arquivo` - metadados de mídia (chave, MIME, tamanho) | `arquivo_atualizacao` → **G** (ARQUIVO) |
 > | `motivo_denuncia` - motivos de denúncia | `denuncia` → **E** (CAMPANHA) |
 >
 > `arquivo` é a tabela-base genérica (qualquer mídia, inclusive a foto de perfil, `usuario.id_imagem_perfil`); as tabelas que a associam a um contexto (atualização, recompensa) é que ganham a letra `G`.
@@ -223,21 +223,21 @@ A pontuação dos pesquisadores é pública: todo papel a vê, sem permissão pr
   * **Denúncia de comentário** (14-11-2026, Grupo CO): `id_comentario` (FK `FK_DENUNCIA_COMENTARIO`, `ON DELETE SET NULL`) e a cópia do comentário no momento da denúncia (`comentario_conteudo`, `comentario_endossado`, `comentario_id_campanha`): o comentário pode ser apagado depois, e a denúncia continua com o que foi denunciado. O alvo é o perfil do autor (`id_pesquisador_alvo`), preenchido pelo banco ([05-K-2-G]). Uma denúncia por perfil continua valendo, mas cada comentário do mesmo autor pode ser denunciado à parte: `UK_DENUNCIA_USUARIO_PESQUISADOR_ALVO` virou índice único **parcial** (`WHERE id_comentario IS NULL`), mais `UK_DENUNCIA_USUARIO_COMENTARIO` (`WHERE id_comentario IS NOT NULL`), ambos no `02`.
 * **`solicitacao_encerramento`:** pedidos de encerramento antes do prazo. Tem a justificativa de quem pede (`justificativa_pesquisador`) e a de quem decide (`justificativa_admin`, obrigatória para rejeitar: negar sem registrar o motivo seria indefensável numa contestação). Limite técnico de 10.000 em cada e de negócio de 2.000 (`limite_caracteres_justificativa_encerramento`, compartilhado). Ver [05-K-2-H].
 * **`historico_rejeicao`:** uma linha por rejeição de campanha (`id_campanha`, `id_usuario_dono`, `titulo_campanha`, `id_admin`, `justificativa`, `rejeitado_em`). Dono e título são gravados no instante da rejeição e **não há FK para `campanha`**: o histórico sobrevive à exclusão da campanha (que é excluída sozinha quando o prazo de reenvio vence). `id_campanha` fica só como referência, indexada. Imutável (sem policy nem GRANT de UPDATE). A `justificativa` tem limite de negócio em `limite_caracteres_justificativa_rejeicao` (10.000, [05-K-1]). Ver [05-K-2-B].
-* **`recompensa`:** recompensas **simbólicas** oferecidas pelos pesquisadores: `tipo_recompensa` só tem `digital`, `reconhecimento` e `acesso_antecipado`, sem `DEFAULT` (a aplicação escolhe). `valor_minimo > 0`; `quantidade_disponivel` existe e aceita `NULL` (ilimitada), mas o sistema não controla estoque. Limite técnico de 10.000 na descrição e de negócio de 2.000 (`limite_caracteres_descricao_recompensa`).
-  * **Por que só simbólica:** recompensa física cria obrigação de entrega e logística que uma plataforma tocada por duas pessoas não tem como fiscalizar; os três tipos não têm frete, prazo de envio nem disputa de "não recebi". `reconhecimento` é o nome de quem apoiou exibido no projeto; `acesso_antecipado` é o modelo do Experiment.com.
+* **`recompensa` (o Mural dos apoiadores, 22-11-2026, RF-103 a RF-105):** uma por campanha (`UK_RECOMPENSA_CAMPANHA`), criada pelo pesquisador (sem ela, a campanha não tem mural), com o `valor_minimo` e uma mensagem de agradecimento (`descricao`). Quem **soma** o mínimo nas contribuições que contam aparece com o nome e a foto na página da campanha. Calculado na hora (`mural_apoiadores`, 05), não gravado. Saíram título, tipo, quantidade e as tabelas de entrega (`link_recompensa`, `arquivo_recompensa`) e de concessão (`contribuicao_recompensa`). O nome "recompensa" ficou de propósito: o módulo pode crescer (faixas, entregas).
+  * **Por que só simbólica:** recompensa física cria obrigação de entrega e logística que uma plataforma tocada por duas pessoas não sustenta; numa pesquisa, o "produto" é o resultado, que vai a público de qualquer jeito. É o modelo do Experiment.com (financiamento coletivo de ciência): o reconhecimento de quem apoiou.
 
 ---
 
 ### [01-F] LINK (Tabelas de Associação de Links)
 
-* **`link_academico`, `link_atualizacao` e `link_recompensa`:** usam o catálogo `tipo_link` para ligar URLs externas a perfis de pesquisador, atualizações de campanha e recompensas digitais.
+* **`link_academico` e `link_atualizacao`:** usam o catálogo `tipo_link` para ligar URLs externas a perfis de pesquisador, atualizações de campanha e recompensas digitais.
   * **`link_academico.rotulo`** (`VARCHAR(100)`, opcional): rótulo próprio do link (ex.: "meu repositório do projeto X"); sem rótulo, a tela mostra o nome do tipo. Cada pesquisador tem até 5 links, configurável (`trg_link_academico_valida_limite`, [05-K-1]).
 
 ---
 
 ### [01-G] ARQUIVO (Tabelas de Associação de Mídias)
 
-* **`arquivo_atualizacao` e `arquivo_recompensa`:** o vínculo N:N entre a tabela base `arquivo` e as atualizações e recompensas. A posse e a limpeza de órfãos estão em [05-G].
+* **`arquivo_atualizacao`:** o vínculo N:N entre a tabela base `arquivo` e as atualizações. A posse e a limpeza de órfãos estão em [05-G].
 
 ---
 
@@ -252,7 +252,7 @@ A pontuação dos pesquisadores é pública: todo papel a vê, sem permissão pr
   * **Sem `UPDATE` direto:** não há policy nem `GRANT` de `UPDATE`; a situação só muda por `atualizar_status_contribuicao()` ([05-K-2]), que valida a transição e grava a auditoria.
   * **O dono pode contribuir na própria campanha:** nenhuma trava contra `contribuicao.id_usuario` igual ao dono; a contribuição segue todas as regras de qualquer outra, e a taxa da plataforma vale igual. **Por quê:** é comum o próprio autor completar o que falta. **Caso-limite:** no tudo-ou-nada, o próprio pesquisador pode completar a meta.
 * **`auditoria_financeira`:** o retrato de cada mudança de dinheiro (situação anterior e nova, valor, evento, quem fez), de contribuição ou de repasse. **Só aceita inclusão:** não há policy nem `GRANT` de escrita para o `app_nestjs`; quem grava são só as funções `SECURITY DEFINER` de `05` ([04-H-1], [06-H]). O histórico do dinheiro não se apaga nem se edita.
-* **`contribuicao_recompensa`:** liga um apoio às recompensas que ele ganhou: todas as ativas da campanha cujo mínimo o valor alcança, gravadas sozinhas por `trg_contribuicao_concede_recompensas` ao criar a contribuição de quem tem conta.
+* **`contribuicao.desistida_em`** (22-11-2026): quando quem apoiou desistiu (`desistir_contribuicao`). Separa a devolução pedida pela pessoa da devolução porque a campanha não deu certo: só a primeira tira do Mural dos apoiadores (`contribuicao_conta_mural`, 05).
 * **`aceite_termo_contribuicao`:** o aceite do termo na hora de contribuir, com o IP (apagado depois do prazo de retenção, [05-L]).
 
 ---
@@ -312,20 +312,19 @@ O script de índices segue a ordem dos blocos de `01_extensoes_enums_tabelas.sql
 
 ### [02-F] LINK
 
-* Índices das tabelas de associação (`link_academico`, `link_atualizacao`, `link_recompensa`) pelas entidades pai e pelo catálogo `id_tipolink`.
+* Índices das tabelas de associação (`link_academico`, `link_atualizacao`) pelas entidades pai e pelo catálogo `id_tipolink`.
 
 ---
 
 ### [02-G] ARQUIVO
 
-* Índices de junção em `arquivo_atualizacao` e `arquivo_recompensa`.
-* **`uq_arquivo_recompensa_principal`:** índice parcial `UNIQUE`: cada recompensa tem no máximo uma mídia principal (`WHERE principal = TRUE`).
+* Índices de junção em `arquivo_atualizacao`.
 
 ---
 
 ### [02-H] CONTRIBUIÇÃO
 
-* Índices em `contribuicao` (por campanha e por usuário), `contribuicao_recompensa` e `aceite_termo_contribuicao`, para o histórico de contribuições.
+* Índices em `contribuicao` (por campanha e por usuário) e `aceite_termo_contribuicao`, para o histórico de contribuições.
 * **`idx_auditoria_financeira_contribuicao`:** o histórico de uma contribuição na auditoria financeira (RNF-007).
 
 ---
@@ -564,16 +563,15 @@ O arquivo segue os blocos do `01`.
 * **[04-E-7] `repasse`:** sem policy de `INSERT` nem de `UPDATE`. Toda escrita é das funções `SECURITY DEFINER` de `05` (`criar_repasse_campanha`, `atualizar_status_repasse` etc.), que não dependem de policy nem de `GRANT`.
 
 #### [04-F] LINK
-* **Tabelas:** `link_academico`, `link_atualizacao`, `link_recompensa`.
+* **Tabelas:** `link_academico`, `link_atualizacao`.
 * **[04-F-2] `link_academico` (SELECT):** `usuario_visivel(id_usuario)` ([03-D]). Escrita: o próprio pesquisador.
-* **[04-F-1] `link_recompensa`:** quem **ganhou** a recompensa lê o link; editar e remover é só do dono da campanha ou de `campanha_editar`, porque o link é fornecido por quem oferece a recompensa.
 
 #### [04-G] ARQUIVO
-* **Tabelas:** `arquivo`, `arquivo_atualizacao`, `arquivo_recompensa`.
-* **Vínculo de mídia** restrito ao dono da campanha ou à administração. `pol_arquivo_update` (desativar o arquivo) libera quem tem `arquivo_gerenciar`, o dono da foto de perfil (`usuario.id_imagem_perfil`), o dono da campanha da capa (`campanha.id_imagem_capa`, ou quem tem `campanha_editar`), o dono da campanha do anexo de atualização (ou quem tem `atualizacao_moderar`) e o dono da campanha do anexo de recompensa (ou quem tem `campanha_editar`). Ter enviado o arquivo, sozinho, não libera: o que conta é onde ele está em uso. **[04-G-1] `arquivo_recompensa` (UPDATE):** trocar a imagem principal da recompensa. A posse do arquivo é conferida por trigger ([05-G]).
+* **Tabelas:** `arquivo`, `arquivo_atualizacao`.
+* **Vínculo de mídia** restrito ao dono da campanha ou à administração. `pol_arquivo_update` (desativar o arquivo) libera quem tem `arquivo_gerenciar`, o dono da foto de perfil (`usuario.id_imagem_perfil`), o dono da campanha da capa (`campanha.id_imagem_capa`, ou quem tem `campanha_editar`), o dono da campanha do anexo de atualização (ou quem tem `atualizacao_moderar`). Ter enviado o arquivo, sozinho, não libera: o que conta é onde ele está em uso. **[04-G-1] `arquivo_recompensa` (UPDATE):** trocar a imagem principal da recompensa. A posse do arquivo é conferida por trigger ([05-G]).
 
 #### [04-H] CONTRIBUIÇÃO
-* **Tabelas:** `contribuicao`, `auditoria_financeira`, `contribuicao_recompensa`, `aceite_termo_contribuicao`.
+* **Tabelas:** `contribuicao`, `auditoria_financeira`, `aceite_termo_contribuicao`.
 * **Leitura:** quem contribuiu vê as próprias (com conta, por `id_usuario`; sem conta, pelo `token_sessao` da contribuição, lido de `app.token_sessao_atual`); `contribuicao_visualizar_sensivel` vê todas; o dono da campanha vê o resumo pela função `resumo_contribuicoes_campanha` (92038). O pesquisador lista as contribuições das próprias campanhas pela função `SECURITY DEFINER` `contribuicoes_recebidas_pesquisador()` (exige autenticação, 92041; lista status `confirmado` e `repassado`, anonimizando apoiadores anônimos ou sem conta). A contagem agregada de apoios pagos de campanhas públicas é consultada de forma anônima por `contar_apoios_publicos_campanha(idCampanha)`.
 * **[04-H-0] `contribuicao` sem policy de `UPDATE`:** o `app_nestjs` não tem `UPDATE` na tabela ([06-H]) e toda mudança passa por `atualizar_status_contribuicao()` e pelas outras funções `SECURITY DEFINER` de `05`. **Por quê:** uma policy aberta "só como documentação" convidaria a devolver o `GRANT` e reabrir a fraude de confirmar a própria contribuição por `UPDATE` direto. **Caso-limite:** se um dia o Nest precisar alterar uma coluna de `contribuicao` direto, vem um `GRANT` por coluna e uma policy com regra de verdade.
 * **[04-H-1] `auditoria_financeira`:** só leitura (`pol_auditoria_select`): quem contribuiu vê as linhas da própria contribuição, e `auditoria_financeira_visualizar` vê todas. Sem policy nem `GRANT` de escrita: toda linha é gravada pelas funções `SECURITY DEFINER` de `05`.
@@ -666,12 +664,9 @@ Cada trigger observa uma tabela que alimenta alguma dimensão e recalcula só qu
 
 ### [05-K-1] Regras Transversais - Integridade e Escopo
 
-> 📌 **Recompensas (16-11-2026, grupos CT e CV do ATUALIZAR):**
-> - **`recompensa_liberada(id_contribuicao)`** (`[03-R-1]`, em 03 porque a policy de 04 depende dela): a recompensa só VALE com a contribuição paga e não devolvida (`confirmado` ou `repassado`) e, no Tudo ou Nada, só quando o dinheiro vai para o pesquisador (`destino_dinheiro_campanha = 'repasse'`: bateu a meta, ou encerrou antes com a meta batida). Devolução, desistência e reembolso tiram a recompensa.
-> - **`pol_link_recompensa_select`** (04): quem ganhou só vê o link especial com a recompensa liberada. Corrigiu um furo: um Pix gerado e nunca pago já mostrava o link.
-> - **`fn_concede_recompensas`**: continua ligando, quando a contribuição nasce, todas as recompensas que o valor alcança (só com conta), menos o **reconhecimento** para quem apoia como anônimo (é o nome publicado).
-> - **`listar_ganhadores_recompensa(id_recompensa)`** (SECURITY DEFINER): quem ganhou, só o nome ("Apoiador anônimo" quando for o caso) e se já está liberada; só o dono da campanha e o admin (92043).
-> - **Avisos:** `apoio_confirmado` (o comprovante, com as recompensas já liberadas) e `recompensa_liberada` (o Tudo ou Nada que bateu a meta); ver `[05-Q]`.
+> 📌 **Recompensa = Mural dos apoiadores (22-11-2026):**
+> - O modelo de entrega de 16-11-2026 saiu: `recompensa_liberada`, `pol_link_recompensa_select`, `fn_concede_recompensas`, `listar_ganhadores_recompensa` e o aviso `recompensa_liberada` não existem mais. No lugar: `contribuicao_conta_mural(status, desistida_em)` (o que conta: pago, ou devolvido porque a campanha não deu certo; a desistência e o estorno pelo provedor não), `mural_apoiadores(id_campanha)` (SECURITY DEFINER, público: uma linha por pessoa que soma o mínimo; anônimo, sem conta ou conta excluída sem nome nem foto), `contribuicao_no_mural(id_contribuicao)` (para o histórico de quem apoiou e o painel do pesquisador) e `fn_recompensa_trava` (com alguém no mural, o valor mínimo não muda e a recompensa não é desativada nem excluída, 91067).
+> - **Aviso:** `apoio_confirmado` (o comprovante do apoio, sem recompensa desde 22-11-2026).
 >
 > 📌 **Tarifas sincronizadas com o provedor (16-11-2026, grupo CW):** `sincronizar_tarifas_provedor(pix, boleto, cartao_percentual, cartao_fixa)` grava nos 4 parâmetros de tarifa o que o provedor cobra hoje (no Asaas, a consulta de tarifas da conta, `myAccount/fees`, com o desconto enquanto vale). Só troca o que mudou (fica no log de auditoria); valor fora do esperado: 90036. Chamada pela tarefa diária das 5h e pelo botão de Parâmetros (`PagamentoServiceSyncFees`). O valor cobrado nunca dependeu disto; o que ficava velho era o total mostrado antes de pagar.
 >
@@ -681,8 +676,7 @@ Cada trigger observa uma tabela que alimenta alguma dimensão e recalcula só qu
 
 | Tabela | Trigger (função) | Regra |
 |---|---|---|
-| `contribuicao_recompensa` | `trg_contrib_recompensa_valida` (`trg_valida_contribuicao_recompensa`) | A recompensa precisa ser da **mesma campanha** da contribuição (a FK só garante que ela existe em algum lugar). |
-| `link_academico`, `link_atualizacao`, `link_recompensa` | `trg_link_*_valida_tipo` (`trg_valida_escopo_tipolink`) | O tipo de link precisa estar liberado para aquela tabela (`permite_perfil`, `permite_atualizacao`, `permite_recompensa`), e o endereço precisa ser do domínio e do formato do tipo (90002, 90024, 90025). Só pesquisador tem link acadêmico (92026). Uma função só, que escolhe a coluna por `TG_TABLE_NAME`. |
+| `link_academico`, `link_atualizacao` | `trg_link_*_valida_tipo` (`trg_valida_escopo_tipolink`) | O tipo de link precisa estar liberado para aquela tabela (`permite_perfil`, `permite_atualizacao`), e o endereço precisa ser do domínio e do formato do tipo (90002, 90024, 90025). Só pesquisador tem link acadêmico (92026). Uma função só, que escolhe a coluna por `TG_TABLE_NAME`. |
 | `link_academico` | `trg_link_academico_valida_limite` (`fn_valida_limite_link_academico`, `BEFORE INSERT`) | No máximo `configuracoes.limite_links_academicos_perfil` (5) links por pesquisador. Só no `INSERT`: editar um link não aumenta a contagem. |
 | `campanha`, `atualizacao_campanha`, `denuncia`, `solicitacao_encerramento` (×2), `recompensa`, `orcamento_campanha`, `marco_cronograma` | `trg_*_valida_limite_texto` (`fn_valida_limite_texto_livre`) | O limite de negócio de cada texto livre, lido de `configuracoes`. Uma função genérica: cada trigger passa a coluna e a chave por `TG_ARGV` (a coluna é lida por `to_jsonb(NEW) ->> coluna`). **Só vale quando o texto muda (90003):** rodando em todo `UPDATE`, baixar o limite pelo painel faria toda doação falhar (a soma do arrecadado faz `UPDATE campanha`) e pararia o encerramento das vencidas. |
 | `campanha` | `trg_campanha_valida_area_nivel2` (+ `_update`) | A área precisa ser de nível 2, nunca uma grande área (90004). |
@@ -727,9 +721,8 @@ Protege **quem** muda `status`, `aprovado_em` e `id_admin`. `pol_campanha_update
 | `campanha` | `trg_campanha_exige_historico_rejeicao` (`CONSTRAINT TRIGGER`, no `COMMIT`) | Toda rejeição, venha de onde vier, grava `historico_rejeicao` na mesma transação (91028). Sem isso, a campanha ficaria em reenvio infinito e nunca expiraria. |
 | `orcamento_campanha` | `trg_orcamento_campanha_congela`, `trg_orcamento_campanha_valida_limite_max` | Congela na aprovação, sem exceção nem para o admin (91011); no máximo `orcamento_max_itens` itens (91012). |
 | `marco_cronograma` | `trg_marco_cronograma_congela`, `trg_marco_cronograma_valida_data`, `trg_marco_cronograma_valida_limite_max` | Congela quando a campanha, já aprovada, começa de fato (91013); a data não pode ser anterior a `data_inicio` (pode passar de `data_fim`, ex.: divulgação do resultado; 90008); no máximo `cronograma_max_marcos` marcos (91014). |
-| `atualizacao_campanha` | `trg_atualizacao_campanha_status` | Só se publica atualização em campanha `ativo`, `sucesso` ou `nao_atingido` (91019). Fase e formato são `NOT NULL` (RF-053). |
-| `contribuicao` | `trg_contribuicao_concede_recompensas` (`AFTER INSERT`) | RF-104 e RF-105: a pessoa não escolhe recompensa; ganha todas as ativas da campanha cujo valor mínimo a contribuição alcança (com R$ 151, as de R$ 50, R$ 100 e R$ 150). Só quem tem conta. Recompensa criada depois não vale para contribuição antiga. |
-| `recompensa`, `link_recompensa` | `trg_recompensa_exige_link`, `trg_link_recompensa_exige_link` (`CONSTRAINT TRIGGER` adiada) | Recompensa ativa de acesso antecipado ou entrega digital precisa de pelo menos um link especial (91057, RF-103): é por ele que a recompensa chega a quem apoiou. Confere no `COMMIT`, porque a recompensa e o link são gravados em comandos separados; trocar o link (tirar e pôr outro na mesma transação) passa. Reconhecimento e recompensa desativada não precisam. |
+| `atualizacao_campanha` | `trg_atualizacao_campanha_status` | Só se publica atualização em campanha `ativo`, `sucesso` ou `nao_atingido` (91019). Desde 22-11-2026 a atualização é só título, texto e anexos (RF-053): as colunas `fase` e `tipo` (formato) saíram. |
+| `recompensa` | `trg_recompensa_trava` (`fn_recompensa_trava`, `BEFORE UPDATE OR DELETE`) | RF-104 (22-11-2026): com alguém no Mural dos apoiadores, o valor mínimo não muda e a recompensa não é desativada nem excluída (91067). A mensagem continua editável. |
 | `atualizacao_campanha` | `trg_atualizacao_ocultacao` | Grava quem tirou do ar em `ocultada_moderacao` (a moderação ou o dono). O dono mostra de novo o que ele mesmo ocultou; o que a moderação excluiu ele não põe de volta (92040). Mesma ideia do `fn_bloqueia_reversao_moderacao_comentario`, mas sem tirar do dono o "desocultar" das próprias. |
 | `solicitacao_encerramento` | `trg_valida_transicao_solicitacao` | Sem `solicitacao_encerramento_decidir`, só a transição `pendente → cancelado` pelo dono (92002, 92003); aprovar ou rejeitar só pela função de decidir (92033, [05-K-2-H]). |
 | `seguir_campanha` | `trg_seguir_campanha_valida_publicada` | Só se segue campanha publicada (`ativo`, `sucesso`, `nao_atingido`, `encerrado`; 91034). Quem já segue continua seguindo se o status mudar depois. |
@@ -861,7 +854,7 @@ Regras conferidas no PGlite com o banco inteiro, usando o papel real `app_nestjs
 
 * **`desistir_contribuicao(p_id_contribuicao)`** (`05`, `SECURITY DEFINER`, 14-11-2026, Grupo CN): a autorização é a conferência de `id_usuario` contra `id_usuario_atual()`. Prazo em `configuracoes.desistencia_prazo_dias` (7), contado da contribuição. Vale em qualquer momento da campanha, inclusive depois do fim: **a campanha não muda de status** (bem-sucedida continua bem-sucedida).
 * **O caminho é o de sempre:** `confirmado` → `a_devolver`; o worker de estorno devolve o **valor**, e `reservar_proximo_repasse()` já tira do repasse pendente o que deixou de estar confirmado. Como a carência do repasse (15 dias) é maior que o prazo de desistência, o dinheiro ainda não saiu.
-* **Quem desiste perde as recompensas** que a contribuição deu (decisão do Lucas, 14-11-2026). Na devolução do tudo-ou-nada que não bateu a meta elas ficam, porque a pessoa não desistiu.
+* **Quem desiste deixa de contar para o Mural dos apoiadores** (`contribuicao.desistida_em`, 22-11-2026): sai do mural se a soma dele ficar abaixo do mínimo. A devolução porque a campanha não deu certo não tira ninguém do mural.
 * **Códigos:** 92042 (sem sessão, ou contribuição que não é de quem pede; a mensagem diz "não encontrada"), 91059 (não está paga), 91060 (o prazo passou), 91061 (o repasse já está em transferência). Rota: `POST /contribuicao/:id/desistir`; tela: "Desistir do apoio" na Minha Conta, aba Financeiro.
 * **Por quê:** o CDC (art. 49) dá 7 dias de arrependimento na compra fora do estabelecimento; a regra antiga, copiada do Catarse, saiu (decisão do Lucas, 14-11-2026).
 
@@ -917,7 +910,6 @@ Regras conferidas no PGlite com o banco inteiro, usando o papel real `app_nestjs
 | `enfileirar_notificacao(id_usuario, tipo, dados)` | gatilhos e o Nest (verificação de conta, nova senha) | Uma linha por canal ligado do evento; copia o e-mail e o nome da conta; o sino nunca leva `dados.segredo`; conta excluída ou inexistente, ou nenhum canal ligado: nada gravado (`NULL`) |
 | `enfileirar_notificacao_doadores(id_campanha, tipo, dados)` | só gatilhos (sem `EXECUTE` para o `app_nestjs`) | Um e-mail por pessoa com conta que pagou alguma contribuição da campanha |
 | `enfileirar_notificacao_seguidores(id_campanha, tipo, dados)` | só gatilhos | Quem segue a campanha ou o pesquisador dono, uma vez por pessoa, nunca o dono |
-| `enfileirar_aviso_recompensas(id_campanha, id_contribuicao)` | `fn_notifica_situacao_campanha` (Tudo ou Nada que bateu a meta) | `recompensa_liberada` para cada pessoa com recompensa liberada, com os nomes delas (16-11-2026) |
 | `fn_notifica_apoio_confirmado()` (gatilho `trg_notifica_apoio_confirmado`, `contribuicao` virando `confirmado`, com conta) | o banco | `apoio_confirmado`: o comprovante de quem apoiou (campanha, valor, protocolo, prazo para desistir) e, se o pagamento já libera recompensas, elas no mesmo e-mail (16-11-2026) |
 | `enviar_lembretes_fim_campanha()` | a tarefa de encerrar campanhas, a cada 15 minutos (sem sessão) | Lembrete a quem segue uma campanha ativa e ainda não contribuiu, quando falta `lembrete_fim_campanha_horas` (48; 0 desliga) para o fim (RF-055). Uma vez por pessoa e campanha: a marca é o próprio aviso já enviado, sem coluna nova |
 | `reservar_proxima_notificacao(p_ignorar_espera)` | o envio (sem sessão) | A próxima `pendente` vencida (com `TRUE`, só no "Rodar agora" da T6, também a que espera nova tentativa); conta a tentativa e empurra `proxima_tentativa_em` (`email_lease_minutos`); `FOR UPDATE SKIP LOCKED` |
@@ -1052,20 +1044,20 @@ Concede à role `app_nestjs` (criada no `01`) exatamente os privilégios que a R
 
 ### [06-F] LINK
 
-* `link_academico`, `link_atualizacao`, `link_recompensa`: `INSERT`, `UPDATE`, `DELETE`.
+* `link_academico`, `link_atualizacao`: `INSERT`, `UPDATE`, `DELETE`.
 
 ---
 
 ### [06-G] ARQUIVO
 
-* `arquivo_atualizacao`, `arquivo_recompensa`: `INSERT`, `UPDATE`, sem `DELETE` (não há policy de `DELETE`).
+* `arquivo_atualizacao`: `INSERT`, `UPDATE`, sem `DELETE` (não há policy de `DELETE`).
 
 ---
 
 ### [06-H] CONTRIBUIÇÃO
 
 * **`contribuicao`:** só `INSERT`. A situação e a cobrança só mudam por `atualizar_status_contribuicao()` e pelas outras funções `SECURITY DEFINER` do `05`. **Por quê:** com `UPDATE` direto, alguém confirmaria a própria contribuição sem pagar e o arrecadado público subiria.
-* **`contribuicao_recompensa`, `aceite_termo_contribuicao`:** só `INSERT` (registro de escolha e de aceite, não se editam).
+* **`aceite_termo_contribuicao`:** só `INSERT` (registro de aceite, não se edita).
 * **`auditoria_financeira`:** nenhuma escrita: só as funções do `05` gravam, e o histórico do dinheiro não se apaga nem se edita.
 * **Funções do dinheiro:** `GRANT EXECUTE` para `app_nestjs` nas que o Nest chama (listagens e ações das pendências de pagamento, webhook, tarefas automáticas).
 
@@ -1114,7 +1106,7 @@ Concede à role `app_nestjs` (criada no `01`) exatamente os privilégios que a R
   - **todo aceite é da versão vigente na data** (escolhida pela data, nunca por id fixo); cada termo tem a versão antiga (ids 1 e 2), a vigente (3 e 4) e um rascunho da próxima (5 e 6, sem aceite, [07-H-4]);
   - **CPFs falsos** (dígito verificador válido) cifrados de verdade com as chaves do `.env` de desenvolvimento ([01-D]); as chaves Pix também são fictícias; dois pesquisadores não cadastraram chave, e o repasse de um deles espera na fila;
   - **toda conta confirmou o e-mail** pelo mesmo caminho do sistema ([07-D-8]), menos as contas 21 a 23;
-  - **recompensas simbólicas** ([07-E-8]): os três tipos, uma desativada e um link especial; cada contribuição paga de quem tem conta ganha a maior recompensa que o valor alcançou;
+  - **Mural dos apoiadores** ([07-E-8]): a recompensa das campanhas 1, 2 e 3 (mínimos de R$ 100, R$ 50 e R$ 20); a 4 fica sem mural.
   - **e-mails** ([07-D-7]): os que as funções do seed puseram na fila viram "enviados" (provedor `seed`), para o envio não disparar tudo ao subir, e entram casos de cada situação (esperando nova tentativa, falhou, cancelado) para a aba Notificações.
 - **Conferido** pela suíte de coerência do seed (PGlite 18): todo status aparece, a caixa de avisos tem cada situação, nada passa pelo provedor de verdade, ninguém passa do limite de campanhas simultâneas, e nada acontece antes de a conta existir.
 
@@ -1157,7 +1149,7 @@ Concede à role `app_nestjs` (criada no `01`) exatamente os privilégios que a R
 | 28 | `contribuicao` (todas nascem pendentes) | `[07-H-1]` |
 | 29 | `aceite_termo_contribuicao` | `[07-H-3]` |
 | 30 | A vida de cada contribuição pelas funções do sistema: avisos do provedor, auditoria financeira, repasses, denúncias, pedidos de encerramento e contestações | `[07-H-5]` |
-| 31 | `recompensa`, `link_recompensa`, `contribuicao_recompensa` | `[07-E-8]` |
+| 31 | `recompensa` | `[07-E-8]` |
 | 32 | `notificacao` | `[07-D-7]` |
 | 33 | `termos_de_uso` (rascunhos da próxima versão) | `[07-H-4]` |
 | - | Resumo da demonstração e como entrar no sistema | `[07-D-5]` |
@@ -1228,7 +1220,7 @@ O raciocínio de arquitetura por trás de regras que valem para o banco inteiro.
 
 ## Anexo C - Os contextos de link: três colunas, não tabela
 
-* **Como é:** `tipo_link` diz onde cada tipo pode ser usado com três colunas booleanas (`permite_perfil`, `permite_atualizacao`, `permite_recompensa`), lidas por `trg_valida_escopo_tipolink` ([05-K-1]).
+* **Como é:** `tipo_link` diz onde cada tipo pode ser usado com duas colunas booleanas (`permite_perfil`, `permite_atualizacao`; a de recompensa saiu em 22-11-2026), lidas por `trg_valida_escopo_tipolink` ([05-K-1]).
 * **Por quê:** dos cinco tipos ativos, só o `GITHUB` usa mais de um lugar, e não há um quarto lugar previsto. Três colunas são fáceis de ler num `SELECT * FROM tipo_link`.
 * **Se um dia aparecer um quarto lugar,** o caminho é trocar as três colunas por uma coluna de vetor de ENUM (`contextos contexto_link[]`), como o vetor `dominio` da mesma tabela. **Não** uma tabela dinâmica `contexto_link`/`tipolink_contexto`: ela exigiria `JOIN` em toda consulta, uma tela administrativa própria e uma trigger para garantir pelo menos um lugar por tipo, sem flexibilidade real (todo lugar novo pede código novo para ser interpretado, com tabela ou sem).
 

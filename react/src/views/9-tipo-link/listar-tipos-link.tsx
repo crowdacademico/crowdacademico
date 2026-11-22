@@ -46,7 +46,6 @@ export function ListarTiposLink({ auth }: PropsPagina) {
           { chave: 'codigo', rotulo: 'código', tipo: 'texto' },
           { chave: 'permitePerfil', rotulo: 'perfil', tipo: 'simNao' },
           { chave: 'permiteAtualizacao', rotulo: 'atualização', tipo: 'simNao' },
-          { chave: 'permiteRecompensa', rotulo: 'recompensa', tipo: 'simNao' },
           { chave: 'ativo', rotulo: 'ativo', tipo: 'simNao' },
         ]}
         chavePrimaria="idTipolink"

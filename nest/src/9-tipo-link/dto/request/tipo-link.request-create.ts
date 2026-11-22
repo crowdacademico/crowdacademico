@@ -77,8 +77,4 @@ export class TipoLinkRequestCreate {
   @IsOptional()
   @IsBoolean()
   permiteAtualizacao?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  permiteRecompensa?: boolean;
 }

@@ -4,7 +4,7 @@ import { DatabaseService } from '../../commons/database/database.service';
 import { ContribuicaoResponseMine } from '../dto/response/contribuicao.response-mine';
 
 // GET /contribuicao/minhas: o histórico de contribuições da própria conta (RF-009, RF-089), com a campanha, o meio, a
-// situação e as recompensas ganhas (RF-105, todas as que o valor alcançou, fn_concede_recompensas, 05). pol_contribuicao_select (04) só devolve as linhas da sessão; o WHERE
+// situação e se a pessoa está no Mural dos apoiadores (RF-105, contribuicao_no_mural, 05). pol_contribuicao_select (04) só devolve as linhas da sessão; o WHERE
 // repete isso para a consulta usar o índice. Mais nova primeiro.
 @Injectable()
 export class ContribuicaoServiceFindAllMine {
@@ -28,11 +28,9 @@ export class ContribuicaoServiceFindAllMine {
         'c.criado_em',
       ])
       .select(
-        sql<
-          string | null
-        >`(SELECT string_agg(r.titulo, ', ' ORDER BY r.valor_minimo)
-          FROM contribuicao_recompensa cr JOIN recompensa r ON r.id_recompensa = cr.id_recompensa
-          WHERE cr.id_contribuicao = c.id_contribuicao)`.as('recompensas'),
+        sql<boolean>`public.contribuicao_no_mural(c.id_contribuicao)`.as(
+          'no_mural',
+        ),
       )
       .where('c.id_usuario', '=', idUsuario)
       .orderBy('c.criado_em', 'desc')
@@ -50,7 +48,7 @@ export class ContribuicaoServiceFindAllMine {
       status: l.status,
       anonima: l.anonima,
       criadoEm: l.criado_em,
-      recompensas: l.recompensas,
+      noMural: l.no_mural,
     }));
   }
 }

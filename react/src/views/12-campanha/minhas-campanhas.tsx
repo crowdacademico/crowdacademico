@@ -87,7 +87,7 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
           icone: 'fa-flask',
           titulo: 'Você ainda não tem campanhas.',
           texto: podeCriar
-            ? 'Clique em "Criar campanha" para começar: dados, orçamento, cronograma e, se quiser, recompensas.'
+            ? 'Clique em "Criar campanha" para começar: dados, orçamento, cronograma e, se quiser, o Mural dos apoiadores.'
             : 'Campanhas são criadas por pesquisadores (veja o aviso no topo da página).',
         }}
         listar={listar}

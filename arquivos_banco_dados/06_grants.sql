@@ -274,7 +274,7 @@ GRANT INSERT, UPDATE ON
     comentario,
     recompensa
 TO app_nestjs;
--- recompensa tem DELETE (14-11-2026): pol_recompensa_delete (04) restringe ao dono; a já concedida fica presa pela FK.
+-- recompensa tem DELETE (14-11-2026): pol_recompensa_delete (04) restringe ao dono; com alguém no mural, fn_recompensa_trava (05) recusa.
 GRANT DELETE ON recompensa TO app_nestjs;
 -- solicitacao_encerramento: o dono cria o pedido só com a campanha e a justificativa, e só muda o status (para
 -- cancelar, fn_valida_transicao_solicitacao, 05). Aprovar, rejeitar e o encerramento direto são funções (03).
@@ -443,7 +443,7 @@ GRANT INSERT, DELETE ON seguir_campanha TO app_nestjs;
 --  [06-F] LINK
 -- ============================================================================
 GRANT INSERT, UPDATE, DELETE ON
-    link_academico, link_atualizacao, link_recompensa
+    link_academico, link_atualizacao
 TO app_nestjs;
 
 -- ============================================================================
@@ -451,7 +451,7 @@ TO app_nestjs;
 -- ============================================================================
 -- Nenhuma das duas tem policy de DELETE (ver [06-G] no DOCUMENTACAO_BD.md).
 GRANT INSERT, UPDATE ON
-    arquivo_atualizacao, arquivo_recompensa
+    arquivo_atualizacao
 TO app_nestjs;
 
 -- ============================================================================
@@ -496,9 +496,9 @@ REVOKE EXECUTE ON FUNCTION public.concluir_estorno(INT, DECIMAL) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.concluir_estorno(INT, DECIMAL) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.registrar_falha_estorno(INT, TEXT, BOOLEAN, DECIMAL, BOOLEAN) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.registrar_falha_estorno(INT, TEXT, BOOLEAN, DECIMAL, BOOLEAN) TO app_nestjs;
--- contribuicao_recompensa e aceite_termo_contribuicao sem UPDATE: são registro de auditoria/aquisição, não
--- deveriam ser editáveis depois de criados (04 não tem policy de UPDATE para elas).
-GRANT INSERT ON contribuicao_recompensa, aceite_termo_contribuicao TO app_nestjs;
+-- aceite_termo_contribuicao sem UPDATE: é registro de auditoria, não
+-- deveria ser editável depois de criado (04 não tem policy de UPDATE para ela).
+GRANT INSERT ON aceite_termo_contribuicao TO app_nestjs;
 
 -- ============================================================================
 --  [06-I] SCORE

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { excluirComContagemDeUso } from '../../commons/database/excluir-com-contagem-de-uso.util';
 
-// FK_LINK_ACADEMICO_TIPOLINK / FK_LINK_ATUALIZACAO_TIPOLINK / FK_LINK_RECOMPENSA_TIPOLINK não têm CASCADE de
+// FK_LINK_ACADEMICO_TIPOLINK / FK_LINK_ATUALIZACAO_TIPOLINK não têm CASCADE de
 // propósito (ver tipo-link.module.ts): tipo em uso não se exclui, se desativa. pol_tipolink_delete (04) exige
 // tipolink_gerenciar.
 @Injectable()

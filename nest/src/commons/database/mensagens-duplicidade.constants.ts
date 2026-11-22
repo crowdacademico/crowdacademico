@@ -66,9 +66,9 @@ export const DUPLICIDADE_POR_INDICE_UNICO: Readonly<
     campo: 'idArquivo',
     mensagem: 'Este arquivo já está anexado em outro lugar.',
   },
-  UK_ARQUIVO_RECOMPENSA_ARQUIVO: {
-    campo: 'idArquivo',
-    mensagem: 'Este arquivo já está anexado em outro lugar.',
+  UK_RECOMPENSA_CAMPANHA: {
+    mensagem:
+      'Esta campanha já tem o Mural dos apoiadores. Altere o que já existe.',
   },
   UK_SEGUIR_CAMPANHA_USUARIO_CAMPANHA: {
     mensagem: 'Você já segue esta campanha.',

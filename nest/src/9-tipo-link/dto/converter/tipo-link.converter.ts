@@ -13,7 +13,6 @@ export class TipoLinkConverter {
       dominio: linha.dominio,
       permitePerfil: linha.permite_perfil,
       permiteAtualizacao: linha.permite_atualizacao,
-      permiteRecompensa: linha.permite_recompensa,
     };
   }
 }

@@ -78,7 +78,7 @@ const NOME_COLUNA: Partial<Record<string, string>> = {
   dominio: 'Domínios permitidos',
   permite_perfil: 'Perfil do pesquisador',
   permite_atualizacao: 'Atualização de campanha',
-  permite_recompensa: 'Recompensa',
+  desistida_em: 'Desistência em',
   id_termo: 'Termo (id)',
   versao: 'Versão',
   conteudo: 'Conteúdo',

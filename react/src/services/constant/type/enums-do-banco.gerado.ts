@@ -3,8 +3,6 @@
 // Cada lista é um ENUM do banco, em ordem alfabética; a ordem de exibição e os rótulos ficam nos arquivos de
 // constantes de cada módulo.
 
-export const FASE_ATUALIZACAO = ['andamento', 'resultado_final', 'resultado_preliminar'] as const;
-export type FaseAtualizacao = (typeof FASE_ATUALIZACAO)[number];
 
 export const MEIO_PAGAMENTO = ['boleto', 'cartao_credito', 'cartao_debito', 'pix'] as const;
 export type MeioPagamento = (typeof MEIO_PAGAMENTO)[number];
@@ -36,8 +34,6 @@ export type StatusPesquisador = (typeof STATUS_PESQUISADOR)[number];
 export const STATUS_REPASSE = ['concluido', 'erro', 'pendente', 'processando'] as const;
 export type StatusRepasse = (typeof STATUS_REPASSE)[number];
 
-export const TIPO_ATUALIZACAO = ['imagem', 'linkexterno', 'pdf', 'texto'] as const;
-export type TipoAtualizacao = (typeof TIPO_ATUALIZACAO)[number];
 
 export const TIPO_CHAVE_PIX = ['aleatoria', 'cnpj', 'cpf', 'email', 'telefone'] as const;
 export type TipoChavePix = (typeof TIPO_CHAVE_PIX)[number];
@@ -48,8 +44,6 @@ export type TipoConfiguracao = (typeof TIPO_CONFIGURACAO)[number];
 export const TIPO_MOTIVO_DENUNCIA = ['campanha', 'perfil'] as const;
 export type TipoMotivoDenuncia = (typeof TIPO_MOTIVO_DENUNCIA)[number];
 
-export const TIPO_RECOMPENSA = ['acesso_antecipado', 'digital', 'reconhecimento'] as const;
-export type TipoRecompensa = (typeof TIPO_RECOMPENSA)[number];
 
 export const TIPO_TERMO = ['cadastro', 'upgrade_pesquisador'] as const;
 export type TipoTermo = (typeof TIPO_TERMO)[number];

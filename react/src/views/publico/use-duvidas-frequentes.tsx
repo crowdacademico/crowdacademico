@@ -5,7 +5,7 @@ import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 
 // Perguntas frequentes: FONTE ÚNICA (15-11-2026). A página /perguntas-frequentes mostra todas; a Home mostra só as
 // marcadas com `naHome`, com o MESMO texto. Antes a Home tinha 3 respostas escritas à mão, que ficavam velhas.
-// Revisadas contra o banco (05): desistir_contribuicao, fn_concede_recompensas, destino_dinheiro_campanha e as regras
+// Revisadas contra o banco (05): desistir_contribuicao, mural_apoiadores, destino_dinheiro_campanha e as regras
 // de meio de pagamento. Números de negócio vêm das configurações públicas, nunca escritos aqui.
 export interface DuvidaFrequente {
   chave: string;
@@ -33,13 +33,13 @@ export function useDuvidasFrequentes(): DuvidaFrequente[] {
       naHome: true,
       pergunta: 'Que informações encontro em uma campanha?',
       resposta:
-        'A proposta da pesquisa, a meta, o prazo, o orçamento detalhado, o cronograma, quanto já foi arrecadado, o modelo de financiamento, as recompensas, as atualizações do pesquisador e o perfil dele, com instituição, links acadêmicos e pontuação de reputação.',
+        'A proposta da pesquisa, a meta, o prazo, o orçamento detalhado, o cronograma, quanto já foi arrecadado, o modelo de financiamento, o Mural dos apoiadores, as atualizações do pesquisador e o perfil dele, com instituição, links acadêmicos e pontuação de reputação.',
     },
     {
       chave: 'conta',
       naHome: false,
       pergunta: 'Preciso criar uma conta para apoiar?',
-      resposta: `Não para apoiar com Pix. Sem conta, o apoio aparece como anônimo e você não recebe avisos por e-mail nem recompensas. Com conta, você acompanha seus apoios, segue campanhas e pesquisadores, ganha as recompensas${cartaoHabilitado ? ' e pode usar cartão nas campanhas flexíveis' : ''}.`,
+      resposta: `Não para apoiar com Pix. Sem conta, o apoio aparece como anônimo (inclusive no Mural dos apoiadores) e você não recebe avisos por e-mail. Com conta, você acompanha seus apoios, segue campanhas e pesquisadores, aparece com o seu nome no mural${cartaoHabilitado ? ' e pode usar cartão nas campanhas flexíveis' : ''}.`,
     },
     {
       chave: 'apoiar',
@@ -63,7 +63,7 @@ export function useDuvidasFrequentes(): DuvidaFrequente[] {
       chave: 'desistir',
       naHome: false,
       pergunta: 'Posso desistir do apoio?',
-      resposta: `Sim, em até ${prazoDesistencia} dias depois de apoiar, desde que o pagamento já tenha sido confirmado. Com conta, pela Minha Conta, em Financeiro. Sem conta, pelo suporte (${emailSuporte}), com o protocolo do apoio. O valor do apoio volta pelo mesmo meio de pagamento; a tarifa do meio de pagamento não volta, e as recompensas que o apoio deu são perdidas.`,
+      resposta: `Sim, em até ${prazoDesistencia} dias depois de apoiar, desde que o pagamento já tenha sido confirmado. Com conta, pela Minha Conta, em Financeiro. Sem conta, pelo suporte (${emailSuporte}), com o protocolo do apoio. O valor do apoio volta pelo mesmo meio de pagamento; a tarifa do meio de pagamento não volta, e quem ficar abaixo do mínimo sai do Mural dos apoiadores.`,
     },
     {
       chave: 'taxas',
@@ -100,9 +100,9 @@ export function useDuvidasFrequentes(): DuvidaFrequente[] {
     {
       chave: 'recompensas',
       naHome: false,
-      pergunta: 'O que são as recompensas?',
+      pergunta: 'Existe recompensa por apoiar?',
       resposta:
-        'Agradecimentos simbólicos: reconhecimento (como seu nome nos agradecimentos), acesso antecipado aos resultados ou um conteúdo digital. Não há envio de itens físicos. Quem apoia com conta ganha automaticamente todas as recompensas que o valor do apoio alcança, sem precisar escolher. Elas são liberadas, com um e-mail para você, assim que o pagamento é confirmado na campanha flexível, ou quando a campanha bate a meta na Tudo ou Nada, e ficam em Minha Conta, na aba Financeiro. Quem desiste do apoio, ou tem o apoio devolvido, perde as recompensas. Quem apoia como anônimo não ganha o reconhecimento por nome.',
+        'Sim, o Mural dos apoiadores, quando o pesquisador o oferece: quem soma, nos apoios a uma campanha, o valor mínimo que o pesquisador escolheu aparece com o nome e a foto na página dela. É um agradecimento simbólico, sem envio de itens. Quem apoia como anônimo, ou sem conta, aparece no mural sem nome. Quem desiste do apoio e fica abaixo do mínimo sai do mural; se a campanha não bater a meta e o dinheiro for devolvido, quem apoiou continua no mural.',
     },
     {
       chave: 'pesquisador',

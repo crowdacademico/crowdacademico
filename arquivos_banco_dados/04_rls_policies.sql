@@ -24,9 +24,9 @@
 --  [04-C] CONFIG (5 tabelas)
 --  [04-D] USUÁRIO (11 tabelas)
 --  [04-E] CAMPANHA (11 tabelas)
---  [04-F] LINK (3 tabelas)
---  [04-G] ARQUIVO (2 tabelas)
---  [04-H] CONTRIBUIÇÃO (5 tabelas)
+--  [04-F] LINK (2 tabelas)
+--  [04-G] ARQUIVO (1 tabela)
+--  [04-H] CONTRIBUIÇÃO (4 tabelas)
 --  [04-I] SCORE (3 tabelas)
 --  [04-L] LOG DE AUDITORIA (1 tabela)
 -- ============================================================================
@@ -160,7 +160,7 @@ CREATE POLICY pol_motivo_delete ON motivo_denuncia FOR DELETE TO app_nestjs USIN
 
 DROP POLICY IF EXISTS pol_arquivo_select ON arquivo;
 CREATE POLICY pol_arquivo_select ON arquivo FOR SELECT USING (TRUE);
--- O primeiro passo do upload de arquivo fica liberado; a posse real é garantida ao vincular em arquivo_atualizacao/arquivo_recompensa.
+-- O primeiro passo do upload de arquivo fica liberado; a posse real é garantida ao vincular em arquivo_atualizacao.
 DROP POLICY IF EXISTS pol_arquivo_insert ON arquivo;
 CREATE POLICY pol_arquivo_insert ON arquivo FOR INSERT TO app_nestjs WITH CHECK (TRUE);
 DROP POLICY IF EXISTS pol_arquivo_update ON arquivo;
@@ -182,13 +182,6 @@ CREATE POLICY pol_arquivo_update ON arquivo FOR UPDATE TO app_nestjs USING (
         JOIN campanha c ON c.id_campanha = ac.id_campanha
         WHERE aa.id_arquivo = arquivo.id_arquivo
           AND (c.id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('atualizacao_moderar')))
-    )
-    OR EXISTS (
-        SELECT 1 FROM arquivo_recompensa ar
-        JOIN recompensa r ON r.id_recompensa = ar.id_recompensa
-        JOIN campanha c ON c.id_campanha = r.id_campanha
-        WHERE ar.id_arquivo = arquivo.id_arquivo
-          AND (c.id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar')))
     )
 );
 
@@ -535,7 +528,7 @@ DROP POLICY IF EXISTS pol_recompensa_update ON recompensa;
 CREATE POLICY pol_recompensa_update ON recompensa FOR UPDATE TO app_nestjs USING (
     EXISTS (SELECT 1 FROM campanha WHERE id_campanha = recompensa.id_campanha AND (id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar'))))
 );
--- Excluir (14-11-2026): mesma regra do UPDATE. A recompensa já concedida não sai: FK_CONTRIBUICAO_RECOMPENSA_RECOMPENSA (RESTRICT).
+-- Excluir (14-11-2026): mesma regra do UPDATE. Com alguém no Mural dos apoiadores, não sai (fn_recompensa_trava, 05).
 DROP POLICY IF EXISTS pol_recompensa_delete ON recompensa;
 CREATE POLICY pol_recompensa_delete ON recompensa FOR DELETE TO app_nestjs USING (
     EXISTS (SELECT 1 FROM campanha WHERE id_campanha = recompensa.id_campanha AND (id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar'))))
@@ -606,14 +599,12 @@ CREATE POLICY pol_repasse_select ON repasse FOR SELECT TO app_nestjs USING (
 );
 
 -- ============================================================
--- [04-F] LINK (3 tabelas)
+-- [04-F] LINK (2 tabelas)
 -- ============================================================
 ALTER TABLE link_academico       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE link_academico       FORCE ROW LEVEL SECURITY;
 ALTER TABLE link_atualizacao      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE link_atualizacao      FORCE ROW LEVEL SECURITY;
-ALTER TABLE link_recompensa       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE link_recompensa       FORCE ROW LEVEL SECURITY;
 
 -- Link de dono com conta deletada fica invisível (usuario_visivel).
 DROP POLICY IF EXISTS pol_link_select ON link_academico;
@@ -664,63 +655,11 @@ CREATE POLICY pol_link_atualizacao_delete ON link_atualizacao FOR DELETE TO app_
     )
 );
 
--- link_recompensa: só o dono da campanha (ou admin) adiciona links de resgate/download da recompensa;
--- a leitura fica restrita ao dono da campanha, admin ou comprador da recompensa.
-DROP POLICY IF EXISTS pol_link_recompensa_select ON link_recompensa;
-CREATE POLICY pol_link_recompensa_select ON link_recompensa FOR SELECT TO app_nestjs USING (
-    EXISTS (
-        SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
-        WHERE r.id_recompensa = link_recompensa.id_recompensa
-          AND (c.id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar')))
-    )
-    -- Quem ganhou só vê o link com a recompensa liberada (16-11-2026): antes bastava ter a recompensa ligada, e uma
-    -- contribuição Pix gerada e nunca paga já mostrava o link.
-    OR EXISTS (
-        SELECT 1 FROM contribuicao_recompensa cr JOIN contribuicao co ON co.id_contribuicao = cr.id_contribuicao
-        WHERE cr.id_recompensa = link_recompensa.id_recompensa
-          AND co.id_usuario = (SELECT public.id_usuario_atual())
-          AND public.recompensa_liberada(co.id_contribuicao)
-    )
-);
-DROP POLICY IF EXISTS pol_link_recompensa_insert ON link_recompensa;
-CREATE POLICY pol_link_recompensa_insert ON link_recompensa FOR INSERT TO app_nestjs WITH CHECK (
-    EXISTS (
-        SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
-        WHERE r.id_recompensa = link_recompensa.id_recompensa
-          AND (c.id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar')))
-    )
-);
--- [04-F-1] link_recompensa: assimetria proposital entre SELECT e UPDATE (ver DOCUMENTACAO_BD.md)
-DROP POLICY IF EXISTS pol_link_recompensa_update ON link_recompensa;
-CREATE POLICY pol_link_recompensa_update ON link_recompensa FOR UPDATE TO app_nestjs USING (
-    EXISTS (
-        SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
-        WHERE r.id_recompensa = link_recompensa.id_recompensa
-          AND (c.id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar')))
-    )
-) WITH CHECK (
-    EXISTS (
-        SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
-        WHERE r.id_recompensa = link_recompensa.id_recompensa
-          AND (c.id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar')))
-    )
-);
-DROP POLICY IF EXISTS pol_link_recompensa_delete ON link_recompensa;
-CREATE POLICY pol_link_recompensa_delete ON link_recompensa FOR DELETE TO app_nestjs USING (
-    EXISTS (
-        SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
-        WHERE r.id_recompensa = link_recompensa.id_recompensa
-          AND (c.id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar')))
-    )
-);
-
 -- ============================================================
--- [04-G] ARQUIVO (2 tabelas)
+-- [04-G] ARQUIVO (1 tabela)
 -- ============================================================
 ALTER TABLE arquivo_atualizacao  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE arquivo_atualizacao  FORCE ROW LEVEL SECURITY;
-ALTER TABLE arquivo_recompensa   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE arquivo_recompensa   FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS pol_arqatu_select ON arquivo_atualizacao;
 CREATE POLICY pol_arqatu_select ON arquivo_atualizacao FOR SELECT USING (TRUE);
@@ -744,47 +683,9 @@ CREATE POLICY pol_arqatu_update ON arquivo_atualizacao FOR UPDATE TO app_nestjs 
     )
 );
 
--- arquivo_recompensa: escrita só por quem é dono da campanha dona da recompensa (ou admin), mesmo padrão
--- de arquivo_atualizacao; a leitura fica restrita ao dono da campanha, admin ou comprador da recompensa.
-DROP POLICY IF EXISTS pol_arqrecompensa_select ON arquivo_recompensa;
-CREATE POLICY pol_arqrecompensa_select ON arquivo_recompensa FOR SELECT TO app_nestjs USING (
-    EXISTS (
-        SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
-        WHERE r.id_recompensa = arquivo_recompensa.id_recompensa
-          AND (c.id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar')))
-    )
-    OR EXISTS (
-        SELECT 1 FROM contribuicao_recompensa cr JOIN contribuicao co ON co.id_contribuicao = cr.id_contribuicao
-        WHERE cr.id_recompensa = arquivo_recompensa.id_recompensa
-          AND co.id_usuario = (SELECT public.id_usuario_atual())
-    )
-);
-DROP POLICY IF EXISTS pol_arqrecompensa_insert ON arquivo_recompensa;
-CREATE POLICY pol_arqrecompensa_insert ON arquivo_recompensa FOR INSERT TO app_nestjs WITH CHECK (
-    EXISTS (
-        SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
-        WHERE r.id_recompensa = arquivo_recompensa.id_recompensa
-          AND (c.id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar')))
-    )
-);
--- [04-G-1] arquivo_recompensa: por que existe a policy de UPDATE (ver DOCUMENTACAO_BD.md)
-DROP POLICY IF EXISTS pol_arqrecompensa_update ON arquivo_recompensa;
-CREATE POLICY pol_arqrecompensa_update ON arquivo_recompensa FOR UPDATE TO app_nestjs USING (
-    EXISTS (
-        SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
-        WHERE r.id_recompensa = arquivo_recompensa.id_recompensa
-          AND (c.id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar')))
-    )
-) WITH CHECK (
-    EXISTS (
-        SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
-        WHERE r.id_recompensa = arquivo_recompensa.id_recompensa
-          AND (c.id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('campanha_editar')))
-    )
-);
 
 -- ============================================================
--- [04-H] CONTRIBUIÇÃO (5 tabelas)
+-- [04-H] CONTRIBUIÇÃO (4 tabelas)
 -- ============================================================
 ALTER TABLE contribuicao         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contribuicao         FORCE ROW LEVEL SECURITY;
@@ -792,8 +693,6 @@ ALTER TABLE auditoria_financeira ENABLE ROW LEVEL SECURITY;
 ALTER TABLE auditoria_financeira FORCE ROW LEVEL SECURITY;
 ALTER TABLE evento_pagamento     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE evento_pagamento     FORCE ROW LEVEL SECURITY;
-ALTER TABLE contribuicao_recompensa ENABLE ROW LEVEL SECURITY;
-ALTER TABLE contribuicao_recompensa FORCE ROW LEVEL SECURITY;
 ALTER TABLE aceite_termo_contribuicao ENABLE ROW LEVEL SECURITY;
 ALTER TABLE aceite_termo_contribuicao FORCE ROW LEVEL SECURITY;
 
@@ -842,24 +741,6 @@ DROP POLICY IF EXISTS pol_auditoria_update ON auditoria_financeira;
 DROP POLICY IF EXISTS pol_evento_pagamento_select ON evento_pagamento;
 CREATE POLICY pol_evento_pagamento_select ON evento_pagamento FOR SELECT TO app_nestjs USING (
     (SELECT public.tem_permissao('evento_pagamento_visualizar'))
-);
-
--- contribuicao_recompensa: quem contribuiu vê e registra as próprias
--- aquisições; o dono da campanha (ou admin) também pode ver, pra
--- organizar o envio/entrega das recompensas. Sem UPDATE/DELETE:
--- uma vez adquirida, é um registro de compra, não deve ser editável.
-DROP POLICY IF EXISTS pol_contrib_recompensa_select ON contribuicao_recompensa;
-CREATE POLICY pol_contrib_recompensa_select ON contribuicao_recompensa FOR SELECT TO app_nestjs USING (
-    EXISTS (SELECT 1 FROM contribuicao WHERE id_contribuicao = contribuicao_recompensa.id_contribuicao AND id_usuario = (SELECT public.id_usuario_atual()))
-    OR EXISTS (
-        SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
-        WHERE r.id_recompensa = contribuicao_recompensa.id_recompensa AND c.id_usuario = (SELECT public.id_usuario_atual())
-    )
-    OR (SELECT public.tem_permissao('contribuicao_visualizar_sensivel'))
-);
-DROP POLICY IF EXISTS pol_contrib_recompensa_insert ON contribuicao_recompensa;
-CREATE POLICY pol_contrib_recompensa_insert ON contribuicao_recompensa FOR INSERT TO app_nestjs WITH CHECK (
-    EXISTS (SELECT 1 FROM contribuicao WHERE id_contribuicao = contribuicao_recompensa.id_contribuicao AND id_usuario = (SELECT public.id_usuario_atual()))
 );
 
 -- Aceite de termos por contribuição tem política de leitura e escrita compatível com doação anônima: o

@@ -1,59 +1,49 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
-import {
-  RECOMPENSA_COLUNAS_SELECT,
-  STATUS_CONTRIBUICAO_PAGA,
-} from '../constants/recompensa.constants';
+import { ARMAZENAMENTO_SERVICE } from '../../commons/storage/storage.constants';
+import type { ArmazenamentoService } from '../../commons/storage/storage.service.interface';
 import { RecompensaConverter } from '../dto/converter/recompensa.converter';
-import { RecompensaResponse } from '../dto/response/recompensa.response';
+import { MuralResponse } from '../dto/response/recompensa.response';
 
-// As recompensas de uma campanha. A leitura é pública (pol_recompensa_select); os links e a contagem de escolhidas
-// passam pela RLS: o dono da campanha e o admin veem tudo, quem ganhou vê o link da própria recompensa, e o resto
-// recebe links vazios e contagem zero. Inativas vêm junto, marcadas: a tela do dono mostra, a pública esconde.
+// O Mural dos apoiadores de uma campanha (22-11-2026): a recompensa (uma por campanha, ou nenhuma) e quem está nele.
+// Público: a página da campanha mostra para qualquer um. Quem entra é calculado no banco (mural_apoiadores, 05), que
+// já tira o nome e a foto de quem apoiou como anônimo e só responde para campanha com página pública.
 @Injectable()
 export class RecompensaServiceFindAll {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    @Inject(ARMAZENAMENTO_SERVICE)
+    private readonly armazenamento: ArmazenamentoService,
+  ) {}
 
-  async executar(idCampanha: number): Promise<RecompensaResponse[]> {
+  async executar(idCampanha: number): Promise<MuralResponse> {
     const db = this.database.getDb();
-    const recompensas = await db
+    const recompensa = await db
       .selectFrom('recompensa')
-      .select(RECOMPENSA_COLUNAS_SELECT)
-      .where('id_campanha', '=', idCampanha)
-      .orderBy('valor_minimo')
-      .orderBy('id_recompensa')
-      .execute();
-    if (recompensas.length === 0) return [];
-
-    const ids = recompensas.map((r) => r.id_recompensa);
-    const links = await db
-      .selectFrom('link_recompensa')
       .selectAll()
-      .where('id_recompensa', 'in', ids)
-      .orderBy('ordem')
-      .orderBy('id_link_recompensa')
-      .execute();
-    const contagens = await db
-      .selectFrom('contribuicao_recompensa as cr')
-      .innerJoin('contribuicao as c', 'c.id_contribuicao', 'cr.id_contribuicao')
-      .select((eb) => [
-        'cr.id_recompensa',
-        eb.fn.countAll<string>().as('total'),
-      ])
-      .where('cr.id_recompensa', 'in', ids)
-      .where('c.status', 'in', STATUS_CONTRIBUICAO_PAGA)
-      .groupBy('cr.id_recompensa')
-      .execute();
+      .where('id_campanha', '=', idCampanha)
+      .executeTakeFirst();
+    if (!recompensa) {
+      return { recompensa: null, apoiadores: [], travada: false };
+    }
 
-    return recompensas.map((r) =>
-      RecompensaConverter.paraResponseDto(
-        r,
-        Number(
-          contagens.find((c) => c.id_recompensa === r.id_recompensa)?.total ??
-            0,
-        ),
-        links.filter((l) => l.id_recompensa === r.id_recompensa),
-      ),
-    );
+    const resultado = await sql<{
+      nome: string | null;
+      chave_foto: string | null;
+      apoiou_em: Date;
+    }>`SELECT * FROM public.mural_apoiadores(${idCampanha})`.execute(db);
+
+    return {
+      recompensa: RecompensaConverter.paraResponseDto(recompensa),
+      apoiadores: resultado.rows.map((linha) => ({
+        nome: linha.nome,
+        fotoUrl: linha.chave_foto
+          ? this.armazenamento.montarUrlPublica(linha.chave_foto)
+          : null,
+        apoiouEm: linha.apoiou_em,
+      })),
+      travada: resultado.rows.length > 0,
+    };
   }
 }

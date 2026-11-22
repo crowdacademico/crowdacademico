@@ -39,11 +39,10 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
   const [dominioTexto, setDominioTexto] = useState('');
   const [permitePerfil, setPermitePerfil] = useState(true);
   const [permiteAtualizacao, setPermiteAtualizacao] = useState(false);
-  const [permiteRecompensa, setPermiteRecompensa] = useState(false);
 
   const codigoInvalido = codigo.length > 0 && !REGEX_CODIGO_TIPO_LINK.test(codigo);
   const regexInvalida = regex.length > 0 && !regexValida(regex);
-  const nenhumEscopoMarcado = !permitePerfil && !permiteAtualizacao && !permiteRecompensa;
+  const nenhumEscopoMarcado = !permitePerfil && !permiteAtualizacao;
 
   // "Criar" fica sempre clicável: clicando com algo faltando, cada campo mostra o próprio erro. Formato do código, regex
   // e "pelo menos uma opção" já aparecem enquanto se preenche.
@@ -62,7 +61,6 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
         dominio: paraDominios(dominioTexto),
         permitePerfil,
         permiteAtualizacao,
-        permiteRecompensa,
       });
       mostrar(
         'Tipo de link cadastrado com sucesso.',
@@ -74,7 +72,7 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
   };
 
   // Criar também pergunta antes de fechar com algo digitado, como o Alterar.
-  const sujo = codigo !== '' || nome !== '' || regex !== '' || dominioTexto !== '' || !permitePerfil || permiteAtualizacao || permiteRecompensa;
+  const sujo = codigo !== '' || nome !== '' || regex !== '' || dominioTexto !== '' || !permitePerfil || permiteAtualizacao;
   const fechar = useFecharComAviso(sujo, aoFechar);
 
   return (
@@ -181,10 +179,8 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
       <EscoposTipoLink
         permitePerfil={permitePerfil}
         permiteAtualizacao={permiteAtualizacao}
-        permiteRecompensa={permiteRecompensa}
         aoMudarPerfil={setPermitePerfil}
         aoMudarAtualizacao={setPermiteAtualizacao}
-        aoMudarRecompensa={setPermiteRecompensa}
       />
     </ModalFicha>
   );

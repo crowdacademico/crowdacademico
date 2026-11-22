@@ -139,7 +139,6 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91054 | `reenviar_notificacao`, `cancelar_notificacao` | `notificacao` | Só um e-mail que falhou pode ser reenviado; só um na fila ou que falhou pode ser cancelado |
 | 91055 | `reenviar_notificacao` | `notificacao` | A conta do e-mail foi excluída: não há para onde reenviar |
 | 91056 | `fn_valida_contestacao_pendente` | `denuncia` | Decidida a contestação, a situação da denúncia não muda mais (RF-115) |
-| 91057 | `fn_valida_link_recompensa` | `recompensa`, `link_recompensa` | Recompensa ativa de acesso antecipado ou entrega digital sem o link especial (RF-103) |
 | 91058 | `fn_congela_regras_campanha` (via `fn_campanha_erro_congelamento`) | `campanha` | Imagem de capa alterada numa campanha **rejeitada sem reenvios** (só leitura). Desde 14-11-2026 (Grupo CQ) a capa não congela na aprovação, então o código só aparece nesse caso; a mensagem continua na tabela de `fn_campanha_erro_congelamento` |
 | 91059 | `desistir_contribuicao` | `contribuicao` | Desistir de uma contribuição que não está paga (pendente, vencida, já devolvida ou repassada)
 | 91060 | `desistir_contribuicao` | `contribuicao` | Desistir depois do prazo (`desistencia_prazo_dias`, 7 por padrão, contados da contribuição)
@@ -148,6 +147,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91063 | `fn_congela_regras_campanha`, `fn_congela_orcamento_campanha`, `fn_congela_marco_cronograma` | `campanha`, `orcamento_campanha`, `marco_cronograma` | Campanha aguardando aprovação: conteúdo, orçamento e cronograma não mudam enquanto a curadoria analisa (Grupo DG, 21-11-2026)
 | 91064 | `fn_atualizacao_trava_edicao` | `atualizacao_campanha`, `link_atualizacao`, `arquivo_atualizacao` | Alterar o conteúdo ou os anexos de uma atualização excluída pela moderação, ou de campanha fora de ativa, sucesso ou não atingida (Grupo DI, 21-11-2026) |
 | 91065 | `fn_comentario_bloqueio` | `comentario` | Autor bloqueado pelo dono da campanha tentando comentar de novo nela (Grupo DJ, 21-11-2026) |
+| 91067 | `fn_recompensa_trava` | `recompensa` | Mudar o valor mínimo, desativar ou excluir a recompensa com alguém no Mural dos apoiadores (22-11-2026) |
 | 91066 | `alterar_email_nao_confirmado` | `usuario` | Trocar pela própria conta um e-mail que já foi confirmado (Grupo DN, 22-11-2026) |
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
@@ -195,7 +195,6 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92040 | `fn_atualizacao_ocultacao` | `atualizacao_campanha` | Atualização excluída pela moderação (mantendo o registro): o dono não a põe de volta |
 | 92041 | `contribuicoes_recebidas_pesquisador` | `contribuicao` | Consulta das contribuições recebidas sem sessão (a rota do Nest já exige login; é a defesa do banco) |
 | 92042 | `desistir_contribuicao` | `contribuicao` | Desistir de um apoio sem sessão, ou de uma contribuição que não é de quem pede (a mensagem diz "não encontrada")
-| 92043 | `listar_ganhadores_recompensa` | `recompensa` | Ver quem ganhou uma recompensa sem ser o dono da campanha nem admin |
 | 92044 | `fn_valida_transicao_campanha` | `campanha` | Aprovar a própria campanha: quem tem a permissão de aprovar não aprova uma campanha da qual é dono (conflito de interesse, CT-11) |
 | 92045 | `decidir_solicitacao_encerramento` | `solicitacao_encerramento` | Decidir o pedido de encerramento antecipado da própria campanha (conflito de interesse) |
 | 92046 | `fn_comentario_bloqueio` | `comentario` | Bloquear ou desbloquear o autor de um comentário sem ser o dono da campanha nem a moderação (Grupo DJ, 21-11-2026) |

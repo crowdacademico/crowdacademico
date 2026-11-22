@@ -4,8 +4,6 @@ export const ATUALIZACAO_CAMPANHA_COLUNAS_SELECT = [
   'titulo',
   'conteudo',
   'publicado_em',
-  'fase',
-  'tipo',
   'ativo',
   'ocultada_moderacao',
   'motivo_moderacao',

@@ -953,109 +953,12 @@ CREATE TRIGGER trg_configuracoes_faixa
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- Função:     trg_valida_contribuicao_recompensa
--- Assinatura: () -> TRIGGER
--- Bloco:      [05-K-1]
--- Uso:        Invocada por trg_contrib_recompensa_valida
--- Regra:      Garante que (1) a recompensa escolhida pertence à MESMA
---             campanha da contribuição (ninguém resgata recompensa de
---             campanha diferente da que doou) e (2) respeita o estoque de
---             quantidade_disponivel da recompensa.
--- ----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.trg_valida_contribuicao_recompensa()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
-DECLARE
-    v_campanha_contrib INT;
-    v_campanha_recomp  INT;
-    v_disponivel       INT;
-    v_ja_reservado      INT;
-BEGIN
-    SELECT id_campanha INTO v_campanha_contrib FROM contribuicao WHERE id_contribuicao = NEW.id_contribuicao;
-    SELECT id_campanha, quantidade_disponivel INTO v_campanha_recomp, v_disponivel
-        FROM recompensa WHERE id_recompensa = NEW.id_recompensa;
-
-    IF v_campanha_contrib IS DISTINCT FROM v_campanha_recomp THEN
-        RAISE EXCEPTION 'A recompensa % não pertence à campanha da contribuição %', NEW.id_recompensa, NEW.id_contribuicao
-            USING ERRCODE = '90001';
-    END IF;
-
-    IF v_disponivel IS NOT NULL THEN
-        SELECT COALESCE(SUM(quantidade), 0) INTO v_ja_reservado
-            FROM contribuicao_recompensa
-            WHERE id_recompensa = NEW.id_recompensa
-              AND id_contrib_recompensa <> COALESCE(NEW.id_contrib_recompensa, -1); -- ignora a própria linha em caso de UPDATE
-
-        IF v_ja_reservado + NEW.quantidade > v_disponivel THEN
-            RAISE EXCEPTION 'Estoque insuficiente para a recompensa % (disponível: %, já reservado: %, solicitado: %)',
-                NEW.id_recompensa, v_disponivel, v_ja_reservado, NEW.quantidade
-                USING ERRCODE = '91001';
-        END IF;
-    END IF;
-
-    RETURN NEW;
-END;
-$$;
-
--- ----------------------------------------------------------------------------
--- Trigger:   trg_contrib_recompensa_valida
--- Tabela:    contribuicao_recompensa
--- Momento:   BEFORE INSERT OR UPDATE
--- Função:    trg_valida_contribuicao_recompensa()
--- Bloco:     [05-K-1]
--- Regra:     Bloqueia a gravação se a recompensa não pertencer à campanha da
---            contribuição, ou se o estoque disponível for insuficiente.
--- ----------------------------------------------------------------------------
-DROP TRIGGER IF EXISTS trg_contrib_recompensa_valida ON contribuicao_recompensa;
-CREATE TRIGGER trg_contrib_recompensa_valida
-    BEFORE INSERT OR UPDATE ON contribuicao_recompensa
-    FOR EACH ROW
-    EXECUTE FUNCTION public.trg_valida_contribuicao_recompensa();
-
--- ----------------------------------------------------------------------------
--- Função:     fn_concede_recompensas
--- Assinatura: () -> TRIGGER
--- Bloco:      [05-K-1]
--- Regra:      RF-104 e RF-105: quem contribui ganha, sem escolher, todas as recompensas ativas da campanha cujo valor
---             mínimo a contribuição alcança (com R$ 151, as de R$ 50, R$ 100 e R$ 150). Só quem tem conta: a recompensa é
---             para alguém. O valor que conta é o da contribuição, sem a tarifa. Recompensa criada depois não vale para
---             contribuição antiga. Aparece como ganha quando a contribuição é paga; vale (o link aparece) conforme
---             recompensa_liberada (03). Quem apoia como anônimo não ganha o reconhecimento (é o nome publicado).
--- ----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.fn_concede_recompensas()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
-BEGIN
-    IF NEW.id_usuario IS NOT NULL THEN
-        INSERT INTO contribuicao_recompensa (id_contribuicao, id_recompensa)
-        SELECT NEW.id_contribuicao, r.id_recompensa
-        FROM recompensa r
-        WHERE r.id_campanha = NEW.id_campanha AND r.ativo AND r.valor_minimo <= NEW.valor
-          -- Reconhecimento é o nome publicado: quem apoiou como anônimo não ganha esse (16-11-2026).
-          AND NOT (NEW.anonima AND r.tipo = 'reconhecimento');
-    END IF;
-    RETURN NULL;
-END;
-$$;
-
--- ----------------------------------------------------------------------------
--- Trigger:   trg_contribuicao_concede_recompensas
--- Tabela:    contribuicao
--- Momento:   AFTER INSERT
--- Função:    fn_concede_recompensas()
--- Bloco:     [05-K-1]
--- ----------------------------------------------------------------------------
-DROP TRIGGER IF EXISTS trg_contribuicao_concede_recompensas ON contribuicao;
-CREATE TRIGGER trg_contribuicao_concede_recompensas
-    AFTER INSERT ON contribuicao
-    FOR EACH ROW
-    EXECUTE FUNCTION public.fn_concede_recompensas();
-
--- ----------------------------------------------------------------------------
 -- Função:     trg_valida_escopo_tipolink
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-1]
 -- Uso:        Invocada por trg_link_academico_valida_tipo,
---             trg_link_atualizacao_valida_tipo e trg_link_recompensa_valida_tipo
--- Regra:      tipo_link é compartilhado por 3 tabelas (link_academico, link_atualizacao, link_recompensa). Impede que
+--             trg_link_atualizacao_valida_tipo
+-- Regra:      tipo_link é compartilhado por 2 tabelas (link_academico, link_atualizacao). Impede que
 --             alguém associe, por exemplo, "Orcid" (permite_perfil=TRUE apenas) a uma recompensa ou atualização: a FK
 --             sozinha só garante a existência do id_tipolink, não o contexto de uso.
 --             Link acadêmico novo só para quem tem perfil de pesquisador (92026): na conta comum não serve para nada.
@@ -1084,7 +987,6 @@ BEGIN
     v_coluna := CASE TG_TABLE_NAME
         WHEN 'link_academico'   THEN 'permite_perfil'
         WHEN 'link_atualizacao' THEN 'permite_atualizacao'
-        WHEN 'link_recompensa'  THEN 'permite_recompensa'
     END;
 
     EXECUTE format('SELECT %I FROM tipo_link WHERE id_tipolink = $1', v_coluna)
@@ -1093,8 +995,7 @@ BEGIN
     IF NOT COALESCE(v_permitido, FALSE) THEN
         RAISE EXCEPTION 'Este tipo de link não pode ser usado %.', CASE TG_TABLE_NAME
             WHEN 'link_academico'   THEN 'no perfil do pesquisador'
-            WHEN 'link_atualizacao' THEN 'em atualização de campanha'
-            ELSE 'em recompensa'
+            ELSE 'em atualização de campanha'
         END
             USING ERRCODE = '90002';
     END IF;
@@ -1317,70 +1218,6 @@ CREATE TRIGGER trg_link_atualizacao_valida_tipo
     BEFORE INSERT OR UPDATE ON link_atualizacao
     FOR EACH ROW
     EXECUTE FUNCTION public.trg_valida_escopo_tipolink();
-
--- ----------------------------------------------------------------------------
--- Trigger:   trg_link_recompensa_valida_tipo
--- Tabela:    link_recompensa
--- Momento:   BEFORE INSERT OR UPDATE
--- Função:    trg_valida_escopo_tipolink()
--- Bloco:     [05-K-1]
--- Regra:     Só aceita id_tipolink com permite_recompensa = TRUE.
--- ----------------------------------------------------------------------------
-DROP TRIGGER IF EXISTS trg_link_recompensa_valida_tipo ON link_recompensa;
-CREATE TRIGGER trg_link_recompensa_valida_tipo
-    BEFORE INSERT OR UPDATE ON link_recompensa
-    FOR EACH ROW
-    EXECUTE FUNCTION public.trg_valida_escopo_tipolink();
-
--- ----------------------------------------------------------------------------
--- Função:     fn_valida_link_recompensa
--- Assinatura: () -> TRIGGER
--- Bloco:      [05-K-1]
--- Regra:      RF-103: acesso antecipado e entrega digital chegam a quem apoiou pelo link especial, então a recompensa
---             ativa desses dois tipos precisa ter pelo menos um link (91057). Reconhecimento não tem o que entregar.
---             CONSTRAINT TRIGGER DEFERRABLE: a recompensa e o link são gravados em comandos separados da mesma
---             transação, e a conferência é do estado FINAL, no COMMIT. Vale ao criar ou mudar a recompensa e ao tirar
---             ou trocar o link.
--- ----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.fn_valida_link_recompensa()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
-DECLARE
-    v_id INT := CASE WHEN TG_OP = 'DELETE' THEN OLD.id_recompensa ELSE NEW.id_recompensa END;
-BEGIN
-    IF EXISTS (
-        SELECT 1 FROM recompensa r
-        WHERE r.id_recompensa = v_id
-          AND r.ativo
-          AND r.tipo IN ('acesso_antecipado', 'digital')
-          AND NOT EXISTS (SELECT 1 FROM link_recompensa l WHERE l.id_recompensa = r.id_recompensa)
-    ) THEN
-        RAISE EXCEPTION 'Acesso antecipado e entrega digital precisam do link especial: é por ele que a recompensa chega a quem apoiou.'
-            USING ERRCODE = '91057';
-    END IF;
-    RETURN NULL;
-END;
-$$;
-
--- ----------------------------------------------------------------------------
--- Triggers:  trg_recompensa_exige_link, trg_link_recompensa_exige_link
--- Tabelas:   recompensa (criar ou mudar), link_recompensa (tirar ou trocar)
--- Momento:   AFTER, DEFERRABLE INITIALLY DEFERRED
--- Função:    fn_valida_link_recompensa()
--- Bloco:     [05-K-1]
--- ----------------------------------------------------------------------------
-DROP TRIGGER IF EXISTS trg_recompensa_exige_link ON recompensa;
-CREATE CONSTRAINT TRIGGER trg_recompensa_exige_link
-    AFTER INSERT OR UPDATE ON recompensa
-    DEFERRABLE INITIALLY DEFERRED
-    FOR EACH ROW
-    EXECUTE FUNCTION public.fn_valida_link_recompensa();
-
-DROP TRIGGER IF EXISTS trg_link_recompensa_exige_link ON link_recompensa;
-CREATE CONSTRAINT TRIGGER trg_link_recompensa_exige_link
-    AFTER UPDATE OR DELETE ON link_recompensa
-    DEFERRABLE INITIALLY DEFERRED
-    FOR EACH ROW
-    EXECUTE FUNCTION public.fn_valida_link_recompensa();
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_valida_area_conhecimento_nivel2
@@ -2610,7 +2447,7 @@ RETURNS TABLE (
     meio_pagamento meio_pagamento,
     status status_contribuicao,
     criado_em TIMESTAMPTZ,
-    recompensas TEXT
+    no_mural BOOLEAN
 )
 LANGUAGE plpgsql
 STABLE
@@ -2635,19 +2472,10 @@ BEGIN
            c.meio_pagamento,
            c.status,
            c.criado_em,
-           recompensas.nomes
+           public.contribuicao_no_mural(c.id_contribuicao)
     FROM contribuicao c
     JOIN campanha ca ON ca.id_campanha = c.id_campanha
     LEFT JOIN usuario u ON u.id_usuario = c.id_usuario
-    LEFT JOIN LATERAL (
-        SELECT string_agg(
-                   r.titulo || CASE WHEN cr.quantidade > 1 THEN ' (x' || cr.quantidade::TEXT || ')' ELSE '' END,
-                   ', ' ORDER BY r.valor_minimo
-               ) AS nomes
-        FROM contribuicao_recompensa cr
-        JOIN recompensa r ON r.id_recompensa = cr.id_recompensa
-        WHERE cr.id_contribuicao = c.id_contribuicao
-    ) recompensas ON TRUE
     WHERE ca.id_usuario = public.id_usuario_atual()
       AND c.status IN ('confirmado', 'repassado')
     ORDER BY c.criado_em DESC, c.id_contribuicao DESC;
@@ -2655,54 +2483,135 @@ END;
 $$;
 
 -- ----------------------------------------------------------------------------
--- Função:     listar_ganhadores_recompensa
--- Assinatura: (p_id_recompensa INT) -> TABLE (quem ganhou a recompensa)
+-- Função:     contribuicao_conta_mural
+-- Assinatura: (p_status status_contribuicao, p_desistida_em TIMESTAMPTZ) -> BOOLEAN
 -- Bloco:      [05-K-1]
--- Regra:      Para o dono da campanha (ou o admin) saber a quem entregar a recompensa, principalmente o reconhecimento
---             (16-11-2026, Alexia). Só contribuição paga e não devolvida (confirmado ou repassado). Só o NOME: o e-mail de
---             quem apoiou não vai para o pesquisador (a entrega digital é pelo link na plataforma). Apoio anônimo, sem
---             conta ou de conta excluída aparece como "Apoiador anônimo". `liberada` = recompensa_liberada (03): no Tudo
---             ou Nada, falso até a campanha bater a meta. Sem ser dono nem admin: 92043.
+-- Regra:      Mural dos apoiadores (22-11-2026, RF-103 a RF-105). Que contribuição conta para entrar no mural: a paga
+--             (confirmado ou repassado) e a devolvida porque a campanha não deu certo (tudo-ou-nada sem a meta,
+--             cancelamento): quem apoiou continua reconhecido. Só sai quem pediu o dinheiro de volta: a desistência
+--             (desistida_em) e o estorno pelo provedor ('reembolsado', a contestação). Pendente, vencida e com erro
+--             nunca contam.
 -- ----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.listar_ganhadores_recompensa(p_id_recompensa INT)
+CREATE OR REPLACE FUNCTION public.contribuicao_conta_mural(p_status status_contribuicao, p_desistida_em TIMESTAMPTZ)
+RETURNS BOOLEAN
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT p_status IN ('confirmado', 'repassado')
+        OR (p_status IN ('a_devolver', 'devolvido', 'reembolso_manual') AND p_desistida_em IS NULL);
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     mural_apoiadores
+-- Assinatura: (p_id_campanha INT) -> TABLE (quem está no Mural dos apoiadores)
+-- Bloco:      [05-K-1]
+-- Regra:      O Mural dos apoiadores (22-11-2026): a recompensa da campanha, uma só, criada pelo pesquisador, com o
+--             valor mínimo. Entra quem SOMA esse valor nas contribuições que contam (contribuicao_conta_mural); quem
+--             apoiou sem conta não tem como somar, e cada contribuição dele vale sozinha. Uma linha por pessoa, na
+--             ordem em que apoiou. Nome e foto só de quem não marcou todo apoio como anônimo (basta uma contribuição
+--             com nome); anônimo, sem conta ou conta excluída vêm sem nome nem foto (a chave da foto, para o Nest montar a URL). O valor de cada um não sai daqui.
+--             Calculado na hora, não gravado: quem entrou nunca sai porque a recompensa trava depois que tem alguém
+--             (fn_recompensa_trava). Só campanha com página pública (a régua de contar_apoios_publicos_campanha);
+--             SECURITY DEFINER para ler o nome de outras contas.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.mural_apoiadores(p_id_campanha INT)
 RETURNS TABLE (
-    id_contribuicao INT,
-    apoiador VARCHAR,
-    valor DECIMAL,
-    ganha_em TIMESTAMPTZ,
-    liberada BOOLEAN
+    nome VARCHAR,
+    chave_foto VARCHAR,
+    apoiou_em TIMESTAMPTZ
 )
-LANGUAGE plpgsql
+LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM recompensa r JOIN campanha ca ON ca.id_campanha = r.id_campanha
-        WHERE r.id_recompensa = p_id_recompensa
-          AND (ca.id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'))
-    ) THEN
-        RAISE EXCEPTION 'Só o dono da campanha vê quem ganhou a recompensa.' USING ERRCODE = '92043';
-    END IF;
+    WITH minimo AS (
+        SELECT r.valor_minimo
+        FROM recompensa r
+        JOIN campanha ca ON ca.id_campanha = r.id_campanha
+        WHERE r.id_campanha = p_id_campanha AND r.ativo
+          AND ca.status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado')
+    ),
+    contam AS (
+        SELECT c.id_usuario, c.valor, c.criado_em, c.anonima FROM contribuicao c
+        WHERE c.id_campanha = p_id_campanha AND public.contribuicao_conta_mural(c.status, c.desistida_em)
+    ),
+    pessoas AS (
+        SELECT c.id_usuario, SUM(c.valor) AS total, MIN(c.criado_em) AS primeiro, bool_and(c.anonima) AS anonima
+        FROM contam c WHERE c.id_usuario IS NOT NULL GROUP BY c.id_usuario
+        UNION ALL
+        SELECT NULL, c.valor, c.criado_em, TRUE FROM contam c WHERE c.id_usuario IS NULL
+    )
+    SELECT CASE WHEN p.anonima OR u.id_usuario IS NULL OR u.deletado THEN NULL ELSE u.nome END::VARCHAR,
+           CASE WHEN p.anonima OR u.id_usuario IS NULL OR u.deletado THEN NULL ELSE a.chave END::VARCHAR,
+           p.primeiro
+    FROM pessoas p
+    CROSS JOIN minimo m
+    LEFT JOIN usuario u ON u.id_usuario = p.id_usuario
+    LEFT JOIN arquivo a ON a.id_arquivo = u.id_imagem_perfil AND a.ativo
+    WHERE p.total >= m.valor_minimo
+    ORDER BY p.primeiro;
+$$;
 
-    RETURN QUERY
-    SELECT c.id_contribuicao,
-           CASE
-               WHEN c.anonima OR u.id_usuario IS NULL OR u.deletado THEN 'Apoiador anônimo'
-               ELSE u.nome
-           END::VARCHAR,
-           c.valor,
-           cr.adquirida_em,
-           public.recompensa_liberada(c.id_contribuicao)
-    FROM contribuicao_recompensa cr
-    JOIN contribuicao c ON c.id_contribuicao = cr.id_contribuicao
-    LEFT JOIN usuario u ON u.id_usuario = c.id_usuario
-    WHERE cr.id_recompensa = p_id_recompensa
-      AND c.status IN ('confirmado', 'repassado')
-    ORDER BY cr.adquirida_em, c.id_contribuicao;
+-- ----------------------------------------------------------------------------
+-- Função:     contribuicao_no_mural
+-- Assinatura: (p_id_contribuicao INT) -> BOOLEAN
+-- Bloco:      [05-K-1]
+-- Regra:      Se quem fez esta contribuição está no Mural dos apoiadores da campanha (a mesma conta de
+--             mural_apoiadores: a soma da pessoa, ou a própria contribuição de quem não tem conta). Para o histórico de
+--             quem apoiou e para o painel do pesquisador (RF-105). FALSE quando a campanha não tem recompensa.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.contribuicao_no_mural(p_id_contribuicao INT)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+    SELECT COALESCE((
+        SELECT public.contribuicao_conta_mural(c.status, c.desistida_em)
+           AND (CASE WHEN c.id_usuario IS NULL THEN c.valor
+                     ELSE (SELECT SUM(o.valor) FROM contribuicao o
+                           WHERE o.id_campanha = c.id_campanha AND o.id_usuario = c.id_usuario
+                             AND public.contribuicao_conta_mural(o.status, o.desistida_em))
+                END) >= r.valor_minimo
+        FROM contribuicao c
+        JOIN recompensa r ON r.id_campanha = c.id_campanha AND r.ativo
+        WHERE c.id_contribuicao = p_id_contribuicao
+    ), FALSE);
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_recompensa_trava
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-1]
+-- Regra:      RF-104 (22-11-2026): depois que alguém entrou no Mural dos apoiadores, o pesquisador não muda mais o valor
+--             mínimo, não desativa e não exclui a recompensa (91067). É o que garante que quem entrou nunca sai. A
+--             mensagem de agradecimento continua editável.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_recompensa_trava()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' AND NEW.valor_minimo IS NOT DISTINCT FROM OLD.valor_minimo
+       AND NEW.ativo IS NOT DISTINCT FROM OLD.ativo AND NEW.id_campanha IS NOT DISTINCT FROM OLD.id_campanha THEN
+        RETURN NEW;
+    END IF;
+    IF EXISTS (SELECT 1 FROM public.mural_apoiadores(OLD.id_campanha)) THEN
+        RAISE EXCEPTION 'Alguém já está no Mural dos apoiadores: o valor mínimo não muda mais, e a recompensa não pode ser desativada nem excluída.'
+            USING ERRCODE = '91067';
+    END IF;
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
 END;
 $$;
+
+DROP TRIGGER IF EXISTS trg_recompensa_trava ON recompensa;
+CREATE TRIGGER trg_recompensa_trava
+    BEFORE UPDATE OR DELETE ON recompensa
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_recompensa_trava();
 
 -- ----------------------------------------------------------------------------
 -- Função:     liquido_repasse
@@ -2887,7 +2796,7 @@ $$;
 --             pagamento fica com o provedor: a plataforma nunca arca com nada) e reservar_proximo_repasse() já tira do
 --             repasse pendente o que deixou de estar 'confirmado'. Como a carência do repasse (15 dias) é maior que o
 --             prazo de desistência, o dinheiro ainda não saiu; se o repasse já estiver em transferência, recusa (91061).
---             Quem desiste perde as recompensas que a contribuição deu (decisão do Lucas, 14-11-2026; na devolução do
+--             Quem desiste deixa de contar para o Mural dos apoiadores (decisão do Lucas, 14-11-2026; na devolução do
 --             tudo-ou-nada elas ficam, porque a pessoa não desistiu). Códigos: 92042 (sem sessão, ou contribuição que não é de quem pede), 91059 (não está
 --             paga), 91060 (prazo passou), 91061 (repasse já em transferência). SECURITY DEFINER: a autorização é a
 --             conferência de id_usuario contra id_usuario_atual().
@@ -2927,7 +2836,9 @@ BEGIN
     END IF;
 
     PERFORM public.atualizar_status_contribuicao(p_id_contribuicao, 'a_devolver');
-    DELETE FROM contribuicao_recompensa WHERE id_contribuicao = p_id_contribuicao;
+    -- Mural dos apoiadores (22-11-2026): a desistência deixa de contar (contribuicao_conta_mural); quem ficar com a
+    -- soma abaixo do mínimo sai do mural.
+    UPDATE contribuicao SET desistida_em = NOW() WHERE id_contribuicao = p_id_contribuicao;
 END;
 $$;
 
@@ -5806,7 +5717,7 @@ EXECUTE FUNCTION fn_atualizacao_ocultacao();
 -- Função:     fn_atualizacao_trava_edicao
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      21-11-2026 (teste com usuários): o conteúdo de uma atualização (título, texto, fase, formato) e os anexos
+-- Regra:      21-11-2026 (teste com usuários): o conteúdo de uma atualização (título e texto) e os anexos
 --             dela só mudam enquanto ela pode ser publicada: não depois que a moderação a excluiu (senão o pesquisador
 --             reescreveria o que foi tirado do ar) e não com a campanha fora de 'ativo', 'sucesso' ou 'nao_atingido' (a
 --             mesma regra de criar, validar_atualizacao_campanha). Os dois dão 91064. Ocultar e mostrar de novo
@@ -5822,8 +5733,7 @@ DECLARE
     v_status         status_campanha;
 BEGIN
     IF TG_TABLE_NAME = 'atualizacao_campanha' THEN
-        IF NEW.titulo IS NOT DISTINCT FROM OLD.titulo AND NEW.conteudo IS NOT DISTINCT FROM OLD.conteudo
-           AND NEW.fase IS NOT DISTINCT FROM OLD.fase AND NEW.tipo IS NOT DISTINCT FROM OLD.tipo THEN
+        IF NEW.titulo IS NOT DISTINCT FROM OLD.titulo AND NEW.conteudo IS NOT DISTINCT FROM OLD.conteudo THEN
             RETURN NEW;
         END IF;
         v_id_atualizacao := OLD.id_atualizacao;
@@ -7162,8 +7072,7 @@ BEGIN
     END IF;
     IF EXISTS (SELECT 1 FROM usuario WHERE id_imagem_perfil = NEW.id_imagem_perfil AND id_usuario <> NEW.id_usuario)
        OR EXISTS (SELECT 1 FROM campanha WHERE id_imagem_capa = NEW.id_imagem_perfil)
-       OR EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_imagem_perfil)
-       OR EXISTS (SELECT 1 FROM arquivo_recompensa WHERE id_arquivo = NEW.id_imagem_perfil) THEN
+       OR EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_imagem_perfil) THEN
         RAISE EXCEPTION 'Este arquivo já está em uso em outro lugar.' USING ERRCODE = '91029';
     END IF;
     RETURN NEW;
@@ -7213,8 +7122,7 @@ BEGIN
     END IF;
     IF EXISTS (SELECT 1 FROM usuario WHERE id_imagem_perfil = NEW.id_imagem_capa)
        OR EXISTS (SELECT 1 FROM campanha WHERE id_imagem_capa = NEW.id_imagem_capa AND id_campanha <> NEW.id_campanha)
-       OR EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_imagem_capa)
-       OR EXISTS (SELECT 1 FROM arquivo_recompensa WHERE id_arquivo = NEW.id_imagem_capa) THEN
+       OR EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_imagem_capa) THEN
         RAISE EXCEPTION 'Esta imagem já está em uso em outro lugar.' USING ERRCODE = '91029';
     END IF;
     RETURN NEW;
@@ -7234,7 +7142,7 @@ FOR EACH ROW EXECUTE FUNCTION public.fn_valida_posse_imagem_capa_campanha();
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_valida_posse_anexo
--- Uso:        Invocada por trg_valida_posse_anexo_atualizacao e trg_valida_posse_anexo_recompensa
+-- Uso:        Invocada por trg_valida_posse_anexo_atualizacao
 -- Bloco:      [05-G]
 -- Regra:      Mesma regra da foto de perfil (fn_valida_posse_imagem_perfil, acima), para anexo de atualização e de
 --             recompensa: o arquivo precisa existir e estar ativo (90022), ter sido enviado por quem está logado
@@ -7269,13 +7177,7 @@ BEGIN
     END IF;
 
     -- Em uso em outro lugar: a própria linha (num UPDATE) não conta.
-    IF TG_TABLE_NAME = 'arquivo_atualizacao' THEN
-        v_em_uso := EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_arquivo AND id_arq_atu IS DISTINCT FROM NEW.id_arq_atu)
-                 OR EXISTS (SELECT 1 FROM arquivo_recompensa WHERE id_arquivo = NEW.id_arquivo);
-    ELSE
-        v_em_uso := EXISTS (SELECT 1 FROM arquivo_recompensa WHERE id_arquivo = NEW.id_arquivo AND id_arq_recompensa IS DISTINCT FROM NEW.id_arq_recompensa)
-                 OR EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_arquivo);
-    END IF;
+    v_em_uso := EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_arquivo AND id_arq_atu IS DISTINCT FROM NEW.id_arq_atu);
     IF v_em_uso
        OR EXISTS (SELECT 1 FROM usuario WHERE id_imagem_perfil = NEW.id_arquivo)
        OR EXISTS (SELECT 1 FROM campanha WHERE id_imagem_capa = NEW.id_arquivo) THEN
@@ -7286,8 +7188,8 @@ END;
 $$;
 
 -- ----------------------------------------------------------------------------
--- Trigger:   trg_valida_posse_anexo_atualizacao / trg_valida_posse_anexo_recompensa
--- Tabela:    arquivo_atualizacao / arquivo_recompensa
+-- Trigger:   trg_valida_posse_anexo_atualizacao
+-- Tabela:    arquivo_atualizacao
 -- Momento:   BEFORE INSERT OR UPDATE OF id_arquivo
 -- Função:    fn_valida_posse_anexo()
 -- Bloco:     [05-G]
@@ -7295,11 +7197,6 @@ $$;
 DROP TRIGGER IF EXISTS trg_valida_posse_anexo_atualizacao ON arquivo_atualizacao;
 CREATE TRIGGER trg_valida_posse_anexo_atualizacao
 BEFORE INSERT OR UPDATE OF id_arquivo ON arquivo_atualizacao
-FOR EACH ROW EXECUTE FUNCTION public.fn_valida_posse_anexo();
-
-DROP TRIGGER IF EXISTS trg_valida_posse_anexo_recompensa ON arquivo_recompensa;
-CREATE TRIGGER trg_valida_posse_anexo_recompensa
-BEFORE INSERT OR UPDATE OF id_arquivo ON arquivo_recompensa
 FOR EACH ROW EXECUTE FUNCTION public.fn_valida_posse_anexo();
 
 -- ----------------------------------------------------------------------------
@@ -7339,7 +7236,6 @@ BEGIN
        AND NOT EXISTS (SELECT 1 FROM usuario u WHERE u.id_imagem_perfil = a.id_arquivo)
        AND NOT EXISTS (SELECT 1 FROM campanha c WHERE c.id_imagem_capa = a.id_arquivo)
        AND NOT EXISTS (SELECT 1 FROM arquivo_atualizacao aa WHERE aa.id_arquivo = a.id_arquivo)
-       AND NOT EXISTS (SELECT 1 FROM arquivo_recompensa ar WHERE ar.id_arquivo = a.id_arquivo)
     RETURNING a.id_arquivo, a.chave::TEXT;
 
     GET DIAGNOSTICS v_total = ROW_COUNT;
@@ -7766,59 +7662,12 @@ END;
 $$;
 
 -- ----------------------------------------------------------------------------
--- Função:     enfileirar_aviso_recompensas
--- Assinatura: (p_id_campanha INT, p_id_contribuicao INT DEFAULT NULL) -> INT
--- Bloco:      [05-Q]
--- Regra:      Avisa (e-mail e sino, 'recompensa_liberada') quem tem recompensa liberada: uma mensagem por pessoa, com os
---             nomes das recompensas, para a campanha inteira (o Tudo ou Nada que bateu a meta). p_id_contribuicao filtra
---             uma contribuição só (não usado hoje: o pagamento que já libera recompensa avisa pelo apoio_confirmado,
---             fn_notifica_apoio_confirmado). Só o que recompensa_liberada (03)
---             deixa. Devolve quantas pessoas foram avisadas. SECURITY DEFINER, sem autorização (só os gatilhos chamam).
--- ----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.enfileirar_aviso_recompensas(p_id_campanha INT, p_id_contribuicao INT DEFAULT NULL)
-RETURNS INT
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-    v_linha RECORD;
-    v_total INT := 0;
-BEGIN
-    FOR v_linha IN
-        SELECT co.id_usuario,
-               ca.titulo,
-               string_agg(DISTINCT r.titulo, ', ') AS recompensas
-        FROM contribuicao co
-        JOIN campanha ca ON ca.id_campanha = co.id_campanha
-        JOIN contribuicao_recompensa cr ON cr.id_contribuicao = co.id_contribuicao
-        JOIN recompensa r ON r.id_recompensa = cr.id_recompensa
-        WHERE co.id_campanha = p_id_campanha
-          AND co.id_usuario IS NOT NULL
-          AND (p_id_contribuicao IS NULL OR co.id_contribuicao = p_id_contribuicao)
-          AND public.recompensa_liberada(co.id_contribuicao)
-        GROUP BY co.id_usuario, ca.titulo
-    LOOP
-        IF public.enfileirar_notificacao(v_linha.id_usuario, 'recompensa_liberada',
-               jsonb_build_object('id_campanha', p_id_campanha, 'titulo', v_linha.titulo,
-                                  'recompensas', v_linha.recompensas)) IS NOT NULL THEN
-            v_total := v_total + 1;
-        END IF;
-    END LOOP;
-    RETURN v_total;
-END;
-$$;
-
--- ----------------------------------------------------------------------------
 -- Função:     fn_notifica_apoio_confirmado
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-Q]
 -- Regra:      O comprovante de quem apoiou com conta (16-11-2026): quando o pagamento é confirmado, e-mail e sino
 --             'apoio_confirmado' com a campanha, o valor, o protocolo e o prazo para desistir (desistencia_prazo_dias).
---             Se o pagamento já libera recompensas (flexível, ou Tudo ou Nada que já bateu a meta: recompensa_liberada,
---             03), elas vêm NESTE e-mail, para não chegarem dois no mesmo minuto. No Tudo ou Nada ainda no ar, o aviso
---             das recompensas sai à parte quando a campanha bate a meta (fn_notifica_situacao_campanha). Sem conta não
---             há para onde mandar (o gatilho só roda com id_usuario).
+--             Sem conta não há para onde mandar (o gatilho só roda com id_usuario).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_notifica_apoio_confirmado()
 RETURNS TRIGGER
@@ -7828,20 +7677,12 @@ SET search_path = public
 AS $$
 DECLARE
     v_titulo      VARCHAR;
-    v_recompensas TEXT;
 BEGIN
     SELECT titulo INTO v_titulo FROM campanha WHERE id_campanha = NEW.id_campanha;
-    IF public.recompensa_liberada(NEW.id_contribuicao) THEN
-        SELECT string_agg(DISTINCT r.titulo, ', ') INTO v_recompensas
-        FROM contribuicao_recompensa cr
-        JOIN recompensa r ON r.id_recompensa = cr.id_recompensa
-        WHERE cr.id_contribuicao = NEW.id_contribuicao;
-    END IF;
     PERFORM public.enfileirar_notificacao(NEW.id_usuario, 'apoio_confirmado',
         jsonb_build_object('id_campanha', NEW.id_campanha, 'titulo', v_titulo, 'valor', NEW.valor,
                            'protocolo', NEW.id_contribuicao::TEXT,
-                           'prazo_desistencia', public.config_numero('desistencia_prazo_dias', 7)::INT::TEXT,
-                           'recompensas', v_recompensas));
+                           'prazo_desistencia', public.config_numero('desistencia_prazo_dias', 7)::INT::TEXT));
     RETURN NULL;
 END;
 $$;
@@ -7893,12 +7734,6 @@ BEGIN
     ) THEN
         PERFORM public.enfileirar_notificacao_doadores(NEW.id_campanha, 'campanha_encerrada_antes',
             jsonb_build_object('vai_para_pesquisador', public.destino_dinheiro_campanha(NEW.id_campanha) = 'repasse'));
-    END IF;
-    -- Tudo ou Nada que saiu do ar com o dinheiro indo para o pesquisador: as recompensas que esperavam a meta valem
-    -- agora (recompensa_liberada, 03). Avisa quem ganhou (16-11-2026).
-    IF OLD.status = 'ativo' AND NEW.modelo = 'all-or-nothing'
-       AND public.destino_dinheiro_campanha(NEW.id_campanha) = 'repasse' THEN
-        PERFORM public.enfileirar_aviso_recompensas(NEW.id_campanha);
     END IF;
     RETURN NULL;
 END;

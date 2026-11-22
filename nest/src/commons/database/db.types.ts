@@ -202,7 +202,6 @@ export interface TipoLinkTable {
   dominio: Generated<string[]>;
   permite_perfil: Generated<boolean>;
   permite_atualizacao: Generated<boolean>;
-  permite_recompensa: Generated<boolean>;
 }
 
 // CREATE TYPE tipo_motivo_denuncia AS ENUM ('campanha', 'perfil') - 01. Mesmo
@@ -402,28 +401,6 @@ export const STATUS_CAMPANHA = [
 ] as const;
 export type StatusCampanha = (typeof STATUS_CAMPANHA)[number];
 
-export const FASES_ATUALIZACAO = [
-  'andamento',
-  'resultado_preliminar',
-  'resultado_final',
-] as const;
-export type FaseAtualizacao = (typeof FASES_ATUALIZACAO)[number];
-
-export const TIPOS_ATUALIZACAO = [
-  'texto',
-  'imagem',
-  'pdf',
-  'linkexterno',
-] as const;
-export type TipoAtualizacao = (typeof TIPOS_ATUALIZACAO)[number];
-
-export const TIPOS_RECOMPENSA = [
-  'digital',
-  'reconhecimento',
-  'acesso_antecipado',
-] as const;
-export type TipoRecompensa = (typeof TIPOS_RECOMPENSA)[number];
-
 export interface CampanhaTable {
   id_campanha: Generated<number>;
   id_usuario: number;
@@ -575,6 +552,8 @@ export interface ContribuicaoTable {
   id_repasse: number | null;
   // RF-041: quando quem apoiou confirmou que entendeu o modelo flexível (NULL no Tudo ou Nada).
   ciencia_modelo_em: Date | null;
+  // Quando quem apoiou desistiu (desistir_contribuicao, 05): só essa devolução tira do Mural dos apoiadores.
+  desistida_em: Date | null;
 }
 
 // Espelha 01_extensoes_enums_tabelas.sql (tabela repasse). Só leitura no Nest: quem cria e muda repasse são as funções
@@ -614,8 +593,6 @@ export interface AtualizacaoCampanhaTable {
   titulo: string;
   conteudo: string;
   publicado_em: Generated<Date>;
-  fase: FaseAtualizacao;
-  tipo: TipoAtualizacao;
   ativo: Generated<boolean>;
   ocultada_moderacao: Generated<boolean>;
   motivo_moderacao: string | null;
@@ -656,22 +633,10 @@ export interface ComentarioTable {
 export interface RecompensaTable {
   id_recompensa: Generated<number>;
   id_campanha: number;
-  titulo: string;
   descricao: string | null;
   valor_minimo: string;
-  quantidade_disponivel: number | null;
-  tipo: TipoRecompensa;
   ativo: Generated<boolean>;
   criado_em: Generated<Date>;
-}
-
-// A recompensa que quem apoiou escolheu (RF-105). Simbólica: sem estoque controlado pelo sistema (quantidade sempre 1).
-export interface ContribuicaoRecompensaTable {
-  id_contrib_recompensa: Generated<number>;
-  id_contribuicao: number;
-  id_recompensa: number;
-  quantidade: Generated<number>;
-  adquirida_em: Generated<Date>;
 }
 
 // Satélites de atualizacao_campanha/recompensa (01-F/01-G), dobrados dentro dos módulos
@@ -680,14 +645,6 @@ export interface ContribuicaoRecompensaTable {
 export interface LinkAtualizacaoTable {
   id_link_atualizacao: Generated<number>;
   id_atualizacao: number;
-  id_tipolink: number;
-  ordem: number | null;
-  url: string;
-}
-
-export interface LinkRecompensaTable {
-  id_link_recompensa: Generated<number>;
-  id_recompensa: number;
   id_tipolink: number;
   ordem: number | null;
   url: string;
@@ -717,14 +674,6 @@ export interface ArquivoAtualizacaoTable {
   id_arq_atu: Generated<number>;
   id_arquivo: number;
   id_atualizacao: number;
-}
-
-export interface ArquivoRecompensaTable {
-  id_arq_recompensa: Generated<number>;
-  id_recompensa: number;
-  id_arquivo: number;
-  ordem: number | null;
-  principal: Generated<boolean>;
 }
 
 export interface VerificacaoEmailTable {
@@ -788,14 +737,11 @@ export interface DB {
   marco_cronograma: MarcoCronogramaTable;
   comentario: ComentarioTable;
   recompensa: RecompensaTable;
-  contribuicao_recompensa: ContribuicaoRecompensaTable;
   notificacao: NotificacaoTable;
   modelo_mensagem: ModeloMensagemTable;
   link_atualizacao: LinkAtualizacaoTable;
-  link_recompensa: LinkRecompensaTable;
   arquivo: ArquivoTable;
   arquivo_atualizacao: ArquivoAtualizacaoTable;
-  arquivo_recompensa: ArquivoRecompensaTable;
 }
 
 // Entidades: a forma de uma linha LIDA de cada tabela (Selectable tira o Generated<>), com o nome que os converters
@@ -819,5 +765,4 @@ export type SeguirPesquisadorEntity = Selectable<SeguirPesquisadorTable>;
 export type NotificacaoEntity = Selectable<NotificacaoTable>;
 export type ModeloMensagemEntity = Selectable<ModeloMensagemTable>;
 export type RecompensaEntity = Selectable<RecompensaTable>;
-export type LinkRecompensaEntity = Selectable<LinkRecompensaTable>;
 export type ComentarioEntity = Selectable<ComentarioTable>;

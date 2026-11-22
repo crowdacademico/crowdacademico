@@ -269,15 +269,14 @@ ON CONFLICT DO NOTHING;
 -- [07-C-1] tipo_link
 -- Allowlist fechada definida pela equipe (SITE_INSTITUCIONAL/OUTRO não existem porque permitiam links sem
 -- verificação). `codigo`: chave natural estável (ver [01-C]), usada por link_academico logo abaixo em vez do id
--- posicional. Os 3 campos de escopo (permite_perfil/permite_atualizacao/permite_recompensa) são configurados por
--- tipo: sem isso caem no DEFAULT (só permite_perfil=TRUE) e link_atualizacao/link_recompensa ficam impossíveis
--- de usar.
-INSERT INTO tipo_link (codigo, nome, ativo, regex, dominio, permite_perfil, permite_atualizacao, permite_recompensa) VALUES
-('LATTES',             'Lattes',               TRUE,  '^https?://lattes\.cnpq\.br/\d+$',                     '{lattes.cnpq.br}',   TRUE, FALSE, FALSE),
-('ORCID',              'ORCID',                TRUE,  '^https?://orcid\.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$',   '{orcid.org}',        TRUE, FALSE, FALSE),
-('RESEARCHGATE',       'ResearchGate',         TRUE,  '^https?://(www\.)?researchgate\.net/profile/[\w\-]+$', '{researchgate.net}', TRUE, FALSE, FALSE),
-('LINKEDIN',           'LinkedIn',             TRUE,  '^https?://(www\.)?linkedin\.com/in/[\w\-]+/?$',        '{linkedin.com}',     TRUE, FALSE, FALSE),
-('GITHUB',             'GitHub',               TRUE,  '^https?://(www\.|gist\.)?github\.com/[\w.\-]+(/.*)?$', '{github.com}',       TRUE, TRUE,  TRUE);
+-- posicional. Os 2 campos de escopo (permite_perfil/permite_atualizacao) são configurados por tipo: sem isso
+-- caem no DEFAULT (só permite_perfil=TRUE) e link_atualizacao fica impossível de usar.
+INSERT INTO tipo_link (codigo, nome, ativo, regex, dominio, permite_perfil, permite_atualizacao) VALUES
+('LATTES',             'Lattes',               TRUE,  '^https?://lattes\.cnpq\.br/\d+$',                     '{lattes.cnpq.br}',   TRUE, FALSE),
+('ORCID',              'ORCID',                TRUE,  '^https?://orcid\.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$',   '{orcid.org}',        TRUE, FALSE),
+('RESEARCHGATE',       'ResearchGate',         TRUE,  '^https?://(www\.)?researchgate\.net/profile/[\w\-]+$', '{researchgate.net}', TRUE, FALSE),
+('LINKEDIN',           'LinkedIn',             TRUE,  '^https?://(www\.)?linkedin\.com/in/[\w\-]+/?$',        '{linkedin.com}',     TRUE, FALSE),
+('GITHUB',             'GitHub',               TRUE,  '^https?://(www\.|gist\.)?github\.com/[\w.\-]+(/.*)?$', '{github.com}',       TRUE, TRUE);
 
 -- [07-C-2] area_conhecimento
 -- 2 níveis do CNPq (grande área -> área): "Ciências da Saúde" cobrindo de odontologia a saúde coletiva era amplo
@@ -496,7 +495,7 @@ Para submeter e gerenciar campanhas, o usuário deve solicitar o upgrade para pe
 5.3. Tarifas. A tarifa do meio de pagamento (Pix ou cartão) é cobrada pelo provedor de pagamento e paga pelo apoiador, por cima do valor da contribuição. A tarifa não entra no valor arrecadado e não é devolvida em nenhum caso, porque fica com o provedor.
 5.4. Desistência. Em até 7 (sete) dias contados da contribuição, o apoiador pode desistir dela e receber de volta o valor contribuído, pelo mesmo meio de pagamento, conforme o art. 49 do Código de Defesa do Consumidor. Quem contribuiu com conta desiste pela área Minha Conta; quem contribuiu sem conta, pelo suporte, informando o protocolo da contribuição. A desistência não altera o resultado da campanha: uma campanha encerrada como bem-sucedida continua bem-sucedida, e o valor devolvido sai do repasse ao pesquisador.
 5.5. Outras devoluções. A contribuição também é devolvida quando a campanha tudo ou nada não atinge a meta e quando a campanha é encerrada por moderação. Fora desses casos e do prazo do item 5.4, a contribuição é definitiva a partir da confirmação do pagamento.
-5.6. Recompensas. As recompensas são simbólicas (reconhecimento, acesso antecipado ou conteúdo digital), sem entrega física. O apoiador com conta recebe automaticamente todas as recompensas ativas cujo valor mínimo a sua contribuição alcança. Quem desiste da contribuição perde as recompensas que ela deu.
+5.6. Recompensa. A recompensa é simbólica, sem entrega: o nome e a foto do apoiador no Mural dos apoiadores da campanha, quando o pesquisador o oferece. Entra no mural quem soma, nas suas contribuições à campanha, o valor mínimo definido pelo pesquisador. Quem contribuiu de forma anônima ou sem conta aparece como anônimo. Quem desiste da contribuição deixa de contar para o mural; a devolução porque a campanha não atingiu a meta ou foi cancelada não tira ninguém do mural.
 5.7. Aceite por contribuição. A cada contribuição, o apoiador confirma estes Termos e as regras do modelo da campanha. A plataforma registra a data, a hora, a versão destes Termos vigente naquele momento, o identificador da transação e o endereço IP de onde a contribuição foi feita (inclusive na contribuição anônima), para fins de auditoria e de defesa em eventual contestação do pagamento. O endereço IP é guardado por 5 (cinco) anos, o prazo para reclamações de consumo (Código de Defesa do Consumidor, art. 27), e depois é apagado; os demais registros da contribuição seguem o item 5.8. A versão registrada é a que se aplica àquela contribuição, mesmo que uma versão nova seja publicada depois.
 5.8. Dados de pagamento. Os dados de pagamento são processados pelo meio de pagamento escolhido (Pix ou cartão). A plataforma guarda o registro da contribuição e do aceite pelo prazo exigido em lei, mesmo que a conta seja encerrada.
 
@@ -855,14 +854,10 @@ INSERT INTO modelo_mensagem (tipo_evento, canal, titulo, corpo, ativo, obrigator
  E'"{{titulo}}" terminou antes do prazo.{{#vai_para_pesquisador}} O valor vai para o pesquisador.{{/vai_para_pesquisador}}{{^vai_para_pesquisador}} A sua contribuição vai ser devolvida.{{/vai_para_pesquisador}}', TRUE, FALSE),
 ('lembrete_fim_campanha', 'interna', 'Campanha perto do fim',
  E'"{{titulo}}" termina em {{data_fim}}. Ainda dá tempo de apoiar.', TRUE, FALSE),
-('recompensa_liberada', 'email', 'Sua recompensa está liberada',
- E'Obrigado por apoiar "{{titulo}}"! A sua recompensa está liberada: {{recompensas}}.\n\nVeja e acesse em Minha Conta, na aba Financeiro, em "Recompensas ganhas".', TRUE, FALSE),
 ('apoio_confirmado', 'email', 'Recebemos seu apoio',
- E'Obrigado por apoiar "{{titulo}}"! O pagamento de {{valor}} foi confirmado e já conta para a meta.\n\nProtocolo do seu apoio: {{protocolo}}. Guarde este número.\n\n{{#recompensas}}Suas recompensas já estão liberadas: {{recompensas}}. Veja em Minha Conta, na aba Financeiro.{{/recompensas}}\n\nSe mudar de ideia, você pode desistir em até {{prazo_desistencia}} dias, em Minha Conta, na aba Financeiro. O valor do apoio volta; a tarifa do meio de pagamento não.', TRUE, FALSE),
+ E'Obrigado por apoiar "{{titulo}}"! O pagamento de {{valor}} foi confirmado e já conta para a meta.\n\nProtocolo do seu apoio: {{protocolo}}. Guarde este número.\n\nSe mudar de ideia, você pode desistir em até {{prazo_desistencia}} dias, em Minha Conta, na aba Financeiro. O valor do apoio volta; a tarifa do meio de pagamento não.', TRUE, FALSE),
 ('apoio_confirmado', 'interna', 'Apoio confirmado',
- E'Seu apoio de {{valor}} a "{{titulo}}" foi confirmado.', TRUE, FALSE),
-('recompensa_liberada', 'interna', 'Recompensa liberada',
- E'Sua recompensa de "{{titulo}}" está liberada: {{recompensas}}.', TRUE, FALSE)
+ E'Seu apoio de {{valor}} a "{{titulo}}" foi confirmado.', TRUE, FALSE)
 ON CONFLICT (tipo_evento, canal) DO NOTHING;
 
 -- ============================================================================
@@ -1306,27 +1301,27 @@ JOIN campanha c ON c.id_campanha = v.n;
 -- [07-E-3] atualizacao_campanha
 -- Publicadas enquanto a campanha estava no ar (trg_atualizacao_campanha_status, 05, só aceita campanha publicada).
 -- A quantidade pesa na dimensão Atualização do score: a Ana publica com regularidade em todas; os outros, menos.
--- Imagem e PDF sem arquivo: o seed não sobe nada para o armazenamento (ver [07-C-4]).
-INSERT INTO atualizacao_campanha (id_campanha, titulo, conteudo, publicado_em, fase, tipo)
-SELECT v.n, v.titulo, v.conteudo, NOW() + v.dias * INTERVAL '1 day', v.fase::fase_atualizacao, v.tipo::tipo_atualizacao
+-- Sem anexos: o seed não sobe nada para o armazenamento (ver [07-C-4]).
+INSERT INTO atualizacao_campanha (id_campanha, titulo, conteudo, publicado_em)
+SELECT v.n, v.titulo, v.conteudo, NOW() + v.dias * INTERVAL '1 day'
 FROM (VALUES
-    (1,  'Início da coleta de dados clínicos', 'Iniciamos a coleta com o hospital parceiro. Primeiros 200 exames de neuroimagem organizados.', -215, 'andamento', 'texto'),
-    (1,  'Artigo submetido com o código aberto', 'O artigo foi submetido e o código e o conjunto de dados estão em repositório público.', -186, 'resultado_final', 'linkexterno'),
-    (2,  'Primeiros testes com leitores', 'Doze leitores com dislexia testaram o protótipo; a velocidade de leitura subiu em média 18%.', -128, 'andamento', 'imagem'),
-    (2,  'Resultado preliminar dos testes', 'A versão com espaçamento adaptável teve a melhor compreensão de texto nos testes.', -102, 'resultado_preliminar', 'texto'),
-    (3,  'Primeiras fotos coletadas', 'Já temos 1.200 fotos de fundo de olho de três unidades básicas de saúde.', -15, 'andamento', 'texto'),
-    (3,  'Primeira versão do modelo', 'A primeira versão acerta 87% dos casos na base de validação; seguimos ajustando.', -4, 'resultado_preliminar', 'texto'),
-    (4,  'Coleta de amostras concluída', 'Coleta concluída em 5 áreas da Caatinga: 120 fungos catalogados para análise.', -130, 'andamento', 'texto'),
-    (4,  'Relatório final dos testes', 'Três compostos mostraram atividade contra bactérias resistentes. Relatório completo em PDF.', -106, 'resultado_final', 'pdf'),
-    (5,  'Visitas aos bairros começaram', 'A equipe de campo começou as visitas em quatro municípios.', -40, 'andamento', 'texto'),
-    (6,  'Protótipos impressos', 'Os primeiros 10 protótipos foram impressos e estão com os fisioterapeutas.', -60, 'andamento', 'imagem'),
-    (7,  'Projeto da cadeira pronto', 'O projeto mecânico foi validado e as peças recicladas já foram separadas.', -10, 'andamento', 'texto'),
-    (8,  'Recrutamento concluído', 'Recrutamos 60 idosos, divididos nos dois grupos do estudo.', -30, 'andamento', 'texto'),
-    (9,  'Primeiras trilhas mapeadas', 'Mapeamos 3 das 8 trilhas previstas em restingas do litoral.', -25, 'andamento', 'texto'),
-    (10, 'Nascentes mapeadas', 'Identificamos 14 nascentes; a coleta das amostras começa na próxima semana.', -30, 'andamento', 'texto'),
-    (3,  'Fotos de pacientes sem autorização', 'Seguem algumas fotos dos exames feitos ontem na unidade de saúde.', -8, 'andamento', 'imagem'),
-    (5,  'Agenda de visitas (versão antiga)', 'Esta agenda foi substituída pela publicação seguinte.', -45, 'andamento', 'texto')
-) AS v(n, titulo, conteudo, dias, fase, tipo);
+    (1,  'Início da coleta de dados clínicos', 'Iniciamos a coleta com o hospital parceiro. Primeiros 200 exames de neuroimagem organizados.', -215),
+    (1,  'Artigo submetido com o código aberto', 'O artigo foi submetido e o código e o conjunto de dados estão em repositório público.', -186),
+    (2,  'Primeiros testes com leitores', 'Doze leitores com dislexia testaram o protótipo; a velocidade de leitura subiu em média 18%.', -128),
+    (2,  'Resultado preliminar dos testes', 'A versão com espaçamento adaptável teve a melhor compreensão de texto nos testes.', -102),
+    (3,  'Primeiras fotos coletadas', 'Já temos 1.200 fotos de fundo de olho de três unidades básicas de saúde.', -15),
+    (3,  'Primeira versão do modelo', 'A primeira versão acerta 87% dos casos na base de validação; seguimos ajustando.', -4),
+    (4,  'Coleta de amostras concluída', 'Coleta concluída em 5 áreas da Caatinga: 120 fungos catalogados para análise.', -130),
+    (4,  'Relatório final dos testes', 'Três compostos mostraram atividade contra bactérias resistentes. Relatório completo em PDF.', -106),
+    (5,  'Visitas aos bairros começaram', 'A equipe de campo começou as visitas em quatro municípios.', -40),
+    (6,  'Protótipos impressos', 'Os primeiros 10 protótipos foram impressos e estão com os fisioterapeutas.', -60),
+    (7,  'Projeto da cadeira pronto', 'O projeto mecânico foi validado e as peças recicladas já foram separadas.', -10),
+    (8,  'Recrutamento concluído', 'Recrutamos 60 idosos, divididos nos dois grupos do estudo.', -30),
+    (9,  'Primeiras trilhas mapeadas', 'Mapeamos 3 das 8 trilhas previstas em restingas do litoral.', -25),
+    (10, 'Nascentes mapeadas', 'Identificamos 14 nascentes; a coleta das amostras começa na próxima semana.', -30),
+    (3,  'Fotos de pacientes sem autorização', 'Seguem algumas fotos dos exames feitos ontem na unidade de saúde.', -8),
+    (5,  'Agenda de visitas (versão antiga)', 'Esta agenda foi substituída pela publicação seguinte.', -45)
+) AS v(n, titulo, conteudo, dias);
 
 -- O link da atualização de código aberto, e as duas formas de ocultar (RF-053): a moderação oculta uma atualização em
 -- desacordo com as regras e o dono oculta uma que ficou velha. São linhas a mais (oculta não conta no score) e cada
@@ -1925,41 +1920,18 @@ BEGIN
 END;
 $$;
 
--- [07-E-8] recompensa, link_recompensa e contribuicao_recompensa
--- Recompensas simbólicas (RF-103 a RF-105), sem estoque: os três tipos, uma desativada e um link especial (que só o
--- dono, o admin e quem ganhou enxergam). Cada contribuição paga de quem tem conta ganha todas as recompensas ativas que
--- o valor dela alcançou, como faz fn_concede_recompensas (05) no uso real; as abaixo de todos os mínimos ficam sem
--- recompensa. Aqui o seed liga à mão porque as contribuições nasceram antes das recompensas.
-INSERT INTO recompensa (id_campanha, titulo, descricao, valor_minimo, tipo, ativo, criado_em)
-SELECT v.id_campanha, v.titulo, v.descricao, v.valor_minimo, v.tipo::tipo_recompensa, v.ativo, c.criado_em + INTERVAL '1 day'
+-- [07-E-8] recompensa
+-- O Mural dos apoiadores (RF-103 a RF-105, 22-11-2026): uma recompensa por campanha, com o valor mínimo e uma mensagem
+-- de agradecimento. Quem entra é calculado na hora (mural_apoiadores, 05). A campanha 4 fica sem mural, para mostrar
+-- a campanha que não oferece recompensa.
+INSERT INTO recompensa (id_campanha, descricao, valor_minimo, criado_em)
+SELECT v.id_campanha, v.descricao, v.valor_minimo, c.criado_em + INTERVAL '1 day'
 FROM (VALUES
-    (1, 'Seu nome nos agradecimentos', 'O nome de quem apoiou aparece nos agradecimentos do artigo publicado.', 1000.00, 'reconhecimento', TRUE),
-    (1, 'Acesso aos dados da pesquisa', 'O conjunto de dados anonimizado usado no treino do algoritmo.', 2500.00, 'digital', TRUE),
-    (2, 'Seu nome no site do projeto', NULL, 250.00, 'reconhecimento', TRUE),
-    (2, 'Testar o aplicativo antes do lançamento', 'Convite para a versão de testes do assistente de leitura.', 1000.00, 'acesso_antecipado', TRUE),
-    (3, 'Agradecimento no relatório final', NULL, 50.00, 'reconhecimento', TRUE),
-    (3, 'Ler os resultados antes da publicação', NULL, 500.00, 'acesso_antecipado', TRUE),
-    (3, 'Vídeo dos bastidores do laboratório', 'Retirada pelo pesquisador: o vídeo não pôde ser gravado.', 1500.00, 'digital', FALSE)
-) AS v(id_campanha, titulo, descricao, valor_minimo, tipo, ativo)
+    (1, 'Obrigado por acreditar nesta pesquisa! Seu nome também vai nos agradecimentos do artigo.', 100.00),
+    (2, NULL, 50.00),
+    (3, 'Cada apoio ajuda a levar o exame de retina a mais unidades de saúde. Obrigado!', 20.00)
+) AS v(id_campanha, descricao, valor_minimo)
 JOIN campanha c ON c.id_campanha = v.id_campanha;
-
--- Acesso antecipado e entrega digital ativos precisam do link (trg_recompensa_exige_link, 05).
-INSERT INTO link_recompensa (id_recompensa, id_tipolink, ordem, url)
-SELECT r.id_recompensa, (SELECT id_tipolink FROM tipo_link WHERE codigo = 'GITHUB'), 0, v.url
-FROM recompensa r
-JOIN (VALUES
-    ('Acesso aos dados da pesquisa', 'https://github.com/crowdacademico-dados'),
-    ('Testar o aplicativo antes do lançamento', 'https://github.com/leitura-acessivel-beta'),
-    ('Ler os resultados antes da publicação', 'https://github.com/retinopatia-resultados')
-) AS v(titulo, url) ON v.titulo = r.titulo;
-
-INSERT INTO contribuicao_recompensa (id_contribuicao, id_recompensa, adquirida_em)
-SELECT c.id_contribuicao, r.id_recompensa, c.criado_em
-FROM contribuicao c
-JOIN recompensa r ON r.id_campanha = c.id_campanha AND r.ativo AND r.valor_minimo <= c.valor
-WHERE c.id_campanha IN (1, 2, 3)
-  AND c.id_usuario IS NOT NULL
-  AND c.status IN ('confirmado', 'repassado', 'a_devolver', 'devolvido', 'reembolso_manual');
 
 -- [07-D-7] notificacao
 -- As funções que o seed chamou acima (rejeitar, encerrar, devolver, decidir, suspender) já puseram os e-mails delas na

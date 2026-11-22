@@ -34,8 +34,6 @@ export class TipoLinkServiceFindAll {
       query = query.where('permite_perfil', '=', true);
     } else if (filtro.escopo === 'atualizacao') {
       query = query.where('permite_atualizacao', '=', true);
-    } else if (filtro.escopo === 'recompensa') {
-      query = query.where('permite_recompensa', '=', true);
     }
 
     const resultado = await paginar(query, {

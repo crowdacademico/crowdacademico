@@ -11,11 +11,6 @@ import { ContadorCaracteres } from '../../components/input/contador-caracteres';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { atualizacaoCampanhaApi } from '../../services/15-atualizacao-campanha/api/atualizacao-campanha.api';
-import {
-  ORDEM_FASE_ATUALIZACAO,
-  ROTULO_FASE_ATUALIZACAO,
-  formatoPelosAnexos,
-} from '../../services/15-atualizacao-campanha/constants/atualizacao-campanha.constants';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { enviarAnexo } from '../../services/26-arquivo/util/enviar-arquivo.util';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
@@ -25,12 +20,11 @@ import { erroLimiteCaracteres } from '../../services/constant/util/validacao.uti
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { AtualizacaoCampanhaResponse } from '../../services/15-atualizacao-campanha/type/atualizacao-campanha.type';
 import type { TipoLinkResponse } from '../../services/9-tipo-link/type/tipo-link.type';
-import type { FaseAtualizacao } from '../../services/constant/type/enums-do-banco.gerado';
 
 interface ModalAtualizacaoProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
   idCampanha: number;
-  // Sem ela: publicar uma nova. Com ela: alterar o texto e a fase (os anexos entram só na publicação).
+  // Sem ela: publicar uma nova. Com ela: alterar o título e o texto (os anexos entram só na publicação).
   atualizacao?: AtualizacaoCampanhaResponse;
   // Criar pelo Estúdio: a campanha é escolhida aqui dentro (campo "Campanha"), não numa lista ao lado do botão.
   campanhasParaEscolher?: { idCampanha: number; titulo: string }[];
@@ -48,9 +42,9 @@ interface LinkNovo {
 // mostrar o que serve; quem confere de verdade é o backend.
 const ACEITA_ARQUIVO = 'image/jpeg,image/png,image/webp,application/pdf';
 
-// Publicar ou alterar uma atualização de progresso (RF-052, RF-053), num modal por cima do Alterar da campanha. O
-// formato (texto, imagem, PDF ou link, RF-053) sai dos anexos, sem perguntar, e não aparece na tela: os ícones dos
-// anexos já dizem o mesmo.
+// Publicar ou alterar uma atualização de progresso (RF-052, RF-053), num modal por cima do Alterar da campanha:
+// título, texto livre e anexos, como o "blog" do Kickstarter, do Catarse e do Experiment.com (sem fase nem formato
+// desde 22-11-2026).
 export function ModalAtualizacao({ auth, idCampanha, atualizacao, campanhasParaEscolher, aoFechar, aoSalva }: ModalAtualizacaoProps) {
   const [idCampanhaEscolhida, setIdCampanhaEscolhida] = useState(idCampanha);
   const { mostrar } = useToast();
@@ -59,7 +53,6 @@ export function ModalAtualizacao({ auth, idCampanha, atualizacao, campanhasParaE
   const limite = useConfiguracoes().obterNumero('limite_caracteres_conteudo_atualizacao', 5000);
   const [titulo, setTitulo] = useState(atualizacao?.titulo ?? '');
   const [conteudo, setConteudo] = useState(atualizacao?.conteudo ?? '');
-  const [fase, setFase] = useState<FaseAtualizacao>(atualizacao?.fase ?? ORDEM_FASE_ATUALIZACAO[0]);
   const [arquivos, setArquivos] = useState<File[]>([]);
   const [links, setLinks] = useState<LinkNovo[]>([]);
   const [tiposLink, setTiposLink] = useState<TipoLinkResponse[]>([]);
@@ -82,11 +75,6 @@ export function ModalAtualizacao({ auth, idCampanha, atualizacao, campanhasParaE
   const codigoTipo = tiposLink.find((tipo) => String(tipo.idTipolink) === linkTipo)?.codigo;
   const exemploLink = codigoTipo ? EXEMPLO_LINK_POR_TIPO[codigoTipo] : undefined;
 
-  const formato = formatoPelosAnexos(
-    arquivos.map((arquivo) => arquivo.type),
-    links.length > 0,
-  );
-
   const adicionarLink = () => {
     const tipo = tiposLink.find((t) => String(t.idTipolink) === linkTipo);
     // O botão só fica ativo com o tipo escolhido e o endereço preenchido.
@@ -99,7 +87,7 @@ export function ModalAtualizacao({ auth, idCampanha, atualizacao, campanhasParaE
     if (!tentarEnviar()) return;
     await executar(async () => {
       if (atualizacao) {
-        await atualizacaoCampanhaApi.alterar(auth.authFetch, atualizacao.idAtualizacao, { titulo: titulo.trim(), conteudo, fase });
+        await atualizacaoCampanhaApi.alterar(auth.authFetch, atualizacao.idAtualizacao, { titulo: titulo.trim(), conteudo });
         mostrar('Atualização alterada.');
       } else {
         const idsArquivos: number[] = [];
@@ -117,8 +105,6 @@ export function ModalAtualizacao({ auth, idCampanha, atualizacao, campanhasParaE
           idCampanha: idCampanhaEscolhida,
           titulo: titulo.trim(),
           conteudo,
-          fase,
-          tipo: formato,
           idsArquivos,
           links: links.map(({ idTipoLink, url }) => ({ idTipoLink, url })),
         });
@@ -130,7 +116,7 @@ export function ModalAtualizacao({ auth, idCampanha, atualizacao, campanhasParaE
   };
 
   const sujo = atualizacao
-    ? titulo !== atualizacao.titulo || conteudo !== atualizacao.conteudo || fase !== atualizacao.fase
+    ? titulo !== atualizacao.titulo || conteudo !== atualizacao.conteudo
     : titulo !== '' || conteudo !== '' || arquivos.length > 0 || links.length > 0;
   const fechar = useFecharComAviso(sujo, aoFechar);
 
@@ -195,17 +181,6 @@ export function ModalAtualizacao({ auth, idCampanha, atualizacao, campanhasParaE
               />
               <ContadorCaracteres texto={conteudo} limite={limite} />
             </>
-          )}
-        </Campo>
-        <Campo obrigatorio rotulo="Fase do projeto">
-          {({ atributos }) => (
-            <select {...atributos} value={fase} onChange={(evento) => setFase(evento.target.value as FaseAtualizacao)} className="input-padrao">
-              {ORDEM_FASE_ATUALIZACAO.map((opcao) => (
-                <option key={opcao} value={opcao}>
-                  {ROTULO_FASE_ATUALIZACAO[opcao]}
-                </option>
-              ))}
-            </select>
           )}
         </Campo>
       </SecaoFicha>

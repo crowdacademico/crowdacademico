@@ -73,7 +73,7 @@ export const ehChamadaDeRepasses = ({ caminho }: { caminho: string }) =>
 
 export const bancadaPagamentoApi = {
   estado: (chamar: Chamar) => chamar<EstadoBancada>(BASE),
-  // As recompensas que o valor alcança o banco liga sozinho (fn_concede_recompensas, 05). A ciência do modelo
+  // O Mural dos apoiadores é calculado pelo banco (mural_apoiadores, 05). A ciência do modelo
   // flexível (RF-041) e o aceite dos Termos (RF-086, obrigatório na API) vão sempre: na bancada quem testa faz o papel de
   // quem apoia; o Nest ignora a ciência em all-or-nothing.
   contribuir: (chamar: Chamar, idCampanha: number, valor: number, meioPagamento: 'pix' | 'cartao_credito' | 'boleto') =>

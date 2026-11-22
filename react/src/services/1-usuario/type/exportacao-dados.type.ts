@@ -32,7 +32,7 @@ export interface ExportacaoDados {
     criadoEm: string;
     orcamento: { categoria: string; descricao: string | null; valor: string }[];
     cronograma: { titulo: string; descricao: string | null; dataPrevista: string }[];
-    atualizacoes: { titulo: string; conteudo: string; fase: string | null; publicadoEm: string }[];
+    atualizacoes: { titulo: string; conteudo: string; publicadoEm: string }[];
   }[];
   comentariosEscritos: { idCampanha: number; tituloCampanha: string | null; conteudo: string; endossado: boolean; criadoEm: string }[];
   seguindoCampanhas: { idCampanha: number; tituloCampanha: string | null; seguidoEm: string }[];

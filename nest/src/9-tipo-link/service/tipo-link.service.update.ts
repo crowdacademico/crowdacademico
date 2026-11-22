@@ -35,14 +35,12 @@ export class TipoLinkServiceUpdate {
     // parcial desligar os 3 de uma vez (ex.: PATCH só com
     // `permitePerfil: false` num tipo que já tinha os outros dois FALSE).
     const algumEscopoNoCorpo =
-      dto.permitePerfil !== undefined ||
-      dto.permiteAtualizacao !== undefined ||
-      dto.permiteRecompensa !== undefined;
+      dto.permitePerfil !== undefined || dto.permiteAtualizacao !== undefined;
 
     if (algumEscopoNoCorpo) {
       const atual = await db
         .selectFrom('tipo_link')
-        .select(['permite_perfil', 'permite_atualizacao', 'permite_recompensa'])
+        .select(['permite_perfil', 'permite_atualizacao'])
         .where('id_tipolink', '=', idTipolink)
         .executeTakeFirst();
 
@@ -55,12 +53,10 @@ export class TipoLinkServiceUpdate {
       const permitePerfil = dto.permitePerfil ?? atual.permite_perfil;
       const permiteAtualizacao =
         dto.permiteAtualizacao ?? atual.permite_atualizacao;
-      const permiteRecompensa =
-        dto.permiteRecompensa ?? atual.permite_recompensa;
 
-      if (!permitePerfil && !permiteAtualizacao && !permiteRecompensa) {
+      if (!permitePerfil && !permiteAtualizacao) {
         throw new BadRequestException(
-          'Pelo menos um escopo (permitePerfil, permiteAtualizacao ou permiteRecompensa) precisa continuar verdadeiro.',
+          'Pelo menos um escopo (permitePerfil ou permiteAtualizacao) precisa continuar verdadeiro.',
         );
       }
     }
@@ -75,9 +71,6 @@ export class TipoLinkServiceUpdate {
         : {}),
       ...(dto.permiteAtualizacao !== undefined
         ? { permite_atualizacao: dto.permiteAtualizacao }
-        : {}),
-      ...(dto.permiteRecompensa !== undefined
-        ? { permite_recompensa: dto.permiteRecompensa }
         : {}),
     };
     if (Object.keys(campos).length === 0) {

@@ -1,5 +1,3 @@
-import type { FaseAtualizacao, TipoAtualizacao } from '../../constant/type/enums-do-banco.gerado';
-
 // Espelha AnexoAtualizacaoResponse (nest/src/15-atualizacao-campanha/dto/response). idAnexo só é único junto com o
 // tipo. nome: do arquivo enviado, ou o tipo do link (GitHub...). tipoMime: só arquivo.
 export interface AnexoAtualizacao {
@@ -17,8 +15,6 @@ export interface AtualizacaoCampanhaResponse {
   titulo: string;
   conteudo: string;
   publicadoEm: string;
-  fase: FaseAtualizacao;
-  tipo: TipoAtualizacao;
   ativo: boolean;
   // Oculta pela moderação: o dono não mostra de novo. false com ativo false: o próprio dono ocultou.
   ocultadaModeracao: boolean;
@@ -36,8 +32,6 @@ export interface AtualizacaoCampanhaRequestCreate {
   idCampanha: number;
   titulo: string;
   conteudo: string;
-  fase: FaseAtualizacao;
-  tipo: TipoAtualizacao;
   // Arquivos já enviados (arquivoApi) e links, gravados junto com a atualização.
   idsArquivos?: number[];
   links?: { idTipoLink: number; url: string }[];
@@ -46,7 +40,6 @@ export interface AtualizacaoCampanhaRequestCreate {
 export interface AtualizacaoCampanhaRequestUpdate {
   titulo?: string;
   conteudo?: string;
-  fase?: FaseAtualizacao;
   ativo?: boolean;
   // Obrigatório quando a moderação exclui (90044).
   motivoModeracao?: string;

@@ -21,7 +21,7 @@ export class ArquivoServiceRemove {
 
   // Soft delete no BANCO (ativo=false), nunca DELETE de verdade na linha: 06_grants.sql só concede
   // INSERT/UPDATE em `arquivo` (sem DELETE), e faz sentido: um arquivo referenciado por
-  // arquivo_atualizacao/arquivo_recompensa/usuario.id_imagem_perfil não pode simplesmente sumir do banco
+  // arquivo_atualizacao/usuario.id_imagem_perfil não pode simplesmente sumir do banco
   // (quebraria FK). A linha fica, só marcada inativa; por isso ArquivoServiceResolveAvatar e qualquer outro
   // lugar que exibe arquivo já filtram por `ativo=true` antes de mostrar.
   //
@@ -72,7 +72,7 @@ export class ArquivoServiceRemove {
       return;
     }
     // Existe e está ativo, mas o UPDATE não pegou: pol_arquivo_update (04)
-    // bloqueou por falta de posse (dono do perfil/atualização/recompensa)
+    // bloqueou por falta de posse (dono do perfil/atualização)
     // ou da permissão 'arquivo_gerenciar'.
     throw new ForbiddenException('Sem permissão para remover este arquivo.');
   }

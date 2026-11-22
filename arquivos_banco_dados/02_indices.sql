@@ -126,7 +126,6 @@ CREATE UNIQUE INDEX "UK_DENUNCIA_USUARIO_COMENTARIO"       ON denuncia(id_usuari
 CREATE INDEX idx_denuncia_comentario       ON denuncia(id_comentario);
 -- Acelera o painel de moderação filtrando por motivo (ex.: "ver todas as denúncias de plágio").
 CREATE INDEX idx_denuncia_motivo            ON denuncia(id_motivo);
-CREATE INDEX idx_recompensa_campanha        ON recompensa(id_campanha);
 
 -- ============================================================
 -- [02-F] LINK
@@ -134,8 +133,6 @@ CREATE INDEX idx_recompensa_campanha        ON recompensa(id_campanha);
 CREATE INDEX idx_link_academico_usuario     ON link_academico(id_usuario);
 CREATE INDEX idx_link_atualizacao_atualizacao  ON link_atualizacao(id_atualizacao);
 CREATE INDEX idx_link_atualizacao_tipolink     ON link_atualizacao(id_tipolink);
-CREATE INDEX idx_link_recompensa_recompensa    ON link_recompensa(id_recompensa);
-CREATE INDEX idx_link_recompensa_tipolink      ON link_recompensa(id_tipolink);
 
 -- ============================================================
 -- [02-G] ARQUIVO
@@ -144,17 +141,13 @@ CREATE INDEX idx_link_recompensa_tipolink      ON link_recompensa(id_tipolink);
 -- enviou" (limitar upload/hora, localizar upload de conta banida) sem full scan em `arquivo`.
 CREATE INDEX idx_arquivo_usuario_upload ON arquivo(id_usuario_upload);
 CREATE INDEX idx_arquivo_atualizacao_atualizacao ON arquivo_atualizacao(id_atualizacao);
--- arquivo_recompensa(id_arquivo) não precisa de índice aqui: UK_ARQUIVO_RECOMPENSA_ARQUIVO (01) já cria um.
 
--- Garante no máximo 1 imagem "principal" por recompensa
-CREATE UNIQUE INDEX uq_arquivo_recompensa_principal ON arquivo_recompensa (id_recompensa) WHERE principal = TRUE;
 
 -- ============================================================
 -- [02-H] CONTRIBUIÇÃO
 -- ============================================================
 CREATE INDEX idx_contribuicao_campanha      ON contribuicao(id_campanha);
 CREATE INDEX idx_contribuicao_usuario       ON contribuicao(id_usuario);
-CREATE INDEX idx_contrib_recompensa_recompensa ON contribuicao_recompensa(id_recompensa);
 CREATE INDEX idx_aceite_termo_contribuicao_termo        ON aceite_termo_contribuicao(id_termo);
 -- RNF-007 (auditoria financeira): o histórico de eventos de uma contribuição é lido por id_contribuicao.
 CREATE INDEX idx_auditoria_financeira_contribuicao ON auditoria_financeira(id_contribuicao);

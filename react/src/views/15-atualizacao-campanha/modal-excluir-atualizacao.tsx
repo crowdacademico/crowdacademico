@@ -5,7 +5,6 @@ import { CaixaMarcacao } from '../../components/input/caixa-marcacao';
 import { Campo } from '../../components/input/campo';
 import { ContadorCaracteres } from '../../components/input/contador-caracteres';
 import { atualizacaoCampanhaApi } from '../../services/15-atualizacao-campanha/api/atualizacao-campanha.api';
-import { ROTULO_FASE_ATUALIZACAO } from '../../services/15-atualizacao-campanha/constants/atualizacao-campanha.constants';
 import { formatarDataHora } from '../../services/constant/util/formatacao.util';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 import type { AtualizacaoCampanhaResponse } from '../../services/15-atualizacao-campanha/type/atualizacao-campanha.type';
@@ -40,7 +39,6 @@ export function ModalExcluirAtualizacao({ authFetch, atualizacao, campanha, situ
       campos={
         <>
           {campanha && <CampoFicha rotulo="Campanha" valor={campanha} largura="cheia" />}
-          <CampoFicha rotulo="Fase" valor={ROTULO_FASE_ATUALIZACAO[atualizacao.fase]} />
           <CampoFicha rotulo="Publicada em" valor={formatarDataHora(atualizacao.publicadoEm)} />
           <CampoFicha rotulo="Situação" valor={situacao} />
           <CampoFicha rotulo="Anexos" valor={String(atualizacao.anexos.length)} />

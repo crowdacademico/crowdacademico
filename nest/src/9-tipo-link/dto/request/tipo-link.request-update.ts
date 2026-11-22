@@ -58,8 +58,4 @@ export class TipoLinkRequestUpdate {
   @IsOptional()
   @IsBoolean()
   permiteAtualizacao?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  permiteRecompensa?: boolean;
 }

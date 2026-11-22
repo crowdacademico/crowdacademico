@@ -55,4 +55,6 @@ export interface ContribuicaoPublicaRequest {
   aceiteTermos: true;
   // RF-041: obrigatório (true) em campanha flexível; o Nest recusa sem ele e grava a data da ciência.
   cienteModeloFlexivel?: boolean;
+  // Apoio anônimo (só com conta; sem conta é sempre anônimo): não aparece com o nome no Mural dos apoiadores.
+  anonima?: boolean;
 }

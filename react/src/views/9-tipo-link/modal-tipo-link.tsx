@@ -40,7 +40,6 @@ export function ModalConsultarTipoLink({ tipo, aoFechar }: ModalConsultarTipoLin
   const escopos = [
     tipo.permitePerfil && 'Perfil',
     tipo.permiteAtualizacao && 'Atualização',
-    tipo.permiteRecompensa && 'Recompensa',
   ].filter((escopo): escopo is string => Boolean(escopo));
 
   return (
@@ -95,7 +94,6 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
   const [dominioTexto, setDominioTexto] = useState(tipo.dominio.join(', '));
   const [permitePerfil, setPermitePerfil] = useState(tipo.permitePerfil);
   const [permiteAtualizacao, setPermiteAtualizacao] = useState(tipo.permiteAtualizacao);
-  const [permiteRecompensa, setPermiteRecompensa] = useState(tipo.permiteRecompensa);
 
   const sujo =
     nome !== tipo.nome ||
@@ -103,11 +101,10 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
     regex !== (tipo.regex ?? '') ||
     dominioTexto !== tipo.dominio.join(', ') ||
     permitePerfil !== tipo.permitePerfil ||
-    permiteAtualizacao !== tipo.permiteAtualizacao ||
-    permiteRecompensa !== tipo.permiteRecompensa;
+    permiteAtualizacao !== tipo.permiteAtualizacao;
 
   const regexInvalida = regex.length > 0 && !regexValida(regex);
-  const nenhumEscopoMarcado = !permitePerfil && !permiteAtualizacao && !permiteRecompensa;
+  const nenhumEscopoMarcado = !permitePerfil && !permiteAtualizacao;
 
   const fechar = useFecharComAviso(sujo, aoFechar);
 
@@ -124,7 +121,6 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
         dominio: paraDominios(dominioTexto),
         permitePerfil,
         permiteAtualizacao,
-        permiteRecompensa,
       });
       mostrar('Tipo de link alterado com sucesso.', `ID: ${tipo.idTipolink} foi alterado`);
       aoAtualizado();
@@ -223,10 +219,8 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
           className="sm:col-span-2"
           permitePerfil={permitePerfil}
           permiteAtualizacao={permiteAtualizacao}
-          permiteRecompensa={permiteRecompensa}
           aoMudarPerfil={setPermitePerfil}
           aoMudarAtualizacao={setPermiteAtualizacao}
-          aoMudarRecompensa={setPermiteRecompensa}
         />
       </SecaoFicha>
     </ModalFicha>
@@ -250,7 +244,7 @@ export function ModalExcluirTipoLink({ auth, tipo, aoFechar, aoExcluido }: Modal
           <CampoFicha rotulo="Nome" valor={tipo.nome} largura="cheia" />
         </>
       }
-      explicacao="Se este tipo ainda estiver em uso em algum perfil, atualização de campanha ou recompensa, a exclusão é bloqueada pelo próprio banco: desative-o em vez de excluir. Se não estiver em uso, some do catálogo para sempre, sem exclusão lógica."
+      explicacao="Se este tipo ainda estiver em uso em algum perfil ou atualização de campanha, a exclusão é bloqueada pelo próprio banco: desative-o em vez de excluir. Se não estiver em uso, some do catálogo para sempre, sem exclusão lógica."
       remover={() => tipoLinkApi.remover(auth.authFetch, tipo.idTipolink)}
       mensagemSucesso="Tipo de link excluído com sucesso."
       detalheSucesso={`ID: ${tipo.idTipolink} foi excluído`}

@@ -143,7 +143,7 @@ export function EtapaRevisaoCampanha({
       </SecaoFicha>
 
       {botaoRecompensas && (
-        <SecaoFicha titulo="Recompensas (opcional)" colunas={1}>
+        <SecaoFicha titulo="Recompensa: Mural dos apoiadores (opcional)" colunas={1}>
           <div>{botaoRecompensas}</div>
         </SecaoFicha>
       )}

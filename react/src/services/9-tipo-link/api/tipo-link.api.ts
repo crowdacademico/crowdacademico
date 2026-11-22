@@ -11,7 +11,7 @@ import type {
 // (o Nest só tem AuthGuardRequireAuth para exigir login). remover() pode voltar 409 se o tipo ainda estiver em uso
 // em algum link (ver tipo-link.service.remove.ts).
 //
-// Filtro: `escopo` é 'perfil' | 'atualizacao' | 'recompensa', os mesmos valores de TipoLinkRequestList no
+// Filtro: `escopo` é 'perfil' | 'atualizacao', os mesmos valores de TipoLinkRequestList no
 // backend (filtra pelo campo permite_* correspondente).
 interface FiltroTipoLink {
   ativo?: boolean;

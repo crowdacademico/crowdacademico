@@ -1,20 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
-import { RECOMPENSA_COLUNAS_SELECT } from '../constants/recompensa.constants';
-import { RecompensaRequestUpdate } from '../dto/request/recompensa.request-update';
+import { RecompensaConverter } from '../dto/converter/recompensa.converter';
+import { RecompensaRequestUpdate } from '../dto/request/recompensa.request-create';
 import { RecompensaResponse } from '../dto/response/recompensa.response';
-import { RecompensaServiceFindAll } from './recompensa.service.findall';
 
-// Alterar ou desativar (ativo = false; não existe excluir: uma recompensa já escolhida numa contribuição precisa
-// continuar existindo, FK_CONTRIBUICAO_RECOMPENSA_RECOMPENSA). Dono da campanha ou quem tem campanha_editar
-// (pol_recompensa_update, 04). `link` troca o link especial na mesma transação.
+// Com alguém no mural, mudar o valor mínimo ou desativar é recusado pelo banco (fn_recompensa_trava, 05, 91067).
 @Injectable()
 export class RecompensaServiceUpdate {
-  constructor(
-    private readonly database: DatabaseService,
-    private readonly findAll: RecompensaServiceFindAll,
-  ) {}
+  constructor(private readonly database: DatabaseService) {}
 
   async executar(
     idRecompensa: number,
@@ -24,18 +18,16 @@ export class RecompensaServiceUpdate {
       .getDb()
       .updateTable('recompensa')
       .set({
-        ...(dto.titulo !== undefined && { titulo: dto.titulo.trim() }),
         ...(dto.descricao !== undefined && {
           descricao: dto.descricao?.trim() || null,
         }),
         ...(dto.valorMinimo !== undefined && {
           valor_minimo: dto.valorMinimo.toFixed(2),
         }),
-        ...(dto.tipo !== undefined && { tipo: dto.tipo }),
         ...(dto.ativo !== undefined && { ativo: dto.ativo }),
       })
       .where('id_recompensa', '=', idRecompensa)
-      .returning(RECOMPENSA_COLUNAS_SELECT)
+      .returningAll()
       .executeTakeFirst();
 
     if (!linha) {
@@ -44,28 +36,9 @@ export class RecompensaServiceUpdate {
         'recompensa',
         { id_recompensa: idRecompensa },
         'Recompensa não encontrada.',
-        'Só o dono da campanha altera as recompensas dela.',
+        'Só o dono da campanha altera a recompensa dela.',
       );
     }
-    if (dto.link) {
-      const db = this.database.getDb();
-      await db
-        .deleteFrom('link_recompensa')
-        .where('id_recompensa', '=', idRecompensa)
-        .execute();
-      await db
-        .insertInto('link_recompensa')
-        .values({
-          id_recompensa: idRecompensa,
-          id_tipolink: dto.link.idTipoLink,
-          url: dto.link.url,
-          ordem: 0,
-        })
-        .execute();
-    }
-    const lista = await this.findAll.executar(linha.id_campanha);
-    const atualizada = lista.find((r) => r.idRecompensa === idRecompensa);
-    if (!atualizada) throw new NotFoundException('Recompensa não encontrada.');
-    return atualizada;
+    return RecompensaConverter.paraResponseDto(linha);
   }
 }

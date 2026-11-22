@@ -193,13 +193,7 @@ export class UsuarioServiceExportData {
             () =>
               db
                 .selectFrom('atualizacao_campanha')
-                .select([
-                  'id_campanha',
-                  'titulo',
-                  'conteudo',
-                  'fase',
-                  'publicado_em',
-                ])
+                .select(['id_campanha', 'titulo', 'conteudo', 'publicado_em'])
                 .where('id_campanha', 'in', idsCampanhas)
                 .execute(),
           ]);
@@ -308,7 +302,6 @@ export class UsuarioServiceExportData {
           .map((a) => ({
             titulo: a.titulo,
             conteudo: a.conteudo,
-            fase: a.fase,
             publicadoEm: a.publicado_em,
           })),
       })),

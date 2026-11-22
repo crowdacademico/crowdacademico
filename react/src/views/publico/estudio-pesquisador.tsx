@@ -15,7 +15,7 @@ import { ModalExcluirComentario } from '../../components/crud/modal-excluir-come
 import { CartaoEndosso } from './cartao-endosso';
 import { denunciaApi } from '../../services/19-denuncia/api/denuncia.api';
 import { ModalFicha } from '../../components/crud/modal-ficha';
-import { SecaoGanhadoresRecompensa } from '../18-recompensa/secao-ganhadores-recompensa';
+import { MuralApoiadores } from '../../components/crud/mural-apoiadores';
 import { ModalExcluirItem } from '../../components/crud/modal-excluir-item';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
@@ -34,12 +34,11 @@ import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-confi
 import { formatarDataHora } from '../../services/constant/util/formatacao.util';
 import { comentarioApi } from '../../services/17-comentario/api/comentario.api';
 import type { ComentarioResponse } from '../../services/17-comentario/type/comentario.type';
-import { ROTULO_FASE_ATUALIZACAO, ROTULO_TIPO_ATUALIZACAO, rotuloSituacaoAtualizacao } from '../../services/15-atualizacao-campanha/constants/atualizacao-campanha.constants';
+import { rotuloSituacaoAtualizacao } from '../../services/15-atualizacao-campanha/constants/atualizacao-campanha.constants';
 import { atualizacaoCampanhaApi } from '../../services/15-atualizacao-campanha/api/atualizacao-campanha.api';
 import type { AtualizacaoCampanhaResponse } from '../../services/15-atualizacao-campanha/type/atualizacao-campanha.type';
 import { recompensaApi } from '../../services/18-recompensa/api/recompensa.api';
-import { ROTULO_TIPO_RECOMPENSA } from '../../services/18-recompensa/constants/recompensa.constants';
-import type { RecompensaResponse } from '../../services/18-recompensa/type/recompensa.type';
+import type { ApoiadorMural, RecompensaResponse } from '../../services/18-recompensa/type/recompensa.type';
 import { contribuicaoApi } from '../../services/22-contribuicao/api/contribuicao.api';
 import { ROTULO_MEIO_PAGAMENTO } from '../../services/22-contribuicao/constants/contribuicao.constants';
 import { classeBadgeStatusContribuicao, ROTULO_STATUS_CONTRIBUICAO } from '../../services/22-contribuicao/constants/status-contribuicao.constants';
@@ -366,48 +365,60 @@ function PainelCampanhas({
 
 interface RecompensaLinha extends RecompensaResponse {
   tituloCampanha: string;
-  tipoRotulo: string;
+  apoiadores: ApoiadorMural[];
+  noMural: number;
+  travada: boolean;
   situacao: string;
 }
 
+// A aba Recompensas do Estúdio: o Mural dos apoiadores de cada campanha (22-11-2026, RF-103 a RF-105). Uma recompensa por
+// campanha; "Nova recompensa" oferece o mural numa campanha que ainda não tem.
 function PainelRecompensas({ auth, campanhas }: { auth: PropsPagina['auth']; campanhas: CampanhaResponse[] }) {
   const [chaveRecarga, setChaveRecarga] = useState(0);
-  const [editando, setEditando] = useState<{ campanha: number; recompensa?: RecompensaResponse } | null>(null);
+  const [linhas, setLinhas] = useState<RecompensaLinha[]>([]);
+  const [editando, setEditando] = useState<{ campanha: number; recompensa?: RecompensaLinha } | null>(null);
   const [consultando, setConsultando] = useState<RecompensaLinha | null>(null);
   const [excluindo, setExcluindo] = useState<RecompensaLinha | null>(null);
   const listar = useCallback(async (): Promise<RecompensaLinha[]> => {
-    const listas = await Promise.all(campanhas.map(async (campanha) => {
-      const recompensas = await recompensaApi.listar(auth.authFetch, campanha.idCampanha);
-      return recompensas.map((recompensa) => ({
-        ...recompensa,
-        tituloCampanha: campanha.titulo,
-        tipoRotulo: ROTULO_TIPO_RECOMPENSA[recompensa.tipo],
-        situacao: recompensa.ativo ? 'Ativa' : 'Desativada',
-      }));
-    }));
-    return listas.flat();
+    const murais = await Promise.all(campanhas.map(async (campanha) => ({
+      campanha,
+      mural: await recompensaApi.mural(auth.authFetch, campanha.idCampanha),
+    })));
+    const lista = murais.flatMap(({ campanha, mural }) =>
+      mural.recompensa
+        ? [{
+            ...mural.recompensa,
+            tituloCampanha: campanha.titulo,
+            apoiadores: mural.apoiadores,
+            noMural: mural.apoiadores.length,
+            travada: mural.travada,
+            situacao: mural.recompensa.ativo ? 'Ativo' : 'Desativado',
+          }]
+        : [],
+    );
+    setLinhas(lista);
+    return lista;
   }, [auth.authFetch, campanhas]);
   const recarregar = () => setChaveRecarga((atual) => atual + 1);
+  const semMural = campanhas.filter((campanha) => !linhas.some((linha) => linha.idCampanha === campanha.idCampanha));
 
   return (
     <>
       <GenericTable<RecompensaLinha>
         titulo="Recompensas"
         nivelTitulo={2}
-        ajuda="Ofereça reconhecimento, acesso antecipado ou conteúdo digital às pessoas que apoiarem."
-        acaoTopo={campanhas.length > 0 && (
-          <BotaoCriar rotulo="Nova recompensa" aoClicar={() => setEditando({ campanha: campanhas[0].idCampanha })} />
+        ajuda="A recompensa é o Mural dos apoiadores: quem somar o valor mínimo nas contribuições aparece com o nome e a foto na página da campanha. Uma por campanha."
+        acaoTopo={semMural.length > 0 && (
+          <BotaoCriar rotulo="Nova recompensa" aoClicar={() => setEditando({ campanha: semMural[0].idCampanha })} />
         )}
         colunas={[
           { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
-          { chave: 'titulo', rotulo: 'recompensa', tipo: 'texto', umaLinha: true },
-          { chave: 'tipoRotulo', rotulo: 'tipo', tipo: 'texto' },
           { chave: 'valorMinimo', rotulo: 'a partir de', tipo: 'dinheiro' },
+          { chave: 'noMural', rotulo: 'no mural', tipo: 'numero' },
           {
             chave: 'situacao',
             rotulo: 'situação',
             tipo: 'status',
-            // Só o selo: desativar e reativar ficam no Alterar; quantas vezes foi concedida, no Consultar.
             renderizar: (linha) => <span className={'badge ' + (linha.ativo ? 'badge-sucesso' : 'badge-neutro')}>{linha.situacao}</span>,
             textoExibido: (linha) => linha.situacao,
           },
@@ -421,46 +432,38 @@ function PainelRecompensas({ auth, campanhas }: { auth: PropsPagina['auth']; cam
           excluir: setExcluindo,
         }}
         acaoIndisponivel={(linha, acao) =>
-          acao === 'excluir' && linha.escolhidas > 0
-            ? 'Já foi concedida a quem apoiou: não pode ser excluída. Para tirá-la do ar, desative em Alterar.'
-            : undefined
+          acao === 'excluir' && linha.travada ? 'Já tem gente no mural: a recompensa não sai mais.' : undefined
         }
-        filtrosFacetados={[
-          { chave: 'tipoRotulo', rotulo: 'Tipo' },
-          { chave: 'situacao', rotulo: 'Situação' },
-        ]}
+        filtrosFacetados={[{ chave: 'situacao', rotulo: 'Situação' }]}
         vazio={{
-          icone: 'fa-gift',
+          icone: 'fa-users',
           titulo: campanhas.length ? 'Nenhuma recompensa cadastrada.' : 'Cadastre uma campanha antes de oferecer recompensas.',
-          texto: campanhas.length ? 'Cadastre recompensas simbólicas para suas campanhas.' : undefined,
+          texto: campanhas.length ? 'Ofereça o Mural dos apoiadores nas suas campanhas.' : undefined,
         }}
       />
       {consultando && (
-        <ModalFicha titulo="Consultar Recompensa" subtitulo={consultando.titulo} aoFechar={() => setConsultando(null)}>
+        <ModalFicha titulo="Consultar Recompensa" subtitulo="Mural dos apoiadores" aoFechar={() => setConsultando(null)}>
           <SecaoFicha titulo="Recompensa">
             <CampoFicha rotulo="Campanha" valor={consultando.tituloCampanha} largura="cheia" />
-            <CampoFicha rotulo="Tipo" valor={consultando.tipoRotulo} />
             <CampoFicha rotulo="A partir de" valor={formatarMoeda(consultando.valorMinimo)} />
             <CampoFicha rotulo="Situação" valor={consultando.situacao} />
-            <CampoFicha rotulo="Descrição" valor={consultando.descricao} largura="cheia" />
-            {consultando.links.length > 0 && (
-              <CampoFicha
-                rotulo="Link especial"
-                valor={<a href={consultando.links[0].url} target="_blank" rel="noreferrer" className="link-texto break-all">{consultando.links[0].url}</a>}
-                largura="cheia"
-              />
+            <CampoFicha rotulo="Mensagem de agradecimento" valor={consultando.descricao} largura="cheia" />
+          </SecaoFicha>
+          <SecaoFicha titulo={`No mural (${consultando.noMural})`} colunas={1}>
+            {consultando.apoiadores.length === 0 ? (
+              <p className="paragrafo texto-fraco">Ninguém no mural ainda.</p>
+            ) : (
+              <MuralApoiadores apoiadores={consultando.apoiadores} />
             )}
           </SecaoFicha>
-          <SecaoGanhadoresRecompensa authFetch={auth.authFetch} idRecompensa={consultando.idRecompensa} />
         </ModalFicha>
       )}
       {excluindo && (
         <ModalExcluirItem
-          nome={excluindo.titulo}
+          nome="Mural dos apoiadores"
           campos={
             <>
               <CampoFicha rotulo="Campanha" valor={excluindo.tituloCampanha} largura="cheia" />
-              <CampoFicha rotulo="Tipo" valor={excluindo.tipoRotulo} />
               <CampoFicha rotulo="A partir de" valor={formatarMoeda(excluindo.valorMinimo)} />
             </>
           }
@@ -475,7 +478,8 @@ function PainelRecompensas({ auth, campanhas }: { auth: PropsPagina['auth']; cam
           auth={auth}
           idCampanha={editando.campanha}
           recompensa={editando.recompensa}
-          campanhasParaEscolher={campanhas}
+          travada={editando.recompensa?.travada}
+          campanhasParaEscolher={editando.recompensa ? undefined : semMural}
           aoFechar={() => setEditando(null)}
           aoSalva={recarregar}
         />
@@ -487,8 +491,6 @@ function PainelRecompensas({ auth, campanhas }: { auth: PropsPagina['auth']; cam
 interface AtualizacaoLinha extends AtualizacaoCampanhaResponse {
   tituloCampanha: string;
   campanhaAceita: boolean;
-  faseRotulo: string;
-  tipoRotulo: string;
   situacao: string;
 }
 
@@ -513,8 +515,6 @@ function PainelAtualizacoes({ auth, campanhas }: { auth: PropsPagina['auth']; ca
         ...atualizacao,
         tituloCampanha: campanha.titulo,
         campanhaAceita: STATUS_ACEITA_ATUALIZACAO.has(campanha.status),
-        faseRotulo: ROTULO_FASE_ATUALIZACAO[atualizacao.fase],
-        tipoRotulo: ROTULO_TIPO_ATUALIZACAO[atualizacao.tipo],
         situacao: rotuloSituacaoAtualizacao(atualizacao, true),
       }));
     }));
@@ -534,8 +534,6 @@ function PainelAtualizacoes({ auth, campanhas }: { auth: PropsPagina['auth']; ca
         colunas={[
           { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
           { chave: 'titulo', rotulo: 'título', tipo: 'texto', umaLinha: true },
-          { chave: 'faseRotulo', rotulo: 'fase', tipo: 'texto' },
-          { chave: 'tipoRotulo', rotulo: 'formato', tipo: 'texto' },
           { chave: 'publicadoEm', rotulo: 'publicada em', tipo: 'dataHora' },
           {
             chave: 'situacao',
@@ -586,7 +584,6 @@ function PainelAtualizacoes({ auth, campanhas }: { auth: PropsPagina['auth']; ca
             : undefined;
         }}
         filtrosFacetados={[
-          { chave: 'faseRotulo', rotulo: 'Fase' },
           { chave: 'situacao', rotulo: 'Situação' },
         ]}
         vazio={{
@@ -624,8 +621,6 @@ function PainelAtualizacoes({ auth, campanhas }: { auth: PropsPagina['auth']; ca
           rodape={<RodapeAcoes aoCancelar={() => setConsultando(null)} rotuloCancelar="Fechar" />}
         >
           <div className="grade-ficha">
-            <CampoFicha rotulo="Fase" valor={consultando.faseRotulo} />
-            <CampoFicha rotulo="Formato" valor={consultando.tipoRotulo} />
             <CampoFicha rotulo="Publicada em" valor={formatarDataHora(consultando.publicadoEm)} />
             <CampoFicha rotulo="Situação" valor={consultando.situacao} />
             {consultando.ocultadaModeracao && (
@@ -861,7 +856,7 @@ function PainelContribuicoes({ auth, campanhas }: { auth: PropsPagina['auth']; c
       <GenericTable<ContribuicaoRecebida>
         titulo="Contribuições"
         nivelTitulo={2}
-        ajuda="Os apoios pagos que suas campanhas receberam, com o valor, o meio de pagamento e a recompensa de cada um."
+        ajuda="Os apoios pagos que suas campanhas receberam, com o valor, o meio de pagamento e se quem apoiou está no Mural dos apoiadores."
         colunas={[
           { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
           { chave: 'apoiador', rotulo: 'apoiador', tipo: 'texto', umaLinha: true },
@@ -885,7 +880,7 @@ function PainelContribuicoes({ auth, campanhas }: { auth: PropsPagina['auth']; c
             textoExibido: (linha) => ROTULO_MEIO_PAGAMENTO[linha.meioPagamento],
           },
           { chave: 'criadoEm', rotulo: 'data', tipo: 'dataHora' },
-          { chave: 'recompensas', rotulo: 'recompensas', tipo: 'texto' },
+          { chave: 'noMural', rotulo: 'mural', tipo: 'texto', renderizar: (linha) => (linha.noMural ? 'No mural' : '-'), textoExibido: (linha) => (linha.noMural ? 'No mural' : '-') },
         ]}
         chavePrimaria="idContribuicao"
         listar={listar}
@@ -913,7 +908,7 @@ function PainelContribuicoes({ auth, campanhas }: { auth: PropsPagina['auth']; c
             <CampoFicha rotulo="Apoiador" valor={consultando.apoiador} />
             <CampoFicha rotulo="Valor" valor={formatarMoeda(consultando.valor)} />
             <CampoFicha rotulo="Campanha" valor={consultando.tituloCampanha} largura="cheia" />
-            <CampoFicha rotulo="Recompensa" valor={consultando.recompensas ?? 'Nenhuma'} largura="cheia" />
+            <CampoFicha rotulo="Mural dos apoiadores" valor={consultando.noMural ? 'Está no mural' : 'Não está no mural'} largura="cheia" />
             <CampoFicha rotulo="Data" valor={formatarDataHora(consultando.criadoEm)} />
             <CampoFicha rotulo="Meio de pagamento" valor={ROTULO_MEIO_PAGAMENTO[consultando.meioPagamento]} />
             <CampoFicha rotulo="Situação" valor={ROTULO_STATUS_CONTRIBUICAO[consultando.status]} />

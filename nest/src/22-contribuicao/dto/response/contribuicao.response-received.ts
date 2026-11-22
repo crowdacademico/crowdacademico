@@ -12,5 +12,6 @@ export class ContribuicaoResponseReceived {
   meioPagamento: MeioPagamento;
   status: StatusContribuicao;
   criadoEm: Date;
-  recompensas: string | null;
+  // Se quem apoiou está no Mural dos apoiadores (RF-105).
+  noMural: boolean;
 }

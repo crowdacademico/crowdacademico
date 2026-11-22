@@ -25,8 +25,8 @@ export interface MinhaContribuicao {
   status: StatusContribuicao;
   anonima: boolean;
   criadoEm: string;
-  // As recompensas ganhas, separadas por vírgula, da menor para a maior; null = nenhuma.
-  recompensas: string | null;
+  // Se a pessoa está no Mural dos apoiadores da campanha (a recompensa, RF-105).
+  noMural: boolean;
 }
 
 export interface ContribuicaoRecebida {
@@ -38,5 +38,6 @@ export interface ContribuicaoRecebida {
   meioPagamento: MeioPagamento;
   status: StatusContribuicao;
   criadoEm: string;
-  recompensas: string | null;
+  // Se quem apoiou está no Mural dos apoiadores (RF-105).
+  noMural: boolean;
 }

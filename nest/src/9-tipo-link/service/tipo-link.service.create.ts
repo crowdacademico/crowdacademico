@@ -21,11 +21,10 @@ export class TipoLinkServiceCreate {
     // abaixo antes de gravar.
     const permitePerfil = dto.permitePerfil ?? true;
     const permiteAtualizacao = dto.permiteAtualizacao ?? false;
-    const permiteRecompensa = dto.permiteRecompensa ?? false;
 
-    if (!permitePerfil && !permiteAtualizacao && !permiteRecompensa) {
+    if (!permitePerfil && !permiteAtualizacao) {
       throw new BadRequestException(
-        'Pelo menos um escopo (permitePerfil, permiteAtualizacao ou permiteRecompensa) precisa ser verdadeiro.',
+        'Pelo menos um escopo (permitePerfil ou permiteAtualizacao) precisa ser verdadeiro.',
       );
     }
 
@@ -52,7 +51,6 @@ export class TipoLinkServiceCreate {
           ...(dto.dominio !== undefined ? { dominio: dto.dominio } : {}),
           permite_perfil: permitePerfil,
           permite_atualizacao: permiteAtualizacao,
-          permite_recompensa: permiteRecompensa,
         })
         .returningAll()
         .executeTakeFirstOrThrow();

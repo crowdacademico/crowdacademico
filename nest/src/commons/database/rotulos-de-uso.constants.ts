@@ -12,7 +12,6 @@ const ROTULO_DE_USO_POR_TABELA: Readonly<Record<string, RotuloDeUso>> = {
   denuncia: { singular: 'denúncia', plural: 'denúncias' },
   link_academico: { singular: 'perfil', plural: 'perfis' },
   link_atualizacao: { singular: 'atualização', plural: 'atualizações' },
-  link_recompensa: { singular: 'recompensa', plural: 'recompensas' },
 };
 
 export function rotuloDeUso(tabela: string): RotuloDeUso {

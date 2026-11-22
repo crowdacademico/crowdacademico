@@ -96,10 +96,6 @@ export const REGRA_POR_CONSTRAINT: Readonly<Record<string, RegraConhecida>> = {
     campo: 'valorMinimo',
     mensagem: 'O valor mínimo da recompensa precisa ser maior que zero.',
   },
-  CK_RECOMPENSA_QUANTIDADE: {
-    campo: 'quantidadeDisponivel',
-    mensagem: 'A quantidade disponível não pode ser negativa.',
-  },
   CK_RECOMPENSA_DESCRICAO_TAMANHO: {
     campo: 'descricao',
     mensagem: TEXTO_LONGO,

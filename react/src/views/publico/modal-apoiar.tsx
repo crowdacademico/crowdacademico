@@ -28,9 +28,9 @@ const VALOR_MAXIMO = 99_999_999.99;
 interface ModalApoiarProps {
   auth: Pick<UseAuthReturn, 'authFetch' | 'usuario' | 'aceitePendente'>;
   campanha: CampanhaResponse;
-  // As recompensas ativas da campanha (a página já carregou): só para mostrar quais o valor alcança (RF-105, ninguém escolhe).
-  recompensas: RecompensaResponse[];
-  // "Apoiar com R$ X" da aba Recompensas (ou o ?valor= de um link antigo do checkout).
+  // A recompensa da campanha = o Mural dos apoiadores (null = sem mural, ou desativado): o modal diz se o valor entra.
+  recompensa: RecompensaResponse | null;
+  // "Apoiar e entrar no mural" da aba Mural dos apoiadores (ou o ?valor= de um link antigo do checkout).
   valorInicial?: number;
   aoFechar: () => void;
 }
@@ -63,7 +63,7 @@ function ehProvedorTeste(link: string | undefined): boolean {
 //
 // As regras continuam no banco (trigger de contribuição, 05): valor mínimo, Tudo ou Nada só Pix, sem conta só Pix, faixa e
 // interruptor do cartão, interruptor do boleto. Aqui elas só decidem o que mostrar, para a pessoa não esbarrar num erro.
-export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFechar }: ModalApoiarProps) {
+export function ModalApoiar({ auth, campanha, recompensa, valorInicial, aoFechar }: ModalApoiarProps) {
   const navigate = useNavigate();
   const { obterNumero, obterConfiguracao } = useConfiguracoes();
   const minimo = obterNumero('valor_minimo_contribuicao', 5);
@@ -111,6 +111,7 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
   const [meio, setMeio] = useState<MeioApoioPublico>('pix');
   const [cienteFlexivel, setCienteFlexivel] = useState(false);
   const [aceitouTermos, setAceitouTermos] = useState(false);
+  const [anonima, setAnonima] = useState(false);
   // O Termo de Uso abre num modal por cima (o mesmo do Cadastro), não numa aba nova (16-11-2026, Lucas): "Li e concordo"
   // marca a caixa. undefined = ainda não buscado; null = não deu para carregar.
   const [termoAberto, setTermoAberto] = useState(false);
@@ -198,9 +199,6 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
   const total = tarifa === null ? null : centavos(numero + tarifa);
   const nomeMeio = meioUsado === 'pix' ? 'Pix' : meioUsado === 'boleto' ? 'boleto' : 'cartão';
 
-  const alcancadas = valorOk ? recompensas.filter((item) => item.valorMinimo <= numero) : [];
-  const proxima = recompensas.find((item) => !valorOk || item.valorMinimo > numero);
-
   const podeIr = valorOk && aceitouTermos && (!flexivel || cienteFlexivel) && !auth.aceitePendente && !enviando && !bloqueado;
   // O que falta para o botão ligar, dito embaixo dos Termos (botão apagado sem explicação parece quebrado).
   const falta = !valorOk
@@ -229,6 +227,7 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
         meioPagamento: meioUsado,
         aceiteTermos: true,
         ...(flexivel ? { cienteModeloFlexivel: true } : {}),
+        ...(auth.usuario && anonima ? { anonima: true } : {}),
       });
       const link = meioUsado === 'boleto' ? criada.boleto?.link : criada.linkPagamento;
       const apoio: ApoioEmAndamento = {
@@ -440,7 +439,7 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
         )}
         {algumaPedeConta && (
           <p className="legenda texto-fraco">
-            {boletoLigado ? 'Cartão e boleto pedem' : 'O cartão pede'} uma conta, para a devolução e as recompensas chegarem a você.{' '}
+            {boletoLigado ? 'Cartão e boleto pedem' : 'O cartão pede'} uma conta, para a devolução chegar a você.{' '}
             <Link to="/login" state={{ voltarPara: voltarAoApoio }} className="link-texto">
               Entrar
             </Link>
@@ -448,32 +447,41 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
         )}
       </SecaoFicha>
 
-      {recompensas.length > 0 && (
-        <SecaoFicha titulo="Recompensas" colunas={1}>
+      {recompensa && (
+        <SecaoFicha titulo="Mural dos apoiadores" colunas={1}>
           <div className="paragrafo texto-padrao" aria-live="polite">
-            {alcancadas.length > 0 ? (
+            {valorOk && numero >= recompensa.valorMinimo ? (
               <p>
-                Com {formatarMoeda(numero)}, você ganha{' '}
-                <span className="enfase texto-forte">{alcancadas.map((item) => item.titulo).join(', ')}</span>.
+                Com {formatarMoeda(numero)}, você entra no <span className="enfase texto-forte">Mural dos apoiadores</span> desta
+                campanha{anonima ? ', como anônimo' : ', com o seu nome e a sua foto'}.
               </p>
             ) : (
-              <p className="texto-fraco">{valorOk ? 'Este valor ainda não alcança nenhuma recompensa.' : 'Escolha um valor para ver as recompensas que ele alcança.'}</p>
+              <>
+                <p className="texto-fraco">
+                  Quem soma {formatarMoeda(recompensa.valorMinimo)} em apoios a esta campanha entra no Mural dos apoiadores
+                  (contam também os seus apoios anteriores).
+                </p>
+                <button type="button" onClick={() => setValor(recompensa.valorMinimo.toFixed(2))} className="link-texto mt-1 text-left">
+                  Apoiar com {formatarMoeda(recompensa.valorMinimo)} e entrar no mural
+                </button>
+              </>
             )}
-            {proxima && (
-              <button type="button" onClick={() => setValor(proxima.valorMinimo.toFixed(2))} className="link-texto mt-1 text-left">
-                Apoiar com {formatarMoeda(proxima.valorMinimo)} e ganhar “{proxima.titulo}”
-              </button>
-            )}
-            {auth.usuario && alcancadas.length > 0 && (
-              <p className="legenda texto-fraco mt-2">
-                {flexivel
-                  ? 'Liberadas assim que o pagamento for confirmado. Você recebe um e-mail e elas ficam em Minha Conta.'
-                  : 'Liberadas quando a campanha bater a meta. Você recebe um e-mail e elas ficam em Minha Conta.'}
-              </p>
+            {auth.usuario && (
+              <label className="flex items-start gap-3 cursor-pointer mt-3">
+                <input type="checkbox" checked={anonima} onChange={(evento) => setAnonima(evento.target.checked)} className="mt-1 w-4 h-4 accent-primary" />
+                <span>
+                  Apoiar como anônimo
+                  <span className="block legenda texto-fraco">No mural, você aparece sem nome e sem foto.</span>
+                </span>
+              </label>
             )}
             {!auth.usuario && (
-              <p className="legenda texto-aviso mt-2">
-                As recompensas vão só para quem apoia com a conta: <Link to="/login" state={{ voltarPara: voltarAoApoio }} className="link-texto link-texto--cor-herdada">entre</Link> antes de continuar.
+              <p className="legenda texto-fraco mt-2">
+                Sem conta, você aparece no mural como anônimo.{' '}
+                <Link to="/login" state={{ voltarPara: voltarAoApoio }} className="link-texto">
+                  Entre
+                </Link>{' '}
+                para aparecer com o seu nome.
               </p>
             )}
           </div>

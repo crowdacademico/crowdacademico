@@ -2,7 +2,6 @@ import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
-  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -10,14 +9,6 @@ import {
   MaxLength,
   ValidateNested,
 } from 'class-validator';
-import {
-  FASES_ATUALIZACAO,
-  TIPOS_ATUALIZACAO,
-} from '../../../commons/database/db.types';
-import type {
-  FaseAtualizacao,
-  TipoAtualizacao,
-} from '../../../commons/database/db.types';
 
 export class AtualizacaoCampanhaRequestLink {
   @IsInt()
@@ -44,13 +35,6 @@ export class AtualizacaoCampanhaRequestCreate {
   @IsString()
   @MaxLength(20000)
   conteudo: string;
-
-  // RF-053: fase e formato obrigatórios (NOT NULL no banco).
-  @IsIn(FASES_ATUALIZACAO)
-  fase: FaseAtualizacao;
-
-  @IsIn(TIPOS_ATUALIZACAO)
-  tipo: TipoAtualizacao;
 
   @IsOptional()
   @IsArray()

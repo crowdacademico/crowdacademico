@@ -2,14 +2,13 @@ import { CabecalhoAcoes, CelulaAcoes } from '../colunas/5-coluna-acoes';
 import { ListaAnexos } from '../lista-anexos';
 import { formatarData } from '../../../services/constant/util/formatacao.util';
 import {
-  ROTULO_FASE_ATUALIZACAO,
   motivoAtualizacaoNaoEditavel,
   rotuloSituacaoAtualizacao,
 } from '../../../services/15-atualizacao-campanha/constants/atualizacao-campanha.constants';
 import type { AtualizacaoCampanhaResponse } from '../../../services/15-atualizacao-campanha/type/atualizacao-campanha.type';
 import { CaixaTabela } from './caixa-tabela';
 
-// Atualizações publicadas numa campanha (título, fase, anexos, data e situação; o formato sai dos anexos, cujo ícone
+// Atualizações publicadas numa campanha (título, anexos, data e situação; o ícone de cada anexo
 // diz se é PDF, imagem ou link), com Alterar e Excluir para o dono, na coluna Ações padrão (a mesma da GenericTable).
 // Quem busca e faz a alteração é a tela que usa a tabela.
 interface TabelaAtualizacoesProps {
@@ -29,7 +28,6 @@ export function TabelaAtualizacoes({ atualizacoes, aoAlterar, aoExcluir, campanh
         <thead>
           <tr>
             <th>Título</th>
-            <th className="crud-tabela__col--curta">Fase</th>
             <th>Anexos</th>
             <th className="crud-tabela__col--curta">Publicada em</th>
             <th className="crud-tabela__col--curta">Situação</th>
@@ -40,7 +38,6 @@ export function TabelaAtualizacoes({ atualizacoes, aoAlterar, aoExcluir, campanh
           {atualizacoes.map((item) => (
             <tr key={item.idAtualizacao}>
               <td data-rotulo="Título">{item.titulo}</td>
-              <td data-rotulo="Fase" className="crud-tabela__col--curta">{ROTULO_FASE_ATUALIZACAO[item.fase]}</td>
               <td data-rotulo="Anexos">
                 <ListaAnexos anexos={item.anexos} />
               </td>

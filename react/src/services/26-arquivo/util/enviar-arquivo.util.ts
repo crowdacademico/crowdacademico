@@ -7,10 +7,10 @@ import type { ArquivoResponse, ContextoArquivo } from '../type/arquivo.type';
 // (nest/src/26-arquivo/constants/arquivo.constants.ts).
 const PERFIL_REDUCAO_ANEXO = { larguraMaxima: 1600, qualidade: 78 };
 
-// Envia um anexo (de atualização, ou o arquivo de uma recompensa com o contexto 'campanha') nos 3 passos do módulo
+// Envia um anexo de atualização nos 3 passos do módulo
 // 26-arquivo (iniciar, subir ao armazenamento, confirmar). A imagem é reduzida no navegador antes; o PDF vai como está.
-// O tipo e o tamanho quem confere de verdade é o backend. O arquivo fica sem dono até ser ligado a uma atualização ou
-// recompensa; se nunca for, a limpeza automática apaga.
+// O tipo e o tamanho quem confere de verdade é o backend. O arquivo fica sem dono até ser ligado a uma atualização;
+// se nunca for, a limpeza automática apaga.
 export async function enviarAnexo(
   authFetch: AuthFetch,
   escolhido: File,

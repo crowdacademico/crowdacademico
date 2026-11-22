@@ -17,7 +17,7 @@ export const contribuicaoApi = {
   // Quantas contribuições estão pagas e quantas existem. Só o dono da campanha ou quem tem a permissão (senão, 403).
   resumoDaCampanha: (authFetch: AuthFetch, idCampanha: number): Promise<ResumoContribuicoes> =>
     authFetch(`${BASE}/campanha/${idCampanha}/resumo`).then(tratarResposta<ResumoContribuicoes>),
-  // O histórico de contribuições da conta logada (RF-009, RF-089), com a recompensa escolhida.
+  // O histórico de contribuições da conta logada (RF-009, RF-089), com o Mural dos apoiadores (noMural).
   // Desistir do apoio (CDC, art. 49): a regra toda é do banco (desistir_contribuicao, 05).
   desistir: (authFetch: AuthFetch, idContribuicao: number): Promise<void> =>
     authFetch(`${BASE}/${idContribuicao}/desistir`, { method: 'POST' }).then(tratarResposta<void>),

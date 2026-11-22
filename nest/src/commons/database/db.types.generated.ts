@@ -5,7 +5,6 @@
 
 import type { ColumnType } from "kysely";
 
-export type FaseAtualizacao = "andamento" | "resultado_final" | "resultado_preliminar";
 
 export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
   ? ColumnType<S, I | undefined, U>
@@ -49,7 +48,6 @@ export type StatusRepasse = "concluido" | "erro" | "pendente" | "processando";
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
-export type TipoAtualizacao = "imagem" | "linkexterno" | "pdf" | "texto";
 
 export type TipoChavePix = "aleatoria" | "cnpj" | "cpf" | "email" | "telefone";
 
@@ -57,7 +55,6 @@ export type TipoConfiguracao = "booleano" | "decimal" | "dinheiro" | "inteiro" |
 
 export type TipoMotivoDenuncia = "campanha" | "perfil";
 
-export type TipoRecompensa = "acesso_antecipado" | "digital" | "reconhecimento";
 
 export type TipoTermo = "cadastro" | "upgrade_pesquisador";
 
@@ -99,24 +96,14 @@ export interface ArquivoAtualizacao {
   id_atualizacao: number;
 }
 
-export interface ArquivoRecompensa {
-  id_arq_recompensa: Generated<number>;
-  id_arquivo: number;
-  id_recompensa: number;
-  ordem: number | null;
-  principal: Generated<boolean>;
-}
-
 export interface AtualizacaoCampanha {
   ativo: Generated<boolean>;
   conteudo: string;
-  fase: FaseAtualizacao;
   id_atualizacao: Generated<number>;
   id_campanha: number;
   motivo_moderacao: string | null;
   ocultada_moderacao: Generated<boolean>;
   publicado_em: Generated<Timestamp>;
-  tipo: TipoAtualizacao;
   titulo: string;
 }
 
@@ -183,6 +170,7 @@ export interface Configuracoes {
 export interface Contribuicao {
   anonima: Generated<boolean>;
   ciencia_modelo_em: Timestamp | null;
+  desistida_em: Timestamp | null;
   cobranca_cancelada_em: Timestamp | null;
   criado_em: Generated<Timestamp>;
   dinheiro_liberado_em: Timestamp | null;
@@ -200,14 +188,6 @@ export interface Contribuicao {
   tentativas_estorno: Generated<number>;
   token_sessao: Generated<string | null>;
   valor: Numeric;
-}
-
-export interface ContribuicaoRecompensa {
-  adquirida_em: Generated<Timestamp>;
-  id_contrib_recompensa: Generated<number>;
-  id_contribuicao: number;
-  id_recompensa: number;
-  quantidade: Generated<number>;
 }
 
 export interface Denuncia {
@@ -269,14 +249,6 @@ export interface LinkAcademico {
 export interface LinkAtualizacao {
   id_atualizacao: number;
   id_link_atualizacao: Generated<number>;
-  id_tipolink: number;
-  ordem: number | null;
-  url: string;
-}
-
-export interface LinkRecompensa {
-  id_link_recompensa: Generated<number>;
-  id_recompensa: number;
   id_tipolink: number;
   ordem: number | null;
   url: string;
@@ -394,9 +366,6 @@ export interface Recompensa {
   descricao: string | null;
   id_campanha: number;
   id_recompensa: Generated<number>;
-  quantidade_disponivel: number | null;
-  tipo: TipoRecompensa;
-  titulo: string;
   valor_minimo: Numeric;
 }
 
@@ -514,7 +483,6 @@ export interface TipoLink {
   nome: string;
   permite_atualizacao: Generated<boolean>;
   permite_perfil: Generated<boolean>;
-  permite_recompensa: Generated<boolean>;
   regex: string | null;
 }
 
@@ -570,20 +538,17 @@ export interface DB {
   area_conhecimento: AreaConhecimento;
   arquivo: Arquivo;
   arquivo_atualizacao: ArquivoAtualizacao;
-  arquivo_recompensa: ArquivoRecompensa;
   atualizacao_campanha: AtualizacaoCampanha;
   auditoria_financeira: AuditoriaFinanceira;
   campanha: Campanha;
   comentario: Comentario;
   configuracoes: Configuracoes;
   contribuicao: Contribuicao;
-  contribuicao_recompensa: ContribuicaoRecompensa;
   denuncia: Denuncia;
   evento_pagamento: EventoPagamento;
   historico_rejeicao: HistoricoRejeicao;
   link_academico: LinkAcademico;
   link_atualizacao: LinkAtualizacao;
-  link_recompensa: LinkRecompensa;
   log_auditoria: LogAuditoria;
   marco_cronograma: MarcoCronograma;
   modelo_mensagem: ModeloMensagem;

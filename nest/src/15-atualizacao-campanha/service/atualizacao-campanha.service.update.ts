@@ -21,8 +21,6 @@ export class AtualizacaoCampanhaServiceUpdate {
     const campos = {
       ...(dto.titulo !== undefined ? { titulo: dto.titulo } : {}),
       ...(dto.conteudo !== undefined ? { conteudo: dto.conteudo } : {}),
-      ...(dto.fase !== undefined ? { fase: dto.fase } : {}),
-      ...(dto.tipo !== undefined ? { tipo: dto.tipo } : {}),
       ...(dto.ativo !== undefined ? { ativo: dto.ativo } : {}),
       ...(dto.motivoModeracao !== undefined
         ? { motivo_moderacao: dto.motivoModeracao }

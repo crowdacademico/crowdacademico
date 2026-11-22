@@ -87,7 +87,7 @@ Fontes:
 
 ---
 
-## 📌 Para discutir (07-11-2026): repositório privado do GitHub como recompensa
+## ✅ Resolvido em 22-11-2026 (a recompensa virou o Mural dos apoiadores, sem entrega por link): repositório privado do GitHub como recompensa
 
 **A ideia:** o pesquisador compartilhar um repositório do GitHub com quem apoiou, inclusive um repositório fechado (privado).
 

@@ -16,7 +16,7 @@ interface LinhaContribuicaoRecebida {
   meio_pagamento: MeioPagamento;
   status: StatusContribuicao;
   criado_em: Date;
-  recompensas: string | null;
+  no_mural: boolean;
 }
 
 @Injectable()
@@ -37,7 +37,7 @@ export class ContribuicaoServiceFindAllReceived {
       meioPagamento: linha.meio_pagamento,
       status: linha.status,
       criadoEm: linha.criado_em,
-      recompensas: linha.recompensas,
+      noMural: linha.no_mural,
     }));
   }
 }

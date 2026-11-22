@@ -8,12 +8,11 @@ export interface TipoLinkResponse {
   regex: string | null;
   permitePerfil: boolean;
   permiteAtualizacao: boolean;
-  permiteRecompensa: boolean;
 }
 
 // Mesmos valores de ListarTipoLinkQueryDto (Nest) - filtra pelo campo
 // permite_* correspondente.
-export type EscopoTipoLink = 'perfil' | 'atualizacao' | 'recompensa';
+export type EscopoTipoLink = 'perfil' | 'atualizacao';
 
 // Espelha tipo-link.request-create.ts.
 export interface TipoLinkRequestCreate {
@@ -24,7 +23,6 @@ export interface TipoLinkRequestCreate {
   dominio?: string[];
   permitePerfil?: boolean;
   permiteAtualizacao?: boolean;
-  permiteRecompensa?: boolean;
 }
 
 // Espelha tipo-link.request-update.ts. Sem `codigo`, de propósito (ver
@@ -37,5 +35,4 @@ export interface TipoLinkRequestUpdate {
   dominio?: string[];
   permitePerfil?: boolean;
   permiteAtualizacao?: boolean;
-  permiteRecompensa?: boolean;
 }

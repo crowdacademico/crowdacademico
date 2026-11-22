@@ -1,5 +1,5 @@
 // Mensagem do 409 quando um item não pode ser excluído porque está em uso (chave estrangeira sem CASCADE): diz
-// ONDE e QUANTAS vezes, com singular/plural certos ("em uso em 2 perfis e 1 recompensa"). As contagens passam
+// ONDE e QUANTAS vezes, com singular/plural certos ("em uso em 2 perfis e 1 atualização"). As contagens passam
 // pela RLS: quem exclui catálogo é administrador e enxerga tudo; se mesmo assim nada for contado, a frase diz
 // só "em outros registros" em vez de "em uso em 0".
 export interface UsoDoItem {

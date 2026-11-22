@@ -1,5 +1,4 @@
 import { ROTULO_MODELO_CAMPANHA, ROTULO_STATUS_CAMPANHA } from '../../12-campanha/constants/status-campanha.constants';
-import { ROTULO_FASE_ATUALIZACAO } from '../../15-atualizacao-campanha/constants/atualizacao-campanha.constants';
 import { ROTULO_MEIO_PAGAMENTO } from '../../22-contribuicao/constants/contribuicao.constants';
 import { ROTULO_STATUS_CONTRIBUICAO } from '../../22-contribuicao/constants/status-contribuicao.constants';
 import {
@@ -128,8 +127,8 @@ export function gerarHtmlExportacao(dados: ExportacaoDados): string {
         'Sem marcos no cronograma.',
       )}
       <h4>Atualizações publicadas</h4>${tabela(
-        ['Título', 'Fase', 'Publicada em', 'Texto'],
-        campanha.atualizacoes.map((a) => [a.titulo, rotulo(ROTULO_FASE_ATUALIZACAO, a.fase), formatarDataHora(a.publicadoEm), a.conteudo]),
+        ['Título', 'Publicada em', 'Texto'],
+        campanha.atualizacoes.map((a) => [a.titulo, formatarDataHora(a.publicadoEm), a.conteudo]),
         'Nenhuma atualização publicada.',
       )}</section>`);
     }

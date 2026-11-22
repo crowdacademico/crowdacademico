@@ -15,6 +15,6 @@ export class ContribuicaoResponseMine {
   status: StatusContribuicao;
   anonima: boolean;
   criadoEm: Date;
-  // As recompensas ganhas, separadas por vírgula, da menor para a maior; null = nenhuma.
-  recompensas: string | null;
+  // Se a pessoa está no Mural dos apoiadores da campanha (a recompensa, RF-105; false sem mural).
+  noMural: boolean;
 }

@@ -1,106 +1,63 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { useFecharComAviso } from '../../components/crud/use-alteracao-nao-salva';
 import { Campo } from '../../components/input/campo';
 import { InputDinheiro } from '../../components/input/input-dinheiro';
-import { Tooltip } from '../../components/layout/tooltip';
-import { EXEMPLO_LINK_POR_TIPO } from '../../services/7-link-academico/constants/exemplos-link.constants';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { recompensaApi } from '../../services/18-recompensa/api/recompensa.api';
-import {
-  EXEMPLO_TIPO_RECOMPENSA,
-  ORDEM_TIPO_RECOMPENSA,
-  ROTULO_TIPO_RECOMPENSA,
-} from '../../services/18-recompensa/constants/recompensa.constants';
-import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { RecompensaResponse } from '../../services/18-recompensa/type/recompensa.type';
-import type { TipoLinkResponse } from '../../services/9-tipo-link/type/tipo-link.type';
-import type { TipoRecompensa } from '../../services/constant/type/enums-do-banco.gerado';
 
 interface ModalRecompensaProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
   idCampanha: number;
-  // Sem ela: criar uma nova. Com ela: alterar.
+  // Sem ela: oferecer o mural. Com ela: alterar.
   recompensa?: RecompensaResponse;
-  // Criar pelo Estúdio: a campanha é escolhida aqui dentro (campo "Campanha"), não numa lista ao lado do botão.
+  // Já tem alguém no mural: o valor mínimo não muda e a recompensa não é desativada (o banco recusa, 91067).
+  travada?: boolean;
+  // Criar pelo Estúdio: a campanha é escolhida aqui dentro (só as que ainda não têm mural).
   campanhasParaEscolher?: { idCampanha: number; titulo: string }[];
   aoFechar: () => void;
   aoSalva: () => void;
 }
 
-// Acesso antecipado e entrega digital chegam a quem apoiou pelo link especial, que é obrigatório nos dois (o banco
-// recusa sem ele, 91057). Reconhecimento é o nome de quem apoiou num agradecimento: não tem o que entregar por link.
-const tipoUsaLink = (tipo: TipoRecompensa) => tipo !== 'reconhecimento';
-
-// Criar ou alterar uma recompensa simbólica (RF-103, RF-104), num modal por cima do Alterar da campanha. Depois de
-// escolhida numa contribuição paga, o valor e o tipo não mudam mais: quem apoiou escolheu por eles (o padrão do Catarse e
-// do Kickstarter). Trocar o link vai junto no mesmo pedido, para o link nunca faltar no meio da troca.
-export function ModalRecompensa({ auth, idCampanha, recompensa, campanhasParaEscolher, aoFechar, aoSalva }: ModalRecompensaProps) {
-  const [idCampanhaEscolhida, setIdCampanhaEscolhida] = useState(idCampanha);
+// A recompensa da campanha = o Mural dos apoiadores (22-11-2026, RF-103 a RF-105): o valor que a pessoa precisa somar
+// nas contribuições para entrar, e uma mensagem de agradecimento opcional. Uma por campanha.
+export function ModalRecompensa({ auth, idCampanha, recompensa, travada = false, campanhasParaEscolher, aoFechar, aoSalva }: ModalRecompensaProps) {
+  const [idCampanhaEscolhida, setIdCampanhaEscolhida] = useState(campanhasParaEscolher?.[0]?.idCampanha ?? idCampanha);
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { ocupado, executar } = useEnvio(reportarErro, limparErro);
-  const linkAtual = recompensa?.links[0] ?? null;
-  const travada = (recompensa?.escolhidas ?? 0) > 0;
-  const [titulo, setTitulo] = useState(recompensa?.titulo ?? '');
   const [valorMinimo, setValorMinimo] = useState(recompensa ? String(recompensa.valorMinimo) : '');
-  const [tipo, setTipo] = useState<TipoRecompensa>(recompensa?.tipo ?? ORDEM_TIPO_RECOMPENSA[0]);
   const [descricao, setDescricao] = useState(recompensa?.descricao ?? '');
-  // Desativar/reativar mora aqui (saiu do botão da tabela do Estúdio).
   const [ativo, setAtivo] = useState(recompensa?.ativo ?? true);
-  const [idTipoLink, setIdTipoLink] = useState(linkAtual ? String(linkAtual.idTipoLink) : '');
-  const [url, setUrl] = useState(linkAtual?.url ?? '');
-  const [tiposLink, setTiposLink] = useState<TipoLinkResponse[]>([]);
-  const precisaLink = tipoUsaLink(tipo);
-  // O exemplo do tipo escolhido (os mesmos dos links acadêmicos), no ⓘ do endereço.
-  const codigoTipoLink = tiposLink.find((opcao) => String(opcao.idTipolink) === idTipoLink)?.codigo;
-  const exemploLink = codigoTipoLink ? EXEMPLO_LINK_POR_TIPO[codigoTipoLink] : undefined;
-
-  useEffect(() => {
-    tipoLinkApi.listar(auth.authFetch, { ativo: true, escopo: 'recompensa' }).then(setTiposLink).catch(reportarErro);
-  }, [auth.authFetch, reportarErro]);
 
   const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
-    titulo: titulo.trim() === '' && 'Informe o título.',
     valorMinimo: !(Number(valorMinimo) > 0) && 'Informe um valor mínimo maior que zero.',
-    idTipoLink: precisaLink && idTipoLink === '' && 'Escolha o tipo do link.',
-    url: precisaLink && url.trim() === '' && 'Cole o link: é por ele que a recompensa chega a quem apoiou.',
   }));
 
   const salvar = async () => {
     if (!tentarEnviar()) return;
-    const link = precisaLink ? { idTipoLink: Number(idTipoLink), url: url.trim() } : undefined;
     await executar(async () => {
       if (recompensa) {
-        const linkMudou = link !== undefined && (linkAtual === null || link.url !== linkAtual.url || link.idTipoLink !== linkAtual.idTipoLink);
         await recompensaApi.alterar(auth.authFetch, recompensa.idRecompensa, {
-          titulo: titulo.trim(),
           descricao: descricao.trim() || null,
-          ...(travada ? {} : { valorMinimo: Number(valorMinimo), tipo }),
-          ...(linkMudou ? { link } : {}),
+          ...(travada ? {} : { valorMinimo: Number(valorMinimo) }),
           ...(ativo !== recompensa.ativo ? { ativo } : {}),
         });
-        // Virou Reconhecimento: o link que sobrou não entrega nada.
-        if (!precisaLink && linkAtual) {
-          await recompensaApi.removerLink(auth.authFetch, linkAtual.idLinkRecompensa);
-        }
-        mostrar('Recompensa alterada.');
+        mostrar('Mural dos apoiadores alterado.');
       } else {
         await recompensaApi.criar(auth.authFetch, {
           idCampanha: idCampanhaEscolhida,
-          titulo: titulo.trim(),
-          tipo,
           valorMinimo: Number(valorMinimo),
-          descricao: descricao.trim() || undefined,
-          link,
+          descricao: descricao.trim() || null,
         });
-        mostrar('Recompensa criada.', 'Ela aparece para quem for apoiar a campanha.');
+        mostrar('Mural dos apoiadores criado.', 'Quem apoiar a partir do valor mínimo aparece na página da campanha.');
       }
       aoSalva();
       aoFechar();
@@ -108,20 +65,14 @@ export function ModalRecompensa({ auth, idCampanha, recompensa, campanhasParaEsc
   };
 
   const sujo = recompensa
-    ? titulo !== recompensa.titulo ||
-      Number(valorMinimo) !== recompensa.valorMinimo ||
-      tipo !== recompensa.tipo ||
-      descricao !== (recompensa.descricao ?? '') ||
-      ativo !== recompensa.ativo ||
-      url !== (linkAtual?.url ?? '') ||
-      idTipoLink !== (linkAtual ? String(linkAtual.idTipoLink) : '')
-    : titulo !== '' || valorMinimo !== '' || descricao !== '' || url !== '';
+    ? Number(valorMinimo) !== recompensa.valorMinimo || descricao !== (recompensa.descricao ?? '') || ativo !== recompensa.ativo
+    : valorMinimo !== '' || descricao !== '';
   const fechar = useFecharComAviso(sujo, aoFechar);
 
   return (
     <ModalFicha
       titulo={recompensa ? 'Alterar Recompensa' : 'Nova Recompensa'}
-      subtitulo={recompensa?.titulo}
+      subtitulo="Mural dos apoiadores"
       aoFechar={fechar}
       erro={erro}
       rodape={
@@ -131,7 +82,11 @@ export function ModalRecompensa({ auth, idCampanha, recompensa, campanhasParaEsc
         />
       }
     >
-      <SecaoFicha titulo="Recompensa">
+      <SecaoFicha titulo="Mural dos apoiadores">
+        <p className="sm:col-span-2 legenda texto-fraco">
+          Quem somar, nas contribuições à campanha, pelo menos o valor mínimo aparece com o nome e a foto no Mural dos
+          apoiadores da página da campanha. Quem apoiar como anônimo aparece sem nome.
+        </p>
         {!recompensa && campanhasParaEscolher && campanhasParaEscolher.length > 0 && (
           <Campo obrigatorio rotulo="Campanha" className="sm:col-span-2">
             {({ atributos }) => (
@@ -150,112 +105,31 @@ export function ModalRecompensa({ auth, idCampanha, recompensa, campanhasParaEsc
             )}
           </Campo>
         )}
-        {recompensa && (
-          <label className="sm:col-span-2 flex items-start gap-3 cursor-pointer paragrafo texto-padrao">
-            <input type="checkbox" checked={ativo} onChange={(evento) => setAtivo(evento.target.checked)} className="mt-1 w-4 h-4 accent-primary" />
-            <span>
-              <span className="enfase texto-forte">Recompensa ativa</span>
-              <span className="block legenda texto-fraco">Desmarcada, some para quem for apoiar; quem já ganhou continua vendo.</span>
-            </span>
-          </label>
-        )}
-        <Campo obrigatorio rotulo="Título" erro={erroDe('titulo')}>
-          {({ atributos, classeErro }) => (
-            <input
-              {...atributos}
-              type="text"
-              maxLength={150}
-              value={titulo}
-              onChange={(evento) => setTitulo(evento.target.value)}
-              className={'input-padrao' + classeErro}
-            />
-          )}
-        </Campo>
         <Campo
           obrigatorio
-          rotulo="A partir de"
+          rotulo="Valor mínimo"
           erro={erroDe('valorMinimo')}
-          dica={travada ? `Já escolhida em ${recompensa?.escolhidas} contribuição(ões): o valor e o tipo não mudam mais.` : undefined}
+          dica={travada ? 'Já tem gente no mural: o valor mínimo não muda mais.' : undefined}
         >
           {({ atributos, classeErro }) => (
             <InputDinheiro {...atributos} valor={valorMinimo} aoMudar={setValorMinimo} disabled={travada} className={'input-padrao' + classeErro} />
           )}
         </Campo>
-        <Campo obrigatorio rotulo="Tipo" dica={EXEMPLO_TIPO_RECOMPENSA[tipo]} className="sm:col-span-2">
+        <Campo rotulo="Mensagem de agradecimento (opcional)" className="sm:col-span-2">
           {({ atributos }) => (
-            <select
-              {...atributos}
-              value={tipo}
-              disabled={travada}
-              onChange={(evento) => setTipo(evento.target.value as TipoRecompensa)}
-              className="input-padrao"
-            >
-              {ORDEM_TIPO_RECOMPENSA.map((opcao) => (
-                <option key={opcao} value={opcao}>
-                  {ROTULO_TIPO_RECOMPENSA[opcao]}
-                </option>
-              ))}
-            </select>
+            <textarea {...atributos} rows={3} value={descricao} onChange={(evento) => setDescricao(evento.target.value)} className="input-padrao" />
           )}
         </Campo>
-        <Campo rotulo="Descrição (opcional)" className="sm:col-span-2">
-          {({ atributos }) => (
-            <textarea {...atributos} rows={2} value={descricao} onChange={(evento) => setDescricao(evento.target.value)} className="input-padrao" />
-          )}
-        </Campo>
+        {recompensa && !travada && (
+          <label className="sm:col-span-2 flex items-start gap-3 cursor-pointer paragrafo texto-padrao">
+            <input type="checkbox" checked={ativo} onChange={(evento) => setAtivo(evento.target.checked)} className="mt-1 w-4 h-4 accent-primary" />
+            <span>
+              <span className="enfase texto-forte">Mural ativo</span>
+              <span className="block legenda texto-fraco">Desmarcado, o mural some da página da campanha.</span>
+            </span>
+          </label>
+        )}
       </SecaoFicha>
-
-      {precisaLink && (
-        <SecaoFicha titulo="Link especial (só quem ganhar vê)">
-          {tiposLink.length === 0 ? (
-            <p className="legenda enfase texto-erro sm:col-span-2">Nenhum tipo de link liberado para recompensa. O admin libera em Tipos de Link.</p>
-          ) : (
-            <>
-              <Campo obrigatorio rotulo="Tipo do link" erro={erroDe('idTipoLink')}>
-                {({ atributos, classeErro }) => (
-                  <select
-                    {...atributos}
-                    value={idTipoLink}
-                    onChange={(evento) => {
-                      setIdTipoLink(evento.target.value);
-                      if (evento.target.value === '') setUrl('');
-                    }}
-                    className={'input-padrao' + classeErro}
-                  >
-                    <option value="">Nenhum</option>
-                    {tiposLink.map((opcao) => (
-                      <option key={opcao.idTipolink} value={opcao.idTipolink}>
-                        {opcao.nome}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </Campo>
-              <Campo
-                obrigatorio
-                rotulo={
-                  <>
-                    Endereço do link {exemploLink && <Tooltip texto={`Exemplo: ${exemploLink}`} />}
-                  </>
-                }
-                erro={erroDe('url')}
-              >
-                {({ atributos, classeErro }) => (
-                  <input
-                    {...atributos}
-                    type="url"
-                    maxLength={500}
-                    value={url}
-                    disabled={idTipoLink === ''}
-                    onChange={(evento) => setUrl(evento.target.value)}
-                    className={'input-padrao' + classeErro}
-                  />
-                )}
-              </Campo>
-            </>
-          )}
-        </SecaoFicha>
-      )}
     </ModalFicha>
   );
 }

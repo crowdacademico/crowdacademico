@@ -2,13 +2,14 @@
 
 Só o que ainda falta **fazer ou decidir**. O que fica pronto sai daqui (atualizado em 17-11-2026).
 
-**Grupos:** 1. Antes da banca · 2. Pagamento · 3. E-mail de verdade · 4. No dia do deploy · 5. Decisões em aberto, sem pressa · 6. Ideias para depois
+**Grupos:** 1. Antes da banca · 2. Pagamento · 4. No dia do deploy · 5. Decisões em aberto, sem pressa · 6. Ideias para depois · 7. Bancada de testes
+
+(O grupo 3, E-mail de verdade, foi resolvido em 22-11-2026: o Brevo envia pelo Render, com o remetente do IFSP confirmado na conta. A numeração dos outros grupos ficou igual.)
 
 ---
 
 ## 1. Antes da banca
 
-- **Colar no Supabase os Grupos DL, DM e DN do `ATUALIZAR O SUPABASE.sql` (22-11-2026), antes de subir o Nest novo no Render:** detecção de reuso do refresh token, prazo de carência na exclusão de conta e troca do e-mail ainda não confirmado. Depois, conferir na tela: excluir uma conta de teste e entrar de novo (o modal de reativação), e uma conta sem e-mail confirmado (o aviso do topo, o reenvio e a troca do e-mail em Minha Conta).
 - 🔴 **Dados pessoais do titular na página de pagamento do Asaas (16-11-2026, urgente).** O topo da página de pagamento do Asaas (para onde o modal Apoiar manda quem apoia) mostra o titular da conta: nome, CPF, e-mail, cidade e final do telefone. No sandbox de hoje é a conta pessoal do Lucas, então qualquer pessoa que testar o apoio vê esses dados; a frase do rodapé ("cobrança de responsabilidade única e exclusiva de <titular>, CPF...") também é do Asaas. **Caminhos:** (1) em produção, a conta Asaas no nome da plataforma (CNPJ, ou o responsável oficial definido com o orientador), nunca uma conta pessoal; (2) já no sandbox, ver no painel do Asaas (Minha Conta > Informações / Personalização da fatura) o que dá para esconder ou trocar (nome fantasia, e-mail e telefone de contato da plataforma); (3) se o CPF do titular não puder ser escondido, abrir uma conta sandbox nova em nome da plataforma para os testes com outras pessoas. Até lá: só testar o apoio com quem já conhece esses dados.
 
 ---
@@ -50,13 +51,6 @@ Resolvidos no seed em 18-11-2026 (valem quando o banco for recriado): prazo de a
 
 ---
 
-## 3. E-mail de verdade (o módulo está pronto e testado no modo de teste)
-
-- **Serviço de envio de verdade:** recomendação Brevo pela API, com um domínio `.com.br` (cerca de R$ 40 por ano). Sem domínio, só o Gmail com senha de app. Passo a passo e comparação dos planos em `.Tutorial-email.md`. Fica para o fim, como o gateway.
-- **Saber se o e-mail chegou (21-10-2026):** "Enviado" quer dizer que o provedor aceitou, não que chegou na caixa da pessoa. Falta o webhook de entrega do Brevo (entregue, devolvido, marcado como spam), o equivalente ao do Asaas; o Gmail por SMTP nem oferece. Só dá para fazer junto com o serviço de envio de verdade. Explicação em `.Tutorial-email.md`, Parte 0.
-
----
-
 ## 4. No dia do deploy
 
 - **Banco de produção:** rodar o `07_seed_dados.sql` só até o marcador `[07-DEMONSTRACAO]` e promover a primeira conta a admin uma vez (ver `.Tutorial-rodar-projeto.md`).
@@ -76,9 +70,8 @@ Resolvidos no seed em 18-11-2026 (valem quando o banco for recriado): prazo de a
 
 ### Requisitos
 
-- **RF-053 (decidido em 22-11-2026):** a atualização virou texto livre com anexos, sem fase nem formato. Falta tirar a fase da tela e do banco (o formato já saiu da tela, mas continua gravado) e levar o texto novo ao documento do TCC. Detalhe em `informacoes/REQUISITOS_V14.md`.
-- **Recompensa com arquivo (07-11-2026, aguardando a Alexia):** o Lucas perguntou à Alexia se a recompensa entrega também por arquivo (imagem ou PDF) ou só por link. Já foi feito e testado, e desfeito no mesmo dia para esperar a resposta; as versões com o recurso estão guardadas fora do repositório, e o Grupo CF do ATUALIZAR ficou comentado, marcado "NÃO COLE".
-- **Tipos de link para atualização e recompensa (04-11-2026):** hoje o único tipo liberado para atualização e recompensa é o GitHub, e a regra dele só aceita endereço de perfil (`github.com/nome`), não de repositório. Artigo (DOI), vídeo ou pasta de arquivos precisam de um tipo novo, criado pelo admin na tela Tipos de Link (sem código). Decidir quais tipos entram no seed.
+- **Requisitos e documento do TCC:** o Claude Code escreve um prompt para o Claude Web atualizar os requisitos e o documento do TCC (`.docx`) com o sistema atual: o RF-053 (texto livre com anexos) e os RF-103 a RF-105 (o Mural dos apoiadores), os dois feitos no sistema em 22-11-2026.
+- **Tipos de link para atualização (04-11-2026):** hoje o único tipo liberado para atualização é o GitHub, e a regra dele só aceita endereço de perfil (`github.com/nome`), não de repositório. Artigo (DOI), vídeo ou pasta de arquivos precisam de um tipo novo, criado pelo admin na tela Tipos de Link (sem código). Decidir quais tipos entram no seed. (A recompensa não usa mais link desde 22-11-2026.)
 
 ### Cadastro de pesquisador (anotado em 21-11-2026)
 
@@ -97,12 +90,25 @@ Resolvidos no seed em 18-11-2026 (valem quando o banco for recriado): prazo de a
 
 ## 6. Ideias para depois
 
+- **Saber se o e-mail chegou (opcional):** "Enviado" quer dizer que o Brevo aceitou, não que chegou na caixa da pessoa. O webhook de entrega do Brevo (entregue, devolvido, marcado como spam) diria isso, como o do Asaas faz com o pagamento. Explicação em `.Tutorial-email.md`, Parte 0.
 - **Autenticação em duas etapas (2FA), sem RF (decisão do V8: avançado demais para o escopo do TCC agora).** Bancas costumam perguntar sobre segurança, e 2FA é um dos primeiros itens. Hoje o sistema tem só e-mail e senha, com bloqueio por tentativas. Para fazer, precisa de um RF novo.
 - **Auditoria de acessibilidade manual (WCAG 2.2, nível AA).** A parte automática foi feita em 16-11-2026: o axe-core zerou nas 22 telas, nos dois temas, no computador e no celular (`testes-e2e/`), e a auditoria Nielsen/WCAG da área pública corrigiu 14 itens (`informacoes/AUDITORIA_AREA_PUBLICA_NIELSEN_WCAG_16-11-2026.md`). Falta a conferência manual, que a ferramenta automática não pega: navegação só pelo teclado, ordem do foco, zoom de 200%. Já anotado: o cabeçalho de coluna que ordena a tabela responde ao clique, mas não ao teclado.
 - **Imagens geradas por IA para dar vida ao site (14-11-2026, sugestão do Claude aprovada pelo Lucas).** Mesmo processo dos cards do Como funciona: prompt base com a paleta escura (#041722 a #082e48, degradê até #0a4a3c) e verde (#0f9b58, #5fc796), sem texto na imagem; originais em `informacoes/Imagens`, convertidas para WebP (qualidade 80) em `react/public/imagens/`. Em ordem de impacto: (1) capas padrão das campanhas sem imagem, uma por grande área do CNPq (9 imagens 16:9, 1200x675; hoje o cartão mostra só um ícone de frasco); (2) painel lateral do Login e do Cadastro (retrato 3:4, ~900x1200); (3) confirmação do apoio (`/apoio-confirmado`, quadrada 800x800); (4) estados vazios (2 ou 3 ilustrações reaproveitáveis, 400x400, fundo transparente); (5) página de erro ou não encontrada (16:9).
 - **Tela de administração dos arquivos (especificada em 13-09-2026, não construída de propósito).** Espaço ocupado (com % do limite do plano gratuito), arquivos desativados, órfãos (sem vínculo com foto de perfil, atualização ou recompensa), distribuição por tipo, os 10 maiores consumidores e a listagem completa. Tudo sai das colunas que `arquivo` já tem, sem módulo novo (2 rotas no `26-arquivo` e uma tela de listagem). Cuidado na ação "excluir órfão": apagar do armazenamento primeiro, depois do banco, registrando em auditoria; se o armazenamento falhar, a linha fica. Momento certo: quando anexos tiverem volume de verdade.
-- **Auditoria de coisas inúteis (04-11-2026).** Procurar campo, coluna, tela ou mecanismo que só existe por existir (gravado ou mostrado, mas que nada usa, ou que repete outra coisa). Exemplo que motivou: o formato da atualização (RF-053), que nada usa; saiu da tela em 04-11-2026, mas continua gravado. Para cada achado: tirar da tela, tirar do banco ou levar à revisão externa.
+- **Auditoria de coisas inúteis (04-11-2026).** Procurar campo, coluna, tela ou mecanismo que só existe por existir (gravado ou mostrado, mas que nada usa, ou que repete outra coisa). Exemplo que motivou: o formato da atualização (RF-053), que nada usava; saiu de vez em 22-11-2026, junto com a fase. Para cada achado: tirar da tela, tirar do banco ou levar à revisão externa.
 - **Auditoria do Tailwind que anula o CSS, versão com navegador.** A versão sem navegador foi feita em 01-11-2026 (`informacoes/testes-banco/ferramentas/tailwind-x-css.mjs`) e os achados foram corrigidos. Falta a versão com navegador, que prova quais candidatos quebram de verdade; agora dá para fazer com o Playwright do `testes-e2e/`.
 - **Super auditoria de padrões de mercado (29-09-2026).** Comparar o sistema inteiro com os sistemas de referência (login e sessão, termos, moderação, campanha, pagamento, mensagens de erro, telas): para cada diferença, qual é o padrão, o que o projeto faz e se vale mudar.
 - **Dispatcher de triggers (29-09-2026).** Hoje `campanha` tem 23 triggers e `comentario` 9; quando várias rodam no mesmo momento, o Postgres segue a ordem alfabética do nome. O dispatcher seria uma trigger só por momento, chamando as regras numa ordem escrita: ordem explícita e erro previsível, mas mexe nas regras mais críticas (as suítes de caracterização, 1.050 casos, são a rede de proteção). Recomendação: não fazer. Estudo completo de 24-10-2026; decisão aberta.
 - **Reorganizar o `DESIGN_SYSTEM.md` (18-10-2026).** As regras principais (como linha e coluna das tabelas, DS-100, DS-104 e DS-105) passam para os números de destaque, para serem achadas primeiro.
+
+---
+
+## 7. Bancada de testes
+
+O que foi feito sem conferir na tela. O Claude roda com o Playwright **só quando o Lucas autorizar**; até lá, fica anotado aqui.
+
+- **Prazo de carência na exclusão (22-11-2026):** excluir uma conta de teste em Minha Conta, entrar de novo com a senha e com o Google: o modal "Sua conta está marcada para exclusão" com a data e os dias; "Agora não" não entra; "Reativar minha conta" entra e tudo volta. Conta excluída pelo admin: o login recusa, sem modal. Conta com campanha ativa: a exclusão é recusada.
+- **E-mail não confirmado (22-11-2026):** conta nova sem confirmar: o aviso no topo de toda página; "Reenviar o link" manda outro; "Corrigir o e-mail" leva a Minha Conta, onde o e-mail é editável (e não é, depois de confirmar); pedir perfil de pesquisador, enviar campanha e comentar são recusados com a mensagem de confirmar o e-mail; o modal Apoiar mostra o e-mail do recibo e deixa apoiar.
+- **Detecção de reuso do refresh token (22-11-2026):** duas abas abertas renovando juntas não derrubam a sessão.
+- **Atualização sem fase (22-11-2026):** criar e alterar uma atualização (só título, texto e anexos); a página da campanha, o perfil, o Estúdio e a tela Atualizações do painel sem a fase; Exportar meus dados sem a fase. Rodar também as suítes 18, 34 e 53 do PGlite, ajustadas sem a fase.
+- **Mural dos apoiadores (22-11-2026):** recriar o banco do zero (o 01 a 08 mudaram, sem grupo no ATUALIZAR). Depois: oferecer o mural numa campanha (Alterar e Estúdio), apoiar abaixo e acima do mínimo, duas vezes somando, como anônimo; ver a aba "Mural dos apoiadores" na página pública; desistir e sair do mural; tentar mudar o mínimo com gente no mural (recusa). Rodar as suítes 16, 22, 54, 58 e a nova 62 do PGlite.
