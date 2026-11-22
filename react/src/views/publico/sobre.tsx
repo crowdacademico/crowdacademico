@@ -53,7 +53,7 @@ const PRINCIPIOS = [
 
 // Quem criou a plataforma (21-11-2026), em faixas: a foto ao lado das informações, como as páginas "Sobre" e
 // "Equipe" de muitos sites. As duas faixas têm sempre a mesma altura (grade de linhas iguais) e as fotos o mesmo
-// tamanho (400x500, WebP, ~10 KB; ver react/public/imagens). Campo vazio não aparece: o da Alexia fica para depois.
+// tamanho (400x500, WebP, ~10 KB; ver react/public/imagens). Campo vazio não aparece.
 interface Criador {
   nome: string;
   foto: string;
@@ -77,8 +77,16 @@ const CRIADORES: readonly Criador[] = [
     ],
   },
   {
-    nome: 'Alexia',
+    nome: 'Alexia Eduarda Celice Ferreira',
     foto: '/imagens/criador-alexia.webp',
+    papel: 'Cocriadora do CrowdAcadêmico',
+    formacao: 'Tecnologia em Sistemas para Internet · IFSP, câmpus Birigui',
+    resumo:
+      'Programadora full-stack em formação. É técnica em Informática integrado ao ensino médio e gosta de estudar e aprender coisas novas na área de tecnologia.',
+    links: [
+      { rotulo: 'E-mail de Alexia', href: 'mailto:alexia.eduarda@aluno.ifsp.edu.br', icone: 'fa-solid fa-envelope', texto: 'alexia.eduarda@aluno.ifsp.edu.br' },
+      { rotulo: 'GitHub de Alexia', href: 'https://github.com/Alexia01Edu', icone: 'fa-brands fa-github', texto: 'github.com/Alexia01Edu' },
+    ],
   },
 ];
 
@@ -92,7 +100,9 @@ function FaixaCriador({ criador }: { criador: Criador }) {
         height={200}
         loading="lazy"
         decoding="async"
-        className="w-40 h-50 shrink-0 rounded-xl object-cover border borda-padrao"
+        // Em tela larga, a foto acompanha a altura do cartão (que é a do texto) e avança 0,75rem sobre o espaço interno
+        // no topo, embaixo e à esquerda: fica mais perto da borda sem o cartão crescer. No celular, tamanho fixo em cima.
+        className="w-40 h-50 shrink-0 rounded-xl object-cover border borda-padrao sm:h-auto sm:self-stretch sm:-my-3 sm:-ml-3"
       />
       <div className="min-w-0">
         <h3 className="subtitulo texto-forte">{criador.nome}</h3>
