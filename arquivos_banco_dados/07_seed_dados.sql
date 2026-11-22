@@ -882,9 +882,9 @@ INSERT INTO permissao (nome) VALUES
 ('campanha_excluir_forcado')
 ON CONFLICT (nome) DO NOTHING;
 
--- [07-C-4] arquivo: vazio. O seed não tem imagens nem documentos no armazenamento, e uma linha aqui apontaria
--- para um arquivo que não existe (foto "cadastrada" sem imagem, anexo que não abre). Ninguém nasce com foto de
--- perfil e nenhuma atualização nasce com anexo; arquivo só entra pelo envio de verdade.
+-- [07-C-4] arquivo: as capas das campanhas e as fotos das atualizações (22-11-2026) entram mais abaixo, em
+-- [07-E-1c] e [07-E-3], apontando para as imagens de informacoes/Imagens/imagens-seed, que sobem para o bucket com
+-- `npm run seed:imagens` (nest). Ninguém nasce com foto de perfil.
 
 -- [07-D-1] usuario
 -- senha_hash: hash bcrypt de verdade (custo 10, igual CUSTO_BCRYPT_SENHA em usuario.constants.ts), o MESMO para
@@ -1161,7 +1161,14 @@ JOIN tipo_link tl ON tl.codigo = v.tipolink_codigo;
 --   20 Bruno     tudo-ou-nada  na fila há 3 dias, com 2 marcos: o checklist "Pronta para aprovar?" mostra o que falta
 --                              (no uso real o envio barra isso; só aconteceria se os parâmetros mudassem depois)
 --   21 Pesquisador Sistema     ativa e sem comentário, para testar comentário e endosso pelo login rápido (não é da
---                              demonstração: a faceta Origem do Campo de Testes a mostra como "teste")
+--                              demonstração: a faceta Origem do Campo de Testes a mostra como "teste"); tem apoios,
+--                              atualizações e Mural dos apoiadores
+--   22 Pesquisador Sistema flexível  "Em breve": aprovada, começa daqui a 10 dias
+--   23 Pesquisador Sistema flexível  sucesso: bateu a meta; o repasse espera (seed mais rico para quem entra como ele,
+--                              22-11-2026)
+--   24 Eduardo   tudo-ou-nada  "Em breve": aprovada, começa daqui a 14 dias, com capa
+--   25 Patrícia  tudo-ou-nada  ativa, com apoios, comentários e atualização com foto
+--   26 Juliana   flexível      ativa, com apoios, comentários e atualização com foto
 -- A fila de aprovação mostra as três cores da espera (até 7 dias, até 30, acima: espera_atencao_dias e
 -- espera_critica_dias), e Pedidos de Encerramento também (1, 15 e 40 dias). Quem aprova e rejeita é o Curador
 -- Sistema (6). A duração de toda campanha fica entre prazo_minimo_campanha_dias e prazo_maximo_campanha_dias.
@@ -1192,7 +1199,12 @@ INSERT INTO seed_campanha VALUES
     (18, 11, NULL, '4.05.00.00', 'Estudo sobre Microbiota Intestinal em Pacientes Oncológicos', 'all-or-nothing', 20000.00, 'Caracterização da microbiota intestinal e sua relação com resposta a quimioterapia em pacientes com câncer colorretal.', 12, 52, 'aguardando_aprovacao', NULL, -30, -2),
     (19, 16, NULL, '6.07.00.00', 'Percepção de Segurança no Transporte Público Noturno', 'all-or-nothing', 6000.00, 'Questionário e entrevistas com usuárias do transporte público noturno sobre percepção de segurança e rotas evitadas.', 6, 36, 'aguardando_aprovacao', NULL, -45, -40),
     (20, 9,  NULL, '1.03.00.00', 'Nova Plataforma de Diagnóstico por Imagem com Machine Learning', 'all-or-nothing', 30000.00, 'Sistema de apoio ao diagnóstico radiológico baseado em visão computacional, validado com dados de dois hospitais universitários.', 10, 45, 'aguardando_aprovacao', NULL, -5, -3),
-    (21, 7,  6,    '6.07.00.00', 'Campanha de Teste: Comentários e Endosso', 'flexivel', 10000.00, 'Campanha ativa para testar comentários, endosso e atualizações. Comente em nome de um pesquisador na Bancada da Campanha; endosse entrando como Pesquisador Sistema, em Minhas Campanhas.', -5, 40, 'ativo', -5, -7, -6);
+    (21, 7,  6,    '6.07.00.00', 'Campanha de Teste: Comentários e Endosso', 'flexivel', 10000.00, 'Campanha ativa para testar comentários, endosso e atualizações. Comente em nome de um pesquisador na Bancada da Campanha; endosse entrando como Pesquisador Sistema, em Minhas Campanhas.', -5, 40, 'ativo', -5, -7, -6),
+    (22, 7,  6,    '2.05.00.00', 'Monitoramento de Aves Migratórias no Litoral Paulista', 'flexivel', 9000.00, 'Contagem e anilhamento de aves migratórias em praias e manguezais do litoral paulista, com os dados abertos para os órgãos ambientais.', 10, 55, 'ativo', -1, -9, -4),
+    (23, 7,  6,    '4.06.00.00', 'Mapeamento de Criadouros do Aedes aegypti em Escolas Públicas', 'flexivel', 6000.00, 'Vistoria de escolas públicas com estudantes como agentes de pesquisa, para mapear e eliminar criadouros do mosquito da dengue.', -70, -25, 'ativo', -72, -80, -76),
+    (24, 12, 6,    '2.05.00.00', 'Abelhas Sem Ferrão como Bioindicadoras em Áreas Agrícolas', 'all-or-nothing', 14000.00, 'Uso de colmeias de abelhas nativas sem ferrão para medir o impacto de agrotóxicos em lavouras do Recôncavo Baiano.', 14, 60, 'ativo', -1, -10, -5),
+    (25, 15, 6,    '4.01.00.00', 'Rastreamento de Anemia em Gestantes da Atenção Básica', 'all-or-nothing', 12000.00, 'Exame de hemoglobina com aparelho portátil nas consultas de pré-natal de unidades básicas de saúde, com encaminhamento imediato dos casos.', -12, 33, 'ativo', -13, -20, -16),
+    (26, 14, 6,    '7.08.00.00', 'Olimpíadas de Matemática como Porta de Entrada para a Ciência', 'flexivel', 7000.00, 'Acompanhamento de estudantes de escolas públicas que participaram de olimpíadas de matemática e do efeito disso na escolha por carreiras científicas.', -8, 37, 'ativo', -9, -15, -12);
 
 -- Desligadas só nesta carga: trg_campanha_valida_prazo_negocio (as datas de início ficam no passado),
 -- trg_campanha_limite_simultaneo (as que vão fechar mais abaixo ainda estão 'ativo' agora; no fim, ninguém passa do
@@ -1223,6 +1235,46 @@ BEGIN
 END;
 $$;
 
+-- [07-E-1c] capas e vídeos das campanhas (22-11-2026)
+-- As capas são arquivos de verdade no bucket: as imagens estão em informacoes/Imagens/imagens-seed (créditos em
+-- CREDITOS.md) e sobem com `npm run seed:imagens` (nest), depois de recriar o banco, nas mesmas chaves gravadas aqui.
+-- Sem esse envio, a linha existe mas a imagem não abre. Vídeo só em campanha sem capa
+-- (CK_CAMPANHA_VIDEO_OU_IMAGEM_CAPA). trg_congela_regras_campanha fica desligada só aqui: as campanhas já nascem
+-- aprovadas, e capa e vídeo travam depois da aprovação.
+INSERT INTO arquivo (chave, nome_original, tipo_mime, tamanho_bytes, id_usuario_upload, criado_em)
+SELECT 'seed/capas/' || v.nome || '.webp', v.nome || '.webp', 'image/webp', v.tamanho, c.id_usuario, c.criado_em + INTERVAL '1 hour'
+FROM (VALUES
+    (1, '01-alzheimer', 25220), (2, '02-dislexia', 36580), (3, '03-retinopatia', 33638), (4, '04-caatinga', 319546),
+    (7, '07-cadeira-de-rodas', 114388), (8, '08-idosos-exercicio', 115196), (10, '10-nascente', 334942),
+    (11, '11-vale-do-ribeira', 289322), (12, '12-quilombo', 115738)
+) AS v(n, nome, tamanho)
+JOIN campanha c ON c.id_campanha = v.n;
+INSERT INTO arquivo (chave, nome_original, tipo_mime, tamanho_bytes, id_usuario_upload, criado_em)
+SELECT 'seed/atualizacoes/a14-abelha-nativa.webp', 'a14-abelha-nativa.webp', 'image/webp', 30776, id_usuario, criado_em + INTERVAL '1 hour'
+FROM campanha WHERE id_campanha = 24;
+
+ALTER TABLE campanha DISABLE TRIGGER trg_congela_regras_campanha;
+UPDATE campanha c
+SET id_imagem_capa = a.id_arquivo, capa_no_banner = v.banner
+FROM (VALUES
+    (1, 'seed/capas/01-alzheimer.webp', FALSE), (2, 'seed/capas/02-dislexia.webp', TRUE),
+    (3, 'seed/capas/03-retinopatia.webp', TRUE), (4, 'seed/capas/04-caatinga.webp', TRUE),
+    (7, 'seed/capas/07-cadeira-de-rodas.webp', TRUE), (8, 'seed/capas/08-idosos-exercicio.webp', FALSE),
+    (10, 'seed/capas/10-nascente.webp', FALSE), (11, 'seed/capas/11-vale-do-ribeira.webp', TRUE),
+    (12, 'seed/capas/12-quilombo.webp', FALSE), (24, 'seed/atualizacoes/a14-abelha-nativa.webp', TRUE)
+) AS v(n, chave, banner)
+JOIN arquivo a ON a.chave = v.chave
+WHERE c.id_campanha = v.n;
+UPDATE campanha c
+SET video_apresentacao_url = v.url
+FROM (VALUES
+    (5, 'https://www.youtube.com/watch?v=7bCwxKbA_ks'),
+    (6, 'https://www.youtube.com/watch?v=S1twuIznlmE'),
+    (9, 'https://www.youtube.com/watch?v=KqTenGaBbj8')
+) AS v(n, url)
+WHERE c.id_campanha = v.n;
+ALTER TABLE campanha ENABLE TRIGGER trg_congela_regras_campanha;
+
 -- [07-E-1b] orcamento_campanha e marco_cronograma de toda campanha que já foi enviada (o rascunho, 13, ainda não
 -- precisa): 3 itens que somam a meta e 3 marcos dentro do prazo, como o envio exige (fn_valida_completude_campanha, 05).
 -- A campanha 20 fica com 2 marcos de propósito (ver [07-E-1]). As congela ficam desligadas só aqui, porque a maioria
@@ -1252,7 +1304,12 @@ FROM (VALUES
     (18, 'Serviços de terceiros', 'Sequenciamento das amostras', 0.5, 1), (18, 'Material de consumo', 'Kits de coleta', 0.3, 2), (18, 'Bolsas', 'Bolsa de iniciação científica (3 meses)', 0.2, 3),
     (19, 'Serviços de terceiros', 'Transcrição das entrevistas', 0.5, 1), (19, 'Material de consumo', 'Impressão dos questionários', 0.3, 2), (19, 'Bolsas', 'Entrevistadoras de campo', 0.2, 3),
     (20, 'Equipamentos', 'Servidor para a plataforma', 0.5, 1), (20, 'Serviços de terceiros', 'Anotação das imagens por radiologistas', 0.3, 2), (20, 'Material de consumo', 'Licenças de software', 0.2, 3),
-    (21, 'Material de consumo', 'Material de divulgação', 0.6, 1), (21, 'Serviços de terceiros', 'Revisão do texto', 0.4, 2)
+    (21, 'Material de consumo', 'Material de divulgação', 0.6, 1), (21, 'Serviços de terceiros', 'Revisão do texto', 0.4, 2),
+    (22, 'Material de campo', 'Anilhas, redes de neblina e binóculos', 0.5, 1), (22, 'Viagens', 'Saídas de campo pelo litoral', 0.3, 2), (22, 'Bolsas', 'Bolsa de iniciação científica (3 meses)', 0.2, 3),
+    (23, 'Material de consumo', 'Kits de vistoria e larvicida biológico', 0.5, 1), (23, 'Bolsas', 'Bolsas para os estudantes agentes de pesquisa', 0.3, 2), (23, 'Serviços de terceiros', 'Identificação das larvas em laboratório', 0.2, 3),
+    (24, 'Equipamentos', 'Colmeias racionais para abelhas nativas', 0.5, 1), (24, 'Serviços de terceiros', 'Análise de resíduos de agrotóxicos no mel', 0.3, 2), (24, 'Viagens', 'Visitas às lavouras parceiras', 0.2, 3),
+    (25, 'Equipamentos', 'Hemoglobinômetros portáteis', 0.5, 1), (25, 'Material de consumo', 'Lancetas e microcuvetas', 0.3, 2), (25, 'Bolsas', 'Bolsa de enfermagem de pesquisa', 0.2, 3),
+    (26, 'Bolsas', 'Bolsa de iniciação científica (6 meses)', 0.5, 1), (26, 'Viagens', 'Visitas às escolas participantes', 0.3, 2), (26, 'Material de consumo', 'Impressão dos questionários', 0.2, 3)
 ) AS v(n, categoria, descricao, fracao, ordem)
 JOIN seed_campanha s ON s.n = v.n;
 
@@ -1278,7 +1335,12 @@ FROM (VALUES
     (18, 'Recrutamento dos pacientes', 0.15, 1), (18, 'Coleta das amostras', 0.5, 2), (18, 'Análise do sequenciamento', 0.9, 3),
     (19, 'Aplicação dos questionários', 0.15, 1), (19, 'Entrevistas', 0.5, 2), (19, 'Relatório final', 0.9, 3),
     (20, 'Base de imagens anotada', 0.3, 1), (20, 'Teste com os radiologistas', 0.8, 2),
-    (21, 'Início das atividades', 0.15, 1), (21, 'Relatório parcial', 0.5, 2), (21, 'Relatório final', 0.9, 3)
+    (21, 'Início das atividades', 0.15, 1), (21, 'Relatório parcial', 0.5, 2), (21, 'Relatório final', 0.9, 3),
+    (22, 'Primeira contagem nas praias', 0.15, 1), (22, 'Anilhamento no pico da migração', 0.5, 2), (22, 'Dados abertos publicados', 0.9, 3),
+    (23, 'Formação dos estudantes', 0.15, 1), (23, 'Vistorias nas escolas', 0.5, 2), (23, 'Mapa dos criadouros', 0.9, 3),
+    (24, 'Instalação das colmeias', 0.15, 1), (24, 'Coleta de mel e pólen', 0.5, 2), (24, 'Relatório de resíduos', 0.9, 3),
+    (25, 'Treino das equipes de saúde', 0.15, 1), (25, 'Rastreamento nas consultas', 0.5, 2), (25, 'Relatório para a secretaria de saúde', 0.9, 3),
+    (26, 'Lista dos participantes das olimpíadas', 0.15, 1), (26, 'Entrevistas com os estudantes', 0.5, 2), (26, 'Relatório final', 0.9, 3)
 ) AS v(n, titulo_marco, fracao, ordem)
 JOIN seed_campanha s ON s.n = v.n
 JOIN campanha c ON c.id_campanha = s.n;
@@ -1320,8 +1382,64 @@ FROM (VALUES
     (9,  'Primeiras trilhas mapeadas', 'Mapeamos 3 das 8 trilhas previstas em restingas do litoral.', -25),
     (10, 'Nascentes mapeadas', 'Identificamos 14 nascentes; a coleta das amostras começa na próxima semana.', -30),
     (3,  'Fotos de pacientes sem autorização', 'Seguem algumas fotos dos exames feitos ontem na unidade de saúde.', -8),
-    (5,  'Agenda de visitas (versão antiga)', 'Esta agenda foi substituída pela publicação seguinte.', -45)
+    (5,  'Agenda de visitas (versão antiga)', 'Esta agenda foi substituída pela publicação seguinte.', -45),
+    -- 22-11-2026: atualizações no estilo blog, várias com foto (o vínculo com a imagem vem logo abaixo).
+    (1,  'Bastidores: a ressonância do hospital parceiro', E'Hoje a equipe acompanhou um dia inteiro de exames no hospital parceiro.\n\nCada exame de ressonância gera centenas de imagens do cérebro. Nossa parte é organizar, anonimizar e marcar essas imagens para que o algoritmo aprenda a reconhecer os primeiros sinais da doença.\n\nObrigado a quem apoiou: o servidor com GPU comprado com a campanha já está processando o primeiro lote.', -205),
+    (3,  'Visita ao laboratório de análise das imagens', E'Passamos a tarde com as oftalmologistas que revisam as fotos de fundo de olho.\n\nElas marcam, uma a uma, os sinais de retinopatia. São essas marcações que ensinam o modelo. Já são 1.200 fotos revisadas, e a meta é chegar a 3.000 até o fim da campanha.', -9),
+    (4,  'Primeiras colônias isoladas', E'As primeiras colônias de fungos da Caatinga cresceram nas placas de cultura!\n\nAgora cada colônia é separada e testada contra bactérias resistentes. Vamos contar aqui quais delas mostrarem atividade.', -125),
+    (6,  'A primeira peça saiu da impressora', E'Depois de três semanas de ajustes no modelo digital, a primeira peça da prótese saiu da impressora 3D.\n\nO encaixe ficou firme e o peso, bem abaixo das próteses comerciais. Os fisioterapeutas começam os testes na semana que vem.', -55),
+    (7,  'Oficina de montagem da cadeira', E'Montamos a estrutura da cadeira com rodas e engrenagens de bicicletas doadas.\n\nFalta instalar o motor e a bateria. Quem quiser conhecer a oficina pode nos visitar às quintas-feiras.', -6),
+    (8,  'Primeira etapa de coleta concluída', 'Terminamos a coleta de sangue da primeira etapa com os 60 participantes. As amostras seguem para análise dos marcadores imunológicos.', -25),
+    (9,  'Saída de campo de barco pelo manguezal', E'Esta semana fomos de barco até os pontos mais distantes do manguezal.\n\nEncontramos duas espécies exóticas que ainda não estavam no nosso mapa. As fotos e as coordenadas já foram para o banco de dados público.', -12),
+    (10, 'Coleta de amostras na nascente do parque', E'Coletamos amostras de água em seis nascentes urbanas.\n\nAs medições de campo (temperatura, pH e oxigênio) já estão no mapa. As análises microbiológicas saem em duas semanas.', -18),
+    (11, 'Primeiras entrevistas com as benzedeiras', 'Gravamos as primeiras quatro entrevistas. Cada uma dura cerca de duas horas, com rezas, histórias e receitas de chás.', -20),
+    (11, 'Encontro com as lideranças da comunidade', E'Reunimos as lideranças para apresentar o que já foi gravado.\n\nFicou decidido que o acervo vai ficar guardado também na associação da comunidade, e não só na universidade.', -10),
+    (21, 'Bem-vindos à campanha de teste', E'Esta é a campanha de teste do Pesquisador Sistema.\n\nUse-a para experimentar comentários, endossos, atualizações e o Mural dos apoiadores.', -4),
+    (21, 'Relatório parcial', 'Primeira semana concluída, com os primeiros apoios confirmados. Obrigado!', -1),
+    (23, 'Primeira vistoria nas escolas', E'Os estudantes fizeram a primeira vistoria em cinco escolas.\n\nForam encontrados 37 focos com larvas do mosquito, a maioria em calhas e vasos de plantas. Todos foram eliminados no mesmo dia.', -60),
+    (23, 'Meta batida: obrigado!', E'A campanha bateu a meta!\n\nCom o valor arrecadado, as vistorias vão continuar até o fim do ano letivo, e o mapa dos criadouros será entregue à secretaria de educação.', -26),
+    (25, 'Os aparelhos chegaram', E'Os hemoglobinômetros portáteis chegaram e as equipes das unidades de saúde já foram treinadas.\n\nNa primeira semana, 48 gestantes fizeram o exame durante a consulta de pré-natal.', -5),
+    (26, 'Conversas com os medalhistas', E'Começamos as entrevistas com estudantes que já participaram das olimpíadas de matemática.\n\nMuitos contam que foi a primeira vez que se imaginaram cientistas.', -4)
 ) AS v(n, titulo, conteudo, dias);
+
+-- Fotos das atualizações (22-11-2026): arquivos de verdade no bucket, como as capas de [07-E-1c] (sobem com
+-- `npm run seed:imagens`). Cada imagem mora numa atualização só.
+INSERT INTO arquivo (chave, nome_original, tipo_mime, tamanho_bytes, id_usuario_upload, criado_em)
+SELECT 'seed/atualizacoes/' || v.nome || '.webp', v.nome || '.webp', 'image/webp', v.tamanho, c.id_usuario, a.publicado_em
+FROM (VALUES
+    ('Bastidores: a ressonância do hospital parceiro', 'a01-exames-neuroimagem', 114668),
+    ('Visita ao laboratório de análise das imagens', 'a12-microscopio', 88510),
+    ('Primeiras colônias isoladas', 'a04-placa-de-petri', 218342),
+    ('A primeira peça saiu da impressora', 'a06-impressora-3d', 27440),
+    ('Oficina de montagem da cadeira', 'a07-pecas-bicicleta', 223368),
+    ('Saída de campo de barco pelo manguezal', 'a16-ribeirinhos', 53232),
+    ('Coleta de amostras na nascente do parque', 'a10-coleta-agua', 154808),
+    ('Encontro com as lideranças da comunidade', 'a15-reuniao-pesquisa', 201262),
+    ('Primeira vistoria nas escolas', 'a05-mosquito-aedes', 36492),
+    ('Os aparelhos chegaram', 'a08-exame-sangue', 72236),
+    ('Conversas com os medalhistas', 'a13-sala-de-aula', 101208)
+) AS v(titulo, nome, tamanho)
+JOIN atualizacao_campanha a ON a.titulo = v.titulo
+JOIN campanha c ON c.id_campanha = a.id_campanha;
+
+INSERT INTO arquivo_atualizacao (id_arquivo, id_atualizacao)
+SELECT ar.id_arquivo, a.id_atualizacao
+FROM atualizacao_campanha a
+JOIN arquivo ar ON ar.chave = 'seed/atualizacoes/' || (
+    SELECT v.nome FROM (VALUES
+        ('Bastidores: a ressonância do hospital parceiro', 'a01-exames-neuroimagem'),
+        ('Visita ao laboratório de análise das imagens', 'a12-microscopio'),
+        ('Primeiras colônias isoladas', 'a04-placa-de-petri'),
+        ('A primeira peça saiu da impressora', 'a06-impressora-3d'),
+        ('Oficina de montagem da cadeira', 'a07-pecas-bicicleta'),
+        ('Saída de campo de barco pelo manguezal', 'a16-ribeirinhos'),
+        ('Coleta de amostras na nascente do parque', 'a10-coleta-agua'),
+        ('Encontro com as lideranças da comunidade', 'a15-reuniao-pesquisa'),
+        ('Primeira vistoria nas escolas', 'a05-mosquito-aedes'),
+        ('Os aparelhos chegaram', 'a08-exame-sangue'),
+        ('Conversas com os medalhistas', 'a13-sala-de-aula')
+    ) AS v(titulo, nome) WHERE v.titulo = a.titulo
+) || '.webp';
 
 -- O link da atualização de código aberto, e as duas formas de ocultar (RF-053): a moderação oculta uma atualização em
 -- desacordo com as regras e o dono oculta uma que ficou velha. São linhas a mais (oculta não conta no score) e cada
@@ -1363,7 +1481,14 @@ FROM (VALUES
     (6,  13, 'O custo por unidade ficou muito abaixo do mercado. Ótimo exemplo de retorno direto à sociedade.', -50),
     (10, 8,  'Mapa público dos resultados é exatamente o que as prefeituras precisam.', -20),
     (10, 10, 'Vocês vão repetir a coleta na época de chuva? A qualidade da água muda bastante.', -12),
-    (16, 8,  'Não encontrei a autorização da secretaria de educação para a coleta nas escolas.', -30)
+    (16, 8,  'Não encontrei a autorização da secretaria de educação para a coleta nas escolas.', -30),
+    (23, 9,  'Envolver os próprios estudantes na vistoria é uma ideia excelente: vira aula de ciência na prática.', -58),
+    (23, 13, 'Vocês vão comparar com os dados de notificação de dengue dos bairros das escolas?', -50),
+    (23, 11, 'Parabéns pela meta! Fico feliz de ver pesquisa em saúde pública com a comunidade escolar.', -27),
+    (25, 8,  'Rastrear a anemia ainda no pré-natal pode evitar muitos partos de risco. Projeto muito necessário.', -6),
+    (25, 12, 'Os aparelhos portáteis já foram validados contra o exame de laboratório?', -3),
+    (26, 10, 'Fui medalhista de olimpíada no ensino médio e foi exatamente o que me levou para a engenharia!', -5),
+    (26, 15, 'Seria interessante ouvir também quem participou e não ganhou medalha.', -2)
 ) AS v(n, autor, conteudo, dias);
 
 -- Endossos, feitos como o dono de cada campanha (o mesmo caminho da tela): validar_comentario_endosso_autor (05)
@@ -1376,7 +1501,7 @@ BEGIN
         SELECT c.id_comentario, ca.id_usuario AS dono
         FROM comentario c
         JOIN campanha ca ON ca.id_campanha = c.id_campanha
-        JOIN (VALUES (1, 9), (1, 10), (3, 9), (3, 11), (4, 8), (5, 14), (6, 13), (10, 8))
+        JOIN (VALUES (1, 9), (1, 10), (3, 9), (3, 11), (4, 8), (5, 14), (6, 13), (10, 8), (23, 9), (23, 11), (25, 8), (26, 10))
             AS e(id_campanha, id_pesquisador)
           ON e.id_campanha = c.id_campanha AND e.id_pesquisador = c.id_pesquisador
         ORDER BY c.criado_em
@@ -1390,10 +1515,10 @@ $$;
 
 -- [07-E-2] seguir_campanha / [07-D-4] seguir_pesquisador
 INSERT INTO seguir_campanha (id_usuario, id_campanha) VALUES
-(18, 3), (19, 3), (20, 10), (18, 5), (19, 1), (9, 3), (13, 7);
+(18, 3), (19, 3), (20, 10), (18, 5), (19, 1), (9, 3), (13, 7), (18, 21), (20, 21), (19, 25), (18, 26);
 
 INSERT INTO seguir_pesquisador (id_usuario, id_pesquisador) VALUES
-(18, 8), (19, 8), (20, 13), (9, 8), (8, 9), (18, 10), (13, 8);
+(18, 8), (19, 8), (20, 13), (9, 8), (8, 9), (18, 10), (13, 8), (18, 7), (20, 7), (19, 15);
 
 -- [07-H-1] contribuicao
 -- Toda contribuição nasce 'pendente', como no POST /contribuicao, e o resto da vida dela acontece pelas mesmas
@@ -1477,7 +1602,24 @@ INSERT INTO seed_contribuicao VALUES
     (61, 15, 8,     500.00, 'pix',            FALSE, -20,  TRUE),
     (62, 16, 18,    600.00, 'pix',            FALSE, -38,  TRUE),
     (63, 16, 20,    400.00, 'pix',            FALSE, -36,  TRUE),
-    (64, 16, 19,    200.00, 'cartao_credito', FALSE, -30,  TRUE);
+    (64, 16, 19,    200.00, 'cartao_credito', FALSE, -30,  TRUE),
+    -- 22-11-2026: a 23 (do Pesquisador Sistema) bate a meta e fecha com sucesso; a 21, a 25 e a 26 ganham apoios.
+    (65, 23, 18,   2000.00, 'pix',            FALSE, -62,  TRUE),
+    (66, 23, 19,   1500.00, 'pix',            FALSE, -58,  TRUE),
+    (67, 23, 20,   1200.00, 'pix',            FALSE, -52,  TRUE),
+    (68, 23, 8,     800.00, 'pix',            FALSE, -45,  TRUE),
+    (69, 23, NULL,  300.00, 'pix',            TRUE,  -40,  TRUE),
+    (70, 23, 9,     400.00, 'pix',            TRUE,  -35,  TRUE),
+    (71, 21, 18,    300.00, 'pix',            FALSE, -4,   TRUE),
+    (72, 21, 20,    150.00, 'pix',            FALSE, -3,   TRUE),
+    (73, 21, 9,     200.00, 'pix',            TRUE,  -2,   TRUE),
+    (74, 21, 19,     80.00, 'pix',            FALSE, -1,   TRUE),
+    (75, 25, 18,    600.00, 'pix',            FALSE, -9,   TRUE),
+    (76, 25, 20,    400.00, 'pix',            FALSE, -6,   TRUE),
+    (77, 25, NULL,  150.00, 'pix',            TRUE,  -2,   TRUE),
+    (78, 26, 19,    500.00, 'pix',            FALSE, -6,   TRUE),
+    (79, 26, 8,     250.00, 'pix',            FALSE, -4,   TRUE),
+    (80, 26, 20,    100.00, 'pix',            FALSE, -1,   TRUE);
 
 ALTER TABLE contribuicao DISABLE TRIGGER trg_valida_status_contribuicao;
 INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, anonima, provedor, id_transacao_api, criado_em)
@@ -1923,13 +2065,17 @@ $$;
 -- [07-E-8] recompensa
 -- O Mural dos apoiadores (RF-103 a RF-105, 22-11-2026): uma recompensa por campanha, com o valor mínimo e uma mensagem
 -- de agradecimento. Quem entra é calculado na hora (mural_apoiadores, 05). A campanha 4 fica sem mural, para mostrar
--- a campanha que não oferece recompensa.
+-- a campanha que não oferece recompensa. 21, 23, 25 e 26: murais com gente (22-11-2026).
 INSERT INTO recompensa (id_campanha, descricao, valor_minimo, criado_em)
 SELECT v.id_campanha, v.descricao, v.valor_minimo, c.criado_em + INTERVAL '1 day'
 FROM (VALUES
     (1, 'Obrigado por acreditar nesta pesquisa! Seu nome também vai nos agradecimentos do artigo.', 100.00),
     (2, NULL, 50.00),
-    (3, 'Cada apoio ajuda a levar o exame de retina a mais unidades de saúde. Obrigado!', 20.00)
+    (3, 'Cada apoio ajuda a levar o exame de retina a mais unidades de saúde. Obrigado!', 20.00),
+    (21, 'Obrigado por testar o Mural dos apoiadores!', 100.00),
+    (23, 'Cada apoio virou uma vistoria a mais nas escolas. Obrigado!', 500.00),
+    (25, 'Obrigado por cuidar das gestantes com a gente.', 200.00),
+    (26, NULL, 50.00)
 ) AS v(id_campanha, descricao, valor_minimo)
 JOIN campanha c ON c.id_campanha = v.id_campanha;
 

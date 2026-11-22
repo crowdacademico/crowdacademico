@@ -1095,7 +1095,7 @@ Concede à role `app_nestjs` (criada no `01`) exatamente os privilégios que a R
   - **8 a 17:** os pesquisadores da demonstração, cada um com uma história (o resumo da pontuação de cada um está no fim do `07`, [07-D-5]).
   - **18 a 20:** quem apoia as campanhas.
   - **21 a 23:** contas comuns zeradas, com o e-mail ainda não verificado; a 21 também fica com o aceite do termo da conta pendente, para demonstrar a tela de aceite (o pesquisador 16 fica pendente no termo de pesquisador).
-- **21 campanhas**, uma para cada situação, listadas no cabeçalho de [07-E-1] (sucesso com repasse, não atingida com cada devolução numa situação, repasse em erro, "Em breve", rascunho, rejeitada com reenvio, encerrada por moderação, fila de aprovação nas três cores da espera, pedidos de encerramento em cada situação...).
+- **26 campanhas** (as 22 a 26 entraram em 22-11-2026 para dar mais o que testar ao Pesquisador Sistema e mais vida ao site), uma para cada situação, listadas no cabeçalho de [07-E-1] (sucesso com repasse, não atingida com cada devolução numa situação, repasse em erro, "Em breve", rascunho, rejeitada com reenvio, encerrada por moderação, fila de aprovação nas três cores da espera, pedidos de encerramento em cada situação...).
 - **O dinheiro passa pelas funções reais:** toda contribuição nasce pendente, e o resto acontece pelas mesmas funções que o sistema usa com o provedor de verdade ([07-H-5]): o aviso do provedor confirma, o fechamento da campanha cria o repasse ou manda devolver, as tarefas de repasse e de estorno andam, a moderação julga, o admin decide. Funções temporárias (`pg_temp`) só fazem o papel do provedor e datam cada passo. O provedor da demonstração é `seed`, que nenhuma tarefa automática trata: ligar o provedor de verdade nunca tenta cobrar, devolver ou transferir um dado de demonstração.
   - **Por quê:** escrever o resultado à mão não prova nada; passar pelas funções reais prova que elas aceitam cada caminho.
 - **Regras da demonstração:**
@@ -1106,7 +1106,8 @@ Concede à role `app_nestjs` (criada no `01`) exatamente os privilégios que a R
   - **todo aceite é da versão vigente na data** (escolhida pela data, nunca por id fixo); cada termo tem a versão antiga (ids 1 e 2), a vigente (3 e 4) e um rascunho da próxima (5 e 6, sem aceite, [07-H-4]);
   - **CPFs falsos** (dígito verificador válido) cifrados de verdade com as chaves do `.env` de desenvolvimento ([01-D]); as chaves Pix também são fictícias; dois pesquisadores não cadastraram chave, e o repasse de um deles espera na fila;
   - **toda conta confirmou o e-mail** pelo mesmo caminho do sistema ([07-D-8]), menos as contas 21 a 23;
-  - **Mural dos apoiadores** ([07-E-8]): a recompensa das campanhas 1, 2 e 3 (mínimos de R$ 100, R$ 50 e R$ 20); a 4 fica sem mural.
+  - **Mural dos apoiadores** ([07-E-8]): a recompensa das campanhas 1, 2, 3, 21, 23, 25 e 26; a 4 fica sem mural.
+  - **Capas, vídeos e fotos** ([07-E-1c] e [07-E-3], 22-11-2026): capas nas campanhas 1, 2, 3, 4, 7, 8, 10, 11, 12 e 24, vídeos na 5, 6 e 9, e 11 atualizações com foto. As imagens estão em `informacoes/Imagens/imagens-seed` (créditos em `CREDITOS.md`) e sobem com `npm run seed:imagens`.
   - **e-mails** ([07-D-7]): os que as funções do seed puseram na fila viram "enviados" (provedor `seed`), para o envio não disparar tudo ao subir, e entram casos de cada situação (esperando nova tentativa, falhou, cancelado) para a aba Notificações.
 - **Conferido** pela suíte de coerência do seed (PGlite 18): todo status aparece, a caixa de avisos tem cada situação, nada passa pelo provedor de verdade, ninguém passa do limite de campanhas simultâneas, e nada acontece antes de a conta existir.
 
