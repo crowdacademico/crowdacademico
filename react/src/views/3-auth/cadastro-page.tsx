@@ -416,8 +416,11 @@ export function CadastroPage({ auth }: PropsPagina) {
           </Campo>
 
           {tipoConta === 'pesquisador' && (
-            <section className="space-y-5">
-              <h2 className="titulo-bloco titulo-bloco--linha">Dados do perfil de pesquisador</h2>
+            // Duas colunas em tela larga (21-11-2026, teste com usuários: o cadastro de pesquisador era longo demais, com
+            // o CPF ocupando a largura toda sem precisar). Pares: CPF e tipo de vínculo, instituição e título, tipo e
+            // chave Pix. O lugar da instituição fica reservado, para os campos não trocarem de coluna ao mudar o vínculo.
+            <section className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
+              <h2 className="titulo-bloco titulo-bloco--linha sm:col-span-2">Dados do perfil de pesquisador</h2>
               <CampoCpf
                 valor={cpf}
                 onChange={setCpf}
@@ -433,6 +436,7 @@ export function CadastroPage({ auth }: PropsPagina) {
                 aoAlterarVinculoInstitucional={setVinculoInstitucional}
                 aoAlterarTituloAcademico={setTituloAcademico}
                 erroVinculoInstitucional={erroDe('vinculoInstitucional')}
+                reservarVinculoInstitucional
                 marcarObrigatorios
               />
               <CamposChavePix
@@ -442,7 +446,6 @@ export function CadastroPage({ auth }: PropsPagina) {
                 aoAlterarChave={setChavePix}
                 opcional
               />
-              <p className="legenda texto-fraco">Os links acadêmicos podem ser informados depois, no seu perfil.</p>
             </section>
           )}
 

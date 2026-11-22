@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Tooltip } from '../layout/tooltip';
 
 export interface OpcaoFiltroPublico {
@@ -36,6 +36,23 @@ export function GrupoFiltroExpansivel({
   const idLista = `${baseId}-list`;
   const idAjuda = `${baseId}-hint`;
   const estaAberto = expandido && !desabilitado;
+  // A lista abre por cima da página (21-11-2026): antes ela empurrava o resto para baixo. Fecha ao clicar fora e com Esc.
+  const caixaRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!estaAberto) return;
+    const fecharFora = (evento: MouseEvent) => {
+      if (caixaRef.current && !caixaRef.current.contains(evento.target as Node)) setExpandido(false);
+    };
+    const fecharEsc = (evento: KeyboardEvent) => {
+      if (evento.key === 'Escape') setExpandido(false);
+    };
+    document.addEventListener('mousedown', fecharFora);
+    document.addEventListener('keydown', fecharEsc);
+    return () => {
+      document.removeEventListener('mousedown', fecharFora);
+      document.removeEventListener('keydown', fecharEsc);
+    };
+  }, [estaAberto]);
   const opcoesSelecionadas = opcoes.filter((opcao) => valoresSelecionados.includes(opcao.value));
   const buscaNormalizada = normalizarTexto(busca);
   const opcoesFiltradas = buscaNormalizada
@@ -51,7 +68,7 @@ export function GrupoFiltroExpansivel({
   }
 
   return (
-    <section className="group/filter relative rounded-lg border borda-padrao fundo-cartao">
+    <section ref={caixaRef} className="group/filter relative rounded-lg border borda-padrao fundo-cartao">
       <button
         type="button"
         onClick={() => {
@@ -107,7 +124,10 @@ export function GrupoFiltroExpansivel({
         </ul>
       )}
 
-      <div id={idLista} className={`flex flex-col gap-3 px-4 pb-4 ${estaAberto ? '' : 'hidden'}`}>
+      <div
+        id={idLista}
+        className={`absolute left-0 right-0 top-full z-30 mt-2 flex flex-col gap-3 rounded-lg border borda-padrao fundo-cartao p-4 shadow-xl ${estaAberto ? '' : 'hidden'}`}
+      >
         <label className="relative flex w-full items-center">
           <i
             className="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 texto-fraco"

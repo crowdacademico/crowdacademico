@@ -6,6 +6,23 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta da
 
 ---
 
+## Instituição: lista de verdade e nomes errados (anotado em 21-11-2026)
+
+**Pedido:** o Rogério, no teste, queria escolher a instituição numa lista pronta, como na tela de acesso CAFe dos Periódicos CAPES.
+
+**Hoje (feito em 21-11-2026, sem tabela nova):** o campo Instituição sugere, enquanto a pessoa digita, as instituições que outros pesquisadores já usaram (da mais usada para a menos usada, `listar_instituicoes_sugeridas()`, 05) e uma lista inicial fixa de 30 no React (`instituicoes-sugeridas.constants.ts`). Continua aceitando texto livre.
+
+**O problema que fica:** não é uma lista oficial. Quem digita errado ("Univ. de Sao Paulo") cria uma grafia nova, e quem escolhe essa sugestão espalha o erro. A contagem ajuda (a grafia certa tende a ser a mais usada e aparece primeiro), mas não impede.
+
+**Caminhos melhores, para pensar:**
+1. **Lista oficial vinda de dados abertos:** o cadastro de instituições do e-MEC (dados.gov.br) traz nome, sigla e cidade de todas as instituições de ensino superior. Cobre universidades, faculdades e institutos federais; ficam de fora os institutos de pesquisa (Embrapa, Fiocruz, INPE), que entrariam à mão. Pede uma tabela (ou um arquivo JSON servido pelo React, se a ideia for não ter tabela).
+2. **Escolher da lista ou "outra":** o campo só aceita uma instituição da lista; quem não acha escolhe "Outra" e digita. As "outras" vão para o admin revisar e, se for o caso, entrar na lista. É o padrão do CAFe e do Lattes.
+3. **Correção pelo painel:** o admin vê as grafias parecidas lado a lado e junta numa só (troca o texto em todos os perfis de uma vez). Resolve o legado de qualquer caminho.
+
+**Sugestão do Claude:** o 1 com o 2 é o que de fato evita o nome errado; o 3 limpa o que já foi digitado. O que existe hoje é um bom passo intermediário: não muda nada para quem digita e já reduz as variações.
+
+---
+
 ## Exportar meus dados: a opção PDF (anotado em 21-11-2026)
 
 **Hoje:** Minha Conta > Privacidade tem o botão dividido "Exportar". O clique principal baixa um **HTML** para ler no navegador (`services/1-usuario/util/exportacao-html.util.ts`), e a seta oferece o **JSON** para levar a outro serviço. Os dois saem do mesmo pacote (`GET /usuario/eu/exportar-dados`), buscado uma vez só, então o limite de uma exportação por hora não atrapalha a troca de formato. É o padrão do Facebook e do Instagram ("Baixar suas informações": HTML ou JSON).

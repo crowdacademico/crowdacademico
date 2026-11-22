@@ -1,4 +1,6 @@
+import { useEffect, useId, useState } from 'react';
 import { Campo } from '../../components/input/campo';
+import { listarInstituicoesSugeridas } from '../../services/6-perfil-pesquisador/api/instituicoes.api';
 import {
   ROTULO_TIPO_VINCULO,
   ROTULO_TITULO_ACADEMICO,
@@ -43,6 +45,20 @@ export function CamposVinculoPerfil({
   marcarObrigatorios = false,
 }: CamposVinculoPerfilProps) {
   const institucional = tipoVinculo === 'institucional';
+  // Sugestões da Instituição (21-11-2026): as já usadas por outros pesquisadores e uma lista inicial fixa, num <datalist>
+  // nativo, que sugere enquanto a pessoa digita e continua aceitando texto livre.
+  const idSugestoes = useId();
+  const [sugestoes, setSugestoes] = useState<string[]>([]);
+  useEffect(() => {
+    if (!institucional) return;
+    let ativo = true;
+    void listarInstituicoesSugeridas().then((lista) => {
+      if (ativo) setSugestoes(lista);
+    });
+    return () => {
+      ativo = false;
+    };
+  }, [institucional]);
   return (
     <>
       <Campo rotulo="Tipo de vínculo" obrigatorio={marcarObrigatorios}>
@@ -71,12 +87,20 @@ export function CamposVinculoPerfil({
               <input
                 {...atributos}
                 type="text"
+                list={idSugestoes}
+                autoComplete="off"
+                placeholder="Comece a digitar para ver sugestões"
                 value={vinculoInstitucional}
                 onChange={(evento) => aoAlterarVinculoInstitucional(evento.target.value)}
                 className={'input-padrao' + classeErro}
               />
             )}
           </Campo>
+          <datalist id={idSugestoes}>
+            {sugestoes.map((nome) => (
+              <option key={nome} value={nome} />
+            ))}
+          </datalist>
         </div>
       )}
 

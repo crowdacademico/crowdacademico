@@ -1,0 +1,36 @@
+// Lista inicial do campo Instituição (21-11-2026): para o campo não começar sem sugestão nenhuma. Soma-se às
+// instituições que os pesquisadores já digitaram (GET /perfil-pesquisador/instituicoes). Formato "Nome (SIGLA)": quem
+// digita a sigla também encontra. Não é lista oficial nem fechada: o campo continua aceitando texto livre (ver
+// ACHADOS_PARA_DISCUTIR.md, "Instituição: lista de verdade e nomes errados").
+export const INSTITUICOES_INICIAIS: readonly string[] = [
+  'Universidade de São Paulo (USP)',
+  'Universidade Estadual de Campinas (Unicamp)',
+  'Universidade Estadual Paulista (Unesp)',
+  'Universidade Federal de São Paulo (Unifesp)',
+  'Universidade Federal de São Carlos (UFSCar)',
+  'Instituto Federal de São Paulo (IFSP)',
+  'Universidade Federal do Rio de Janeiro (UFRJ)',
+  'Universidade Federal Fluminense (UFF)',
+  'Universidade Federal de Minas Gerais (UFMG)',
+  'Universidade Federal de Viçosa (UFV)',
+  'Universidade Federal do Rio Grande do Sul (UFRGS)',
+  'Universidade Federal do Paraná (UFPR)',
+  'Universidade Estadual de Londrina (UEL)',
+  'Universidade Estadual de Maringá (UEM)',
+  'Universidade Federal de Santa Catarina (UFSC)',
+  'Universidade de Brasília (UnB)',
+  'Universidade Federal de Goiás (UFG)',
+  'Universidade Federal de Mato Grosso do Sul (UFMS)',
+  'Universidade Federal da Bahia (UFBA)',
+  'Universidade Federal de Pernambuco (UFPE)',
+  'Universidade Federal do Ceará (UFC)',
+  'Universidade Federal do Pará (UFPA)',
+  'Pontifícia Universidade Católica de São Paulo (PUC-SP)',
+  'Universidade Presbiteriana Mackenzie',
+  'Instituto Tecnológico de Aeronáutica (ITA)',
+  'Fundação Oswaldo Cruz (Fiocruz)',
+  'Empresa Brasileira de Pesquisa Agropecuária (Embrapa)',
+  'Instituto Nacional de Pesquisas Espaciais (INPE)',
+  'Instituto Butantan',
+  'Centro Nacional de Pesquisa em Energia e Materiais (CNPEM)',
+];

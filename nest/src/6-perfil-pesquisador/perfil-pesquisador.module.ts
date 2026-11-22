@@ -5,6 +5,8 @@ import { PerfilPesquisadorControllerFixCpf } from './controllers/perfil-pesquisa
 import { PerfilPesquisadorControllerCreate } from './controllers/perfil-pesquisador.controller.create';
 import { PerfilPesquisadorControllerFindAll } from './controllers/perfil-pesquisador.controller.findall';
 import { PerfilPesquisadorControllerFindOne } from './controllers/perfil-pesquisador.controller.findone';
+import { PerfilPesquisadorControllerInstitutions } from './controllers/perfil-pesquisador.controller.institutions';
+import { PerfilPesquisadorServiceInstitutions } from './service/perfil-pesquisador.service.institutions';
 import { PerfilPesquisadorControllerReactivate } from './controllers/perfil-pesquisador.controller.reactivate';
 import { PerfilPesquisadorControllerSuspend } from './controllers/perfil-pesquisador.controller.suspend';
 import { PerfilPesquisadorControllerUpdate } from './controllers/perfil-pesquisador.controller.update';
@@ -24,6 +26,8 @@ import { PerfilPesquisadorServiceUpdate } from './service/perfil-pesquisador.ser
   controllers: [
     PerfilPesquisadorControllerCreate,
     PerfilPesquisadorControllerFindAll,
+    // Antes do FindOne: senão "instituicoes" seria lido como :id.
+    PerfilPesquisadorControllerInstitutions,
     PerfilPesquisadorControllerFindOne,
     PerfilPesquisadorControllerUpdate,
     PerfilPesquisadorControllerUpdateForOther,
@@ -42,6 +46,7 @@ import { PerfilPesquisadorServiceUpdate } from './service/perfil-pesquisador.ser
     PerfilPesquisadorServiceSuspend,
     PerfilPesquisadorServiceReactivate,
     PerfilPesquisadorServiceReactivateExpired,
+    PerfilPesquisadorServiceInstitutions,
   ],
 })
 export class PerfilPesquisadorModule {}

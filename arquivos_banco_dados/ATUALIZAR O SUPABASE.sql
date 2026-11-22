@@ -120,3 +120,43 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.limpar_sessoes_antigas() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.limpar_sessoes_antigas() TO app_nestjs;
+
+
+-- ============================================================================
+-- GRUPO DM (21-11-2026) - Sugestões de instituição no cadastro de pesquisador (sem tabela nova). IDEMPOTENTE.
+-- Cole ANTES de subir o Nest novo (a rota nova chama a função).
+--
+-- O que muda: listar_instituicoes_sugeridas() devolve as instituições que os pesquisadores já digitaram, com quantos
+-- perfis usam cada grafia. O campo Instituição passa a sugerir essas (e uma lista curta fixa no React) e continua
+-- aceitando texto livre.
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- Função:     listar_instituicoes_sugeridas
+-- Assinatura: () -> TABLE (nome TEXT, quantidade INT)
+-- Bloco:      [05-K-3]
+-- Regra:      21-11-2026 (pedido do Rogério no teste: a instituição como no CAFe, com lista pronta). Sem tabela nova:
+--             as instituições que os pesquisadores já digitaram (perfil_pesquisador.vinculo_institucional), cada grafia
+--             com quantos perfis a usam, da mais usada para a menos usada. O campo do cadastro sugere estas e continua
+--             aceitando texto livre. Só o nome da instituição sai (já é público no perfil); nada da pessoa. SECURITY
+--             DEFINER: o cadastro acontece sem login, e a RLS de perfil_pesquisador não deixaria ler. Limite de 500.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.listar_instituicoes_sugeridas()
+RETURNS TABLE (nome TEXT, quantidade INT)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT btrim(vinculo_institucional) AS nome, count(*)::INT AS quantidade
+    FROM perfil_pesquisador
+    WHERE tipo_vinculo = 'institucional'
+      AND vinculo_institucional IS NOT NULL
+      AND btrim(vinculo_institucional) <> ''
+    GROUP BY btrim(vinculo_institucional)
+    ORDER BY count(*) DESC, btrim(vinculo_institucional)
+    LIMIT 500;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.listar_instituicoes_sugeridas() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.listar_instituicoes_sugeridas() TO app_nestjs;

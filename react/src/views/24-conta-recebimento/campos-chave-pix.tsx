@@ -1,3 +1,4 @@
+import { Tooltip } from '../../components/layout/tooltip';
 import { useState } from 'react';
 import { Campo } from '../../components/input/campo';
 import { ORDEM_TIPO_CHAVE_PIX, ROTULO_TIPO_CHAVE_PIX } from '../../services/24-conta-recebimento/constants/conta-recebimento.constants';
@@ -48,13 +49,19 @@ export function CamposChavePix({ tipoChave, aoAlterarTipo, chave, aoAlterarChave
         )}
       </Campo>
       <Campo
-        rotulo={opcional ? 'Chave Pix para receber (opcional)' : 'Chave'}
-        erro={erro ?? undefined}
-        dica={
-          opcional
-            ? 'Para onde vai o dinheiro das suas campanhas. Precisa estar no seu CPF. Se preferir, cadastre depois em Minha Conta > Financeiro.'
-            : undefined
+        // A explicação mora no ⓘ (21-11-2026): o (opcional) do rótulo já diz que dá para deixar para depois; o que a pessoa
+        // não adivinha é que a chave precisa estar no CPF dela (a titularidade é conferida e a chave de outra pessoa não passa).
+        rotulo={
+          opcional ? (
+            <>
+              Chave Pix para receber (opcional){' '}
+              <Tooltip texto="Para onde vai o dinheiro das suas campanhas. A chave precisa estar no seu CPF. Dá para cadastrar depois, em Minha Conta > Financeiro." />
+            </>
+          ) : (
+            'Chave'
+          )
         }
+        erro={erro ?? undefined}
       >
         {({ atributos, classeErro }) => (
           <input

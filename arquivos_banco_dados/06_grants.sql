@@ -402,6 +402,8 @@ REVOKE EXECUTE ON FUNCTION public.limpar_notificacoes_antigas() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.limpar_notificacoes_antigas() TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.limpar_sessoes_antigas() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.limpar_sessoes_antigas() TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.listar_instituicoes_sugeridas() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.listar_instituicoes_sugeridas() TO app_nestjs;
 -- deslizar_datas_campanha(): chamada pelo pesquisador pelo Nest. Quem pode usar é decidido DENTRO da função
 -- (dono + status).
 REVOKE EXECUTE ON FUNCTION public.deslizar_datas_campanha(INT, TIMESTAMPTZ) FROM PUBLIC;

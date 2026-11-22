@@ -6317,6 +6317,33 @@ FOR EACH ROW
 EXECUTE FUNCTION public.fn_comentario_bloqueio();
 
 -- ----------------------------------------------------------------------------
+-- Função:     listar_instituicoes_sugeridas
+-- Assinatura: () -> TABLE (nome TEXT, quantidade INT)
+-- Bloco:      [05-K-3]
+-- Regra:      21-11-2026 (pedido do Rogério no teste: a instituição como no CAFe, com lista pronta). Sem tabela nova:
+--             as instituições que os pesquisadores já digitaram (perfil_pesquisador.vinculo_institucional), cada grafia
+--             com quantos perfis a usam, da mais usada para a menos usada. O campo do cadastro sugere estas e continua
+--             aceitando texto livre. Só o nome da instituição sai (já é público no perfil); nada da pessoa. SECURITY
+--             DEFINER: o cadastro acontece sem login, e a RLS de perfil_pesquisador não deixaria ler. Limite de 500.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.listar_instituicoes_sugeridas()
+RETURNS TABLE (nome TEXT, quantidade INT)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT btrim(vinculo_institucional) AS nome, count(*)::INT AS quantidade
+    FROM perfil_pesquisador
+    WHERE tipo_vinculo = 'institucional'
+      AND vinculo_institucional IS NOT NULL
+      AND btrim(vinculo_institucional) <> ''
+    GROUP BY btrim(vinculo_institucional)
+    ORDER BY count(*) DESC, btrim(vinculo_institucional)
+    LIMIT 500;
+$$;
+
+-- ----------------------------------------------------------------------------
 -- Função:     validar_comentario_frequencia
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]

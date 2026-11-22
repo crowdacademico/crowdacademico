@@ -93,10 +93,15 @@ export function Explorar({ auth }: PropsPagina) {
   const [modoLista, setModoLista] = useState(false);
   const [pagina, setPagina] = useState(1);
 
-  const areas = useMemo(
-    () => [...new Set((campanhas ?? []).map((campanha) => campanha.nomeArea).filter((nome): nome is string => Boolean(nome)))].sort(),
-    [campanhas],
-  );
+  // Só as áreas que têm campanha publicada, com a quantidade de cada uma (padrão de filtro de busca: não oferecer uma
+  // opção que daria lista vazia).
+  const areas = useMemo(() => {
+    const contagem = new Map<string, number>();
+    for (const campanha of campanhas ?? []) {
+      if (campanha.nomeArea) contagem.set(campanha.nomeArea, (contagem.get(campanha.nomeArea) ?? 0) + 1);
+    }
+    return [...contagem.entries()].sort(([a], [b]) => a.localeCompare(b, 'pt-BR')).map(([nome, quantidade]) => ({ nome, quantidade }));
+  }, [campanhas]);
   const resultados = useMemo(() => {
     const termo = normalizar(busca.trim());
     const filtradas = (campanhas ?? []).filter((campanha) => {
@@ -250,7 +255,7 @@ export function Explorar({ auth }: PropsPagina) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
             <GrupoFiltroExpansivel
               titulo="Área do conhecimento"
-              opcoes={areas.map((nome) => ({ value: nome, label: nome }))}
+              opcoes={areas.map(({ nome, quantidade }) => ({ value: nome, label: nome, count: quantidade }))}
               valoresSelecionados={areasSelecionadas}
               aoAlterar={setAreasSelecionadas}
               desabilitado={areas.length === 0}
