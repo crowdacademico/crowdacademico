@@ -10,7 +10,7 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta da
 
 **Pedido:** o Rogério, no teste, queria escolher a instituição numa lista pronta, como na tela de acesso CAFe dos Periódicos CAPES.
 
-**Hoje (feito em 21-11-2026, sem tabela nova):** o campo Instituição sugere, enquanto a pessoa digita, as instituições que outros pesquisadores já usaram (da mais usada para a menos usada, `listar_instituicoes_sugeridas()`, 05) e uma lista inicial fixa de 30 no React (`instituicoes-sugeridas.constants.ts`). Continua aceitando texto livre.
+**Hoje (feito em 21-11-2026, sem tabela nova):** o campo Instituição sugere, enquanto a pessoa digita, as instituições que outros pesquisadores já usaram (da mais usada para a menos usada, `listar_instituicoes_sugeridas()`, 05) e a lista da tela de acesso CAFe dos Periódicos CAPES, 311 instituições no formato "SIGLA - NOME" (`instituicoes-sugeridas.constants.ts`, no React). Continua aceitando texto livre.
 
 **O problema que fica:** não é uma lista oficial. Quem digita errado ("Univ. de Sao Paulo") cria uma grafia nova, e quem escolhe essa sugestão espalha o erro. A contagem ajuda (a grafia certa tende a ser a mais usada e aparece primeiro), mas não impede.
 
