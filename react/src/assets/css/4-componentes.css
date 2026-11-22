@@ -1069,9 +1069,10 @@
   }
 
   /* Largura do site: cabeçalho, faixa do "Início >" e rodapé na mesma caixa, então o logo de cima e o de baixo
-     ficam sempre alinhados. */
+     ficam sempre alinhados. Desde 22-11-2026 é também o trilho de toda a área pública, de Minha Conta e do Estúdio
+     (DSP-34). 72rem = 1152 px (era 80rem, 1280 px): com 1280, a linha de texto ficava longa demais e cansava. */
   .largura-site {
-    max-width: 80rem;
+    max-width: 72rem;
     margin-inline: auto;
     padding-inline: 1rem;
   }

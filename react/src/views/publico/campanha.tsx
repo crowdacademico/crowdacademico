@@ -211,9 +211,9 @@ export function Campanha({ auth }: PropsPagina) {
 
   return (
     <div id="view-campanha" className="view-section flex-grow pagina-publica campanha-detalhe">
-      {!idValido && <div className="max-w-7xl mx-auto px-4 py-10"><MensagemErro texto="O endereço da campanha é inválido." /></div>}
-      {carregando && <div className="max-w-7xl mx-auto px-4 py-10"><Carregando /></div>}
-      {!carregando && erro && <div className="max-w-7xl mx-auto px-4 py-10"><MensagemErro texto={erro} /></div>}
+      {!idValido && <div className="largura-site w-full py-10"><MensagemErro texto="O endereço da campanha é inválido." /></div>}
+      {carregando && <div className="largura-site w-full py-10"><Carregando /></div>}
+      {!carregando && erro && <div className="largura-site w-full py-10"><MensagemErro texto={erro} /></div>}
       {!carregando && !erro && campanha && (
         <>
           <section
@@ -228,7 +228,7 @@ export function Campanha({ auth }: PropsPagina) {
               </>
             )}
             <div className="absolute inset-0 grade-medicao" aria-hidden="true" />
-            <div className="max-w-7xl mx-auto px-4 relative z-10">
+            <div className="largura-site w-full relative z-10">
               <nav aria-label="Trilha de navegação" className="text-sm font-medium texto-sobre-escuro mb-6 flex items-center gap-2">
                 <Link className="inline-flex items-center gap-2 hover-texto-sobre-escuro-forte transition" to="/">
                   <i className="fa-solid fa-house text-xs" aria-hidden="true" />
@@ -258,7 +258,7 @@ export function Campanha({ auth }: PropsPagina) {
             </div>
           </section>
 
-          <div className="max-w-7xl mx-auto px-4 -mt-16 pb-16 flex flex-col lg:flex-row gap-10 relative z-10">
+          <div className="largura-site w-full -mt-16 pb-16 flex flex-col lg:flex-row gap-10 relative z-10">
             <div className="flex-1 min-w-0">
               {/* Decisão de 14-11-2026: a imagem de capa ocupa este espaço quando não há vídeo; com vídeo, o vídeo manda
                   e a capa vira o fundo atrás do botão de play. Sem campo nem caixinha a mais no cadastro. */}

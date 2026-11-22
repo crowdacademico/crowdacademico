@@ -177,7 +177,7 @@ export function Explorar({ auth }: PropsPagina) {
 
   return (
     <div className="fundo-pagina py-10 min-h-full">
-      <div className="w-full max-w-7xl mx-auto px-4">
+      <div className="largura-site w-full">
         <CabecalhoPagina
           className="mb-8 border-b borda-padrao pb-5"
           id="cabecalho-pagina-explorar"

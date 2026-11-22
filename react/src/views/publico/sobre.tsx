@@ -1,24 +1,25 @@
 import { Link } from 'react-router';
 import { CabecalhoPagina } from '../../components/layout/cabecalho-pagina';
+import { useAlturaIgual } from '../../components/layout/use-altura-igual';
 
 // Sobre (15-11-2026): página de IDENTIDADE do projeto (por que existe, para quem, o que defende). A mecânica da
 // plataforma (curadoria, prazos, repasse) mora em Como funciona; os números, em Taxas e transparência.
 const PROBLEMAS = [
   {
     icone: 'fa-hourglass-half',
-    titulo: 'Editais demoram e oscilam',
+    titulo: 'Editais lentos e incertos',
     texto:
       'Entre enviar um projeto e receber o recurso podem passar meses, às vezes mais de um ano, e a abertura dos editais muda conforme o orçamento público de cada período.',
   },
   {
     icone: 'fa-door-closed',
-    titulo: 'Nem todo pesquisador chega ao edital',
+    titulo: 'Acesso desigual',
     texto:
       'Quem está começando a carreira, trabalha em instituição menor ou não tem vínculo com um programa de pós-graduação compete em desvantagem com grupos já consolidados.',
   },
   {
     icone: 'fa-circle-question',
-    titulo: 'Plataformas genéricas não distinguem pesquisa',
+    titulo: 'Vaquinhas genéricas',
     texto:
       'Em uma vaquinha comum, um projeto com metodologia definida aparece do mesmo jeito que um pedido pessoal. Pouco ajuda quem quer apoiar a saber a diferença.',
   },
@@ -33,7 +34,7 @@ const PRINCIPIOS = [
   },
   {
     icone: 'fa-file-invoice-dollar',
-    titulo: 'Orçamento e cronograma desde o início',
+    titulo: 'Orçamento e cronograma',
     texto:
       'Todo projeto precisa detalhar para onde vai cada real e quais são as etapas previstas. Essas informações ficam públicas na campanha.',
   },
@@ -132,11 +133,19 @@ function FaixaCriador({ criador }: { criador: Criador }) {
 }
 
 export function Sobre() {
+  // Cartões do mesmo bloco com a mesma altura (auto-rows-fr) e os títulos com a altura do mais alto do bloco, para os
+  // parágrafos começarem juntos em todos os cartões, inclusive em linhas diferentes (22-11-2026).
+  const blocoProblemas = useAlturaIgual<HTMLDivElement>('h3');
+  const blocoPrincipios = useAlturaIgual<HTMLDivElement>('h3');
+  const blocoPublico = useAlturaIgual<HTMLDivElement>('h3');
   return (
     <div className="pagina-publica fundo-pagina min-h-full py-16">
-      <div className="mx-auto max-w-4xl px-4">
+      <div className="largura-site w-full">
+        {/* Largura única da área pública (DSP-34, 22-11-2026): títulos, parágrafos, as faixas de "Quem fez" e o cartão final
+            usam o trilho inteiro; só os blocos de cartões ficam centralizados numa largura de 896 px. */}
         <CabecalhoPagina
           className="mb-14"
+          descricaoLarga
           descricao="Uma plataforma brasileira de financiamento coletivo feita exclusivamente para a pesquisa científica e tecnológica."
           titulo="Sobre o CrowdAcadêmico"
         />
@@ -150,9 +159,9 @@ export function Sobre() {
             das fundações estaduais. O modelo funciona, mas deixa muita ciência sem recurso, principalmente a de menor
             porte, que não precisa de milhões, só de uma coleta de campo, de um equipamento ou de uma viagem.
           </p>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div ref={blocoProblemas} className="mx-auto grid max-w-4xl grid-cols-1 sm:auto-rows-fr gap-4 sm:grid-cols-3">
             {PROBLEMAS.map((problema) => (
-              <article key={problema.titulo} className="pagina-publica__cartao">
+              <article key={problema.titulo} className="pagina-publica__cartao flex flex-col items-center text-center">
                 <span className="pagina-publica__perfil-icone" aria-hidden="true">
                   <i className={`fa-solid ${problema.icone}`} />
                 </span>
@@ -179,7 +188,7 @@ export function Sobre() {
               apoio mínimo é baixo e o Pix é o meio principal de pagamento.
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div ref={blocoPrincipios} className="mx-auto grid max-w-4xl grid-cols-1 sm:auto-rows-fr gap-4 sm:grid-cols-2">
             {PRINCIPIOS.map((principio) => (
               <article key={principio.titulo} className="pagina-publica__cartao flex items-start gap-4">
                 <span className="pagina-publica__perfil-icone shrink-0" aria-hidden="true">
@@ -198,7 +207,7 @@ export function Sobre() {
           <h2 id="sobre-publico" className="titulo-secao mb-4">
             Para quem é
           </h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div ref={blocoPublico} className="mx-auto grid max-w-4xl grid-cols-1 sm:auto-rows-fr gap-4 sm:grid-cols-2">
             <article className="pagina-publica__cartao">
               <h3 className="subtitulo mb-2">Pesquisadores</h3>
               <p className="paragrafo texto-padrao">

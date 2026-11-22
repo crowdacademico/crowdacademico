@@ -67,7 +67,7 @@ export function Transparencia() {
 
   return (
     <div className="pagina-publica fundo-pagina min-h-full py-16">
-      <div className="mx-auto max-w-5xl px-4">
+      <div className="largura-site w-full">
         <CabecalhoPagina
           className="mb-12"
           titulo="Taxas e transparência"

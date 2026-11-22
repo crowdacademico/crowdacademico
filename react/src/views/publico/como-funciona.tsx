@@ -285,7 +285,7 @@ export function ComoFunciona() {
 
   return (
     <div className="pagina-publica fundo-pagina min-h-full py-16">
-      <div className="mx-auto max-w-6xl px-4">
+      <div className="largura-site w-full">
         <CabecalhoPagina
           className="mb-14"
           descricao="Do projeto à campanha publicada, do apoio ao resultado: veja como cada etapa funciona no CrowdAcadêmico."

@@ -252,7 +252,7 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
       {/* Sem overflow-hidden e numa camada acima (z-10): o menu do Seguir abre por cima do conteúdo, não por trás. */}
       <header id="perfil-pesquisador-capa" className="superficie-escura relative z-10 mb-10 py-14">
         {/* No celular, tudo centrado e a foto menor (16-11-2026, Alexia): alinhado à esquerda sobrava um vazio à direita. */}
-        <div className="mx-auto max-w-5xl px-4 flex flex-col items-center text-center sm:flex-row sm:text-left gap-6 sm:gap-8">
+        <div className="largura-site w-full flex flex-col items-center text-center sm:flex-row sm:text-left gap-6 sm:gap-8">
           <div className="shrink-0">
             {pesquisador?.avatarUrl ? (
               <img
@@ -297,7 +297,7 @@ export function PerfilPesquisador({ auth }: PropsPagina) {
       </header>
 
       {!naoEncontrado && (
-        <div className="mx-auto max-w-5xl px-4">
+        <div className="largura-site w-full">
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             <div className="space-y-10 lg:col-span-2">
               <SecaoCampanhas titulo="Campanhas ativas" campanhas={ativas} carregando={campanhas === null && carregando} vazio="Nenhuma campanha arrecadando agora." />

@@ -34,7 +34,9 @@ export function TermosUso() {
 
   return (
     <div className="fundo-pagina min-h-full py-16">
-      <div className="mx-auto max-w-5xl px-4">
+      <div className="largura-site w-full">
+        {/* Largura única da área pública (DSP-34, 22-11-2026): o trilho do cabeçalho (.largura-site), com o texto corrido numa coluna de 768 px alinhada à esquerda. */}
+        <div className="max-w-3xl">
         <CabecalhoPagina
           className="mb-10"
           descricao="Consulte o termo vigente para conta e contribuições, fornecido pelo CrowdAcadêmico."
@@ -51,6 +53,7 @@ export function TermosUso() {
             <div className="paragrafo texto-padrao whitespace-pre-wrap">{termo.conteudo}</div>
           </article>
         )}
+        </div>
       </div>
     </div>
   );

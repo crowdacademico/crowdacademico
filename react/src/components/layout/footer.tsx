@@ -1,4 +1,4 @@
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { LogoMarca } from './logo-marca';
 
 // Rodapé ÚNICO do sistema (14-11-2026): o mesmo na área restrita (layout.tsx) e na pública (layout-publico.tsx).
@@ -24,7 +24,16 @@ const COLUNAS = [
   },
 ];
 
+// Link para a página em que a pessoa já está (22-11-2026): sem isto o clique não fazia nada e parecia quebrado; agora
+// leva ao topo, como o menu do GitHub e das redes sociais. Quem pede "reduzir movimento" no sistema sobe direto, sem
+// a rolagem animada.
+function irAoTopo() {
+  const reduzir = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({ top: 0, behavior: reduzir ? 'auto' : 'smooth' });
+}
+
 export function Footer() {
+  const { pathname } = useLocation();
   return (
     <footer className="rodape py-16 border-t borda-rodape mt-auto">
       {/* Mesma caixa do cabeçalho (.largura-site). Tela larga: as 4 colunas com o mesmo espaço entre elas; média: 2 por
@@ -42,12 +51,23 @@ export function Footer() {
         </div>
 
         {COLUNAS.map(({ titulo, links }) => (
-          <div key={titulo}>
+          // Os links nunca quebram de linha (22-11-2026, trilho de 1152 px): a coluna não encolhe, e quem cede espaço são as
+          // duas colunas de texto (a da marca e a de Segurança), que podem ganhar uma linha a mais sem problema.
+          <div key={titulo} className="lg:shrink-0">
             <h2 className="rotulo-campo texto-rodape-forte mb-6">{titulo}</h2>
             <ul className="space-y-4 paragrafo texto-herdado">
               {links.map(({ rotulo, to }) => (
                 <li key={to}>
-                  <Link to={to} className="hover-texto-marca transition-colors flex items-center gap-2">
+                  <Link
+                    to={to}
+                    className="hover-texto-marca transition-colors flex items-center gap-2 whitespace-nowrap"
+                    onClick={(evento) => {
+                      if (pathname === to) {
+                        evento.preventDefault();
+                        irAoTopo();
+                      }
+                    }}
+                  >
                     <i className="fa-solid fa-angle-right icone-pequeno texto-rodape-apagado" aria-hidden="true" />
                     {rotulo}
                   </Link>

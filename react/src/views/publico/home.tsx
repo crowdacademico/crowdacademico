@@ -274,7 +274,7 @@ export function Home({ auth }: PropsPagina) {
       </section>
 
       <section className="fundo-cartao border-b borda-padrao py-16">
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="largura-site w-full">
           <div className="text-center mb-12">
             <span className="microrrotulo texto-marca">Informações públicas</span>
             <h2 className="titulo-secao texto-forte mt-3">Um ambiente confiável para a ciência</h2>
@@ -298,7 +298,7 @@ export function Home({ auth }: PropsPagina) {
         </div>
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 pt-10 pb-2">
+      <section className="largura-site w-full pt-10 pb-2">
         <h2 className="titulo-secao texto-forte mb-6 text-center">Explore comunidades incríveis</h2>
         {carregando && <Carregando className="text-center" />}
         {!carregando && erro && <MensagemErro texto={erro} />}
@@ -392,7 +392,7 @@ export function Home({ auth }: PropsPagina) {
 
       <section className="superficie-escura texto-sobre-escuro-forte py-14 relative overflow-hidden">
         <div className="absolute inset-0 grade-medicao" aria-hidden="true" />
-        <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+        <div className="largura-site w-full grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
           <article className="home-stat">
             <div className="home-stat__valor">{valorEstatistica(formatarNumeroCompacto(campanhas?.length ?? 0))}</div>
             <div className="rotulo">Campanhas públicas</div>
@@ -411,7 +411,7 @@ export function Home({ auth }: PropsPagina) {
       </section>
 
       <section className="fundo-cartao home-como">
-        <div className="max-w-7xl mx-auto px-4 home-como__grade">
+        <div className="largura-site w-full home-como__grade">
           <div className="home-como__texto">
             <span className="microrrotulo texto-marca">Como funciona</span>
             <h2 className="titulo-secao texto-forte mt-3 mb-10">É simples conhecer uma pesquisa</h2>
@@ -462,7 +462,7 @@ export function Home({ auth }: PropsPagina) {
       <section className="home-pesquisadores">
         <img src="/imagens/faixa-pesquisadores.jpg" alt="" className="home-pesquisadores__foto" />
         <div className="home-pesquisadores__veu" aria-hidden="true" />
-        <div className="max-w-7xl mx-auto px-4 py-20 relative z-10">
+        <div className="largura-site w-full py-20 relative z-10">
           <span className="microrrotulo texto-marca-sobre-escuro">Para pesquisadores</span>
           <h2 className="titulo-secao texto-sobre-escuro-forte mt-3 mb-4">Sua pesquisa pode ir mais longe</h2>
           <p className="paragrafo texto-sobre-escuro-forte mb-8 max-w-xl">
