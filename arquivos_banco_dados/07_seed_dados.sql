@@ -424,17 +424,17 @@ FROM (VALUES
     ('8.03.00.00', 'Artes')
 ) AS v(codigo, nome);
 
--- Nível 2 - filhas de "Multidisciplinar" (id 9) - 5 áreas (grande área mais
--- recente do CNPq; lista abaixo é a mais estável/citada, mas é a que tem
--- maior chance de precisar de ajuste na conferência oficial).
+-- Nível 2 - filhas de "Multidisciplinar" (id 9) - 5 áreas. Conferidas com a Tabela de Áreas do Conhecimento da Capes,
+-- atualizada em 2022 (a fonte citada no TCC), em 22-11-2026: antes os códigos estavam trocados e havia "Biodiversidade",
+-- que não existe na tabela, no lugar de "Interdisciplinar". O total continua 81 áreas (RF-050).
 INSERT INTO area_conhecimento (codigo_cnpq, nome, id_pai, ativo)
 SELECT v.codigo, v.nome, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '9.00.00.00'), TRUE
 FROM (VALUES
-    ('9.01.00.00', 'Biotecnologia'),
-    ('9.02.00.00', 'Ciências Ambientais'),
-    ('9.03.00.00', 'Biodiversidade'),
-    ('9.04.00.00', 'Ensino'),
-    ('9.05.00.00', 'Materiais')
+    ('9.01.00.00', 'Interdisciplinar'),
+    ('9.02.00.00', 'Ensino'),
+    ('9.03.00.00', 'Materiais'),
+    ('9.04.00.00', 'Biotecnologia'),
+    ('9.05.00.00', 'Ciências Ambientais')
 ) AS v(codigo, nome);
 
 -- [07-C-3] motivo_denuncia

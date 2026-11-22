@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { CaixaAviso } from '../../components/crud/caixa-aviso';
+import { linkAcademicoApi } from '../../services/7-link-academico/api/link-academico.api';
 import { MetricasEstudio } from './metricas-estudio';
 import { LayoutAreaUsuario } from '../../components/layout/layout-area-usuario';
 import { AvisoSoPesquisador } from '../../components/crud/aviso-so-pesquisador';
@@ -114,6 +115,14 @@ function ConteudoEstudio({ auth, secao }: PropsPagina & { secao: SecaoEstudio })
     [auth.authFetch],
   );
   const faltaChavePix = (campanhas?.length ?? 0) > 0 && !carregandoPix && !erroPix && !contaPix?.titularidadeVerificada;
+  // Sem nenhum link acadêmico (21-11-2026): os links contam na pontuação (o banco recalcula o score quando um link
+  // muda) e dão credibilidade ao perfil. Aviso fixo no topo, e não uma dica escondida num ⓘ: quem não sabe que deveria
+  // cadastrar não passaria o mouse. Some sozinho quando o primeiro link entra.
+  const { dado: links } = useBuscar(
+    () => (idUsuario === null ? Promise.resolve([]) : linkAcademicoApi.listarDoUsuario(auth.authFetch, idUsuario)),
+    [auth.authFetch, idUsuario],
+  );
+  const faltaLinks = links !== null && links.length === 0;
 
   return (
     <LayoutAreaUsuario
@@ -144,6 +153,19 @@ function ConteudoEstudio({ auth, secao }: PropsPagina & { secao: SecaoEstudio })
                   {contaPix && 'A chave cadastrada não foi confirmada no seu nome. '}
                   <Link to="/minha-conta/financeiro" className="link-texto link-texto--cor-herdada">
                     Ir para Minha Conta &gt; Financeiro
+                  </Link>
+                </p>
+              </CaixaAviso>
+            </div>
+          )}
+          {faltaLinks && (
+            <div className="mb-5">
+              <CaixaAviso titulo="Adicione seus links acadêmicos" tom="info" icone="fa-graduation-cap">
+                <p>
+                  Lattes, ORCID ou Google Acadêmico mostram quem você é como pesquisador, passam confiança a quem apoia e
+                  aumentam a sua pontuação.{' '}
+                  <Link to="/minha-conta/perfil" className="link-texto link-texto--cor-herdada">
+                    Ir para Minha Conta &gt; Perfil
                   </Link>
                 </p>
               </CaixaAviso>

@@ -91,7 +91,9 @@ export function CamposVinculoPerfil({
                 autoComplete="off"
                 placeholder="Comece a digitar para ver sugestões"
                 value={vinculoInstitucional}
-                onChange={(evento) => aoAlterarVinculoInstitucional(evento.target.value)}
+                // Em maiúsculas enquanto digita (21-11-2026), como a lista do CAFe: mesmo o que for digitado à mão segue o
+                // padrão das sugestões.
+                onChange={(evento) => aoAlterarVinculoInstitucional(evento.target.value.toLocaleUpperCase('pt-BR'))}
                 className={'input-padrao' + classeErro}
               />
             )}

@@ -1180,7 +1180,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | DELETE | `/usuario-papel/:idUsuario/:idPapel` |
 | AUTH | POST | `/usuario-papel/:idUsuario/:idPapel/suspender` · `.../revogar-suspensao` |
 | **Perfil e links** | | |
-| pub | GET | `/perfil-pesquisador` · `/perfil-pesquisador/:id` · `/perfil-pesquisador/:id/score` |
+| pub | GET | `/perfil-pesquisador` · `/perfil-pesquisador/instituicoes` · `/perfil-pesquisador/:id` · `/perfil-pesquisador/:id/score` |
 | AUTH | POST · PATCH | `/perfil-pesquisador` |
 | AUTH | POST | `/perfil-pesquisador/:id` *(criar em nome de outro, distinta do `POST /perfil-pesquisador` self-service acima; Campo de Testes, só fora de produção)* |
 | AUTH | PATCH | `/perfil-pesquisador/:id` *(alterar o perfil de outro pesquisador; o `PATCH /perfil-pesquisador` sem id é o self-service)* |

@@ -55,11 +55,14 @@ interface TooltipProps {
   texto: string;
   baixo?: boolean;
   esquerda?: boolean;
+  // Abre alinhada pela borda direita do ícone: para o ⓘ perto da borda direita de um cartão que corta o que passa
+  // dele (ex.: a chave Pix do cadastro, 21-11-2026).
+  direita?: boolean;
   aoClicar?: () => void;
   icone?: string;
 }
 
-export function Tooltip({ texto, baixo = false, esquerda = false, aoClicar, icone = 'fa-solid fa-circle-info' }: TooltipProps) {
+export function Tooltip({ texto, baixo = false, esquerda = false, direita = false, aoClicar, icone = 'fa-solid fa-circle-info' }: TooltipProps) {
   const classe = 'dica dica--info' + (aoClicar ? ' dica--clicavel' : '');
   const Elemento = aoClicar ? 'button' : 'span';
 
@@ -73,7 +76,7 @@ export function Tooltip({ texto, baixo = false, esquerda = false, aoClicar, icon
       aria-label={texto}
     >
       <i className={icone} aria-hidden="true"></i>
-      <Dica texto={texto} baixo={baixo} esquerda={esquerda} />
+      <Dica texto={texto} baixo={baixo} esquerda={esquerda} direita={direita} />
     </Elemento>
   );
 }

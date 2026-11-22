@@ -55,7 +55,7 @@ export function CamposChavePix({ tipoChave, aoAlterarTipo, chave, aoAlterarChave
           opcional ? (
             <>
               Chave Pix para receber (opcional){' '}
-              <Tooltip texto="Para onde vai o dinheiro das suas campanhas. A chave precisa estar no seu CPF. Dá para cadastrar depois, em Minha Conta > Financeiro." />
+              <Tooltip texto="Para onde vai o dinheiro das suas campanhas. A chave precisa estar no seu CPF. Dá para cadastrar depois, em Minha Conta > Financeiro." direita />
             </>
           ) : (
             'Chave'
