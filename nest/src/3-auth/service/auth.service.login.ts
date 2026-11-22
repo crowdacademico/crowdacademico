@@ -26,7 +26,16 @@ import {
 } from '../constants/auth.constants';
 import { AuthRequestLogin } from '../dto/request/auth.request-login';
 import { AuthResponseLogin } from '../dto/response/auth.response-login';
+import { AuthResponseExclusaoAgendada } from '../dto/response/auth.response-exclusao-agendada';
 import { formatarDataHoraBr } from '../util/auth.util.format-date-time';
+
+// Linha devolvida por conta_exclusao_agendada (03, [03-O]).
+export interface ContaExclusaoAgendada {
+  id_usuario: number;
+  senha_hash: string | null;
+  bloqueado_ate: Date | null;
+  exclusao_definitiva_em: Date;
+}
 
 // A mesma resposta para e-mail sem conta e senha errada (ver MENSAGEM_LOGIN_RECUSADO).
 const loginRecusado = () =>
@@ -51,7 +60,7 @@ export class AuthServiceLogin {
     dto: AuthRequestLogin,
     ip: string | undefined,
     userAgent: string | undefined,
-  ): Promise<AuthResponseLogin> {
+  ): Promise<AuthResponseLogin | AuthResponseExclusaoAgendada> {
     const db = this.database.getDb();
 
     // Só esta query, no módulo inteiro, lê senha_hash - de propósito, nunca
@@ -66,7 +75,7 @@ export class AuthServiceLogin {
       .executeTakeFirst();
 
     if (!usuario) {
-      throw loginRecusado();
+      return this.entrarNaContaComExclusaoAgendada(dto, ip, userAgent);
     }
 
     await this.barrarContaImpedida(usuario.id_usuario, usuario.bloqueado_ate);
@@ -91,6 +100,74 @@ export class AuthServiceLogin {
     }
 
     return this.abrirSessao(usuario.id_usuario, ip, userAgent);
+  }
+
+  // Prazo de carência da exclusão (22-11-2026). A conta que a própria pessoa excluiu some da busca acima (a RLS
+  // esconde conta excluída); aqui ela é procurada por conta_exclusao_agendada (03, [03-O]). Mesmas regras do login
+  // comum (bloqueio, suspensão, senha errada conta falha) e a mesma resposta vaga quando não há conta: só quem
+  // acerta a senha fica sabendo da exclusão agendada.
+  private async entrarNaContaComExclusaoAgendada(
+    dto: AuthRequestLogin,
+    ip: string | undefined,
+    userAgent: string | undefined,
+  ): Promise<AuthResponseLogin | AuthResponseExclusaoAgendada> {
+    const conta = await this.buscarExclusaoAgendada(dto.email, null);
+    if (!conta || conta.senha_hash === null) {
+      throw loginRecusado();
+    }
+
+    await this.barrarContaImpedida(conta.id_usuario, conta.bloqueado_ate);
+
+    const senhaValida = await bcrypt.compare(dto.senha, conta.senha_hash);
+    if (!senhaValida) {
+      // Fora da transação da requisição, pelo mesmo motivo do login comum (o 401 dá ROLLBACK).
+      await this.pool.query('SELECT public.registrar_falha_login($1)', [
+        conta.id_usuario,
+      ]);
+      throw loginRecusado();
+    }
+
+    return this.responderExclusaoAgendada(conta, dto.reativar, ip, userAgent);
+  }
+
+  // Procura a conta com exclusão agendada pelo e-mail ou pelo identificador da conta Google (usado também pelo
+  // login com Google). Só aparece a conta que a própria pessoa excluiu e que ainda está dentro do prazo.
+  async buscarExclusaoAgendada(
+    email: string,
+    googleSub: string | null,
+  ): Promise<ContaExclusaoAgendada | undefined> {
+    const resultado = await sql<ContaExclusaoAgendada>`
+      SELECT * FROM public.conta_exclusao_agendada(${email}, ${googleSub})
+    `.execute(this.database.getDb());
+    return resultado.rows[0];
+  }
+
+  // A identidade já foi conferida (senha ou Google). Sem `reativar`, devolve a data para o modal; com ele, desfaz a
+  // exclusão e abre a sessão normalmente, na mesma transação.
+  async responderExclusaoAgendada(
+    conta: ContaExclusaoAgendada,
+    reativar: boolean | undefined,
+    ip: string | undefined,
+    userAgent: string | undefined,
+  ): Promise<AuthResponseLogin | AuthResponseExclusaoAgendada> {
+    if (!reativar) {
+      return {
+        exclusaoAgendada: true,
+        exclusaoDefinitivaEm: conta.exclusao_definitiva_em.toISOString(),
+      };
+    }
+
+    const resultado = await sql<{ reativada: boolean }>`
+      SELECT public.reativar_conta_usuario(${conta.id_usuario}) AS reativada
+    `.execute(this.database.getDb());
+    // FALSE só se o prazo acabou entre o modal e o clique: a conta não existe mais para o login.
+    if (!resultado.rows[0]?.reativada) {
+      throw loginRecusado();
+    }
+    // De novo, agora com a conta visível: com ela excluída, a RLS escondia a suspensão de moderação, e excluir e
+    // reativar não pode servir para escapar dela. Se barrar, o erro desfaz a reativação junto (mesma transação).
+    await this.barrarContaImpedida(conta.id_usuario);
+    return this.abrirSessao(conta.id_usuario, ip, userAgent);
   }
 
   // O que barra a entrada de uma conta que já foi identificada, pela senha ou pelo Google (18-11-2026): o bloqueio

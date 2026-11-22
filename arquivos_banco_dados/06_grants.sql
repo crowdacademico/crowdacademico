@@ -167,6 +167,13 @@ REVOKE EXECUTE ON FUNCTION public.liberar_bloqueio_login(INT)             FROM P
 REVOKE EXECUTE ON FUNCTION public.registrar_login_sucesso(INT, TEXT)      FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.entrar_com_google(TEXT, TEXT, TEXT)    FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.excluir_conta_usuario(INT)              FROM PUBLIC;
+-- Prazo de carência da exclusão (22-11-2026), ver [03-O]: o login acha e reativa a conta sem sessão ainda existindo,
+-- e o @Cron diário finaliza as vencidas.
+REVOKE EXECUTE ON FUNCTION public.conta_exclusao_agendada(TEXT, TEXT)     FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.reativar_conta_usuario(INT)             FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.finalizar_exclusoes_vencidas()          FROM PUBLIC;
+-- alterar_email_nao_confirmado(TEXT): ver [03-O] (bloqueio parcial do e-mail não confirmado, 22-11-2026).
+REVOKE EXECUTE ON FUNCTION public.alterar_email_nao_confirmado(TEXT)      FROM PUBLIC;
 -- registrar_aceite_termo(INT, INT, TEXT) - ver [03-D-1], usada pelo cadastro
 -- público (POST /auth/cadastro, 3-auth) pra gravar o aceite de termo no
 -- mesmo instante em que a conta é criada, sem sessão ainda existindo.
@@ -201,6 +208,10 @@ GRANT EXECUTE ON FUNCTION public.liberar_bloqueio_login(INT)              TO app
 GRANT EXECUTE ON FUNCTION public.registrar_login_sucesso(INT, TEXT)       TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.entrar_com_google(TEXT, TEXT, TEXT)     TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.excluir_conta_usuario(INT)               TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.conta_exclusao_agendada(TEXT, TEXT)      TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.reativar_conta_usuario(INT)              TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.finalizar_exclusoes_vencidas()           TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.alterar_email_nao_confirmado(TEXT)       TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.registrar_aceite_termo(INT, INT, TEXT)   TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_pesquisador(INT, TIMESTAMPTZ, TEXT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.reativar_pesquisador(INT)                TO app_nestjs;

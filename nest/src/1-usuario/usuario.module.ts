@@ -19,6 +19,7 @@ import { UsuarioServiceFindOne } from './service/usuario.service.findone';
 import { UsuarioServiceFindAllLogins } from './service/usuario.service.findall-logins';
 import { UsuarioServiceFindAllAcceptedTerms } from './service/usuario.service.findall-accepted-terms';
 import { UsuarioServiceRemove } from './service/usuario.service.remove';
+import { UsuarioServiceFinalizarExclusoes } from './service/usuario.service.finalizar-exclusoes';
 import { UsuarioServiceSuspend } from './service/usuario.service.suspend';
 import { UsuarioServiceUpdate } from './service/usuario.service.update';
 
@@ -45,6 +46,7 @@ import { UsuarioServiceUpdate } from './service/usuario.service.update';
     UsuarioServiceFindOne,
     UsuarioServiceUpdate,
     UsuarioServiceRemove,
+    UsuarioServiceFinalizarExclusoes,
     UsuarioServiceUnlock,
     UsuarioServiceFindAllLogins,
     UsuarioServiceFindAllAcceptedTerms,

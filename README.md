@@ -5,6 +5,8 @@
 # crowdacademico
 Projeto de TCC do IFSP Birigui
 
+# DEPLOY
+https://crowdacademico-1.onrender.com/
 
 # EXEMPLO real do código já pronto (tabela `seguir_pesquisador`), com CONSTRAINTS nomeados fácil de achar e INDEX
 *(Atualizado nesta revisão - a versão anterior deste exemplo usava prefixo `CRW_` e `SCREAMING_SNAKE_CASE` pra tabela/coluna; essa convenção nunca chegou a ser adotada no `.sql` de verdade. A convenção que o projeto usa desde o início é: tabelas/colunas em `snake_case` minúsculo, sem prefixo, com constraints nomeados em `"SCREAMING_SNAKE_CASE"` entre aspas duplas (`"PK_..."`/`"FK_..."`/`"UK_..."`/`"CK_..."`) e índices em `idx_snake_case` minúsculo - exatamente como está em `arquivos_banco_dados/01_extensoes_enums_tabelas.sql` e `02_indices.sql` hoje.)*

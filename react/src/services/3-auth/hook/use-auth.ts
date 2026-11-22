@@ -3,7 +3,33 @@ import { esquecerEscolhaGoogle } from '../util/google-identity.util';
 import type { Dispatch, SetStateAction } from 'react';
 import { API_BASE_URL } from '../../constant/constants/api.constants';
 import * as authApi from '../api/auth.api';
-import type { AuthFetch, AuthResponseLogin, AuthResponseRegister } from '../type/auth.type';
+import type {
+  AuthFetch,
+  AuthResponseExclusaoAgendada,
+  AuthResponseLogin,
+  AuthResponseRegister,
+} from '../type/auth.type';
+
+// Prazo de carência da exclusão de conta (22-11-2026): a senha (ou o Google) conferiu, mas a própria pessoa tinha
+// excluído a conta e ainda está no prazo. Não abre sessão: a tela de login pega este erro e mostra o modal com a data
+// e o botão "Reativar minha conta", que repete o login com `reativar`. Em qualquer outra tela (o botão do Google no
+// cadastro), a mensagem explica o caminho.
+export class ErroContaExclusaoAgendada extends Error {
+  exclusaoDefinitivaEm: string;
+
+  constructor(exclusaoDefinitivaEm: string) {
+    super('Sua conta está marcada para exclusão. Entre pela tela de login para reativá-la.');
+    this.name = 'ErroContaExclusaoAgendada';
+    this.exclusaoDefinitivaEm = exclusaoDefinitivaEm;
+  }
+}
+
+function sessaoOuExclusaoAgendada(resultado: AuthResponseLogin | AuthResponseExclusaoAgendada): AuthResponseLogin {
+  if ('exclusaoAgendada' in resultado) {
+    throw new ErroContaExclusaoAgendada(resultado.exclusaoDefinitivaEm);
+  }
+  return resultado;
+}
 import type { UsuarioResponse } from '../../1-usuario/type/usuario.type';
 import { acompanharRequisicao } from '../../../components/layout/barra-carregamento/atividade-rede';
 
@@ -59,9 +85,10 @@ export interface UseAuthReturn {
   carregando: boolean;
   autenticado: boolean;
   // `manterConectado`: a caixa "Manter conectado neste computador" (marcada por padrão; desmarcada, a sessão acaba ao fechar o navegador).
-  login: (email: string, senha: string, manterConectado: boolean) => Promise<AuthResponseLogin>;
+  // `reativar`: o clique em "Reativar minha conta" no modal de exclusão agendada (ver ErroContaExclusaoAgendada).
+  login: (email: string, senha: string, manterConectado: boolean, reativar?: boolean) => Promise<AuthResponseLogin>;
   // Login com Google: a conta nova volta com aceitePendente e passa pelo aceite do Termo de Uso (RF-015).
-  entrarComGoogle: (credential: string, manterConectado: boolean) => Promise<AuthResponseLogin>;
+  entrarComGoogle: (credential: string, manterConectado: boolean, reativar?: boolean) => Promise<AuthResponseLogin>;
   cadastrar: (
     nome: string,
     email: string,
@@ -130,8 +157,8 @@ export function useAuth(): UseAuthReturn {
   }, []);
 
   const login = useCallback(
-    async (email: string, senha: string, manterConectado: boolean): Promise<AuthResponseLogin> => {
-      const resultado = await authApi.login(email, senha);
+    async (email: string, senha: string, manterConectado: boolean, reativar = false): Promise<AuthResponseLogin> => {
+      const resultado = sessaoOuExclusaoAgendada(await authApi.login(email, senha, reativar));
       salvarSessao(resultado, manterConectado);
       return resultado;
     },
@@ -139,8 +166,8 @@ export function useAuth(): UseAuthReturn {
   );
 
   const entrarComGoogle = useCallback(
-    async (credential: string, manterConectado: boolean): Promise<AuthResponseLogin> => {
-      const resultado = await authApi.entrarComGoogle(credential);
+    async (credential: string, manterConectado: boolean, reativar = false): Promise<AuthResponseLogin> => {
+      const resultado = sessaoOuExclusaoAgendada(await authApi.entrarComGoogle(credential, reativar));
       salvarSessao(resultado, manterConectado);
       return resultado;
     },

@@ -1,4 +1,10 @@
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 import { EmailNormalizado } from '../../../commons/validacao/transformacoes.decorator';
 
 export class AuthRequestLogin {
@@ -15,4 +21,9 @@ export class AuthRequestLogin {
   @IsString()
   @MinLength(1, { message: 'Senha é obrigatória.' })
   senha: string;
+
+  // Prazo de carência (22-11-2026): TRUE quando a pessoa clicou "Reativar minha conta" no modal de exclusão agendada.
+  @IsOptional()
+  @IsBoolean()
+  reativar?: boolean;
 }

@@ -53,6 +53,8 @@ function montar(idCliente: string | null = ID_CLIENTE) {
   const login = {
     barrarContaImpedida: jest.fn().mockResolvedValue(undefined),
     abrirSessao: jest.fn(),
+    buscarExclusaoAgendada: jest.fn().mockResolvedValue(undefined),
+    responderExclusaoAgendada: jest.fn(),
   };
   const database = { getDb: jest.fn().mockReturnValue({}) };
   const googleToken = new AuthServiceGoogleToken(
@@ -155,7 +157,7 @@ describe('AuthServiceGoogle', () => {
     );
     expect(login.barrarContaImpedida).toHaveBeenCalledWith(8);
     expect(login.abrirSessao).toHaveBeenCalledWith(8, IP, NAVEGADOR);
-    expect(r.aceitePendente).toBe(false);
+    expect(r).toMatchObject({ aceitePendente: false });
   });
 
   it('e-mail novo: a conta criada volta com o Termo de Uso pendente (RF-015)', async () => {
@@ -172,7 +174,7 @@ describe('AuthServiceGoogle', () => {
       {},
       expect.objectContaining({ sub: 's-nova', nome: null }),
     );
-    expect(r.aceitePendente).toBe(true);
+    expect(r).toMatchObject({ aceitePendente: true });
   });
 
   it('conta suspensa: continua barrada (403), sem abrir sessão', async () => {
@@ -190,6 +192,44 @@ describe('AuthServiceGoogle', () => {
       service.executar({ credential: 't' }, IP, NAVEGADOR),
     ).rejects.toThrow(ForbiddenException);
     expect(login.abrirSessao).not.toHaveBeenCalled();
+  });
+
+  it('conta excluída pela própria pessoa, dentro do prazo: devolve a exclusão agendada (prazo de carência)', async () => {
+    tokenDoGoogle({
+      sub: 's1',
+      email: 'agendada@gmail.com',
+      email_verified: true,
+    });
+    banco.mockResolvedValue(null);
+    const { service, login } = montar();
+    const conta = {
+      id_usuario: 11,
+      senha_hash: null,
+      bloqueado_ate: null,
+      exclusao_definitiva_em: new Date('2026-12-22T12:00:00Z'),
+    };
+    login.buscarExclusaoAgendada.mockResolvedValue(conta);
+    login.responderExclusaoAgendada.mockResolvedValue({
+      exclusaoAgendada: true,
+      exclusaoDefinitivaEm: '2026-12-22T12:00:00.000Z',
+    });
+    const r = await service.executar(
+      { credential: 't', reativar: true },
+      IP,
+      NAVEGADOR,
+    );
+    expect(login.buscarExclusaoAgendada).toHaveBeenCalledWith(
+      'agendada@gmail.com',
+      's1',
+    );
+    expect(login.barrarContaImpedida).toHaveBeenCalledWith(11, null);
+    expect(login.responderExclusaoAgendada).toHaveBeenCalledWith(
+      conta,
+      true,
+      IP,
+      NAVEGADOR,
+    );
+    expect(r).toMatchObject({ exclusaoAgendada: true });
   });
 
   it('e-mail de conta excluída (o banco devolve null): 401', async () => {

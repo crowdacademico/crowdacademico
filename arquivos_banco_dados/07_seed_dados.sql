@@ -583,6 +583,9 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'refresh_token_dias_validade', '30',   'inteiro',  'Por quantos dias a sessão continua válida (refresh token) antes de precisar logar de novo', TRUE, FALSE),
 (NULL, 'sessao_painel_horas_validade', '12', 'inteiro',  'Contas com acesso ao painel (admin, curador, moderador, suporte, revisor): por quantas horas sem uso a sessão continua válida, mesmo com "Manter conectado" (0 = vale o prazo comum de refresh_token_dias_validade)', TRUE, FALSE),
 (NULL, 'verificacao_email_horas_validade', '24', 'inteiro', 'Validade do token de verificação de e-mail, em horas', TRUE, FALSE),
+-- Prazo de carência da exclusão de conta (22-11-2026), lido por conta_exclusao_agendada, reativar_conta_usuario e
+-- finalizar_exclusoes_vencidas (03, [03-O]).
+(NULL, 'conta_exclusao_carencia_dias', '30', 'inteiro', 'Dias entre o pedido de exclusão da conta e a exclusão definitiva; nesse prazo, quem excluiu a própria conta pode reativá-la entrando de novo', TRUE, FALSE),
 (NULL, 'recuperacao_senha_minutos_validade', '30', 'inteiro', 'Validade do link de "Esqueci minha senha", em minutos (de 1 a 60: o RF-007 limita a 1 hora)', TRUE, FALSE),
 -- Lida por contar_metricas_dashboard() (03, [03-M]): o card "sessões ativas" conta sessão criada (login ou
 -- renovação do token) dentro desta janela.

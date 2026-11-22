@@ -13,6 +13,9 @@ import { useErrosFormulario } from '../../services/constant/hook/use-erros-formu
 import { emailValido } from '../../services/constant/util/validacao.util';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import { LogoMarca } from '../../components/layout/logo-marca';
+import { ModalConfirmacao } from '../../components/crud/modal-confirmacao';
+import { ErroContaExclusaoAgendada } from '../../services/3-auth/hook/use-auth';
+import { formatarData } from '../../services/constant/util/formatacao.util';
 
 // Cópia fiel de telas/login/login.html do Projeto de Interface real, com uma mudança deliberada em relação ao
 // original, não só estética:
@@ -61,6 +64,11 @@ export function LoginPage({ auth }: PropsPagina) {
   // topo e os dois campos ficam marcados, cada um com o texto que o servidor mandou em `campos`. Fica no topo mesmo
   // com os campos marcados (useErroToast, sozinho, troca a frase do topo pelos erros de campo).
   const [recusa, setRecusa] = useState('');
+  // Prazo de carência da exclusão (22-11-2026): a senha conferiu, mas a própria pessoa tinha excluído a conta. Abre o modal
+  // com a data e o botão de reativar; `credencialGoogle` guarda o token quando a entrada foi pelo Google.
+  const [exclusaoAgendada, setExclusaoAgendada] = useState<{ em: string; credencialGoogle: string | null } | null>(
+    null,
+  );
 
   // Mesma validação do cadastro: o erro aparece embaixo do campo, com o cursor nele, e não num aviso solto. O erro do
   // servidor sobre um campo (validação do DTO, login recusado) vai para o mesmo lugar.
@@ -88,6 +96,10 @@ export function LoginPage({ auth }: PropsPagina) {
           setSenha('');
           setRecusa(erroLogin.message);
         }
+        if (erroLogin instanceof ErroContaExclusaoAgendada) {
+          setExclusaoAgendada({ em: erroLogin.exclusaoDefinitivaEm, credencialGoogle: null });
+          return;
+        }
         throw erroLogin;
       }
       void navigate(destinoDepoisDoLogin(local.state), { replace: true });
@@ -98,7 +110,34 @@ export function LoginPage({ auth }: PropsPagina) {
   const aoEntrarComGoogle = (credential: string) => {
     setRecusa('');
     void executarEnviando(async () => {
-      await auth.entrarComGoogle(credential, manterConectado);
+      try {
+        await auth.entrarComGoogle(credential, manterConectado);
+      } catch (erroGoogle) {
+        if (erroGoogle instanceof ErroContaExclusaoAgendada) {
+          setExclusaoAgendada({ em: erroGoogle.exclusaoDefinitivaEm, credencialGoogle: credential });
+          return;
+        }
+        throw erroGoogle;
+      }
+      void navigate(destinoDepoisDoLogin(local.state), { replace: true });
+    });
+  };
+
+  // "Reativar minha conta": repete o mesmo login (senha ou Google) com `reativar`; o Nest desfaz a exclusão e abre a
+  // sessão. O token do Google vale por cerca de 1 hora, tempo de sobra entre o modal e o clique.
+  const aoReativar = () => {
+    if (!exclusaoAgendada) return;
+    const { credencialGoogle } = exclusaoAgendada;
+    void executarEnviando(async () => {
+      try {
+        if (credencialGoogle) {
+          await auth.entrarComGoogle(credencialGoogle, manterConectado, true);
+        } else {
+          await auth.login(email, senha, manterConectado, true);
+        }
+      } finally {
+        setExclusaoAgendada(null);
+      }
       void navigate(destinoDepoisDoLogin(local.state), { replace: true });
     });
   };
@@ -233,6 +272,29 @@ export function LoginPage({ auth }: PropsPagina) {
         </form>
         </section>
       </div>
+      {exclusaoAgendada && (
+        <ModalConfirmacao
+          titulo="Sua conta está marcada para exclusão"
+          rotuloConfirmar="Reativar minha conta"
+          rotuloOcupado="Reativando..."
+          rotuloCancelar="Agora não"
+          ocupado={enviando}
+          aoConfirmar={aoReativar}
+          aoCancelar={() => setExclusaoAgendada(null)}
+        >
+          <p>
+            Ela será excluída de vez em <strong>{formatarData(exclusaoAgendada.em)}</strong> ({textoDiasRestantes(exclusaoAgendada.em)}).
+          </p>
+          <p>Reativando agora, tudo volta como estava, e você entra normalmente.</p>
+        </ModalConfirmacao>
+      )}
     </div>
   );
+}
+
+// "faltam 12 dias", "falta 1 dia" ou "termina hoje": arredonda para cima, para não dizer 0 com horas ainda sobrando.
+function textoDiasRestantes(iso: string): string {
+  const dias = Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
+  if (dias <= 0) return 'termina hoje';
+  return dias === 1 ? 'falta 1 dia' : `faltam ${dias} dias`;
 }

@@ -1545,6 +1545,23 @@ Testado com o backend rodando de verdade contra o Postgres real (não só compil
 
 **Em palavras simples:** as regras do Nest que protegem a conta de cada pessoa: o bloqueio por senha errada, a troca de senha, o e-mail, o Termo de Uso pendente, a renovação da sessão e a recuperação de senha. As regras do banco que sustentam cada uma estão no `DOCUMENTACAO_BD.md`.
 
+📌 **Detecção de reuso do refresh token (22-11-2026).**
+- A rotação já existia: cada renovação revoga o token usado e emite outro (`auth.service.refresh.ts`). Agora, quando chega um token **já trocado** (`sessao.revogado_por_rotacao`), o Nest entende que alguém o copiou e revoga **todas** as sessões da conta. Para voltar, precisa da senha, que só o dono tem.
+- **Por quê:** sem isso, o ladrão que usasse a cópia primeiro ficava com uma sessão viva, e o dono só via "sessão terminou". É o padrão da OWASP e da Auth0 para rotação de refresh token.
+- **Cuidados:** (1) o segredo é conferido antes, para ninguém derrubar as sessões de outra pessoa só adivinhando um id; (2) a revogação vai por uma conexão própria do pool, como o `registrar_falha_login`, porque o 401 dá `ROLLBACK`; (3) uma janela de 1 minuto (`PRAZO_CORRIDA_REUSO_MS`) não conta como roubo: duas abas renovando juntas e a renovação repetida depois de uma queda de rede.
+- **Por que não o cookie `HttpOnly`:** no Render, o site e a API ficam em subdomínios diferentes de `onrender.com`, que o navegador trata como sites diferentes; o Safari e o Chrome bloqueiam cookie entre sites, e a pessoa seria deslogada a cada F5. O cookie só vale com domínio próprio, que o projeto não terá.
+
+📌 **Prazo de carência na exclusão de conta (22-11-2026).**
+- Excluir a conta só agenda a exclusão (`excluir_conta_usuario`, `DOCUMENTACAO_BD.md`, [03-O]). Quem excluiu a própria conta e entra de novo dentro do prazo (parâmetro `conta_exclusao_carencia_dias`, 30) recebe, no lugar da sessão, `{ exclusaoAgendada: true, exclusaoDefinitivaEm }` (`AuthResponseExclusaoAgendada`, 200). O React mostra o modal "Sua conta está marcada para exclusão" com a data, os dias que faltam e "Reativar minha conta", que repete o login com `reativar: true`. Vale para senha e Google.
+- Só quem acerta a senha (ou o Google) fica sabendo da exclusão agendada; e-mail errado continua com a resposta vaga de sempre. Depois de reativar, as barreiras do login rodam de novo, agora com a conta visível: excluir e reativar não escapa de uma suspensão.
+- `UsuarioServiceFinalizarExclusoes` (`@Cron` às 3h10) roda `finalizar_exclusoes_vencidas()` e apaga do armazenamento as fotos que ela devolve.
+
+📌 **E-mail não confirmado: bloqueio parcial (22-11-2026).**
+- Quem não confirmou o e-mail entra e navega, mas não pede o perfil de pesquisador, não envia campanha para análise e não comenta (`exigirEmailConfirmado`, `commons/seguranca/email-confirmado.util.ts`, 403). O apoio fica liberado: travar o momento do dinheiro afasta quem quer apoiar; o modal Apoiar mostra o e-mail do recibo para a pessoa conferir.
+- **Por que não o bloqueio total** (sem confirmar, não entra): hoje é o modelo mais raro, porque aumenta a desistência no cadastro, e prende quem perdeu o link (só o Suporte reenviaria). O parcial é o modelo do GitHub e o mais comum em plataformas com dinheiro ou publicação. O mais moderno é o código de 6 dígitos no cadastro (Slack, Notion), que pediria refazer o cadastro.
+- **No Nest, não no banco:** é regra de uso (o que a tela libera), não de integridade; as contas criadas pelo painel e pelos testes do banco seguem válidas sem confirmação.
+- **Saídas para a pessoa:** o aviso no topo de toda página (`AvisoEmailNaoConfirmado`) com "Reenviar o link" (`POST /auth/reenviar-minha-verificacao`) e "Corrigir o e-mail", que leva a Minha Conta, onde o e-mail ainda não confirmado é editável (`PATCH /auth/meu-email`, função `alterar_email_nao_confirmado`). E-mail confirmado continua só leitura. As duas rotas são da conta logada e têm limite de 3 por minuto em produção.
+
 📌 **Bloqueio por senha errada (RF-005) gravado fora da transação.**
 - `auth.service.login.ts` chama `registrar_falha_login()` por uma conexão própria do pool (`PG_POOL`), e não pelo `db` da requisição.
 - **Por quê:** o login com senha errada termina em 401, e qualquer exceção faz o `GlobalDbInterceptor` dar `ROLLBACK`. Pelo `db` da requisição, a anotação da falha iria junto, o contador nunca passaria de zero e o bloqueio depois de 5 tentativas nunca aconteceria.

@@ -6,6 +6,7 @@ import { Header } from './header';
 import { LimiteErro } from './limite-erro';
 import { useAlturaTopoFixo, useTopoAoTrocarDePagina } from './use-posicao-da-tela';
 import { TelaAceiteTermoUso } from '../../views/5-termo-uso/tela-aceite-termo-uso';
+import { AvisoEmailNaoConfirmado } from './aviso-email-nao-confirmado';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
 interface LayoutPublicoProps {
@@ -42,6 +43,7 @@ export function LayoutPublico({ auth }: LayoutPublicoProps) {
       <PularParaConteudoPublico />
       <BarraCarregamento />
       <Header auth={auth} variante="publico" />
+      <AvisoEmailNaoConfirmado auth={auth} />
       {/* O <main> mora aqui, uma vez só, para toda página da área pública (16-11-2026, axe-core): o atalho "ir para o
           conteúdo principal" do leitor de tela funciona, e os <header> de dentro das páginas deixam de contar como
           cabeçalho do site. As páginas não têm <main> próprio. */}

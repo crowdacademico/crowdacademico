@@ -11,6 +11,7 @@ interface ModalConfirmacaoProps {
   children: ReactNode;
   rotuloConfirmar: string;
   rotuloOcupado?: string;
+  rotuloCancelar?: string;
   perigo?: boolean;
   ocupado?: boolean;
   // Decisão crítica: o Confirmar só libera depois de marcar "Li e entendo as consequências".
@@ -27,6 +28,7 @@ export function ModalConfirmacao({
   children,
   rotuloConfirmar,
   rotuloOcupado,
+  rotuloCancelar = 'Voltar',
   perigo = false,
   ocupado = false,
   exigirCiencia = false,
@@ -68,7 +70,7 @@ export function ModalConfirmacao({
         <div className="px-6 py-4 border-t borda-padrao">
           <RodapeAcoes
             aoCancelar={aoCancelar}
-            rotuloCancelar="Voltar"
+            rotuloCancelar={rotuloCancelar}
             acao={{ rotulo: rotuloConfirmar, rotuloOcupado, ocupado, perigo, desabilitado: exigirCiencia && !ciente, aoClicar: aoConfirmar }}
           />
         </div>

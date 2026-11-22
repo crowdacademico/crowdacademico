@@ -6,6 +6,7 @@ import {
 } from '../constants/auth.constants';
 import { AuthRequestGoogle } from '../dto/request/auth.request-google';
 import { AuthResponseLogin } from '../dto/response/auth.response-login';
+import { AuthResponseExclusaoAgendada } from '../dto/response/auth.response-exclusao-agendada';
 import { entrarComGoogleNoBanco } from '../util/auth.util.entrar-com-google';
 import { AuthServiceGoogleToken } from './auth.service.google-token';
 import { AuthServiceLogin } from './auth.service.login';
@@ -29,7 +30,7 @@ export class AuthServiceGoogle {
     dto: AuthRequestGoogle,
     ip: string | undefined,
     userAgent: string | undefined,
-  ): Promise<AuthResponseLogin> {
+  ): Promise<AuthResponseLogin | AuthResponseExclusaoAgendada> {
     const dados = await this.googleToken.conferir(dto.credential);
     // Sem a confirmação do Google, o e-mail do token pode não ser da pessoa: entrar por ele abriria a conta de outra.
     if (!dados.emailVerificado) {
@@ -41,6 +42,24 @@ export class AuthServiceGoogle {
       dados,
     );
     if (idUsuario === null) {
+      // Prazo de carência (22-11-2026): a conta que a própria pessoa excluiu, ainda dentro do prazo, oferece a
+      // reativação, como no login por senha. O Google já confirmou que o e-mail é dela.
+      const conta = await this.login.buscarExclusaoAgendada(
+        dados.email,
+        dados.sub,
+      );
+      if (conta) {
+        await this.login.barrarContaImpedida(
+          conta.id_usuario,
+          conta.bloqueado_ate,
+        );
+        return this.login.responderExclusaoAgendada(
+          conta,
+          dto.reativar,
+          ip,
+          userAgent,
+        );
+      }
       throw new UnauthorizedException(MENSAGEM_GOOGLE_SEM_CONTA);
     }
 

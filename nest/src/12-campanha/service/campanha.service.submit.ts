@@ -1,3 +1,4 @@
+import { exigirEmailConfirmado } from '../../commons/seguranca/email-confirmado.util';
 import {
   ConflictException,
   ForbiddenException,
@@ -30,6 +31,10 @@ export class CampanhaServiceSubmit {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(id: number): Promise<CampanhaResponse> {
+    await exigirEmailConfirmado(
+      this.database.getDb(),
+      'enviar a campanha para análise',
+    );
     const linha = await this.database
       .getDb()
       .updateTable('campanha')

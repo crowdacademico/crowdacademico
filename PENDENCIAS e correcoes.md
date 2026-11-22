@@ -8,7 +8,7 @@ Só o que ainda falta **fazer ou decidir**. O que fica pronto sai daqui (atualiz
 
 ## 1. Antes da banca
 
-- **Teste com pessoas de fora (Quadro 16 do TCC):** 3 a 5 pessoas (não o Lucas nem a Alexia) usando o sistema sozinhas, e alguém anotando quem conseguiu cada tarefa sem ajuda e onde travou. O TCC cita as sessões de usabilidade e de aceitação.
+- **Colar no Supabase os Grupos DL, DM e DN do `ATUALIZAR O SUPABASE.sql` (22-11-2026), antes de subir o Nest novo no Render:** detecção de reuso do refresh token, prazo de carência na exclusão de conta e troca do e-mail ainda não confirmado. Depois, conferir na tela: excluir uma conta de teste e entrar de novo (o modal de reativação), e uma conta sem e-mail confirmado (o aviso do topo, o reenvio e a troca do e-mail em Minha Conta).
 - 🔴 **Dados pessoais do titular na página de pagamento do Asaas (16-11-2026, urgente).** O topo da página de pagamento do Asaas (para onde o modal Apoiar manda quem apoia) mostra o titular da conta: nome, CPF, e-mail, cidade e final do telefone. No sandbox de hoje é a conta pessoal do Lucas, então qualquer pessoa que testar o apoio vê esses dados; a frase do rodapé ("cobrança de responsabilidade única e exclusiva de <titular>, CPF...") também é do Asaas. **Caminhos:** (1) em produção, a conta Asaas no nome da plataforma (CNPJ, ou o responsável oficial definido com o orientador), nunca uma conta pessoal; (2) já no sandbox, ver no painel do Asaas (Minha Conta > Informações / Personalização da fatura) o que dá para esconder ou trocar (nome fantasia, e-mail e telefone de contato da plataforma); (3) se o CPF do titular não puder ser escondido, abrir uma conta sandbox nova em nome da plataforma para os testes com outras pessoas. Até lá: só testar o apoio com quem já conhece esses dados.
 
 ---
@@ -67,50 +67,22 @@ Resolvidos no seed em 18-11-2026 (valem quando o banco for recriado): prazo de a
 - **`trust proxy` no Nest:** atrás de um proxy (servidor de hospedagem), o Nest precisa confiar nele para ler o IP real de quem contribui (gravado no aceite do Termo, `aceite_termo_contribuicao.ip_aceite`) e de quem faz login. Sem isso, todo IP gravado seria o do proxy.
 - **Docker** do Nest e do React (F2 do roteiro do Atlas, com o `docker/` deles como referência).
 - **`react/.gitignore` não cobre `.env`:** inofensivo hoje (o `.env` só tem a URL da API); só volta à tona se o conteúdo do `.env` mudar ou no deploy.
-- **CORS por lista de endereços:** a API aceita chamadas de qualquer site (`app.enableCors()` sem opções, `nest/src/main.ts`). Correção pequena: aceitar só os endereços de uma lista no `.env`, como o sistema Atlas faz. É pré-requisito do refresh token em cookie (grupo 5).
+- **CORS por lista de endereços:** a API aceita chamadas de qualquer site (`app.enableCors()` sem opções, `nest/src/main.ts`). Correção pequena: aceitar só os endereços de uma lista no `.env`, como o sistema Atlas faz. (O refresh token em cookie foi descartado em 22-11-2026: sem domínio próprio, o navegador bloquearia o cookie entre os subdomínios do Render. Ver `DOCUMENTACAO_BACKEND.md`, seção 19.)
 - **Sessões sem regra de acesso por dono (anotado em 30-09-2026, decidido em 24-10-2026: só no deploy, junto do cookie e do CORS).** `sessao` tem regra de acesso aberta (`USING (true)`) de propósito: login e renovação acontecem antes de haver alguém logado. Quem decide de quem é a sessão é o Nest (confere o segredo do token e o dono). Na simulação, qualquer papel encerra a sessão de qualquer conta direto no banco. Não é brecha pela API hoje; é defesa em profundidade.
 
 ---
 
 ## 5. Decisões em aberto, sem pressa
 
-### Segurança e conta
-
-#### Conta excluída prende o e-mail (anotado em 01-11-2026; o Lucas quer fazer, mas por último)
-
-**Ideia do Lucas (01-11-2026):** quem excluiu a conta e se arrependeu volta com o mesmo e-mail, e o que estava ligado a ela (contribuições e o resto) volta a aparecer, uma "reativação" por baixo dos panos, sem RF. Alguns sistemas fazem assim. Antes de fazer: estudar o que a exclusão apaga de verdade (a exclusão anonimiza parte dos dados, pela LGPD) e o que dá para devolver.
-
-**Em palavras simples:** quem exclui a conta não consegue criar outra com o mesmo e-mail: o cadastro responde "Já existe uma conta com esse e-mail.". A exclusão é lógica (`usuario.deletado = TRUE`), a linha fica no banco com o e-mail, e `UK_USUARIO_EMAIL` (01) exige e-mail único **entre todas as contas, inclusive as excluídas**.
-
-**Padrão de mercado:** e-mail único só entre contas não excluídas (índice único parcial, `WHERE NOT deletado`); a conta antiga guarda o e-mail para o histórico e o endereço fica livre para uma conta nova.
-
-**Cuidado ao fazer:** o login, o "Esqueci minha senha" e qualquer busca por e-mail passam a poder achar duas linhas com o mesmo endereço (uma excluída), e precisam ignorar a excluída. Mexe no 01/02 e pede grupo no ATUALIZAR. O "Reenviar" das Notificações não é afetado: a conta nova tem outro id, e a recusa (91055) vale só para os e-mails da conta excluída.
-
-#### Login sem e-mail confirmado (anotado em 01-11-2026)
-
-**Em palavras simples:** hoje quem cria conta entra e usa tudo **mesmo sem confirmar o e-mail**. O "E-mail não verificado" é só um selo amarelo em Minha Conta e no Alterar Usuário. O RF-003 pede só que a conta nasça "não verificada" e que o sistema guarde esse estado; não manda bloquear o login.
-
-**Inclinação do Lucas (01-11-2026):** bloquear a entrada de quem não confirmou o e-mail. Com isso, o botão "Reenviar e-mail de confirmação" em Minha Conta (que foi cogitado) fica redundante: quem não confirmou nem chega lá. Não é para fazer agora.
-
-**Antes de decidir, dois cuidados:**
-- **Quem perdeu o e-mail fica preso.** Bloqueando o login, a pessoa sem o link só consegue outro pelo Suporte (o "Reenviar verificação" do Alterar Usuário). O padrão de mercado é a tela de login avisar "confirme o seu e-mail" com um link "reenviar" ali mesmo.
-- **A conta criada pelo painel nasce sem e-mail confirmado** (`usuario.service.create.ts`) e sem receber o link. Bloqueando o login, essa conta não entraria nunca, a não ser que o painel passe a mandar o link ou a criar a conta já confirmada.
-
-**Já pronto para isso:** o aviso vermelho de Configurações > Mensagens ("Se desativado, quem cria conta não recebe o link para confirmar o e-mail. A conta é criada, mas o e-mail fica sem confirmação.") foi escrito para continuar certo se o login passar a exigir e-mail confirmado. As contas da demonstração já nascem confirmadas ([07-D-8]).
-
-#### Refresh token em cookie `HttpOnly`, em vez de `localStorage`
-
-Hoje o refresh token fica no `localStorage` do navegador (`use-auth.ts`), para não precisar logar de novo a cada F5. Um cookie `HttpOnly` com `SameSite=Strict` faz o mesmo papel com uma vantagem real de segurança: o JavaScript da página nunca lê o cookie, então um ataque de XSS (injeção de script) não consegue roubar o token; com `localStorage`, qualquer script que rode na página consegue. Trocar mexe em como o `authFetch`/`use-auth.ts` renovam a sessão e em como o Nest define e lê o cookie, e depende do CORS por lista (grupo 4); o sistema Atlas usa `SESSION_LIFETIME`, `SESSION_SECURE_COOKIE` e `SESSION_SAME_SITE` no `.env` e serve de referência. **O estudo foi feito em 24-10-2026** (o que muda, o risco e o padrão de mercado); a decisão continua aberta.
-
 ### Requisitos
 
-- **RF-053, fase e formato da atualização (anotado em 04-11-2026; assunto para bem mais à frente):** o Lucas não gostou deste requisito, acha estranho. Texto atual: "Cada atualização de progresso deve registrar a fase do projeto a que se refere (andamento, resultado preliminar ou resultado final) e o formato do conteúdo publicado (texto, imagem, PDF ou link externo), podendo ter arquivos e links externos anexados." Como o sistema faz hoje: a fase é escolhida pelo pesquisador; o formato não é mais perguntado, sai dos anexos (PDF, imagem, link ou só texto), porque escolhido à mão dava para marcar "PDF" sem anexar nada.
+- **RF-053 (decidido em 22-11-2026):** a atualização virou texto livre com anexos, sem fase nem formato. Falta tirar a fase da tela e do banco (o formato já saiu da tela, mas continua gravado) e levar o texto novo ao documento do TCC. Detalhe em `informacoes/REQUISITOS_V14.md`.
 - **Recompensa com arquivo (07-11-2026, aguardando a Alexia):** o Lucas perguntou à Alexia se a recompensa entrega também por arquivo (imagem ou PDF) ou só por link. Já foi feito e testado, e desfeito no mesmo dia para esperar a resposta; as versões com o recurso estão guardadas fora do repositório, e o Grupo CF do ATUALIZAR ficou comentado, marcado "NÃO COLE".
 - **Tipos de link para atualização e recompensa (04-11-2026):** hoje o único tipo liberado para atualização e recompensa é o GitHub, e a regra dele só aceita endereço de perfil (`github.com/nome`), não de repositório. Artigo (DOI), vídeo ou pasta de arquivos precisam de um tipo novo, criado pelo admin na tela Tipos de Link (sem código). Decidir quais tipos entram no seed.
 
 ### Cadastro de pesquisador (anotado em 21-11-2026)
 
-- **Instituição com lista pronta, como o CAFe (pedido do Rogério no teste).** Hoje é texto livre. A ideia é o campo sugerir instituições já cadastradas enquanto a pessoa digita, como a tela de acesso CAFe dos Periódicos CAPES (https://www.periodicos.capes.gov.br/index.php/acesso-cafe.html). **Para estudar:** (1) de onde vem a lista: o cadastro de instituições de ensino superior do e-MEC sai em dados abertos (dados.gov.br), e falta ver como entram os institutos de pesquisa fora do e-MEC (Embrapa, Fiocruz, INPE); (2) uma tabela nova de instituições, alimentada pelo seed, com o campo virando "busca com sugestões" (já existe `caixa-busca-sugestoes.tsx`) e um "não encontrei a minha" que aceita texto livre; (3) o que fazer com os perfis que já têm a instituição digitada à mão.
+- **Instituição: evitar nome escrito errado (o passo seguinte ao CAFe).** As sugestões já existem desde 21-11-2026: as instituições usadas por outros pesquisadores e as 311 da lista do CAFe. O campo continua aceitando texto livre, então ainda dá para criar uma grafia errada. Os caminhos possíveis estão no `ACHADOS_PARA_DISCUTIR.md`, em "Instituição: lista de verdade e nomes errados".
 
 ### Visual
 

@@ -560,13 +560,18 @@ $$;
 -- Assinatura: (p_id_usuario INT) -> VOID
 -- Bloco:      [03-O]
 -- Regra:      RNF-003 (LGPD): marca deletado = TRUE e grava deletado_em/deletado_por (Art. 37: quem fez e quando).
---             Via de mão única de propósito: não existe função para reverter. O próprio usuário exclui a própria
---             conta sem permissão nenhuma; quem tem usuario_excluir (só o admin, auto-atribuída por
---             trg_admin_recebe_toda_permissao) exclui a de outra pessoa.
---             Campanhas da conta (RF-016): com campanha ATIVA a exclusão é recusada (91031); rascunho e campanha
---             aguardando aprovação que nunca foi avaliada somem junto; a que aguarda por REENVIO de uma rejeitada
---             volta a 'rejeitado' e segue o caminho normal da rejeição (o histórico dela fica). O resto (sucesso,
---             não atingido, encerrada, rejeitada) fica como está. O último admin ativo não pode ser excluído (91030).
+--             PRAZO DE CARÊNCIA (22-11-2026, padrão Facebook/Instagram/X): isto só AGENDA a exclusão. A conta some
+--             do público e as sessões caem, mas nada que não tenha volta acontece aqui: o rascunho, a foto e o
+--             login pelo Google ficam. Quem excluiu a PRÓPRIA conta reativa entrando de novo dentro do prazo
+--             (reativar_conta_usuario); passado o prazo, finalizar_exclusoes_vencidas() apaga e anonimiza.
+--             O próprio usuário exclui a própria conta sem permissão nenhuma; quem tem usuario_excluir (só o admin,
+--             auto-atribuída por trg_admin_recebe_toda_permissao) exclui a de outra pessoa, e essa não é reativada
+--             pelo login (é decisão da administração).
+--             Campanhas da conta (RF-016), na hora, porque a moderação não pode avaliar campanha de conta excluída:
+--             com campanha ATIVA a exclusão é recusada (91031); campanha aguardando aprovação que nunca foi
+--             avaliada some; a que aguarda por REENVIO de uma rejeitada volta a 'rejeitado' e segue o caminho
+--             normal da rejeição (o histórico dela fica). O resto (sucesso, não atingido, encerrada, rejeitada)
+--             fica como está. O último admin ativo não pode ser excluído (91030).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.excluir_conta_usuario(p_id_usuario INT)
 RETURNS VOID
@@ -574,8 +579,6 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-DECLARE
-    v_id_imagem_perfil INT;
 BEGIN
     -- COALESCE: sem ninguém logado, id_usuario_atual() é NULL, e "p_id_usuario = NULL" é NULL, não FALSE;
     -- "NOT (NULL OR FALSE)" também é NULL, e o IF deixava passar sem login.
@@ -591,24 +594,21 @@ BEGIN
             USING ERRCODE = '91031';
     END IF;
 
-    SELECT id_imagem_perfil INTO v_id_imagem_perfil
-    FROM usuario WHERE id_usuario = p_id_usuario;
-
-    -- google_sub = NULL (18-11-2026): a conta excluída deixa de entrar pelo Google, e o identificador da conta
-    -- Google não fica guardado sem uso (LGPD).
+    -- google_sub fica (22-11-2026): é por ele que o login pelo Google acha a conta para oferecer a reativação. Sai na
+    -- anonimização, em finalizar_exclusoes_vencidas().
     UPDATE usuario
-    SET deletado = TRUE, deletado_em = NOW(), deletado_por = public.id_usuario_atual(), google_sub = NULL
+    SET deletado = TRUE, deletado_em = NOW(), deletado_por = public.id_usuario_atual()
     WHERE id_usuario = p_id_usuario;
 
     -- Conta excluída não renova mais nenhuma sessão (mesmo motivo de suspender_usuario).
     UPDATE sessao SET revogado_em = NOW()
     WHERE id_usuario = p_id_usuario AND revogado_em IS NULL;
 
+    -- O rascunho fica para a reativação (some na anonimização, ou antes, pelo prazo comum de rascunho).
     DELETE FROM campanha c
     WHERE c.id_usuario = p_id_usuario
-      AND (c.status = 'rascunho'
-           OR (c.status = 'aguardando_aprovacao'
-               AND NOT EXISTS (SELECT 1 FROM historico_rejeicao h WHERE h.id_campanha = c.id_campanha)));
+      AND c.status = 'aguardando_aprovacao'
+      AND NOT EXISTS (SELECT 1 FROM historico_rejeicao h WHERE h.id_campanha = c.id_campanha);
 
     -- A volta a 'rejeitado' pede linha em historico_rejeicao na mesma transação (trg_campanha_exige_historico_rejeicao,
     -- 05); id_admin NULL porque ninguém da moderação rejeitou.
@@ -621,25 +621,175 @@ BEGIN
     SELECT id_campanha, id_usuario, titulo, NULL,
            'Reenvio cancelado: o pesquisador excluiu a própria conta.'
     FROM devolvidas;
+END;
+$$;
 
-    -- Desativa a foto de
-    -- perfil vinculada na mesma transação - sem isto, a linha em `arquivo`
-    -- ficava ativo=true pra sempre, mesmo com a conta dona já excluída.
-    -- SECURITY DEFINER bypassa pol_arquivo_update DE PROPÓSITO aqui: quem
-    -- executou a exclusão da conta já foi autorizado acima (dono OU
-    -- 'usuario_excluir') - não faz sentido também exigir 'arquivo_gerenciar'
-    -- ou posse sobre o arquivo em si só pra essa consequência automática.
-    -- Os BYTES de verdade no bucket NÃO são apagados aqui - Postgres não
-    -- fala com o provedor de armazenamento (B2/R2/Supabase Storage). Isso é
-    -- feito depois, do lado da aplicação (ver
-    -- nest/src/1-usuario/service/usuario.service.remove.ts), que lê
-    -- `arquivo.chave` (ainda intacta, só `ativo` mudou) e chama
-    -- armazenamento.excluirObjeto().
-    IF v_id_imagem_perfil IS NOT NULL THEN
-        UPDATE arquivo
-        SET ativo = FALSE, desativado_em = NOW()
-        WHERE id_arquivo = v_id_imagem_perfil;
+-- ----------------------------------------------------------------------------
+-- Função:     conta_exclusao_agendada
+-- Assinatura: (p_email TEXT, p_google_sub TEXT) -> TABLE(id_usuario, senha_hash, bloqueado_ate, exclusao_definitiva_em)
+-- Bloco:      [03-O]
+-- Regra:      Prazo de carência (22-11-2026). O login acha aqui a conta que a própria pessoa excluiu e que ainda
+--             está dentro do prazo, para oferecer a reativação. A RLS (pol_usuario_select, 04) esconde conta
+--             excluída de todo mundo; SECURITY DEFINER passa por cima só para esta busca, e só app_nestjs executa
+--             (06). Conta excluída pelo admin (deletado_por diferente do dono) não aparece: não se reativa pelo login.
+--             O Nest confere a senha (ou o token do Google) antes de dizer qualquer coisa sobre a conta.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.conta_exclusao_agendada(p_email TEXT, p_google_sub TEXT)
+RETURNS TABLE (
+    id_usuario             INT,
+    senha_hash             VARCHAR,
+    bloqueado_ate          TIMESTAMPTZ,
+    exclusao_definitiva_em TIMESTAMPTZ
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT u.id_usuario, u.senha_hash, u.bloqueado_ate,
+           u.deletado_em + public.config_numero('conta_exclusao_carencia_dias', 30) * INTERVAL '1 day'
+    FROM usuario u
+    WHERE u.deletado
+      AND u.anonimizado_em IS NULL
+      AND u.deletado_por = u.id_usuario
+      AND u.deletado_em + public.config_numero('conta_exclusao_carencia_dias', 30) * INTERVAL '1 day' > NOW()
+      AND (u.email = lower(btrim(COALESCE(p_email, '')))
+           OR (p_google_sub IS NOT NULL AND u.google_sub = p_google_sub))
+    LIMIT 1;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     reativar_conta_usuario
+-- Assinatura: (p_id_usuario INT) -> BOOLEAN
+-- Bloco:      [03-O]
+-- Regra:      Prazo de carência (22-11-2026): desfaz a exclusão agendada. Chamada pelo login depois de conferir a
+--             senha (ou o token do Google), antes de existir sessão; por isso não confere id_usuario_atual(), e só
+--             app_nestjs executa (06). Só vale para conta que a própria pessoa excluiu, ainda dentro do prazo e não
+--             anonimizada. As sessões não voltam: o login abre uma nova. Devolve FALSE se não havia o que reativar.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.reativar_conta_usuario(p_id_usuario INT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    UPDATE usuario
+    SET deletado = FALSE, deletado_em = NULL, deletado_por = NULL
+    WHERE id_usuario = p_id_usuario
+      AND deletado
+      AND anonimizado_em IS NULL
+      AND deletado_por = p_id_usuario
+      AND deletado_em + public.config_numero('conta_exclusao_carencia_dias', 30) * INTERVAL '1 day' > NOW();
+    IF NOT FOUND THEN
+        RETURN FALSE;
     END IF;
+    -- Conta excluída antes do prazo de carência existir (22-11-2026) já teve a foto apagada: tira o vínculo morto.
+    UPDATE usuario u SET id_imagem_perfil = NULL
+    WHERE u.id_usuario = p_id_usuario
+      AND EXISTS (SELECT 1 FROM arquivo a WHERE a.id_arquivo = u.id_imagem_perfil AND NOT a.ativo);
+    RETURN TRUE;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     alterar_email_nao_confirmado
+-- Assinatura: (p_email TEXT) -> VOID
+-- Bloco:      [03-O]
+-- Regra:      Bloqueio parcial do e-mail não confirmado (22-11-2026): quem ainda não confirmou o e-mail pode
+--             corrigi-lo em Minha Conta (digitou errado no cadastro, o link nunca chega). É o único caso em que a
+--             própria pessoa troca o e-mail: app_nestjs não tem UPDATE na coluna (06), e e-mail já confirmado não
+--             muda por aqui (91066). Apaga os links de confirmação pendentes; o Nest manda um novo para o endereço
+--             novo. E-mail repetido cai em UK_USUARIO_EMAIL ("Já existe uma conta com esse e-mail.").
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.alterar_email_nao_confirmado(p_email TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_id INT := public.id_usuario_atual();
+BEGIN
+    IF v_id IS NULL THEN
+        RAISE EXCEPTION 'Entre na sua conta para trocar o e-mail.' USING ERRCODE = '92013';
+    END IF;
+    IF EXISTS (SELECT 1 FROM usuario WHERE id_usuario = v_id AND email_verificado) THEN
+        RAISE EXCEPTION 'Este e-mail já foi confirmado e não pode ser trocado por aqui.' USING ERRCODE = '91066';
+    END IF;
+
+    UPDATE usuario SET email = p_email WHERE id_usuario = v_id AND NOT deletado;
+    DELETE FROM verificacao_email WHERE id_usuario = v_id AND confirmado_em IS NULL;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     finalizar_exclusoes_vencidas
+-- Assinatura: () -> SETOF TEXT (chaves das fotos de perfil para o Nest apagar do armazenamento)
+-- Bloco:      [03-O]
+-- Regra:      Prazo de carência (22-11-2026), rodada 1x por dia pelo Nest (UsuarioServiceFinalizarExclusoes). Para
+--             cada conta excluída há mais de configuracoes.conta_exclusao_carencia_dias (30), faz o que não tem
+--             volta: apaga os rascunhos, desativa a foto de perfil e anonimiza a conta (LGPD, Art. 16 e 18, VI):
+--             nome "Conta excluída", e-mail "excluido-<id>@anonimo.invalid" (o endereço fica livre para uma conta
+--             nova, sem mexer em UK_USUARIO_EMAIL nem no login), sem senha e sem Google; no perfil de pesquisador,
+--             o CPF e a chave Pix saem (o CPF fica livre para outro cadastro). Contribuições, campanhas encerradas
+--             e comentários ficam, ligados à conta anônima: são o histórico financeiro e público da plataforma.
+--             O log de auditoria guarda o nome e o e-mail antigos (registro das operações, LGPD Art. 37).
+--             Os bytes da foto não saem daqui (o Postgres não fala com o armazenamento): a função devolve as
+--             chaves, e o Nest apaga. Uma conta que falhar não trava as outras.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.finalizar_exclusoes_vencidas()
+RETURNS SETOF TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_dias  INT := public.config_numero('conta_exclusao_carencia_dias', 30);
+    v_conta RECORD;
+    v_chave TEXT;
+BEGIN
+    FOR v_conta IN
+        SELECT u.id_usuario, u.id_imagem_perfil FROM usuario u
+        WHERE u.deletado
+          AND u.anonimizado_em IS NULL
+          AND u.deletado_em <= NOW() - v_dias * INTERVAL '1 day'
+    LOOP
+        v_chave := NULL;
+        BEGIN
+            DELETE FROM campanha WHERE id_usuario = v_conta.id_usuario AND status = 'rascunho';
+
+            IF v_conta.id_imagem_perfil IS NOT NULL THEN
+                UPDATE arquivo SET ativo = FALSE, desativado_em = NOW()
+                WHERE id_arquivo = v_conta.id_imagem_perfil AND ativo
+                RETURNING chave INTO v_chave;
+            END IF;
+
+            UPDATE usuario
+            SET nome = 'Conta excluída',
+                email = 'excluido-' || v_conta.id_usuario || '@anonimo.invalid',
+                senha_hash = NULL,
+                google_sub = NULL,
+                ultimo_login_ip = NULL,
+                anonimizado_em = NOW()
+            WHERE id_usuario = v_conta.id_usuario;
+
+            UPDATE perfil_pesquisador
+            SET cpf_criptografado = '',
+                cpf_hash = 'excluido-' || v_conta.id_usuario,
+                tipo_chave_pix = NULL,
+                chave_pix_criptografada = NULL,
+                chave_pix_verificada_em = NULL
+            WHERE id_usuario = v_conta.id_usuario;
+        EXCEPTION WHEN OTHERS THEN
+            RAISE WARNING 'finalizar_exclusoes_vencidas: conta % não foi finalizada: %', v_conta.id_usuario, SQLERRM;
+            CONTINUE;
+        END;
+
+        IF v_chave IS NOT NULL THEN
+            RETURN NEXT v_chave;
+        END IF;
+    END LOOP;
 END;
 $$;
 

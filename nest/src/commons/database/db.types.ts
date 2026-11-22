@@ -18,6 +18,8 @@ export interface UsuarioTable {
   deletado: Generated<boolean>;
   deletado_em: Date | null;
   deletado_por: number | null;
+  // Prazo de carência (22-11-2026): preenchida quando a exclusão vira definitiva (finalizar_exclusoes_vencidas, 03).
+  anonimizado_em: Date | null;
   email_verificado: Generated<boolean>;
   tentativas_login_falhas: Generated<number>;
   bloqueado_ate: Date | null;
@@ -71,6 +73,8 @@ export interface SessaoTable {
   criado_em: Generated<Date>;
   expira_em: Date;
   revogado_em: Date | null;
+  // TRUE quando a revogação veio da rotação (token trocado por um novo): só esse caso dispara a detecção de reuso.
+  revogado_por_rotacao: Generated<boolean>;
   ip: string | null;
   user_agent: string | null;
   // 'login' (senha digitada) ou 'refresh' (renovação silenciosa do token de acesso, a cada ~15min de uso), ver

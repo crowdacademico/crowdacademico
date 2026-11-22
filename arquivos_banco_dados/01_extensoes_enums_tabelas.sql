@@ -259,6 +259,11 @@ CREATE TABLE usuario (
     -- trilha exigida pelo Art. 37 da LGPD (registro das operações de tratamento).
     deletado_em      TIMESTAMPTZ,
     deletado_por     INT,
+    -- Prazo de carência da exclusão (22-11-2026): deletado = TRUE com anonimizado_em NULL é a "exclusão agendada"
+    -- (a conta some do público, mas nada foi apagado, e quem excluiu a própria conta reativa entrando de novo).
+    -- Passado o prazo (configuracoes.conta_exclusao_carencia_dias), finalizar_exclusoes_vencidas() (03) apaga o
+    -- que não tem volta, anonimiza nome, e-mail e CPF, e preenche esta coluna. Ver DOCUMENTACAO_BD.md, [03-O].
+    anonimizado_em   TIMESTAMPTZ,
 
     email_verificado         BOOLEAN   NOT NULL DEFAULT FALSE,
     tentativas_login_falhas  INT       NOT NULL DEFAULT 0,
@@ -560,6 +565,10 @@ CREATE TABLE sessao (
     -- 'refresh' (não 'login') de propósito: linhas de antes da coluna existir ficam invisíveis na tela de
     -- login em vez de aparecerem como login sem ser.
     origem              VARCHAR(20) NOT NULL DEFAULT 'refresh',
+    -- TRUE quando a revogação veio da rotação (o token foi trocado por um novo). Só esse caso dispara a detecção de
+    -- reuso no Nest (auth.service.refresh.ts): token trocado que volta depois de 1 minuto é cópia, e todas as
+    -- sessões da conta caem. Logout, "encerrar sessão" e suspensão deixam FALSE (aba antiga, não roubo).
+    revogado_por_rotacao BOOLEAN NOT NULL DEFAULT FALSE,
 
     CONSTRAINT "PK_SESSAO" PRIMARY KEY (id_sessao),
     CONSTRAINT "FK_SESSAO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,

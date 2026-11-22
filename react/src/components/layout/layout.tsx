@@ -4,6 +4,7 @@ import { BarraCarregamento } from './barra-carregamento/barra-carregamento';
 import { Breadcrumb } from './breadcrumb';
 import { Footer } from './footer';
 import { Header } from './header';
+import { AvisoEmailNaoConfirmado } from './aviso-email-nao-confirmado';
 import { LimiteErro } from './limite-erro';
 import { useAlturaTopoFixo, useTopoAoTrocarDePagina } from './use-posicao-da-tela';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
@@ -47,6 +48,7 @@ export function Layout({ auth }: LayoutProps) {
       <PularParaConteudo />
       <BarraCarregamento />
       <Header auth={auth} />
+      <AvisoEmailNaoConfirmado auth={auth} />
       <Breadcrumb />
       <main id="conteudo" data-conteudo-principal tabIndex={-1} className="flex flex-col flex-1 outline-none">
         <LimiteErro>

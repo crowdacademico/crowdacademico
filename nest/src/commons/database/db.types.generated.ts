@@ -482,6 +482,7 @@ export interface Sessao {
   origem: Generated<string>;
   refresh_token_hash: string;
   revogado_em: Timestamp | null;
+  revogado_por_rotacao: Generated<boolean>;
   user_agent: string | null;
 }
 
@@ -523,6 +524,7 @@ export interface Usuario {
   deletado: Generated<boolean>;
   deletado_em: Timestamp | null;
   deletado_por: number | null;
+  anonimizado_em: Timestamp | null;
   email: string;
   email_verificado: Generated<boolean>;
   google_sub: string | null;

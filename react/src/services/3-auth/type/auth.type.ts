@@ -21,6 +21,13 @@ export interface AuthResponseLogin {
   aceitePendente: boolean;
 }
 
+// Espelha auth.response-exclusao-agendada.ts (22-11-2026): o login devolve isto, no lugar da sessão, quando a própria
+// pessoa tinha excluído a conta e ainda está no prazo de carência. O hook transforma em ErroContaExclusaoAgendada.
+export interface AuthResponseExclusaoAgendada {
+  exclusaoAgendada: true;
+  exclusaoDefinitivaEm: string;
+}
+
 // Espelha auth.response-register.ts (AuthResponseRegister extends
 // AuthResponseLogin).
 export interface AuthResponseRegister extends AuthResponseLogin {

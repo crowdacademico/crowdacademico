@@ -1,9 +1,12 @@
 import {
   ForbiddenException,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { Pool } from 'pg';
+import { PG_POOL } from '../../commons/database/database.constants';
 import { formatarDataHoraBr } from '../util/auth.util.format-date-time';
 import { AuthServiceLogin } from './auth.service.login';
 import { DatabaseService } from '../../commons/database/database.service';
@@ -15,6 +18,7 @@ import { AuthResponseLogin } from '../dto/response/auth.response-login';
 @Injectable()
 export class AuthServiceRefresh {
   constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
     private readonly database: DatabaseService,
     private readonly authServiceLogin: AuthServiceLogin,
     private readonly usuarioServiceFindOne: UsuarioServiceFindOne,
@@ -49,24 +53,28 @@ export class AuthServiceRefresh {
         'refresh_token_hash',
         'expira_em',
         'revogado_em',
+        'revogado_por_rotacao',
       ])
       .where('id_sessao', '=', parseado.idSessao)
       .forUpdate()
       .executeTakeFirst();
 
-    if (
-      !sessao ||
-      sessao.revogado_em !== null ||
-      sessao.expira_em < new Date()
-    ) {
+    if (!sessao || sessao.expira_em < new Date()) {
       throw new UnauthorizedException('Sua sessão terminou. Entre de novo.');
     }
 
+    // O segredo é conferido ANTES de olhar a revogação: sem isso, quem só adivinhasse um id de sessão conseguiria
+    // disparar a detecção de reuso abaixo e derrubar as sessões de outra pessoa.
     const segredoValido = await bcrypt.compare(
       parseado.segredo,
       sessao.refresh_token_hash,
     );
     if (!segredoValido) {
+      throw new UnauthorizedException('Sua sessão terminou. Entre de novo.');
+    }
+
+    if (sessao.revogado_em !== null) {
+      await this.detectarReuso(sessao);
       throw new UnauthorizedException('Sua sessão terminou. Entre de novo.');
     }
 
@@ -98,7 +106,7 @@ export class AuthServiceRefresh {
     // usado, ele já não vale mais nada).
     await db
       .updateTable('sessao')
-      .set({ revogado_em: new Date() })
+      .set({ revogado_em: new Date(), revogado_por_rotacao: true })
       .where('id_sessao', '=', sessao.id_sessao)
       .execute();
 
@@ -126,4 +134,34 @@ export class AuthServiceRefresh {
       aceitePendente,
     };
   }
+
+  // Detecção de reuso (padrão OWASP/Auth0 para rotação de refresh token). Um token já trocado por um novo só
+  // volta a aparecer se alguém o copiou: ou o ladrão usou antes da pessoa, ou a pessoa usou antes do ladrão. Não
+  // dá para saber qual dos dois é o ladrão, então TODAS as sessões da conta caem; para voltar, precisa da senha.
+  //
+  // Só vale para sessão revogada pela rotação (`revogado_por_rotacao`): token de logout, de "encerrar sessão" ou
+  // de suspensão que volta é aba antiga, não roubo. E só depois de PRAZO_CORRIDA_REUSO_MS: duas abas renovando
+  // ao mesmo tempo com o mesmo token (o .forUpdate() acima faz a segunda esperar a primeira) dão um "reuso" de
+  // milissegundos que é corrida legítima, não roubo.
+  //
+  // Conexão própria do pool, fora da transação da requisição: o 401 que vem logo depois faz o GlobalDbInterceptor
+  // dar ROLLBACK, o que desfaria a revogação (mesmo padrão do registrar_falha_login, auth.service.login.ts).
+  private async detectarReuso(sessao: {
+    id_usuario: number;
+    revogado_em: Date | null;
+    revogado_por_rotacao: boolean;
+  }): Promise<void> {
+    if (!sessao.revogado_por_rotacao || sessao.revogado_em === null) return;
+    if (Date.now() - sessao.revogado_em.getTime() < PRAZO_CORRIDA_REUSO_MS) {
+      return;
+    }
+    await this.pool.query(
+      'UPDATE sessao SET revogado_em = NOW() WHERE id_usuario = $1 AND revogado_em IS NULL',
+      [sessao.id_usuario],
+    );
+  }
 }
+
+// Janela em que um token recém-trocado ainda pode voltar sem ser tratado como roubo: cobre duas abas renovando
+// juntas e a resposta da renovação que se perdeu na rede e é repetida logo em seguida.
+const PRAZO_CORRIDA_REUSO_MS = 60_000;

@@ -27,6 +27,7 @@ const GRUPO_CONFIGURACAO: Record<string, string> = {
   refresh_token_dias_validade: 'Segurança',
   sessao_painel_horas_validade: 'Segurança',
   verificacao_email_horas_validade: 'Segurança',
+  conta_exclusao_carencia_dias: 'Segurança',
   recuperacao_senha_minutos_validade: 'Segurança',
   // Financeiro
   taxa_plataforma_padrao: 'Financeiro',

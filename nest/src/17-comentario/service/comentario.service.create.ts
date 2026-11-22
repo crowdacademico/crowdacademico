@@ -1,3 +1,4 @@
+import { exigirEmailConfirmado } from '../../commons/seguranca/email-confirmado.util';
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { COMENTARIO_COLUNAS_SELECT } from '../constants/comentario.constants';
@@ -18,6 +19,7 @@ export class ComentarioServiceCreate {
     dto: ComentarioRequestCreate,
     idPesquisador: number,
   ): Promise<ComentarioResponse> {
+    await exigirEmailConfirmado(this.database.getDb(), 'comentar');
     const linha = await this.database
       .getDb()
       .insertInto('comentario')

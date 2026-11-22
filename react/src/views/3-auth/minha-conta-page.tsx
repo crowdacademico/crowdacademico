@@ -22,6 +22,8 @@ import { BotaoMostrarSenha } from '../../components/input/botao-mostrar-senha';
 import { MedidorSenha } from '../../components/input/medidor-senha';
 import { ConfirmacaoDigitada } from '../../components/input/confirmacao-digitada';
 import { confirmacaoConfere } from '../../components/input/confirmacao-confere';
+import * as authApi from '../../services/3-auth/api/auth.api';
+import { emailValido } from '../../services/constant/util/validacao.util';
 import { sessaoApi } from '../../services/3-auth/api/sessao.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
@@ -257,6 +259,10 @@ interface ModalEditarPerfilProps {
 function ModalEditarPerfil({ auth, perfil, aoFechar, aoAtualizar }: ModalEditarPerfilProps) {
   const usuario = auth.usuario;
   const [nome, setNome] = useState(usuario?.nome ?? '');
+  // Só quem ainda não confirmou o e-mail troca o endereço aqui (22-11-2026): digitou errado no cadastro e o link nunca
+  // chega. E-mail confirmado continua só leitura.
+  const podeTrocarEmail = usuario?.emailVerificado === false;
+  const [email, setEmail] = useState(usuario?.email ?? '');
   const [fotoNova, setFotoNova] = useState<{ id: number | null; url: string | null } | undefined>();
   const [tipoVinculo, setTipoVinculo] = useState<TipoVinculo>(perfil?.tipoVinculo ?? 'institucional');
   const [vinculoInstitucional, setVinculoInstitucional] = useState(perfil?.vinculoInstitucional ?? '');
@@ -266,14 +272,16 @@ function ModalEditarPerfil({ auth, perfil, aoFechar, aoAtualizar }: ModalEditarP
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const conta = useErrosFormulario(() => ({
     nome: nome.trim().length < NOME_MINIMO_CARACTERES && MENSAGEM_NOME_CURTO,
+    email: podeTrocarEmail && !emailValido(email.trim()) && 'E-mail inválido.',
   }));
+  const emailAlterado = podeTrocarEmail && email.trim().toLowerCase() !== usuario.email;
   const academico = useErrosFormulario(() => ({
     vinculoInstitucional:
       tipoVinculo === 'institucional' &&
       vinculoInstitucional.trim() === '' &&
       'Informe a instituição.',
   }));
-  const contaAlterada = nome.trim() !== (usuario?.nome ?? '') || fotoNova !== undefined;
+  const contaAlterada = nome.trim() !== (usuario?.nome ?? '') || fotoNova !== undefined || emailAlterado;
   const academicoAlterado = perfil !== null && (
     tipoVinculo !== perfil.tipoVinculo ||
     (tipoVinculo === 'institucional' && vinculoInstitucional !== (perfil.vinculoInstitucional ?? '')) ||
@@ -290,7 +298,13 @@ function ModalEditarPerfil({ auth, perfil, aoFechar, aoAtualizar }: ModalEditarP
     await executarEnviando(async () => {
       let usuarioAtualizado = usuario;
       let perfilAtualizado: PerfilPesquisadorResponse | null = perfil;
-      if (contaAlterada) {
+      if (emailAlterado) {
+        // Antes do resto: e-mail já usado por outra conta para tudo aqui, sem salvar metade.
+        await authApi.alterarMeuEmail(auth.authFetch, email.trim());
+        usuarioAtualizado = { ...usuarioAtualizado, email: email.trim().toLowerCase() };
+        mostrar('Enviamos um link de confirmação para o e-mail novo.');
+      }
+      if (nome.trim() !== usuario.nome || fotoNova !== undefined) {
         const dados: DadosAtualizarPerfil = { nome: nome.trim() };
         if (fotoNova !== undefined) dados.idImagemPerfil = fotoNova.id;
         usuarioAtualizado = await usuarioApi.atualizar(auth.authFetch, usuario.idUsuario, dados);
@@ -354,10 +368,24 @@ function ModalEditarPerfil({ auth, perfil, aoFechar, aoAtualizar }: ModalEditarP
               />
             )}
           </Campo>
-          <Campo rotulo="E-mail">
-            {({ atributos }) => (
-              <input {...atributos} type="email" value={usuario?.email ?? ''} disabled className="input-padrao" />
-            )}
+          <Campo
+            rotulo="E-mail"
+            erro={conta.erroDe('email')}
+            dica={podeTrocarEmail ? 'Ainda não confirmado: se estiver errado, corrija aqui e um link novo será enviado.' : undefined}
+          >
+            {({ atributos, classeErro }) =>
+              podeTrocarEmail ? (
+                <input
+                  {...atributos}
+                  type="email"
+                  value={email}
+                  onChange={(evento) => setEmail(evento.target.value)}
+                  className={'input-padrao' + classeErro}
+                />
+              ) : (
+                <input {...atributos} type="email" value={usuario?.email ?? ''} disabled className="input-padrao" />
+              )
+            }
           </Campo>
         </SecaoFicha>
         {perfil && (
@@ -741,7 +769,8 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
       <div className="rounded-lg border borda-forte fundo-erro p-4">
         <p className="paragrafo enfase texto-erro mb-2">Excluir minha conta</p>
         <p className="legenda texto-erro mb-3">
-          Depois de excluir, você não consegue mais entrar com esta conta. Não é possível desfazer.
+          A conta sai do ar na hora, mas a exclusão só fica definitiva depois de um prazo (30 dias, pelo padrão). Se
+          mudar de ideia, é só entrar de novo dentro dele para reativá-la. Depois do prazo, não é possível desfazer.
         </p>
         <MensagemErro texto={erro} className="legenda enfase texto-erro mb-2" />
         <div className="mb-3">

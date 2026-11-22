@@ -15,6 +15,7 @@ import { AuthControllerVerifyEmail } from './controllers/auth.controller.verify-
 import { AuthControllerForgotPassword } from './controllers/auth.controller.forgot-password';
 import { AuthControllerResetPassword } from './controllers/auth.controller.reset-password';
 import { AuthControllerResendVerification } from './controllers/auth.controller.resend-verification';
+import { AuthControllerMyEmail } from './controllers/auth.controller.my-email';
 import { AuthGuardJwt } from './guards/auth.guard.jwt';
 import { AuthGuardRequireAuth } from './guards/auth.guard.require-auth';
 import { AuthServiceRegister } from './service/auth.service.register';
@@ -30,6 +31,7 @@ import { AuthServiceForgotPassword } from './service/auth.service.forgot-passwor
 import { AuthServiceResetPassword } from './service/auth.service.reset-password';
 import { AuthServiceEmailVerification } from './service/auth.service.email-verification';
 import { AuthServiceResendVerification } from './service/auth.service.resend-verification';
+import { AuthServiceMyEmail } from './service/auth.service.my-email';
 
 @Module({
   imports: [
@@ -64,6 +66,7 @@ import { AuthServiceResendVerification } from './service/auth.service.resend-ver
     AuthControllerResetPassword,
     AuthControllerFindAllSessions,
     AuthControllerResendVerification,
+    AuthControllerMyEmail,
   ],
   providers: [
     AuthServiceLogin,
@@ -79,6 +82,7 @@ import { AuthServiceResendVerification } from './service/auth.service.resend-ver
     AuthServiceEndSession,
     AuthServiceEmailVerification,
     AuthServiceResendVerification,
+    AuthServiceMyEmail,
     // Global de verdade (roda em toda rota) - ver comentário em
     // guards/auth.guard.jwt.ts sobre por que fica ANTES do GlobalDbInterceptor
     // no pipeline do Nest.

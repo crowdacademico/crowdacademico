@@ -519,6 +519,14 @@ export function ModalApoiar({ auth, campanha, recompensas, valorInicial, aoFecha
             Aceite a versão nova dos Termos de Uso na sua conta antes de apoiar.
           </p>
         )}
+        {/* Apoio liberado sem e-mail confirmado (22-11-2026): travar o momento do dinheiro afasta quem quer apoiar.
+            Em vez disso, a pessoa vê para onde vão o recibo e uma eventual devolução, e corrige se estiver errado. */}
+        {auth.usuario?.emailVerificado === false && (
+          <p className="legenda texto-fraco">
+            O recibo e uma eventual devolução vão para <strong>{auth.usuario.email}</strong>, que ainda não foi
+            confirmado. Se estiver errado, corrija em Minha Conta.
+          </p>
+        )}
         <label className="flex items-start gap-3 cursor-pointer paragrafo texto-padrao">
           <input
             type="checkbox"

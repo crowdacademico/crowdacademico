@@ -1,3 +1,4 @@
+import { exigirEmailConfirmado } from '../../commons/seguranca/email-confirmado.util';
 import { Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import {
@@ -40,6 +41,10 @@ export class PerfilPesquisadorServiceCreate {
     idUsuario: number,
     ip: string | undefined,
   ): Promise<PerfilPesquisadorResponse> {
+    await exigirEmailConfirmado(
+      this.database.getDb(),
+      'pedir o perfil de pesquisador',
+    );
     const cpfNormalizado = normalizarCpf(dto.cpf);
     const cpfCriptografado = cifrarCpf(cpfNormalizado);
     const cpfHash = calcularHashCpf(cpfNormalizado);
