@@ -34,6 +34,52 @@ function porArrecadacao(campanhas: CampanhaResponse[]) {
 // lado das setas. Quem pediu "menos movimento" no sistema operacional já não tem avanço automático, nem o botão.
 const movimentoReduzido = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// Carrossel que gira sem fim (22-11-2026). Antes, no último cartão, o avanço automático rolava tudo de volta até o
+// primeiro, e as setas paravam nas pontas: não parecia um carrossel. Agora a fileira aparece três vezes seguidas (a
+// original e duas cópias) e a posição fica sempre na primeira volta: ao passar dela, o trilho pula uma volta inteira
+// para trás SEM animação (behavior 'instant'); como as cópias são idênticas, o pulo não aparece. As cópias ficam
+// `inert` e `aria-hidden`: leitor de tela e teclado veem cada campanha uma vez só. Só gira quando os cartões não cabem
+// todos na tela; cabendo, fica parado, sem cópias. CARROSSEL_MUDOU avisa os controles (setas) quando isso muda.
+const CARROSSEL_MUDOU = 'carrossel:mudou';
+const COPIAS_CARROSSEL = 2;
+
+// Largura de uma volta: do primeiro cartão até o primeiro cartão da primeira cópia. 0 = não gira.
+function voltaDoTrilho(trilho: HTMLElement): number {
+  const primeiro = trilho.firstElementChild as HTMLElement | null;
+  const copia = trilho.querySelector<HTMLElement>('[data-copia="1"]');
+  return primeiro && copia ? copia.offsetLeft - primeiro.offsetLeft : 0;
+}
+
+// Traz a posição de volta para a primeira volta, sem animação.
+function normalizarTrilho(trilho: HTMLElement): void {
+  const volta = voltaDoTrilho(trilho);
+  if (volta > 0 && trilho.scrollLeft >= volta) {
+    trilho.scrollTo({ left: trilho.scrollLeft - volta, behavior: 'instant' });
+  }
+}
+
+// Um cartão: a distância entre o começo de um cartão e o do seguinte (a largura dele mais o espaço entre os dois).
+function passoDoTrilho(trilho: HTMLElement): number {
+  const primeiro = trilho.children[0] as HTMLElement | undefined;
+  const segundo = trilho.children[1] as HTMLElement | undefined;
+  return primeiro && segundo ? segundo.offsetLeft - primeiro.offsetLeft : trilho.clientWidth * 0.8;
+}
+
+// Seta e avanço automático: um cartão por vez, com rolagem suave (22-11-2026; antes eram 80% da largura visível, vários
+// cartões de uma vez). Girando, voltar do começo pula antes uma volta para frente (sem animação), e o passo segue para
+// trás na cópia.
+function moverCarrossel(trilho: HTMLElement, direcao: -1 | 1): void {
+  const passo = passoDoTrilho(trilho);
+  const volta = voltaDoTrilho(trilho);
+  if (volta > 0) {
+    normalizarTrilho(trilho);
+    if (direcao < 0 && trilho.scrollLeft < passo) {
+      trilho.scrollTo({ left: trilho.scrollLeft + volta, behavior: 'instant' });
+    }
+  }
+  trilho.scrollBy({ left: direcao * passo, behavior: 'smooth' });
+}
+
 function ControlesCarrossel({
   trilhoRef,
   rotulo,
@@ -53,6 +99,11 @@ function ControlesCarrossel({
   const atualizarLimites = useCallback(() => {
     const trilho = trilhoRef.current;
     if (!trilho) return;
+    // Girando, as setas nunca apagam: sempre há o que ver para os dois lados.
+    if (voltaDoTrilho(trilho) > 0) {
+      setLimites({ inicio: false, fim: false });
+      return;
+    }
     setLimites({
       inicio: trilho.scrollLeft <= 1,
       fim: trilho.scrollLeft + trilho.clientWidth >= trilho.scrollWidth - 1,
@@ -64,16 +115,18 @@ function ControlesCarrossel({
     if (!trilho) return;
     atualizarLimites();
     trilho.addEventListener('scroll', atualizarLimites, { passive: true });
+    trilho.addEventListener(CARROSSEL_MUDOU, atualizarLimites);
     window.addEventListener('resize', atualizarLimites);
     return () => {
       trilho.removeEventListener('scroll', atualizarLimites);
+      trilho.removeEventListener(CARROSSEL_MUDOU, atualizarLimites);
       window.removeEventListener('resize', atualizarLimites);
     };
   }, [atualizarLimites, quantidade, trilhoRef]);
 
   function mover(direcao: -1 | 1) {
     const trilho = trilhoRef.current;
-    trilho?.scrollBy({ left: direcao * trilho.clientWidth * 0.8, behavior: 'smooth' });
+    if (trilho) moverCarrossel(trilho, direcao);
   }
 
   return (
@@ -136,9 +189,47 @@ function BlocoCampanhas({
   emAtualizacao: ReadonlySet<number>;
   aoAlternarSeguir: (idCampanha: number, titulo: string) => void;
 }) {
+  // Gira só quando os cartões não cabem todos na largura visível (medido sem as cópias, e de novo a cada resize).
+  const [girando, setGirando] = useState(false);
+
   useEffect(() => {
     const trilho = trilhoRef.current;
-    if (!trilho || carregando || erro || campanhas.length < 2 || pausado) return;
+    if (!trilho || carregando || erro || campanhas.length < 2) {
+      setGirando(false);
+      return;
+    }
+    const medir = () => {
+      const volta = voltaDoTrilho(trilho);
+      // Com as cópias na tela, a volta é a largura de uma fileira; sem elas, a fileira é o próprio scrollWidth.
+      const larguraFileira = volta > 0 ? volta : trilho.scrollWidth;
+      setGirando(larguraFileira > trilho.clientWidth + 1);
+    };
+    medir();
+    window.addEventListener('resize', medir);
+    return () => window.removeEventListener('resize', medir);
+  }, [campanhas.length, carregando, erro, trilhoRef]);
+
+  // Avisa as setas e, depois de rolagem manual (dedo, roda do mouse), traz a posição de volta para a primeira volta.
+  useEffect(() => {
+    const trilho = trilhoRef.current;
+    if (!trilho) return;
+    trilho.dispatchEvent(new Event(CARROSSEL_MUDOU));
+    if (!girando) return;
+    let espera = 0;
+    const aoRolar = () => {
+      window.clearTimeout(espera);
+      espera = window.setTimeout(() => normalizarTrilho(trilho), 150);
+    };
+    trilho.addEventListener('scroll', aoRolar, { passive: true });
+    return () => {
+      window.clearTimeout(espera);
+      trilho.removeEventListener('scroll', aoRolar);
+    };
+  }, [girando, trilhoRef]);
+
+  useEffect(() => {
+    const trilho = trilhoRef.current;
+    if (!trilho || carregando || erro || campanhas.length < 2 || pausado || !girando) return;
     if (movimentoReduzido()) return;
 
     // Pausa momentânea com o mouse em cima ou o foco do teclado dentro (a do botão é a prop `pausado`).
@@ -146,12 +237,8 @@ function BlocoCampanhas({
     const pausar = () => { pausaMomentanea = true; };
     const retomar = () => { pausaMomentanea = false; };
     const avancar = () => {
-      if (pausaMomentanea || document.hidden || trilho.scrollWidth <= trilho.clientWidth) return;
-      const noFim = trilho.scrollLeft + trilho.clientWidth >= trilho.scrollWidth - 2;
-      trilho.scrollTo({
-        left: noFim ? 0 : trilho.scrollLeft + trilho.clientWidth * 0.8,
-        behavior: 'smooth',
-      });
+      if (pausaMomentanea || document.hidden) return;
+      moverCarrossel(trilho, 1);
     };
 
     trilho.addEventListener('pointerenter', pausar);
@@ -166,24 +253,43 @@ function BlocoCampanhas({
       trilho.removeEventListener('focusin', pausar);
       trilho.removeEventListener('focusout', retomar);
     };
-  }, [campanhas.length, carregando, erro, trilhoRef, pausado]);
+  }, [campanhas.length, carregando, erro, trilhoRef, pausado, girando]);
 
   if (carregando) return <Carregando />;
   if (erro) return <MensagemErro texto={erro} />;
   if (campanhas.length === 0) return <EstadoVazio>{vazio}</EstadoVazio>;
 
+  const cartao = (campanha: CampanhaResponse) => (
+    <CartaoCampanha
+      campanha={campanha}
+      seguindo={seguidas.has(campanha.idCampanha)}
+      seguirDesabilitado={carregandoSeguimento || emAtualizacao.has(campanha.idCampanha)}
+      aoAlternarSeguir={aoAlternarSeguir}
+    />
+  );
+
   return (
     <div className="carrossel-cartoes">
       <div className="carrossel-cartoes__trilho" ref={trilhoRef}>
         {campanhas.map((campanha) => (
-          <CartaoCampanha
-            campanha={campanha}
-            key={campanha.idCampanha}
-            seguindo={seguidas.has(campanha.idCampanha)}
-            seguirDesabilitado={carregandoSeguimento || emAtualizacao.has(campanha.idCampanha)}
-            aoAlternarSeguir={aoAlternarSeguir}
-          />
+          <div className="carrossel-cartoes__item" key={campanha.idCampanha}>
+            {cartao(campanha)}
+          </div>
         ))}
+        {girando &&
+          Array.from({ length: COPIAS_CARROSSEL }, (_, copia) =>
+            campanhas.map((campanha, indice) => (
+              <div
+                className="carrossel-cartoes__item"
+                key={`copia-${copia + 1}-${campanha.idCampanha}`}
+                data-copia={indice === 0 ? copia + 1 : undefined}
+                inert
+                aria-hidden="true"
+              >
+                {cartao(campanha)}
+              </div>
+            )),
+          )}
       </div>
     </div>
   );

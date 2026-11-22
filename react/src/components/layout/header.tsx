@@ -46,7 +46,9 @@ export function Header({ auth, variante = 'painel' }: HeaderProps) {
       data-topo-fixo
       className={(publico ? 'header-publico ' : '') + 'fundo-cartao border-b borda-padrao sticky top-0 z-50 shadow-sm relative'}
     >
-      <div className="largura-site h-16 flex items-center justify-between gap-4">
+      {/* Entre 1024 e 1055 px (22-11-2026) os links e o botão mal cabem: o "Submeter pesquisa" encolhia e quebrava o texto,
+          desmontando o cabeçalho. O botão não quebra mais, e os espaços entre os itens ficam menores até o xl (1280 px). */}
+      <div className="largura-site h-16 flex items-center justify-between gap-3 xl:gap-4">
         {/* A mesma marca e a mesma caixa (.largura-site) do rodapé: as duas ficam na mesma linha vertical. */}
         <Link to="/" className="flex items-center gap-3 shrink-0" aria-label="CrowdAcadêmico, página inicial">
           <LogoMarca />
@@ -54,7 +56,7 @@ export function Header({ auth, variante = 'painel' }: HeaderProps) {
         </Link>
 
         {publico && (
-          <nav className="hidden lg:flex items-center gap-6 mx-2" aria-label="Navegação principal">
+          <nav className="hidden lg:flex items-center gap-4 xl:gap-6 xl:mx-2" aria-label="Navegação principal">
             {LINKS_PUBLICOS.map(({ to, rotulo }) => (
               <NavLink
                 key={to}
@@ -73,7 +75,7 @@ export function Header({ auth, variante = 'painel' }: HeaderProps) {
         {/* O menu da conta (MenuUsuario) fica no CANTO de verdade: por isso o DevLoginRapido fica fora deste grupo. */}
         <div className="flex items-center gap-2 sm:gap-3">
           {publico && (
-            <Link to="/criar-campanha" state={{ voltarPara }} className="btn btn-primary hidden lg:block">
+            <Link to="/criar-campanha" state={{ voltarPara }} className="btn btn-primary hidden lg:block whitespace-nowrap shrink-0">
               Submeter pesquisa
             </Link>
           )}

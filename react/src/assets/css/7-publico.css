@@ -453,6 +453,18 @@
       scroll-snap-align: start;
     }
 
+    /* Cada cartão mora numa caixa (o original e as cópias do giro sem fim, 22-11-2026): o cartão ocupa a caixa inteira. */
+    /* min-width: 0: sem isso a caixa cresce até a largura natural da imagem de capa (1200 px) e ignora os 20rem. */
+    .carrossel-cartoes__item {
+      display: flex;
+      min-width: 0;
+    }
+
+    .carrossel-cartoes__item > * {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
     .carrossel-cartoes__controles {
       display: flex;
       flex-shrink: 0;

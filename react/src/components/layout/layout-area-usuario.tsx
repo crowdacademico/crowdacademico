@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router';
+import { CabecalhoPagina } from './cabecalho-pagina';
 
 export interface ItemMenuAreaUsuario {
   to: string;
@@ -25,43 +26,44 @@ interface LayoutAreaUsuarioProps {
 //   - a partir de 768px (md): menu lateral de 15rem à esquerda;
 //   - no celular: ABAS ROLÁVEIS (padrão do Material Design para 3 a 6 seções; decisão do Lucas): texto com ícone,
 //     sublinhado verde na ativa, esmaecido na borda quando há mais itens para o lado, e a ativa sempre à vista;
-//   - o conteúdo dentro de um cartão.
+//   - o conteúdo dentro de um cartão;
+//   - o mesmo topo das páginas públicas (22-11-2026): fundo da página, py-16 e o CabecalhoPagina (a trilha Início > página
+//     em cima do título), como no Como funciona, no Sobre e no Explorar.
 export function LayoutAreaUsuario({ titulo, descricao, itens, rotuloMenu, topoMenu, preenchimento = true, children }: LayoutAreaUsuarioProps) {
   return (
-    <div className="largura-site w-full py-8">
-      <header className="mb-6">
-        <h1 className="titulo-pagina texto-forte">{titulo}</h1>
-        <p className="mt-2 paragrafo texto-fraco">{descricao}</p>
-      </header>
+    <div className="fundo-pagina min-h-full py-16">
+      <div className="largura-site w-full">
+        <CabecalhoPagina className="mb-8" titulo={titulo} descricao={descricao} />
 
-      <AbasCelular itens={itens} rotuloMenu={rotuloMenu} />
+        <AbasCelular itens={itens} rotuloMenu={rotuloMenu} />
 
-      <div className="grid gap-6 md:grid-cols-[15rem_minmax(0,1fr)] items-start">
-        <aside aria-label={rotuloMenu} className="hidden md:block min-w-0 space-y-4">
-          {topoMenu}
-          <nav aria-label={rotuloMenu} className="flex flex-col gap-2">
-            {itens.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end
-                className={({ isActive }) =>
-                  'paragrafo enfase flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors ' +
-                  (isActive
-                    ? 'fundo-cartao borda-marca texto-marca shadow-sm'
-                    : 'fundo-cartao borda-padrao texto-herdado hover-fundo-sutil')
-                }
-              >
-                <i className={`fa-solid ${item.icone} w-4`} aria-hidden="true"></i>
-                {item.rotulo}
-              </NavLink>
-            ))}
-          </nav>
-        </aside>
+        <div className="grid gap-6 md:grid-cols-[15rem_minmax(0,1fr)] items-start">
+          <aside aria-label={rotuloMenu} className="hidden md:block min-w-0 space-y-4">
+            {topoMenu}
+            <nav aria-label={rotuloMenu} className="flex flex-col gap-2">
+              {itens.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end
+                  className={({ isActive }) =>
+                    'paragrafo enfase flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors ' +
+                    (isActive
+                      ? 'fundo-cartao borda-marca texto-marca shadow-sm'
+                      : 'fundo-cartao borda-padrao texto-herdado hover-fundo-sutil')
+                  }
+                >
+                  <i className={`fa-solid ${item.icone} w-4`} aria-hidden="true"></i>
+                  {item.rotulo}
+                </NavLink>
+              ))}
+            </nav>
+          </aside>
 
-        <section className={`min-w-0 fundo-cartao border borda-padrao rounded-2xl shadow-sm ${preenchimento ? 'p-5 sm:p-8' : 'pb-8'}`}>
-          {children}
-        </section>
+          <section className={`min-w-0 fundo-cartao border borda-padrao rounded-2xl shadow-sm ${preenchimento ? 'p-5 sm:p-8' : 'pb-8'}`}>
+            {children}
+          </section>
+        </div>
       </div>
     </div>
   );

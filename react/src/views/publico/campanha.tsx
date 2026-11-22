@@ -39,6 +39,7 @@ import { ModalAtualizacoes } from './lista-atualizacoes';
 import { ModalApoiar } from './modal-apoiar';
 import { definirTituloDaPagina } from '../../components/layout/definir-titulo-pagina';
 import { CartaoEndosso } from './cartao-endosso';
+import { ModalFicha } from '../../components/crud/modal-ficha';
 import { LinkAcademicoExterno } from './links-academicos';
 import { useLinksAcademicos } from './use-links-academicos';
 import { enderecoVideoIncorporado } from '../../services/12-campanha/util/video-incorporado.util';
@@ -47,7 +48,7 @@ import { recompensaApi } from '../../services/18-recompensa/api/recompensa.api';
 import type { MuralResponse } from '../../services/18-recompensa/type/recompensa.type';
 import { MuralApoiadores } from '../../components/crud/mural-apoiadores';
 
-type AbaCampanha = 'sobre' | 'orcamento' | 'cronograma' | 'recompensas' | 'comentar';
+type AbaCampanha = 'sobre' | 'orcamento' | 'cronograma';
 
 interface EstadoSecundario<T> {
   dados: T[];
@@ -77,6 +78,8 @@ export function Campanha({ auth }: PropsPagina) {
   const [carregando, setCarregando] = useState(idValido);
   const [aba, setAba] = useState<AbaCampanha>('sobre');
   const [vendoAtualizacoes, setVendoAtualizacoes] = useState(false);
+  // Comentar (22-11-2026): saiu das abas e virou o botão de microfone ao lado de "Endosso", que abre este modal.
+  const [comentando, setComentando] = useState(false);
   // RF-061: a contagem regressiva chegou a zero; buscar a campanha de novo (passa a aceitar apoios).
   const [recarga, setRecarga] = useState(0);
   const recarregarCampanha = useCallback(() => setRecarga((total) => total + 1), []);
@@ -179,7 +182,8 @@ export function Campanha({ auth }: PropsPagina) {
   const publicada = campanha ? STATUS_PUBLICADA.has(campanha.status) : false;
   const dias = campanha ? diasRestantes(campanha.dataFim) : null;
   const aceitaApoios = campanha !== null && campanhaAceitaApoios(campanha);
-  // Aba Comentar: só para pesquisador logado que não é o dono, em campanha publicada que aceita comentário (RF-096).
+  // Comentar (o microfone ao lado de "Endosso"): só para pesquisador logado que não é o dono, em campanha publicada que
+  // aceita comentário (RF-096).
   const podeComentar =
     publicada &&
     auth.usuario?.ehPesquisador === true &&
@@ -189,8 +193,6 @@ export function Campanha({ auth }: PropsPagina) {
     { chave: 'sobre', rotulo: 'Sobre o projeto' },
     { chave: 'orcamento', rotulo: 'Orçamento' },
     { chave: 'cronograma', rotulo: 'Cronograma' },
-    { chave: 'recompensas', rotulo: 'Mural dos apoiadores' },
-    ...(podeComentar ? [{ chave: 'comentar' as const, rotulo: 'Comentar' }] : []),
   ];
   // Abas no padrão da W3C (ARIA Authoring Practices): só a aba ativa entra no Tab; as setas, Home e End trocam de aba e
   // levam o foco junto (16-11-2026, auditoria Nielsen/WCAG).
@@ -360,9 +362,26 @@ export function Campanha({ auth }: PropsPagina) {
                     </dl>
                     {publicada && (
                       <section className="mt-8 border-t borda-padrao pt-6" aria-labelledby="comentarios-endossados-titulo">
-                        <h3 id="comentarios-endossados-titulo" className="subtitulo texto-forte mb-4">
-                          Endosso
-                        </h3>
+                        <div className="flex items-center justify-between gap-3 mb-4">
+                          <h3 id="comentarios-endossados-titulo" className="subtitulo texto-forte">
+                            Endosso
+                          </h3>
+                          {podeComentar && (
+                            // Pílula dupla (22-11-2026): a bola com o megafone, na cor da marca, presa à pílula com "Comentar".
+                            <button
+                              type="button"
+                              aria-haspopup="dialog"
+                              onClick={() => setComentando(true)}
+                              className="group inline-flex items-center rounded-full border-2 borda-marca fundo-marca-sutil shrink-0 transition-shadow hover:shadow-md"
+                              title="Comentar nesta campanha"
+                            >
+                              <span className="w-11 h-11 -m-0.5 rounded-full bg-primary text-white flex items-center justify-center shadow-sm" aria-hidden="true">
+                                <i className="fa-solid fa-bullhorn text-lg" />
+                              </span>
+                              <span className="pl-3 pr-5 font-semibold texto-marca group-hover:underline">Comentar</span>
+                            </button>
+                          )}
+                        </div>
                         {comentariosCarregando && <Carregando />}
                         {!comentariosCarregando && comentarios.erro && (
                           <p className="paragrafo texto-fraco" role="status">
@@ -388,83 +407,6 @@ export function Campanha({ auth }: PropsPagina) {
                         )}
                       </section>
                     )}
-                  </section>
-                )}
-                {aba === 'recompensas' && (
-                  <section id="tab-recompensas" aria-labelledby="tab-btn-recompensas" role="tabpanel">
-                    {/* A recompensa é o Mural dos apoiadores (22-11-2026, como o "Project Backers" do Experiment.com): quem
-                        soma o valor mínimo nas contribuições aparece com o nome e a foto. Sem mural, a aba diz que a
-                        campanha não oferece. */}
-                    <h2 className="titulo-secao texto-forte mb-2">Mural dos apoiadores</h2>
-                    {!publicada && <p className="paragrafo texto-fraco">O mural ainda não está disponível para esta campanha.</p>}
-                    {publicada && mural.erro && <p className="paragrafo texto-fraco">Não foi possível carregar o mural.</p>}
-                    {publicada && !mural.erro && !mural.dados?.recompensa && (
-                      <p className="paragrafo texto-fraco">Esta campanha não oferece o Mural dos apoiadores.</p>
-                    )}
-                    {publicada && !mural.erro && mural.dados?.recompensa && (
-                      <>
-                        <p className="paragrafo texto-fraco mb-4">
-                          Quem somar <span className="numero enfase texto-forte">{formatarMoeda(mural.dados.recompensa.valorMinimo)}</span> em
-                          apoios a esta pesquisa aparece aqui, com o nome e a foto. Quem apoiar como anônimo aparece sem nome.
-                        </p>
-                        {mural.dados.recompensa.descricao && (
-                          <p className="paragrafo texto-padrao mb-4 whitespace-pre-wrap">{mural.dados.recompensa.descricao}</p>
-                        )}
-                        <dl className="flex flex-wrap gap-x-8 gap-y-3 mb-5">
-                          <div>
-                            <dt className="legenda texto-fraco">No mural</dt>
-                            <dd className="numero enfase texto-forte">{mural.dados.apoiadores.length}</dd>
-                          </div>
-                          {percentual !== null && (
-                            <div>
-                              <dt className="legenda texto-fraco">Da meta</dt>
-                              <dd className="numero enfase texto-forte">{percentual}%</dd>
-                            </div>
-                          )}
-                          <div>
-                            <dt className="legenda texto-fraco">Arrecadado</dt>
-                            <dd className="numero enfase texto-forte">{formatarMoeda(campanha.valorBrutoArrecadado)}</dd>
-                          </div>
-                          {apoiosPagos !== null && apoiosPagos > 0 && (
-                            <div>
-                              <dt className="legenda texto-fraco">Apoio médio</dt>
-                              <dd className="numero enfase texto-forte">{formatarMoeda(campanha.valorBrutoArrecadado / apoiosPagos)}</dd>
-                            </div>
-                          )}
-                        </dl>
-                        {mural.dados.apoiadores.length === 0 ? (
-                          <p className="paragrafo texto-fraco">Ninguém no mural ainda. Seja o primeiro!</p>
-                        ) : (
-                          <MuralApoiadores apoiadores={mural.dados.apoiadores} />
-                        )}
-                        {aceitaApoios && (
-                          <button
-                            type="button"
-                            onClick={() => abrirApoio(mural.dados?.recompensa?.valorMinimo)}
-                            className="btn btn-primary mt-6"
-                          >
-                            Apoiar e entrar no mural
-                          </button>
-                        )}
-                      </>
-                    )}
-                    {/* Visitante: o convite no mesmo padrão do "Entre na sua conta para denunciar" (Alexia, 16-11-2026). */}
-                    {!auth.autenticado && publicada && (
-                      <Link
-                        to="/login"
-                        state={{ voltarPara: `/campanha/${campanha.idCampanha}` }}
-                        className="mt-6 flex items-center gap-2 text-sm texto-fraco hover:underline"
-                      >
-                        <i className="fa-solid fa-user" aria-hidden="true" />
-                        Entre na sua conta para aparecer no mural com o seu nome e a sua foto
-                      </Link>
-                    )}
-                  </section>
-                )}
-                {aba === 'comentar' && podeComentar && (
-                  <section id="tab-comentar" aria-labelledby="tab-btn-comentar" role="tabpanel">
-                    <h2 className="titulo-secao texto-forte mb-2">Comentar</h2>
-                    <FormComentarCampanha auth={auth} campanha={campanha} />
                   </section>
                 )}
                 {aba === 'orcamento' && (
@@ -620,6 +562,75 @@ export function Campanha({ auth }: PropsPagina) {
               </div>
             </aside>
           </div>
+          {/* Mural dos apoiadores (22-11-2026): saiu das abas e virou um cartão na largura toda, no fim da página, entre a
+              campanha e o rodapé (como o "Project Backers" do Experiment.com). Só aparece quando a campanha oferece. */}
+          {publicada && !mural.erro && mural.dados?.recompensa?.ativo && (
+            <section className="largura-site w-full pb-16" aria-labelledby="mural-apoiadores-titulo">
+              <div className="fundo-cartao rounded-xl shadow-sm border borda-padrao p-6 sm:p-8">
+                <h2 id="mural-apoiadores-titulo" className="titulo-secao texto-forte mb-2">Mural dos apoiadores</h2>
+                <p className="paragrafo texto-fraco mb-4">
+                  Quem somar <span className="numero enfase texto-forte">{formatarMoeda(mural.dados.recompensa.valorMinimo)}</span> em
+                  apoios a esta pesquisa aparece aqui, com o nome e a foto. Quem apoiar como anônimo aparece sem nome.
+                </p>
+                {mural.dados.recompensa.descricao && (
+                  <p className="paragrafo texto-padrao mb-4 whitespace-pre-wrap">{mural.dados.recompensa.descricao}</p>
+                )}
+                <dl className="flex flex-wrap gap-x-8 gap-y-3 mb-5">
+                  <div>
+                    <dt className="legenda texto-fraco">No mural</dt>
+                    <dd className="numero enfase texto-forte">{mural.dados.apoiadores.length}</dd>
+                  </div>
+                  {percentual !== null && (
+                    <div>
+                      <dt className="legenda texto-fraco">Da meta</dt>
+                      <dd className="numero enfase texto-forte">{percentual}%</dd>
+                    </div>
+                  )}
+                  <div>
+                    <dt className="legenda texto-fraco">Arrecadado</dt>
+                    <dd className="numero enfase texto-forte">{formatarMoeda(campanha.valorBrutoArrecadado)}</dd>
+                  </div>
+                  {apoiosPagos !== null && apoiosPagos > 0 && (
+                    <div>
+                      <dt className="legenda texto-fraco">Apoio médio</dt>
+                      <dd className="numero enfase texto-forte">{formatarMoeda(campanha.valorBrutoArrecadado / apoiosPagos)}</dd>
+                    </div>
+                  )}
+                </dl>
+                {mural.dados.apoiadores.length === 0 ? (
+                  <p className="paragrafo texto-fraco">Ninguém no mural ainda. Seja o primeiro!</p>
+                ) : (
+                  <MuralApoiadores apoiadores={mural.dados.apoiadores} />
+                )}
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mt-6">
+                  {aceitaApoios && (
+                    <button
+                      type="button"
+                      onClick={() => abrirApoio(mural.dados?.recompensa?.valorMinimo)}
+                      className="btn btn-primary"
+                    >
+                      Apoiar e entrar no mural
+                    </button>
+                  )}
+                  {!auth.autenticado && (
+                    <Link
+                      to="/login"
+                      state={{ voltarPara: `/campanha/${campanha.idCampanha}` }}
+                      className="flex items-center gap-2 text-sm texto-fraco hover:underline"
+                    >
+                      <i className="fa-solid fa-user" aria-hidden="true" />
+                      Entre na sua conta para aparecer no mural com o seu nome e a sua foto
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
+          {comentando && podeComentar && (
+            <ModalFicha titulo="Comentar" subtitulo={campanha.titulo} aoFechar={() => setComentando(false)}>
+              <FormComentarCampanha auth={auth} campanha={campanha} />
+            </ModalFicha>
+          )}
           {vendoAtualizacoes && (
             <ModalAtualizacoes
               titulo={campanha.titulo}

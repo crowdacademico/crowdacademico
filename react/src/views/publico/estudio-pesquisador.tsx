@@ -15,6 +15,7 @@ import { ModalExcluirComentario } from '../../components/crud/modal-excluir-come
 import { CartaoEndosso } from './cartao-endosso';
 import { denunciaApi } from '../../services/19-denuncia/api/denuncia.api';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { BadgeBooleano } from '../../components/crud/badge-booleano';
 import { MuralApoiadores } from '../../components/crud/mural-apoiadores';
 import { ModalExcluirItem } from '../../components/crud/modal-excluir-item';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
@@ -707,7 +708,6 @@ function PainelComentarios({ auth, campanhas }: { auth: PropsPagina['auth']; cam
             { chave: 'tituloCampanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
             { chave: 'autor', rotulo: 'apoiador', tipo: 'texto', umaLinha: true },
             { chave: 'criadoEm', rotulo: 'data', tipo: 'data' },
-            { chave: 'conteudo', rotulo: 'comentário', tipo: 'texto', umaLinha: true },
             {
               chave: 'endosso',
               rotulo: 'endosso',
@@ -737,7 +737,19 @@ function PainelComentarios({ auth, campanhas }: { auth: PropsPagina['auth']; cam
             <CampoFicha rotulo="Autor" valor={consultando.autor} />
             <CampoFicha rotulo="Enviado em" valor={formatarDataHora(consultando.criadoEm)} />
             <CampoFicha rotulo="Endosso" valor={consultando.endosso} />
-            <CampoFicha rotulo="Comentário" valor={consultando.conteudo} largura="cheia" />
+          </div>
+          {/* O texto aparece como no Alterar (22-11-2026): o cartão do bloco Endosso, apagado quando não está endossado. */}
+          <div className="mt-5">
+            <p className="rotulo mb-2">{consultando.endossado ? 'Prévia na página da campanha' : 'Comentário (não aparece na página da campanha)'}</p>
+            <div className={consultando.endossado ? undefined : 'opacity-60'}>
+              <CartaoEndosso
+                nome={consultando.nomePesquisador}
+                foto={consultando.fotoPesquisador}
+                idPesquisador={consultando.idPesquisador}
+                conteudo={consultando.conteudo}
+                previa
+              />
+            </div>
           </div>
         </ModalFicha>
       )}
@@ -880,7 +892,6 @@ function PainelContribuicoes({ auth, campanhas }: { auth: PropsPagina['auth']; c
             textoExibido: (linha) => ROTULO_MEIO_PAGAMENTO[linha.meioPagamento],
           },
           { chave: 'criadoEm', rotulo: 'data', tipo: 'dataHora' },
-          { chave: 'noMural', rotulo: 'mural', tipo: 'texto', renderizar: (linha) => (linha.noMural ? 'No mural' : '-'), textoExibido: (linha) => (linha.noMural ? 'No mural' : '-') },
         ]}
         chavePrimaria="idContribuicao"
         listar={listar}
@@ -907,8 +918,8 @@ function PainelContribuicoes({ auth, campanhas }: { auth: PropsPagina['auth']; c
           <div className="grade-ficha">
             <CampoFicha rotulo="Apoiador" valor={consultando.apoiador} />
             <CampoFicha rotulo="Valor" valor={formatarMoeda(consultando.valor)} />
+            <CampoFicha rotulo="Apoiador está no Mural dos apoiadores?" valor={<BadgeBooleano valor={consultando.noMural} />} />
             <CampoFicha rotulo="Campanha" valor={consultando.tituloCampanha} largura="cheia" />
-            <CampoFicha rotulo="Mural dos apoiadores" valor={consultando.noMural ? 'Está no mural' : 'Não está no mural'} largura="cheia" />
             <CampoFicha rotulo="Data" valor={formatarDataHora(consultando.criadoEm)} />
             <CampoFicha rotulo="Meio de pagamento" valor={ROTULO_MEIO_PAGAMENTO[consultando.meioPagamento]} />
             <CampoFicha rotulo="Situação" valor={ROTULO_STATUS_CONTRIBUICAO[consultando.status]} />

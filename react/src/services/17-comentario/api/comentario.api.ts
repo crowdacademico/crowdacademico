@@ -36,6 +36,9 @@ export const comentarioApi = {
     authFetch(`/comentario/${id}`, { method: 'PATCH', body: JSON.stringify({ endossado }) }).then(
       tratarResposta<ComentarioResponse>,
     ),
+  // O autor altera o próprio texto (RF-100: só enquanto não estiver endossado; o banco confere).
+  alterarConteudo: (authFetch: AuthFetch, id: number, conteudo: string): Promise<ComentarioResponse> =>
+    authFetch(`/comentario/${id}`, { method: 'PATCH', body: JSON.stringify({ conteudo }) }).then(tratarResposta<ComentarioResponse>),
   // Exclusão lógica (21-11-2026): sai do ar e do endosso, e fica guardado para a moderação.
   excluir: (authFetch: AuthFetch, id: number): Promise<void> =>
     authFetch(`/comentario/${id}`, { method: 'PATCH', body: JSON.stringify({ ativo: false, endossado: false }) })

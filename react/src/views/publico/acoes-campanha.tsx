@@ -13,6 +13,9 @@ import { STATUS_ACEITA_DENUNCIA } from '../../services/12-campanha/constants/sta
 import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 import { API_BASE_URL } from '../../services/constant/constants/api.constants';
 import { useSeguirCampanhas } from './use-seguir-campanhas';
+import { CartaoEndosso } from './cartao-endosso';
+import { Tooltip } from '../../components/layout/tooltip';
+import { pedirConfirmacao } from '../../components/crud/confirmacao';
 
 interface AcoesCampanhaProps {
   auth: UseAuthReturn;
@@ -203,14 +206,18 @@ export function CartaoAcoesCampanha({ auth, campanha }: AcoesCampanhaProps) {
   );
 }
 
-// RF-096: pesquisador comenta campanha de OUTRO pesquisador, um comentário por campanha, com limite configurável.
-// O comentário vai para o dono da campanha; aparece aqui na página só se o dono endossar. As regras finais (perfil
-// ativo, campanha aceita comentário, um por campanha) são do banco: este formulário só evita o envio óbvio errado.
+// RF-096 e RF-100: pesquisador comenta campanha de OUTRO pesquisador, um comentário por campanha, com limite
+// configurável. Mora no modal Comentar da página da campanha (22-11-2026). Com o comentário já feito, mostra a prévia
+// (o mesmo cartão do bloco Endosso, como no Alterar Comentário do Estúdio) e deixa alterar o texto e apagar (exclusão
+// lógica: o comentário sai do ar e a vaga volta) só enquanto não estiver endossado (RF-100; o banco também recusa). As regras finais (perfil ativo,
+// campanha aceita comentário, um por campanha) são do banco: aqui só se evita o envio óbvio errado.
 export function FormComentarCampanha({ auth, campanha }: AcoesCampanhaProps) {
   const { mostrar } = useToast();
   const limite = useConfiguracoes().obterNumero('limite_caracteres_comentario', 500);
   const [meus, setMeus] = useState<{ chave: string; lista: ComentarioMeuResponse[] } | null>(null);
   const [texto, setTexto] = useState('');
+  // Alterando o comentário que já existe (o mesmo campo de texto da criação, já preenchido).
+  const [alterando, setAlterando] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -239,16 +246,27 @@ export function FormComentarCampanha({ auth, campanha }: AcoesCampanhaProps) {
   if (!auth.autenticado || ehDono || !aceitaComentario) return null;
   if (!ehPesquisador) {
     return (
-      <p className="legenda mt-6 texto-fraco">
+      <p className="legenda texto-fraco">
         Pesquisadores podem comentar campanhas de outros pesquisadores. O comentário aparece aqui quando o autor da
         campanha o endossa.
       </p>
     );
   }
 
-  const meuComentario = meus?.chave === chave ? meus.lista.find((item) => item.idCampanha === campanha.idCampanha) : undefined;
+  // Só o que está no ar: o comentário apagado não ocupa mais a vaga.
+  const meuComentario =
+    meus?.chave === chave ? meus.lista.find((item) => item.idCampanha === campanha.idCampanha && item.ativo) : undefined;
   const carregandoMeus = meus?.chave !== chave;
   const tamanho = texto.trim().length;
+
+  const trocarMeu = (novo: ComentarioMeuResponse | null) =>
+    setMeus({
+      chave,
+      lista: [
+        ...(meus?.lista ?? []).filter((item) => item.idCampanha !== campanha.idCampanha),
+        ...(novo ? [novo] : []),
+      ],
+    });
 
   async function enviar(evento: FormEvent): Promise<void> {
     evento.preventDefault();
@@ -256,16 +274,17 @@ export function FormComentarCampanha({ auth, campanha }: AcoesCampanhaProps) {
     setEnviando(true);
     setErro(null);
     try {
-      const criado = await comentarioApi.criar(auth.authFetch, campanha.idCampanha, texto.trim());
-      setMeus({
-        chave,
-        lista: [
-          ...(meus?.lista ?? []),
-          { ...criado, tituloCampanha: campanha.titulo },
-        ],
-      });
+      if (alterando && meuComentario) {
+        const alterado = await comentarioApi.alterarConteudo(auth.authFetch, meuComentario.idComentario, texto.trim());
+        trocarMeu({ ...meuComentario, ...alterado, tituloCampanha: campanha.titulo });
+        setAlterando(false);
+        mostrar('Comentário alterado.');
+      } else {
+        const criado = await comentarioApi.criar(auth.authFetch, campanha.idCampanha, texto.trim());
+        trocarMeu({ ...criado, tituloCampanha: campanha.titulo });
+        mostrar('Comentário enviado ao autor da campanha.');
+      }
       setTexto('');
-      mostrar('Comentário enviado ao autor da campanha.');
     } catch (falha: unknown) {
       setErro(traduzirErro(falha));
     } finally {
@@ -273,27 +292,80 @@ export function FormComentarCampanha({ auth, campanha }: AcoesCampanhaProps) {
     }
   }
 
+  async function apagar(): Promise<void> {
+    if (!meuComentario || meuComentario.endossado || enviando) return;
+    const confirmou = await pedirConfirmacao({
+      titulo: 'Apagar o seu comentário?',
+      texto: 'Ele sai do ar. Você pode escrever outro depois.',
+      rotuloConfirmar: 'Apagar',
+      perigo: true,
+    });
+    if (!confirmou) return;
+    setEnviando(true);
+    setErro(null);
+    try {
+      await comentarioApi.excluir(auth.authFetch, meuComentario.idComentario);
+      trocarMeu(null);
+      mostrar('Comentário apagado.');
+    } catch (falha: unknown) {
+      setErro(traduzirErro(falha));
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  const mostrandoFormulario = !carregandoMeus && (!meuComentario || alterando);
+
   return (
-    <section className="mt-8 border-t borda-padrao pt-6" aria-labelledby="comentar-campanha-titulo">
-      <h3 id="comentar-campanha-titulo" className="subtitulo texto-forte mb-2">
+    <section className="space-y-4" aria-labelledby="comentar-campanha-titulo">
+      <h3 id="comentar-campanha-titulo" className="subtitulo texto-forte flex items-center gap-2">
         Seu comentário como pesquisador
+        <Tooltip baixo texto="Um comentário por campanha. Ele vai para o autor, que pode endossá-lo para aparecer nesta página." />
       </h3>
       {carregandoMeus && <p className="legenda texto-fraco">Carregando…</p>}
-      {!carregandoMeus && meuComentario && (
-        <div className="rounded-lg fundo-sutil border borda-padrao p-4">
-          <p className="legenda mb-2 texto-fraco">
-            {meuComentario.endossado
-              ? 'O autor endossou o seu comentário: ele aparece na lista acima.'
-              : 'Enviado ao autor da campanha. Aparece nesta página se ele endossar.'}
-          </p>
-          <p className="paragrafo texto-padrao whitespace-pre-wrap">{meuComentario.conteudo}</p>
-        </div>
+
+      {!carregandoMeus && meuComentario && !alterando && (
+        <>
+          <div>
+            <p className="rotulo mb-2">
+              {meuComentario.endossado ? 'Prévia na página da campanha' : 'Comentário (aparece na página quando o autor endossar)'}
+            </p>
+            <div className={meuComentario.endossado ? undefined : 'opacity-60'}>
+              <CartaoEndosso
+                nome={auth.usuario?.nome ?? null}
+                foto={auth.usuario?.avatarUrl ?? null}
+                idPesquisador={auth.usuario?.idUsuario ?? null}
+                conteudo={meuComentario.conteudo}
+                previa
+              />
+            </div>
+          </div>
+          {meuComentario.endossado && (
+            <p className="legenda texto-fraco">
+              O autor endossou o seu comentário: enquanto estiver endossado, ele não pode ser alterado nem apagado.
+            </p>
+          )}
+          <div className="flex flex-wrap justify-end gap-2">
+            <button type="button" className="btn btn-secondary" onClick={() => void apagar()} disabled={enviando || meuComentario.endossado}>
+              Apagar
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={enviando || meuComentario.endossado}
+              onClick={() => {
+                setTexto(meuComentario.conteudo);
+                setAlterando(true);
+              }}
+            >
+              Alterar
+            </button>
+          </div>
+        </>
       )}
-      {!carregandoMeus && !meuComentario && (
+
+      {mostrandoFormulario && (
         <form onSubmit={(evento) => void enviar(evento)} className="space-y-3">
-          <p className="legenda texto-fraco">
-            Um comentário por campanha. Ele vai para o autor, que pode endossá-lo para aparecer nesta página.
-          </p>
           <label htmlFor="comentario-texto" className="sr-only">
             Comentário
           </label>
@@ -310,16 +382,31 @@ export function FormComentarCampanha({ auth, campanha }: AcoesCampanhaProps) {
             <span id="comentario-contador" className="legenda numero texto-fraco">
               {tamanho}/{limite}
             </span>
-            <button type="submit" className="btn btn-primary" disabled={enviando || tamanho === 0 || tamanho > limite}>
-              {enviando ? 'Enviando…' : 'Enviar comentário'}
-            </button>
+            <div className="flex gap-2">
+              {alterando && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setAlterando(false);
+                    setTexto('');
+                  }}
+                  disabled={enviando}
+                >
+                  Cancelar
+                </button>
+              )}
+              <button type="submit" className="btn btn-primary" disabled={enviando || tamanho === 0 || tamanho > limite}>
+                {enviando ? 'Salvando…' : alterando ? 'Salvar' : 'Enviar comentário'}
+              </button>
+            </div>
           </div>
-          {erro && (
-            <p className="text-sm texto-erro" role="alert">
-              {erro}
-            </p>
-          )}
         </form>
+      )}
+      {erro && (
+        <p className="text-sm texto-erro" role="alert">
+          {erro}
+        </p>
       )}
     </section>
   );
