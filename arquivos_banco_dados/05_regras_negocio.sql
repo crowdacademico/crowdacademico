@@ -6289,11 +6289,13 @@ BEGIN
             USING ERRCODE = '92046';
     END IF;
 
-    IF NEW.bloqueado THEN
-        NEW.ativo := FALSE;
-    END IF;
+    -- Nesta ordem: voltar ao ar (só a moderação chega aqui) tira o bloqueio primeiro; ao contrário, o "bloqueado sempre
+    -- fica fora do ar" desfazia a volta sem erro nenhum (achado no teste 29, 21-11-2026).
     IF NEW.ativo AND NOT OLD.ativo THEN
         NEW.bloqueado := FALSE;
+    END IF;
+    IF NEW.bloqueado THEN
+        NEW.ativo := FALSE;
     END IF;
 
     RETURN NEW;
