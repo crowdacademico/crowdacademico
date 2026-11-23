@@ -56,7 +56,7 @@ export function PerguntasFrequentes() {
               {coluna.map((duvida) => (
                 <details key={duvida.chave} className="pagina-publica__faq">
                   <summary>{duvida.pergunta}</summary>
-                  <p className="paragrafo texto-padrao mt-3">{duvida.resposta}</p>
+                  <p className="paragrafo texto-padrao">{duvida.resposta}</p>
                 </details>
               ))}
             </div>

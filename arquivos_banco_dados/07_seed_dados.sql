@@ -276,7 +276,13 @@ INSERT INTO tipo_link (codigo, nome, ativo, regex, dominio, permite_perfil, perm
 ('ORCID',              'ORCID',                TRUE,  '^https?://orcid\.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$',   '{orcid.org}',        TRUE, FALSE),
 ('RESEARCHGATE',       'ResearchGate',         TRUE,  '^https?://(www\.)?researchgate\.net/profile/[\w\-]+$', '{researchgate.net}', TRUE, FALSE),
 ('LINKEDIN',           'LinkedIn',             TRUE,  '^https?://(www\.)?linkedin\.com/in/[\w\-]+/?$',        '{linkedin.com}',     TRUE, FALSE),
-('GITHUB',             'GitHub',               TRUE,  '^https?://(www\.|gist\.)?github\.com/[\w.\-]+(/.*)?$', '{github.com}',       TRUE, TRUE);
+('GITHUB',             'GitHub',               TRUE,  '^https?://(www\.|gist\.)?github\.com/[\w.\-]+(/.*)?$', '{github.com}',       TRUE, TRUE),
+-- Só para a atualização (22-11-2026): vídeo, artigo e pasta de arquivos vêm de uma lista fechada de sites, em vez de
+-- qualquer endereço (evita link esquisito ou malicioso). O admin cria outros na tela Tipos de Link, sem código.
+('YOUTUBE',            'YouTube',              TRUE,  '^https?://((www\.|m\.)?youtube\.com/(watch\?v=|shorts/|embed/|live/)|youtu\.be/)[\w\-]+', '{youtube.com,youtu.be}', FALSE, TRUE),
+('VIMEO',              'Vimeo',                TRUE,  '^https?://(www\.|player\.)?vimeo\.com/(video/)?\d+',         '{vimeo.com}',        FALSE, TRUE),
+('DOI',                'DOI (artigo)',         TRUE,  '^https?://(dx\.)?doi\.org/10\.\d{4,9}/\S+$',                 '{doi.org}',          FALSE, TRUE),
+('GOOGLE_DRIVE',       'Google Drive',         TRUE,  '^https?://(drive|docs)\.google\.com/\S+$',                      '{drive.google.com,docs.google.com}', FALSE, TRUE);
 
 -- [07-C-2] area_conhecimento
 -- 2 níveis do CNPq (grande área -> área): "Ciências da Saúde" cobrindo de odontologia a saúde coletiva era amplo
@@ -1163,9 +1169,10 @@ JOIN tipo_link tl ON tl.codigo = v.tipolink_codigo;
 --   21 Pesquisador Sistema     ativa e sem comentário, para testar comentário e endosso pelo login rápido (não é da
 --                              demonstração: a faceta Origem do Campo de Testes a mostra como "teste"); tem apoios,
 --                              atualizações e Mural dos apoiadores
---   22 Pesquisador Sistema flexível  "Em breve": aprovada, começa daqui a 10 dias
---   23 Pesquisador Sistema flexível  sucesso: bateu a meta; o repasse espera (seed mais rico para quem entra como ele,
---                              22-11-2026)
+--   22 Pesquisador Sistema flexível  "Em breve": aprovada, começa daqui a 10 dias ("Campanha de Teste 2: Em Breve")
+--   23 Pesquisador Sistema flexível  sucesso: bateu a meta; o repasse espera ("Campanha de Teste 3: Encerrada com
+--                              Sucesso"; seed mais rico para quem entra como ele, 22-11-2026). As do Pesquisador Sistema
+--                              têm nomes objetivos de teste, não de demonstração.
 --   24 Eduardo   tudo-ou-nada  "Em breve": aprovada, começa daqui a 14 dias, com capa
 --   25 Patrícia  tudo-ou-nada  ativa, com apoios, comentários e atualização com foto
 --   26 Juliana   flexível      ativa, com apoios, comentários e atualização com foto
@@ -1200,8 +1207,8 @@ INSERT INTO seed_campanha VALUES
     (19, 16, NULL, '6.07.00.00', 'Percepção de Segurança no Transporte Público Noturno', 'all-or-nothing', 6000.00, 'Questionário e entrevistas com usuárias do transporte público noturno sobre percepção de segurança e rotas evitadas.', 6, 36, 'aguardando_aprovacao', NULL, -45, -40),
     (20, 9,  NULL, '1.03.00.00', 'Nova Plataforma de Diagnóstico por Imagem com Machine Learning', 'all-or-nothing', 30000.00, 'Sistema de apoio ao diagnóstico radiológico baseado em visão computacional, validado com dados de dois hospitais universitários.', 10, 45, 'aguardando_aprovacao', NULL, -5, -3),
     (21, 7,  6,    '6.07.00.00', 'Campanha de Teste: Comentários e Endosso', 'flexivel', 10000.00, 'Campanha ativa para testar comentários, endosso e atualizações. Comente em nome de um pesquisador na Bancada da Campanha; endosse entrando como Pesquisador Sistema, em Minhas Campanhas.', -5, 40, 'ativo', -5, -7, -6),
-    (22, 7,  6,    '2.05.00.00', 'Monitoramento de Aves Migratórias no Litoral Paulista', 'flexivel', 9000.00, 'Contagem e anilhamento de aves migratórias em praias e manguezais do litoral paulista, com os dados abertos para os órgãos ambientais.', 10, 55, 'ativo', -1, -9, -4),
-    (23, 7,  6,    '4.06.00.00', 'Mapeamento de Criadouros do Aedes aegypti em Escolas Públicas', 'flexivel', 6000.00, 'Vistoria de escolas públicas com estudantes como agentes de pesquisa, para mapear e eliminar criadouros do mosquito da dengue.', -70, -25, 'ativo', -72, -80, -76),
+    (22, 7,  6,    '2.05.00.00', 'Campanha de Teste 2: Em Breve', 'flexivel', 9000.00, 'Campanha "Em breve" do Pesquisador Sistema: aprovada, começa daqui a 10 dias. Para testar a contagem regressiva, a página antes do início e a campanha que ainda não aceita apoio.', 10, 55, 'ativo', -1, -9, -4),
+    (23, 7,  6,    '4.06.00.00', 'Campanha de Teste 3: Encerrada com Sucesso', 'flexivel', 6000.00, 'Campanha encerrada do Pesquisador Sistema: bateu a meta e o repasse espera. Para testar o fim da campanha, o repasse, o Mural dos apoiadores e os comentários endossados.', -70, -25, 'ativo', -72, -80, -76),
     (24, 12, 6,    '2.05.00.00', 'Abelhas Sem Ferrão como Bioindicadoras em Áreas Agrícolas', 'all-or-nothing', 14000.00, 'Uso de colmeias de abelhas nativas sem ferrão para medir o impacto de agrotóxicos em lavouras do Recôncavo Baiano.', 14, 60, 'ativo', -1, -10, -5),
     (25, 15, 6,    '4.01.00.00', 'Rastreamento de Anemia em Gestantes da Atenção Básica', 'all-or-nothing', 12000.00, 'Exame de hemoglobina com aparelho portátil nas consultas de pré-natal de unidades básicas de saúde, com encaminhamento imediato dos casos.', -12, 33, 'ativo', -13, -20, -16),
     (26, 14, 6,    '7.08.00.00', 'Olimpíadas de Matemática como Porta de Entrada para a Ciência', 'flexivel', 7000.00, 'Acompanhamento de estudantes de escolas públicas que participaram de olimpíadas de matemática e do efeito disso na escolha por carreiras científicas.', -8, 37, 'ativo', -9, -15, -12);
@@ -1417,7 +1424,9 @@ FROM (VALUES
     ('Encontro com as lideranças da comunidade', 'a15-reuniao-pesquisa', 201262),
     ('Primeira vistoria nas escolas', 'a05-mosquito-aedes', 36492),
     ('Os aparelhos chegaram', 'a08-exame-sangue', 72236),
-    ('Conversas com os medalhistas', 'a13-sala-de-aula', 101208)
+    ('Conversas com os medalhistas', 'a13-sala-de-aula', 101208),
+    ('Bem-vindos à campanha de teste', 'a17-tubos-de-ensaio', 58152),
+    ('Relatório parcial', 'a18-caderno-de-laboratorio', 126160)
 ) AS v(titulo, nome, tamanho)
 JOIN atualizacao_campanha a ON a.titulo = v.titulo
 JOIN campanha c ON c.id_campanha = a.id_campanha;
@@ -1437,7 +1446,9 @@ JOIN arquivo ar ON ar.chave = 'seed/atualizacoes/' || (
         ('Encontro com as lideranças da comunidade', 'a15-reuniao-pesquisa'),
         ('Primeira vistoria nas escolas', 'a05-mosquito-aedes'),
         ('Os aparelhos chegaram', 'a08-exame-sangue'),
-        ('Conversas com os medalhistas', 'a13-sala-de-aula')
+        ('Conversas com os medalhistas', 'a13-sala-de-aula'),
+        ('Bem-vindos à campanha de teste', 'a17-tubos-de-ensaio'),
+        ('Relatório parcial', 'a18-caderno-de-laboratorio')
     ) AS v(titulo, nome) WHERE v.titulo = a.titulo
 ) || '.webp';
 

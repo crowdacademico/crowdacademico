@@ -8,15 +8,6 @@ Só o que ainda falta **fazer ou decidir**. O que fica pronto sai daqui (atualiz
 
 ---
 
-## 0. Próximos a fazer (lista do Lucas, 22-11-2026)
-
-- **Carrossel da Home girando devagar, sem parar** (contínuo, como uma esteira), no lugar do avanço de um cartão a cada 5 segundos. Manter o Pausar e o "menos movimento" do sistema.
-- **Notificações (`/notificacoes`): trilha e posicionamento** iguais aos do Como funciona (CabecalhoPagina e py-16).
-- **Seed, campanhas do Pesquisador Sistema com nomes objetivos de teste:** renomear para algo como "Campanha de Teste 2: Sistema Em Breve" (confirmar com o Lucas: o nome citado foi o da 23, "Mapeamento de Criadouros do Aedes aegypti em Escolas Públicas", que é a encerrada com sucesso; a "Em breve" é a 22, das aves). Pôr foto nas atualizações da 21 (Campanha de Teste: Comentários e Endosso).
-- **Imagem anexada na atualização não aparece**: só o link do arquivo (ex.: `a12-microscopio.webp`), que abre em outra aba. A imagem precisa aparecer na própria atualização (página da campanha e perfil).
-- **Vídeo da campanha: o pesquisador não consegue pôr o link** em "URL do vídeo de apresentação (opcional)" ("Escolha um vídeo ou uma imagem de capa"). Investigar; e ver o link de vídeo na atualização.
-- **Perguntas frequentes (Home e `/perguntas-frequentes`)**: a pílula inteira precisa ser clicável, não só o texto; hoje há uma área em falso que não abre nada.
-
 ## 1. Antes da banca
 
 - 🔴 **Dados pessoais do titular na página de pagamento do Asaas (16-11-2026, urgente).** O topo da página de pagamento do Asaas (para onde o modal Apoiar manda quem apoia) mostra o titular da conta: nome, CPF, e-mail, cidade e final do telefone. No sandbox de hoje é a conta pessoal do Lucas, então qualquer pessoa que testar o apoio vê esses dados; a frase do rodapé ("cobrança de responsabilidade única e exclusiva de <titular>, CPF...") também é do Asaas. **Caminhos:** (1) em produção, a conta Asaas no nome da plataforma (CNPJ, ou o responsável oficial definido com o orientador), nunca uma conta pessoal; (2) já no sandbox, ver no painel do Asaas (Minha Conta > Informações / Personalização da fatura) o que dá para esconder ou trocar (nome fantasia, e-mail e telefone de contato da plataforma); (3) se o CPF do titular não puder ser escondido, abrir uma conta sandbox nova em nome da plataforma para os testes com outras pessoas. Até lá: só testar o apoio com quem já conhece esses dados.
@@ -80,7 +71,6 @@ Resolvidos no seed em 18-11-2026 (valem quando o banco for recriado): prazo de a
 ### Requisitos
 
 - **Requisitos e documento do TCC:** o Claude Code escreve um prompt para o Claude Web atualizar os requisitos e o documento do TCC (`.docx`) com o sistema atual: o RF-053 (texto livre com anexos) e os RF-103 a RF-105 (o Mural dos apoiadores), os dois feitos no sistema em 22-11-2026.
-- **Tipos de link para atualização (04-11-2026):** hoje o único tipo liberado para atualização é o GitHub, e a regra dele só aceita endereço de perfil (`github.com/nome`), não de repositório. Artigo (DOI), vídeo ou pasta de arquivos precisam de um tipo novo, criado pelo admin na tela Tipos de Link (sem código). Decidir quais tipos entram no seed. (A recompensa não usa mais link desde 22-11-2026.)
 
 ### Cadastro de pesquisador (anotado em 21-11-2026)
 
@@ -126,3 +116,5 @@ O que foi feito sem conferir na tela. O Claude roda com o Playwright **só quand
 - **Modal Comentar com prévia, Alterar e Apagar (22-11-2026):** Conferir: a dica ⓘ no título; sem comentário, o formulário; com comentário, a prévia (o cartão do Endosso, apagado quando ainda não foi endossado), Alterar e Apagar (os dois desligados quando endossado, RF-100; Apagar pede confirmação, e a vaga volta para comentar de novo).
 - **Cabeçalho entre 1024 e 1055 px (22-11-2026):** o "Submeter pesquisa" não quebra mais o texto (espaços menores entre os itens até 1280 px). Conferir nas larguras 1024, 1040, 1056 e 1280, logado e deslogado.
 - **Carrossel da Home sem fim (22-11-2026):** no último cartão segue girando para a frente (não volta correndo ao início); as setas não apagam nas pontas; com poucos cartões que cabem na tela, fica parado. Conferir também o Pausar, o arrastar com o dedo no celular e o leitor de tela (cada campanha lida uma vez só).
+- **Área pública (22-11-2026):** o carrossel da Home desliza devagar sem parar (pausa com o mouse em cima, com o botão, por 3 s depois de uma seta ou do dedo; parado com "menos movimento"); Notificações com a trilha e o topo das outras páginas; Perguntas frequentes (Home e página) abrindo ao clicar em qualquer ponto da pílula; imagens anexadas aparecendo na própria atualização (página da campanha e perfil), com PDF e links na lista.
+- **Seed e links da atualização (22-11-2026):** colar o Grupo DP no Supabase (tipos de link YouTube, Vimeo, DOI e Google Drive para a atualização) e rodar `npm run seed:imagens` de novo (2 fotos novas, da campanha 21). Na próxima recriação do banco: as campanhas 22 e 23 com os nomes "Campanha de Teste 2: Em Breve" e "Campanha de Teste 3: Encerrada com Sucesso", e foto nas duas atualizações da 21. Conferir: publicar uma atualização com link do YouTube (o vídeo toca nela), DOI e Drive (ficam na lista); um link de site fora da lista é recusado.

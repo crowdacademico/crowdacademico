@@ -41,6 +41,10 @@ const movimentoReduzido = () => window.matchMedia('(prefers-reduced-motion: redu
 // `inert` e `aria-hidden`: leitor de tela e teclado veem cada campanha uma vez só. Só gira quando os cartões não cabem
 // todos na tela; cabendo, fica parado, sem cópias. CARROSSEL_MUDOU avisa os controles (setas) quando isso muda.
 const CARROSSEL_MUDOU = 'carrossel:mudou';
+// Uma seta foi clicada: o giro contínuo espera alguns segundos.
+const CARROSSEL_SETA = 'carrossel:seta';
+// Velocidade do giro contínuo, em pixels por segundo (um cartão de 20rem leva uns 11 segundos para passar).
+const VELOCIDADE_CARROSSEL = 30;
 const COPIAS_CARROSSEL = 2;
 
 // Largura de uma volta: do primeiro cartão até o primeiro cartão da primeira cópia. 0 = não gira.
@@ -126,7 +130,10 @@ function ControlesCarrossel({
 
   function mover(direcao: -1 | 1) {
     const trilho = trilhoRef.current;
-    if (trilho) moverCarrossel(trilho, direcao);
+    if (!trilho) return;
+    // O giro contínuo para um pouco, para a seta mover um cartão sem o deslizar puxar junto.
+    trilho.dispatchEvent(new Event(CARROSSEL_SETA));
+    moverCarrossel(trilho, direcao);
   }
 
   return (
@@ -232,26 +239,55 @@ function BlocoCampanhas({
     if (!trilho || carregando || erro || campanhas.length < 2 || pausado || !girando) return;
     if (movimentoReduzido()) return;
 
-    // Pausa momentânea com o mouse em cima ou o foco do teclado dentro (a do botão é a prop `pausado`).
+    // Giro contínuo (22-11-2026): a fileira desliza devagar o tempo todo, como uma esteira, quadro a quadro
+    // (requestAnimationFrame), a VELOCIDADE_CARROSSEL px por segundo. Enquanto desliza, o encaixe nos cartões e a rolagem
+    // suave do CSS ficam desligados (a classe --deslizando): os dois brigariam com o movimento contínuo. `posicao` guarda
+    // a posição com fração de pixel, porque o navegador arredonda o scrollLeft e um passo menor que 1 px nunca sairia
+    // do lugar. Pausa com o mouse em cima, com o foco do teclado dentro, com a aba escondida e por alguns segundos
+    // depois de uma seta ou de arrastar com o dedo (a do botão é a prop `pausado`).
     let pausaMomentanea = false;
+    let pausadoAte = 0;
+    let posicao = trilho.scrollLeft;
+    let anterior = performance.now();
+    let quadro = 0;
     const pausar = () => { pausaMomentanea = true; };
-    const retomar = () => { pausaMomentanea = false; };
-    const avancar = () => {
-      if (pausaMomentanea || document.hidden) return;
-      moverCarrossel(trilho, 1);
+    const retomar = () => {
+      pausaMomentanea = false;
+      posicao = trilho.scrollLeft;
+    };
+    const pausarUmPouco = () => { pausadoAte = performance.now() + 3000; };
+
+    const deslizar = (agora: number) => {
+      const passado = Math.min(agora - anterior, 100);
+      anterior = agora;
+      if (!pausaMomentanea && !document.hidden && agora >= pausadoAte) {
+        // Alguém rolou à mão (seta, dedo, roda do mouse): segue de onde o trilho está.
+        if (Math.abs(trilho.scrollLeft - posicao) > 2) posicao = trilho.scrollLeft;
+        posicao += (VELOCIDADE_CARROSSEL * passado) / 1000;
+        const volta = voltaDoTrilho(trilho);
+        if (volta > 0 && posicao >= volta) posicao -= volta;
+        trilho.scrollLeft = posicao;
+      }
+      quadro = window.requestAnimationFrame(deslizar);
     };
 
+    trilho.classList.add('carrossel-cartoes__trilho--deslizando');
     trilho.addEventListener('pointerenter', pausar);
     trilho.addEventListener('pointerleave', retomar);
     trilho.addEventListener('focusin', pausar);
     trilho.addEventListener('focusout', retomar);
-    const intervalo = window.setInterval(avancar, 5000);
+    trilho.addEventListener('touchstart', pausarUmPouco, { passive: true });
+    trilho.addEventListener(CARROSSEL_SETA, pausarUmPouco);
+    quadro = window.requestAnimationFrame(deslizar);
     return () => {
-      window.clearInterval(intervalo);
+      window.cancelAnimationFrame(quadro);
+      trilho.classList.remove('carrossel-cartoes__trilho--deslizando');
       trilho.removeEventListener('pointerenter', pausar);
       trilho.removeEventListener('pointerleave', retomar);
       trilho.removeEventListener('focusin', pausar);
       trilho.removeEventListener('focusout', retomar);
+      trilho.removeEventListener('touchstart', pausarUmPouco);
+      trilho.removeEventListener(CARROSSEL_SETA, pausarUmPouco);
     };
   }, [campanhas.length, carregando, erro, trilhoRef, pausado, girando]);
 

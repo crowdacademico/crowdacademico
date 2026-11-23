@@ -7,6 +7,7 @@ import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { notificacaoInternaApi } from '../../services/27-notificacao/api/modelo-mensagem.api';
 import type { NotificacaoInternaResponse } from '../../services/27-notificacao/type/modelo-mensagem.type';
 import type { PropsPagina } from '../../services/router/pagina.type';
+import { CabecalhoPagina } from '../../components/layout/cabecalho-pagina';
 
 function dataNotificacao(valor: string) {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(valor));
@@ -74,21 +75,21 @@ export function Notificacoes({ auth }: PropsPagina) {
 
   return (
     <div className="fundo-pagina min-h-full py-16">
-      <div className="mx-auto max-w-2xl px-4">
-        <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="rotulo-leitura texto-marca mb-3">Sua conta</p>
-            <h1 className="titulo-pagina">Notificações</h1>
-            <p className="paragrafo texto-padrao mt-3">
-              Avisos sobre suas campanhas e contribuições.
-            </p>
-          </div>
-          {auth.autenticado && quantidadeNaoLidas > 0 && (
-            <button type="button" className="btn btn-secondary" onClick={() => void marcarTodas()} disabled={marcandoTodas}>
-              {marcandoTodas ? 'Salvando...' : 'Marcar todas como lidas'}
-            </button>
-          )}
-        </header>
+      {/* Mesmo topo das outras páginas (22-11-2026): .largura-site, py-16 e o CabecalhoPagina, com a trilha Início >
+          Notificações em cima do título. */}
+      <div className="largura-site w-full">
+        <CabecalhoPagina
+          className="mb-8"
+          titulo="Notificações"
+          descricao="Avisos sobre suas campanhas e contribuições."
+          acaoTitulo={
+            auth.autenticado && quantidadeNaoLidas > 0 ? (
+              <button type="button" className="btn btn-secondary shrink-0" onClick={() => void marcarTodas()} disabled={marcandoTodas}>
+                {marcandoTodas ? 'Salvando...' : 'Marcar todas como lidas'}
+              </button>
+            ) : undefined
+          }
+        />
 
         {carregando && <Carregando />}
         {!auth.carregando && !auth.autenticado && (

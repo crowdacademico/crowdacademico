@@ -281,17 +281,25 @@
     color: var(--cor-texto-marca);
   }
 
+  /* A pílula inteira é clicável (22-11-2026): o espaçamento mora na pergunta (summary), não na caixa; antes, a borda de
+     1rem em volta do texto não abria nada. */
   .pagina-publica__faq {
     border: 1px solid var(--cor-borda);
     border-radius: var(--radius-lg);
     background: var(--cor-fundo-cartao);
-    padding: 1rem 1.25rem;
   }
 
   .pagina-publica__faq summary {
+    display: list-item;
+    padding: 1rem 1.25rem;
     color: var(--cor-texto-forte);
     cursor: pointer;
     font-weight: 700;
+  }
+
+  .pagina-publica__faq > p {
+    margin-top: 0;
+    padding: 0 1.25rem 1rem;
   }
 
   .busca-catalogo {
@@ -451,6 +459,13 @@
     .carrossel-cartoes__trilho > * {
       flex: 0 0 min(20rem, calc(100vw - 2rem));
       scroll-snap-align: start;
+    }
+
+    /* Giro contínuo da Home (22-11-2026): enquanto a fileira desliza sozinha, sem encaixe nos cartões e sem a rolagem
+       suave do CSS, que brigariam com o movimento quadro a quadro. */
+    .carrossel-cartoes__trilho--deslizando {
+      scroll-snap-type: none;
+      scroll-behavior: auto;
     }
 
     /* Cada cartão mora numa caixa (o original e as cópias do giro sem fim, 22-11-2026): o cartão ocupa a caixa inteira. */
@@ -1077,8 +1092,10 @@
       border-color: var(--cor-texto-marca);
     }
 
+    /* A pergunta ocupa a pílula inteira (largura e altura): todo ponto dela abre a resposta. */
     .home-perguntas__pergunta {
       display: flex;
+      width: 100%;
       align-items: center;
       justify-content: space-between;
       gap: 1rem;

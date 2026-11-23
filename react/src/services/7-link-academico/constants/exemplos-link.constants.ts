@@ -7,4 +7,9 @@ export const EXEMPLO_LINK_POR_TIPO: Partial<Record<string, string>> = {
   RESEARCHGATE: 'https://www.researchgate.net/profile/exemplo-teste',
   LINKEDIN: 'https://www.linkedin.com/in/exemplo-teste',
   GITHUB: 'https://github.com/exemplo-teste',
+  // Só para atualização (22-11-2026): vídeo, artigo e pasta de arquivos.
+  YOUTUBE: 'https://www.youtube.com/watch?v=exemplo-teste',
+  VIMEO: 'https://vimeo.com/123456789',
+  DOI: 'https://doi.org/10.1000/182',
+  GOOGLE_DRIVE: 'https://drive.google.com/drive/folders/exemplo-teste',
 };
