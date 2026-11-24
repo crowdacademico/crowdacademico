@@ -1179,7 +1179,7 @@ DROP TRIGGER IF EXISTS trg_marco_cronograma_valida_limite_texto ON marco_cronogr
 CREATE TRIGGER trg_marco_cronograma_valida_limite_texto
     BEFORE INSERT OR UPDATE ON marco_cronograma
     FOR EACH ROW
-    EXECUTE FUNCTION public.fn_valida_limite_texto_livre('descricao', 'limite_caracteres_descricao_marco', '2000');
+    EXECUTE FUNCTION public.fn_valida_limite_texto_livre('descricao', 'limite_caracteres_descricao_marco', '300');
 
 -- Contestação da penalidade (o pedido do pesquisador e a justificativa de quem decide) e justificativa da rejeição
 -- da campanha: o mesmo molde dos limites acima.

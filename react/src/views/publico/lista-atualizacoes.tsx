@@ -30,7 +30,12 @@ export function ListaAtualizacoes({ atualizacoes, tituloCampanha, campanhaEncerr
         return (
           <li key={atualizacao.idAtualizacao}>
             <article className="fundo-cartao border borda-padrao rounded-xl p-6">
-              <h3 className="subtitulo">{atualizacao.titulo}</h3>
+              {/* "Campanha encerrada" no canto superior direito do card (23-11-2026); antes ficava solta no fim da linha
+                  da data e quebrava torta no celular. */}
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="subtitulo min-w-0">{atualizacao.titulo}</h3>
+                {campanha && campanhaEncerrada?.(atualizacao.idCampanha) && <span className="badge badge-neutro shrink-0">Campanha encerrada</span>}
+              </div>
               <p className="legenda mt-2 texto-fraco">
                 {dataPublicacao(atualizacao.publicadoEm)}
                 {campanha && (
@@ -38,9 +43,7 @@ export function ListaAtualizacoes({ atualizacoes, tituloCampanha, campanhaEncerr
                     {' · '}
                     <Link to={`/campanha/${atualizacao.idCampanha}`} className="texto-marca hover:underline">
                       {campanha}
-                    </Link>
-                    {campanhaEncerrada?.(atualizacao.idCampanha) && <span className="badge badge-neutro ml-2 align-middle">Campanha encerrada</span>}
-                  </>
+                    </Link>                  </>
                 )}
               </p>
               <p className="paragrafo texto-padrao mt-4 whitespace-pre-wrap">{atualizacao.conteudo}</p>

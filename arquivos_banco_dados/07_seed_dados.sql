@@ -658,7 +658,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'campanha_rejeitada_max_reenvios',          '3',    'inteiro', 'Nº máximo de reenvios de uma campanha rejeitada, depois da 1ª rejeição',       TRUE, TRUE),
 (NULL, 'campanha_rejeitada_prazo_dias',            '30',   'inteiro', 'Dias que uma campanha rejeitada fica disponível para reenvio, contados da última rejeição', TRUE, TRUE),
 (NULL, 'limite_caracteres_descricao_orcamento',    '2000', 'inteiro', 'Nº máximo de caracteres na descrição de um item de orçamento (até 20.000)',                    TRUE, TRUE),
-(NULL, 'limite_caracteres_descricao_marco',        '2000', 'inteiro', 'Nº máximo de caracteres na descrição de um marco do cronograma (até 20.000)',                      TRUE, TRUE),
+(NULL, 'limite_caracteres_descricao_marco',        '300',  'inteiro', 'Nº máximo de caracteres na descrição de um marco do cronograma (até 20.000)',                      TRUE, TRUE),
 -- Meta 0.00 seria sucesso instantâneo numa campanha all-or-nothing. Mesmo padrão do prazo: limite técnico
 -- largo na constraint (01, > 0), mínimo de negócio de verdade aqui.
 (NULL, 'meta_minima_campanha',       '500.00', 'dinheiro',  'Valor mínimo de meta financeira aceito para uma campanha, em R$',            TRUE, TRUE),

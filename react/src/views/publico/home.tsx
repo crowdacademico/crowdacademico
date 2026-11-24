@@ -382,11 +382,6 @@ export function Home({ auth }: PropsPagina) {
   );
   const valorEstatistica = (valor: string | number) =>
     carregando ? '…' : erro ? 'Indisponível' : valor;
-  const rotuloProjetosDestaque = () => {
-    if (carregando) return 'Carregando projetos…';
-    if (erro) return 'Projetos indisponíveis';
-    return `${projetosDestaque.length} ${projetosDestaque.length === 1 ? 'projeto' : 'projetos'}`;
-  };
 
   return (
     <div id="view-home" className="view-section active flex-grow pagina-publica">
@@ -470,12 +465,11 @@ export function Home({ auth }: PropsPagina) {
 
       <section id="projetos" className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-20 py-20">
         <div className="mb-16">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-            <div>
-              <h2 className="titulo-secao texto-forte">Em Alta</h2>
-              <p className="text-sm texto-fraco mt-1" aria-live="polite">{rotuloProjetosDestaque()}</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
+          {/* Mesmo cabeçalho do Em Breve (23-11-2026): título e controles na mesma linha também no celular. Antes era
+              flex-col abaixo de 640px e os controles caíam pra linha de baixo; a contagem "N projetos" saiu. */}
+          <div className="flex justify-between items-center mb-8 gap-4">
+            <h2 className="titulo-secao texto-forte">Em Alta</h2>
+            <div className="flex items-center gap-3">
               <ControlesCarrossel
                 desabilitado={Boolean(erro) || carregando}
                 quantidade={projetosDestaque.length}

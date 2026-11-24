@@ -437,8 +437,10 @@ export function Campanha({ auth }: PropsPagina) {
                           .map((marco) => (
                             <li className="linha-do-tempo__marco" key={marco.idMarco}>
                               <p className="rotulo-leitura texto-marca">{formatarData(marco.dataPrevista)}</p>
-                              <h3 className="subtitulo mt-1">{marco.titulo}</h3>
-                              {marco.descricao && <p className="paragrafo texto-padrao mt-2">{marco.descricao}</p>}
+                              {/* Só a data tem destaque (23-11-2026); título em texto normal e descrição menor e mais
+                                  clara, no tamanho do Orçamento. */}
+                              <h3 className="paragrafo font-medium texto-forte mt-1">{marco.titulo}</h3>
+                              {marco.descricao && <p className="legenda texto-fraco mt-1 whitespace-pre-wrap">{marco.descricao}</p>}
                             </li>
                           ))}
                       </ol>

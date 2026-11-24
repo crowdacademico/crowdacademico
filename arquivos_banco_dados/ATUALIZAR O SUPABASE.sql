@@ -18,6 +18,22 @@
 
 
 -- ============================================================================
+-- GRUPO DQ (24-11-2026) - Descrição do marco do cronograma: limite padrão de 2000 para 300 caracteres. IDEMPOTENTE.
+-- Pode colar com o Nest no ar. O admin ainda pode mudar o valor em Configurações (teto de 20.000).
+-- ============================================================================
+UPDATE configuracoes SET valor = '300'
+ WHERE chave = 'limite_caracteres_descricao_marco' AND id_usuario IS NULL;
+
+DROP TRIGGER IF EXISTS trg_marco_cronograma_valida_limite_texto ON marco_cronograma;
+CREATE TRIGGER trg_marco_cronograma_valida_limite_texto
+    BEFORE INSERT OR UPDATE ON marco_cronograma
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_limite_texto_livre('descricao', 'limite_caracteres_descricao_marco', '300');
+
+
+
+
+-- ============================================================================
 -- GRUPO DP (22-11-2026) - Tipos de link para a atualização: YouTube, Vimeo, DOI e Google Drive. IDEMPOTENTE.
 -- Pode colar com o Nest no ar. Só dados (o seed novo já traz os mesmos; isto é para o banco que já está no ar).
 --

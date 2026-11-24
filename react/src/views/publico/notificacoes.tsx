@@ -112,27 +112,32 @@ export function Notificacoes({ auth }: PropsPagina) {
               const lida = notificacao.lidaEm !== null;
               return (
                 <li key={notificacao.idNotificacao}>
-                  <article className={`fundo-cartao border rounded-xl p-5 ${lida ? 'borda-padrao' : 'border-(--cor-marca)'}`}>
-                    <div className="flex items-start gap-4">
+                  {/* Layout de lista de e-mail/app (23-11-2026): o texto ocupa a largura toda do card e o "Marcar como
+                      lida" fica embaixo, junto da data. Antes o botão ficava na coluna da direita e espremia o texto no
+                      celular (uma palavra por linha). */}
+                  <article className={`fundo-cartao border rounded-xl p-4 sm:p-5 ${lida ? 'borda-padrao' : 'border-(--cor-marca)'}`}>
+                    <div className="flex items-start gap-3 sm:gap-4">
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg fundo-sutil texto-marca" aria-hidden="true">
                         <i className={`fa-solid ${lida ? 'fa-bell' : 'fa-bell-concierge'}`} />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <h2 className="subtitulo">{notificacao.titulo}</h2>
+                        <h2 className="paragrafo font-semibold texto-forte">{notificacao.titulo}</h2>
                         <p className="paragrafo texto-padrao mt-1 whitespace-pre-wrap">{notificacao.mensagem}</p>
-                        <p className="legenda mt-2 texto-fraco">{dataNotificacao(notificacao.criadoEm)}</p>
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                          <p className="legenda texto-fraco">{dataNotificacao(notificacao.criadoEm)}</p>
+                          {!lida && (
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-pequeno"
+                              onClick={() => void marcarLida(notificacao.idNotificacao)}
+                              disabled={marcandoId === notificacao.idNotificacao || marcandoTodas}
+                              aria-label={`Marcar "${notificacao.titulo}" como lida`}
+                            >
+                              {marcandoId === notificacao.idNotificacao ? 'Salvando...' : 'Marcar como lida'}
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      {!lida && (
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-pequeno shrink-0"
-                          onClick={() => void marcarLida(notificacao.idNotificacao)}
-                          disabled={marcandoId === notificacao.idNotificacao || marcandoTodas}
-                          aria-label={`Marcar "${notificacao.titulo}" como lida`}
-                        >
-                          {marcandoId === notificacao.idNotificacao ? 'Salvando...' : 'Marcar como lida'}
-                        </button>
-                      )}
                     </div>
                   </article>
                 </li>

@@ -1053,7 +1053,7 @@
       bottom: 0.15rem;
       width: 2px;
       border-radius: 1px;
-      background: var(--cor-borda-forte);
+      background: color-mix(in srgb, var(--cor-marca) 45%, transparent);
     }
 
     .campanha-detalhe__imagem-capa {
