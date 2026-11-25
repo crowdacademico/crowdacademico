@@ -9,6 +9,8 @@ export interface ContribuicaoPixPublica {
   expiraEm: string;
   // QR de TESTE do sandbox (o Asaas não gerou o da cobrança): o pagamento de teste é o "Confirmar pagamento" do painel do Asaas.
   simulado?: boolean;
+  // Sandbox do Asaas: mostra o botão "Simular pagamento" (BotaoSimularPagamento).
+  podeSimularPagamento?: boolean;
 }
 
 export interface ContribuicaoBoletoPublica {

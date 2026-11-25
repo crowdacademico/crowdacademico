@@ -28,4 +28,16 @@ export const contribuicaoPublicaApi = {
     authFetch(`/contribuicao/${idContribuicao}`, {
       headers: tokenSessao ? { 'X-Token-Sessao': tokenSessao } : {},
     }).then(tratarResposta<StatusContribuicaoPublica>),
+
+  // SÓ SANDBOX: paga o Pix de mentira (o mesmo que o "Confirmar pagamento" do painel do Asaas). Quem confirma a
+  // contribuição continua sendo o webhook; a tela percebe pela consulta de sempre.
+  simularPagamento: (
+    authFetch: AuthFetch,
+    idContribuicao: number,
+    tokenSessao?: string,
+  ): Promise<void> =>
+    authFetch(`/contribuicao/${idContribuicao}/simular-pagamento`, {
+      method: 'POST',
+      headers: tokenSessao ? { 'X-Token-Sessao': tokenSessao } : {},
+    }).then(tratarResposta<void>),
 };

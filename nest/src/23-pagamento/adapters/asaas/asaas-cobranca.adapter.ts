@@ -212,12 +212,13 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
   private async pixDaCobranca(idCobranca: string, expiraEm: Date) {
     const sandbox = this.config.ambiente === 'sandbox';
     try {
-      return await dadosPixAsaas(
+      const dados = await dadosPixAsaas(
         this.http,
         idCobranca,
         expiraEm,
         sandbox ? ESPERA_QR_SANDBOX_MS : undefined,
       );
+      return sandbox ? { ...dados, podeSimularPagamento: true } : dados;
     } catch (erro) {
       if (!sandbox) throw erro;
       this.logger.warn(
@@ -390,6 +391,23 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
       ambiente: this.config.ambiente === 'production' ? 'producao' : 'sandbox',
       saldo: typeof r?.balance === 'number' ? r.balance : null,
     };
+  }
+
+  // Só no sandbox: POST /sandbox/payment/{id}/confirm faz o mesmo que o botão "Confirmar pagamento" do painel do Asaas
+  // (docs.asaas.com/reference/confirmar-pagamento). Em produção a rota nem existe; aqui recusa antes, sem chamar o Asaas.
+  async simularPagamento(idCobranca: string): Promise<void> {
+    if (this.config.ambiente !== 'sandbox') {
+      throw new GatewayPagamentoErro(
+        'RECUSADO',
+        'Simular pagamento só existe no sandbox.',
+        false,
+        400,
+      );
+    }
+    await this.http.requisitar(
+      'POST',
+      `/sandbox/payment/${encodeURIComponent(idCobranca)}/confirm`,
+    );
   }
 
   async cancelarCobranca(idCobranca: string): Promise<void> {

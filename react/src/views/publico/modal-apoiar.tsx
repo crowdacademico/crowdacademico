@@ -18,6 +18,7 @@ import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import { ErroHttp } from '../../services/constant/api/http.util';
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { guardarApoio, lerApoio, useSituacaoApoio, type ApoioEmAndamento } from './apoio-em-andamento';
+import { BotaoSimularPagamento } from './botao-simular-pagamento';
 import { PainelPix } from './painel-pix';
 
 const VALORES_SUGERIDOS = [25, 50, 100, 150, 200];
@@ -311,6 +312,14 @@ export function ModalApoiar({ auth, campanha, recompensa, valorInicial, aoFechar
           ) : (
             <>
               <PainelPix pix={apoioPix.pix} linkPagamento={apoioPix.provedorTeste ? undefined : apoioPix.linkPagamento} />
+              {apoioPix.pix.podeSimularPagamento && (
+                <BotaoSimularPagamento
+                  authFetch={auth.authFetch}
+                  idContribuicao={apoioPix.idContribuicao}
+                  tokenSessao={apoioPix.tokenSessao}
+                  aoSimular={situacao.consultarAgora}
+                />
+              )}
               {apoioPix.provedorTeste && (
                 <p className="legenda texto-info fundo-info rounded-lg p-3">
                   Provedor de pagamento de TESTE: confirme o pagamento de mentira pela T5 do Campo de Testes.

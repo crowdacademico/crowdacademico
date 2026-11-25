@@ -6,6 +6,7 @@ import { ContribuicaoControllerFindAllMine } from './controllers/contribuicao.co
 import { ContribuicaoControllerFindAllReceived } from './controllers/contribuicao.controller.findall-received';
 import { ContribuicaoControllerPublicCount } from './controllers/contribuicao.controller.public-count';
 import { ContribuicaoControllerSummary } from './controllers/contribuicao.controller.summary';
+import { ContribuicaoControllerSimulatePayment } from './controllers/contribuicao.controller.simulate-payment';
 import { ContribuicaoControllerWithdraw } from './controllers/contribuicao.controller.withdraw';
 import { ContribuicaoServiceCreate } from './service/contribuicao.service.create';
 import { ContribuicaoServiceFind } from './service/contribuicao.service.find';
@@ -13,6 +14,7 @@ import { ContribuicaoServiceFindAllMine } from './service/contribuicao.service.f
 import { ContribuicaoServiceFindAllReceived } from './service/contribuicao.service.findall-received';
 import { ContribuicaoServicePublicCount } from './service/contribuicao.service.public-count';
 import { ContribuicaoServiceSummary } from './service/contribuicao.service.summary';
+import { ContribuicaoServiceSimulatePayment } from './service/contribuicao.service.simulate-payment';
 import { ContribuicaoServiceWithdraw } from './service/contribuicao.service.withdraw';
 
 @Module({
@@ -25,6 +27,7 @@ import { ContribuicaoServiceWithdraw } from './service/contribuicao.service.with
     ContribuicaoControllerSummary,
     ContribuicaoControllerPublicCount,
     ContribuicaoControllerWithdraw,
+    ContribuicaoControllerSimulatePayment,
   ],
   providers: [
     ContribuicaoServiceCreate,
@@ -34,6 +37,7 @@ import { ContribuicaoServiceWithdraw } from './service/contribuicao.service.with
     ContribuicaoServiceSummary,
     ContribuicaoServicePublicCount,
     ContribuicaoServiceWithdraw,
+    ContribuicaoServiceSimulatePayment,
   ],
 })
 export class ContribuicaoModule {}

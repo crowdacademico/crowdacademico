@@ -65,6 +65,8 @@ export function lerApoio(): ApoioEmAndamento | null {
 export function useSituacaoApoio(authFetch: AuthFetch, apoio: ApoioEmAndamento | null) {
   const [status, setStatus] = useState<StatusContribuicao>('pendente');
   const [erro, setErro] = useState<string | null>(null);
+  // Muda para consultar já, sem esperar os 15 s (o botão "Simular pagamento" do sandbox).
+  const [rodada, setRodada] = useState(0);
 
   useEffect(() => {
     if (!apoio) return;
@@ -88,7 +90,7 @@ export function useSituacaoApoio(authFetch: AuthFetch, apoio: ApoioEmAndamento |
       ativo = false;
       if (espera !== undefined) window.clearTimeout(espera);
     };
-  }, [authFetch, apoio]);
+  }, [authFetch, apoio, rodada]);
 
-  return { status, erro };
+  return { status, erro, consultarAgora: () => setRodada((n) => n + 1) };
 }

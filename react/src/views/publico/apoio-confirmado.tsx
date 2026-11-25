@@ -7,6 +7,7 @@ import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { ROTULO_MEIO_PAGAMENTO } from '../../services/22-contribuicao/constants/contribuicao.constants';
 import type { StatusContribuicao } from '../../services/constant/type/enums-do-banco.gerado';
 import { lerApoio, useSituacaoApoio } from './apoio-em-andamento';
+import { BotaoSimularPagamento } from './botao-simular-pagamento';
 import { PainelPix } from './painel-pix';
 
 const ROTULOS_STATUS: Record<StatusContribuicao, string> = {
@@ -27,7 +28,7 @@ const ROTULOS_STATUS: Record<StatusContribuicao, string> = {
 // é o aviso do Asaas (webhook), nunca esta tela.
 export function ApoioConfirmado({ auth }: PropsPagina) {
   const [apoio] = useState(lerApoio);
-  const { status, erro: erroConsulta } = useSituacaoApoio(auth.authFetch, apoio);
+  const { status, erro: erroConsulta, consultarAgora } = useSituacaoApoio(auth.authFetch, apoio);
   const { obterNumero, obterConfiguracao } = useConfiguracoes();
   const prazoDesistencia = obterNumero('desistencia_prazo_dias', 7);
   const emailSuporte = String(obterConfiguracao('email_suporte', 'o e-mail de suporte') ?? 'o e-mail de suporte');
@@ -95,6 +96,16 @@ export function ApoioConfirmado({ auth }: PropsPagina) {
           {status === 'pendente' && apoio.pix && (
             <div className="mb-6">
               <PainelPix pix={apoio.pix} linkPagamento={apoio.provedorTeste ? undefined : apoio.linkPagamento} />
+              {apoio.pix.podeSimularPagamento && (
+                <div className="mt-4">
+                  <BotaoSimularPagamento
+                    authFetch={auth.authFetch}
+                    idContribuicao={apoio.idContribuicao}
+                    tokenSessao={apoio.tokenSessao}
+                    aoSimular={consultarAgora}
+                  />
+                </div>
+              )}
             </div>
           )}
           {status === 'pendente' &&

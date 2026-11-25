@@ -6,6 +6,8 @@ export class ContribuicaoPixResponse {
   expiraEm: Date;
   // QR de TESTE do sandbox: a tela avisa que o pagamento de teste é pelo painel do Asaas.
   simulado?: boolean;
+  // Sandbox: a tela mostra o botão "Simular pagamento" (POST /contribuicao/:id/simular-pagamento).
+  podeSimularPagamento?: boolean;
 }
 
 export class ContribuicaoCartaoResponse {

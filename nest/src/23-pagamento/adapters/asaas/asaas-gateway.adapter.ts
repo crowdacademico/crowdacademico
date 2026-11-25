@@ -61,6 +61,9 @@ export class AsaasGatewayAdapter
   consultarTarifas() {
     return this.cobranca.consultarTarifas();
   }
+  simularPagamento(idCobranca: string): Promise<void> {
+    return this.cobranca.simularPagamento(idCobranca);
+  }
   verificarConexao() {
     return this.cobranca.verificarConexao();
   }

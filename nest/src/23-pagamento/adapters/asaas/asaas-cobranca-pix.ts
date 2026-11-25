@@ -36,5 +36,6 @@ export function pixDeTesteSandbox(
     copiaECola: `SANDBOX-CROWDACADEMICO-TESTE|${idCobranca}|pague pelo botao Confirmar pagamento no painel do Asaas`,
     expiraEm,
     simulado: true,
+    podeSimularPagamento: true,
   };
 }

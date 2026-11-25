@@ -19,6 +19,8 @@ export interface DadosPix {
   expiraEm: Date;
   // QR de TESTE do sandbox (o Asaas não gerou o da cobrança): não paga nada; o pagamento de teste é pelo painel do Asaas.
   simulado?: boolean;
+  // Sandbox: a tela mostra o botão "Simular pagamento" (POST /contribuicao/:id/simular-pagamento).
+  podeSimularPagamento?: boolean;
 }
 
 export interface DadosBoleto {

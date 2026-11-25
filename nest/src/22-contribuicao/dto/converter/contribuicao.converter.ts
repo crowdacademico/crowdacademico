@@ -44,6 +44,7 @@ export class ContribuicaoConverter {
             qrCodeBase64: cobranca.pix.qrCodeBase64,
             expiraEm: cobranca.pix.expiraEm,
             simulado: cobranca.pix.simulado,
+            podeSimularPagamento: cobranca.pix.podeSimularPagamento,
           }
         : undefined,
       cartao:
