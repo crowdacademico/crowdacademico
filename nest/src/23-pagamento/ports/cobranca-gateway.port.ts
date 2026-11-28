@@ -71,7 +71,7 @@ export interface CobrancaGatewayPort {
   // Dashboard > Saúde (16-11-2026): fala com o provedor SEM cobrar nada, para saber se a chave e a rede estão boas.
   // Erro sai como GatewayPagamentoErro (NAO_CONFIGURADO = chave recusada; REDE = sem resposta).
   verificarConexao(): Promise<VerificacaoGateway>;
-  // SÓ AMBIENTE DE TESTE (25-11-2026, Lucas): paga de mentira uma cobrança aberta, o mesmo que o "Confirmar pagamento" do
+  // SÓ DESENVOLVIMENTO (25-11-2026, Lucas; fora do Render por decisão do orientador, 28-11-2026): paga de mentira uma cobrança aberta, o mesmo que o "Confirmar pagamento" do
   // painel do sandbox do Asaas. O provedor manda o webhook de sempre, e a contribuição é confirmada pelo caminho normal.
   // Opcional: o adapter que não sabe simular (ou está em produção) não implementa ou recusa com RECUSADO.
   simularPagamento?(idCobranca: string): Promise<void>;
