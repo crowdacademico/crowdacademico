@@ -29,7 +29,7 @@ import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
 import { PontuacaoScore } from '../../views/11-configuracoes/pontuacao-score';
 import { ListarModelosMensagem } from '../../views/27-notificacao/listar-modelos-mensagem';
 import { ListarNotificacoes } from '../../views/27-notificacao/listar-notificacoes';
-import { campoTestes } from './campo-testes-opcional';
+import { campoTestes, guiaEstiloPublicado } from './campo-testes-opcional';
 import { ComoFunciona } from '../../views/publico/como-funciona';
 import { Transparencia } from '../../views/publico/transparencia';
 import { PerguntasFrequentes } from '../../views/publico/perguntas-frequentes';
@@ -411,6 +411,8 @@ export const ROTAS_ADMIN: Rota[] = [
 
   // Campo de Testes: só em desenvolvimento e só se a pasta existir (ver campo-testes-opcional.ts).
   ...(campoTestes?.ROTAS_CAMPO_TESTES ?? []),
+  // Só o Guia de Estilo no site publicado, com VITE_MOSTRAR_GUIA_ESTILO=true (ver campo-testes-opcional.ts).
+  ...(guiaEstiloPublicado ? [guiaEstiloPublicado.ROTA_GUIA_ESTILO] : []),
 ];
 // Pode abrir esta tela do painel? Basta uma das permissões da tela; tela sem `permissoes` vale para todo o painel.
 export function podeVerRota(rota: Pick<Rota, 'permissoes'>, permissoesDaConta: readonly string[]): boolean {

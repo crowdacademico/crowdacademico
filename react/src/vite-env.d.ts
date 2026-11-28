@@ -6,6 +6,8 @@
 interface ImportMetaEnv {
   readonly VITE_API_URL?: string;
   readonly VITE_GOOGLE_CLIENT_ID?: string;
+  // "true" no serviço do site no Render: publica só o Guia de Estilo (services/router/campo-testes-opcional.ts).
+  readonly VITE_MOSTRAR_GUIA_ESTILO?: string;
 }
 
 interface ImportMeta {

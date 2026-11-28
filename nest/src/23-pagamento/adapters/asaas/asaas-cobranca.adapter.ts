@@ -399,13 +399,13 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
   }
 
   // Só no sandbox: POST /sandbox/payment/{id}/confirm faz o mesmo que o botão "Confirmar pagamento" do painel do Asaas
-  // (docs.asaas.com/reference/confirmar-pagamento). Só com ASAAS_SIMULAR_PAGAMENTO=true (desenvolvimento, sandbox); sem
+  // (docs.asaas.com/reference/confirmar-pagamento). Só com VITE_SIMULAR_PAGAMENTO_ASAAS=true (desenvolvimento, sandbox); sem
   // ela (o Render) recusa antes, sem chamar o Asaas.
   async simularPagamento(idCobranca: string): Promise<void> {
     if (!this.config.simularPagamento) {
       throw new GatewayPagamentoErro(
         'RECUSADO',
-        'Simular pagamento está desligado neste ambiente (ASAAS_SIMULAR_PAGAMENTO).',
+        'Simular pagamento está desligado neste ambiente (VITE_SIMULAR_PAGAMENTO_ASAAS).',
         false,
         400,
       );

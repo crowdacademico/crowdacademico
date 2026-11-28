@@ -61,7 +61,7 @@ import { ConfigService } from '@nestjs/config';
 //     endereço do domínio cadastrado na conta (Minha Conta > Informações > site); com outro domínio (ou localhost) ele RECUSA
 //     criar a cobrança, e ninguém consegue apoiar. Por isso fica vazio em desenvolvimento.
 //
-//   ASAAS_SIMULAR_PAGAMENTO=true                            (opcional; SÓ NO .env DE DESENVOLVIMENTO)
+//   VITE_SIMULAR_PAGAMENTO_ASAAS=true                            (opcional; SÓ NO .env DE DESENVOLVIMENTO)
 //     Liga o botão "Simular pagamento" embaixo do QR do Pix (paga de mentira pela API do sandbox, sem abrir o painel do
 //     Asaas). Desligado por padrão, e só vale com ASAAS_ENV=sandbox. NUNCA coloque no Render (decisão do orientador,
 //     28-11-2026): o sistema publicado mostra o Pix como ele é, e o pagamento de teste é o do painel do Asaas.
@@ -81,7 +81,7 @@ export interface ConfiguracaoAsaas {
   timeoutMs: number;
   paginasBuscaTransferencia: number;
   urlRetorno?: string;
-  // Botão "Simular pagamento" (ASAAS_SIMULAR_PAGAMENTO=true, só no sandbox e só em desenvolvimento).
+  // Botão "Simular pagamento" (VITE_SIMULAR_PAGAMENTO_ASAAS=true, só no sandbox e só em desenvolvimento).
   simularPagamento?: boolean;
 }
 
@@ -188,6 +188,7 @@ export function lerConfiguracaoAsaas(
     ),
     urlRetorno: texto('ASAAS_URL_RETORNO'),
     simularPagamento:
-      ambiente === 'sandbox' && texto('ASAAS_SIMULAR_PAGAMENTO') === 'true',
+      ambiente === 'sandbox' &&
+      texto('VITE_SIMULAR_PAGAMENTO_ASAAS') === 'true',
   };
 }

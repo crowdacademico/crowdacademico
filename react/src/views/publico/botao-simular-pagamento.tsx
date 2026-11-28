@@ -14,7 +14,7 @@ interface BotaoSimularPagamentoProps {
 const ESPERA_WEBHOOK_MS = 4_000;
 
 // SÓ DESENVOLVIMENTO (25-11-2026, Lucas): paga o Pix de mentira sem abrir o painel do Asaas. Aparece só quando o Nest
-// manda pix.podeSimularPagamento, o que exige ASAAS_SIMULAR_PAGAMENTO=true no nest/.env local; o Render não tem essa
+// manda pix.podeSimularPagamento, o que exige VITE_SIMULAR_PAGAMENTO_ASAAS=true no nest/.env local; o Render não tem essa
 // variável (decisão do orientador, 28-11-2026). Quem confirma a contribuição continua sendo o webhook.
 export function BotaoSimularPagamento({ authFetch, idContribuicao, tokenSessao, aoSimular }: BotaoSimularPagamentoProps) {
   const [enviando, setEnviando] = useState(false);

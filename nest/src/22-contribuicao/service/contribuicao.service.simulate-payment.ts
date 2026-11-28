@@ -31,7 +31,7 @@ const MENSAGEM_SO_TESTE =
 // confirma nada no banco: o Asaas manda o webhook de sempre, e é ele que confirma a contribuição (o caminho testado fica
 // o mesmo da produção). Quem enxerga a contribuição é a RLS, como em GET /contribuicao/:id (login ou X-Token-Sessao):
 // contribuição de outra pessoa dá 404. SÓ EM DESENVOLVIMENTO (orientador, 28-11-2026): o adapter só simula com
-// ASAAS_SIMULAR_PAGAMENTO=true, que fica fora do Render; lá ele recusa sem chamar nada, e a tela nem mostra o botão
+// VITE_SIMULAR_PAGAMENTO_ASAAS=true, que fica fora do Render; lá ele recusa sem chamar nada, e a tela nem mostra o botão
 // (pix.podeSimularPagamento só vem com a variável ligada).
 @Injectable()
 export class ContribuicaoServiceSimulatePayment {
